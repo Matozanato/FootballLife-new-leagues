@@ -153,23 +153,49 @@ def library(root, kind="folder", depth=6):
     out = []
     root = os.path.normpath(root)
 
-    def walk(d, level):
+    def listed(d):
+        """the entries of d by name, or None when it cannot be read. One listing answers "is this
+        an item" and "what is under it" (0.3.1: is_leaf listed a folder, walk listed it again and
+        asked the disk about each name: a kit server of 14,000 folders was 45,000 calls)"""
         try:
-            names = sorted(os.listdir(d), key=str.lower)
+            with os.scandir(d) as it:
+                return sorted(it, key=lambda e: e.name.lower())
         except OSError:
-            return
-        for n in names:
-            p = os.path.join(d, n)
+            return None
+
+    def is_dir(e):
+        try:
+            return e.is_dir()
+        except OSError:
+            return False
+
+    def is_file(e):
+        try:
+            return e.is_file()
+        except OSError:
+            return False
+
+    import bigjson
+    rest = bigjson._rest     # B480 (17.11.2026): a worker resting between listings, as bigjson's readers do
+
+    def walk(d, level, got=None):
+        if got is None:
+            got = listed(d)
+        rest()
+        for e in got or ():
+            p = os.path.join(d, e.name)
             if kind == "mp3":
-                if os.path.isfile(p) and n.lower().endswith(".mp3"):
+                if is_file(e) and e.name.lower().endswith(".mp3"):
                     out.append(os.path.relpath(p, root))
-                elif os.path.isdir(p) and level < depth:
+                elif is_dir(e) and level < depth:
                     walk(p, level + 1)
-            elif os.path.isdir(p):
-                if is_leaf(p):
+            elif is_dir(e):
+                sub = listed(p)
+                names = {x.name.lower() for x in sub or ()}
+                if names & MARKERS or "config.txt" in names or "order.ini" in names:      # is_leaf(p)
                     out.append(os.path.relpath(p, root))
-                elif level < depth:
-                    walk(p, level + 1)
+                elif level < depth and sub is not None:
+                    walk(p, level + 1, sub)
     walk(root, 1)
     return out
 

@@ -107,7 +107,7 @@ sadrži ono što upišeš. Upiši npr. `brazil` ili `liga`. Isprazni polje da op
 
 **Zašto su neke lige sive.** Siva liga se ne može dodati, a zadnji stupac kaže zašto:
 
-- `liga ima 10 do 24 klubova`: liga u igri ima 10 do 24 kluba, nove i igrine zajedno. Ova ih
+- `liga ima 10 do 32 klubova`: liga u igri ima 10 do 32 kluba, nove i igrine zajedno. Ova ih
   ima manje ili više. Još je možeš popraviti u Koraku 4 (dodaj ili izostavi klubove) dok ne
   stane.
 - `igrina vlastita liga: Dovedi lige igre u ovu sezonu`: igra već ima ovu ligu (Premier League,
@@ -154,7 +154,7 @@ Označi **jednu** ligu (samo jednu). Popis desno pokazuje njene klubove: **Klub*
   **Trebaš vidjeti:** klub na kraju popisa, s `iz: <njegova liga>` pored.
 
 **Trebaš vidjeti:** red lige na popisu sad ima `*`, a broj u **Klubovi** se promijenio. Siva
-liga koja sad ima 10 do 24 kluba postane normalna.
+liga koja sad ima 10 do 32 kluba postane normalna.
 
 Klub može igrati samo u jednoj ligi. Ako ga dodaš u dvije, Mod Studio te zaustavi u Koraku 5.
 
@@ -206,7 +206,7 @@ mijenja.
 |---|---|
 | **Ime** | Ime lige u igri. Dvije lige ne mogu imati isto ime. Neka bude kraće od otprilike 38 znakova: duže ime se u Kick Offovom popisu liga vidi kao prazan red. |
 | **Država** | Upiši par slova i izaberi s popisa (`korea` nađe obje Koreje). Daje zastavu i mjesto gdje je liga popisana u igri. |
-| **Klubovi** | 10 do 24. Za NewLife ligu ostavi kako je: manji broj izbaci zadnje klubove, veći doda izmišljene klubove na kraj. |
+| **Klubovi** | 10 do 32. Za NewLife ligu ostavi kako je: manji broj izbaci zadnje klubove, veći doda izmišljene klubove na kraj. |
 | **Klubovi bez lige** | Ostavi na `(ne -- liga)`. Ostali izbori (*Other European teams* ...) su za jedan klub, ili par njih, bez lige oko sebe; idu u igrine skupine "Other ...", a većina polja ispod posivi. [Više](mod-studio-guide.md#8-league-builder-nove-lige-klubovi-i-igrači). |
 | **Format** | Izaberi jedno: **svi sa svima, broj krugova:** i broj (1 do 4; 2 je doma i u gostima); **dijeli se na pola (kao Škotska)**, s `prvo` *n* `x, zatim skupine` *6/6* *n* `x` (skupine moraju dati broj klubova); ili **Apertura i Clausura, zatim doigravanje:** *8 klubova*, *4 kluba* ili *bez doigravanja* (dva kratka turnira u sezoni, najviše 18 klubova). Podjela te Apertura i Clausura su **eksperimentalni**: rade, ali još imaju više bugova od formata svi sa svima, koji je potpuno testiran. Prozor to kaže ispod formata. Za prvi svijet uzmi svi sa svima. |
 | **Rang** | `(prvi rang)` = najbolja liga svoje države. Za drugi rang izaberi ligu jedan rang iznad: tvoje nove lige su na vrhu popisa, pa igrine lige s brojem u zagradi. `= 2. rang` pored pokazuje rang. Liga koja već ima ligu ispod sebe je siva (`-- ispod nje: ...`): jedna liga može imati jednu ligu ispod. Vidi [Korak 7](#korak-7-primjer-država-s-dva-ranga). |
@@ -398,7 +398,7 @@ Sve na ovoj stranici je u [Igrači u punim uputama](mod-studio-guide.md#igrači)
 | Granica | Gdje je vidiš |
 |---|---|
 | Novih klubova ukupno (oko 1.500): broj u redu `Novi klubovi u tvom svijetu: X od Y koliko igra prima.` | Stranica NewLife Database: **Dodaj u svoj svijet** ostaje siv. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
-| 10 do 24 kluba u ligi | NewLife Database: siva liga, `liga ima 10 do 24 klubova`. Kartica Klubovi: `Liga ima od 10 do 24 klubova.` |
+| 10 do 32 kluba u ligi | NewLife Database: siva liga, `liga ima 10 do 32 klubova`. Kartica Klubovi: `Liga ima od 10 do 32 klubova.` |
 | Novih liga po svijetu: nema stalnog broja. Svaka liga i kup uzima jedno od 255 igrinih natjecanja; **2. Moj svijet** pokazuje koliko ih je zauzeto (**NATJECANJA**). Naš testni svijet igra 86 novih liga. | Build: `error: <n> leagues, but the game has room for <m> ...` |
 | Jedna liga ispod jedne lige | Popis **Rang**: sivo. Build: `... are all under ...; the game follows one link down from a league ...` |
 | Rangovi do 7. | Build: `error: <league>: division 8 -- the rank field stops at 7`. |
@@ -425,7 +425,7 @@ Mod Studio pri pokretanju opet otvori tvoj svijet, pa se ono što si napravio ni
 1. **2. Moj svijet**, kartica **Gradnja** (prva kartica).
 
 **Trebaš vidjeti:** napomenu da je Build za moddere, pa veliki gumb **Izgradi i instaliraj** i
-ispod njega dva sklopiva dijela: **Opcije svijeta: europski kupovi, nacionalni kupovi, dresovi i
+ispod njega dva sklopiva dijela: **Opcije svijeta: europski kupovi, dresovi i
 lica novih klubova** (dvije kartice, **Europski kupovi** i **Novi klubovi**, s opcijama) i
 **Korak po korak i Izvezi svijet** (red **0. Postavi module**, **1. Provjeri plan**, **2. Izgradi
 svijet**, **3. Uključi ga**, **4. Nakon pokretanja: provjeri** i **Izvezi svijet...**). Onda red
@@ -482,8 +482,8 @@ U **2. Moj svijet** kartica tvog svijeta je sad zelena: **● U IGRI SADA**.
 | `livecpk: _FL26MyWorld (... files), sider.ini loads it` | Svijet je u igri. |
 | `error: ...` | Build je stao i u igri se ništa nije promijenilo. Popravi što kaže (tablica na kraju) i izgradi opet. |
 
-Opcije pod **Opcije svijeta** (**Uključi Konferencijsku ligu**, **Ždrijeb kupa države**,
-**Dresovi u bojama klubova** ...) objašnjene su u [8.2](mod-studio-guide.md#82-izgradi-uključi-igraj).
+Opcije pod **Opcije svijeta** (**Dresovi u bojama klubova** ...) i na kartici **Kupovi**
+(**Uključi Konferencijsku ligu**, **Ždrijeb kupa države** ...) objašnjene su u [8.2](mod-studio-guide.md#82-izgradi-uključi-igraj).
 Zadane vrijednosti su u redu.
 
 ## Korak 13. Igraj: NOVA Master Liga, pa provjera
@@ -601,7 +601,7 @@ logu Builda iza `error:`. `<...>` stoji za ime ili broj.
 | `no NewLife Database here: put the NewLife-....zip parts you downloaded in one folder (no need to unpack them) and open that folder` | Izabrao si krivu mapu ili si raspakirao dijelove. Otvori mapu u kojoj su same datoteke `NewLife-...zip`. |
 | `the parts in this folder are of different versions (...): keep one version's parts only` | Pomiješane su dvije verzije NewLifea. U mapi ostavi dijelove samo jedne verzije. |
 | `<file> is not a NewLife part (...) -- download it again` | Download se pokvario. Skini taj dio opet. |
-| Siva liga, `liga ima 10 do 24 klubova` | Dodaj ili izostavi klubove (Korak 4) dok nema 10 do 24. |
+| Siva liga, `liga ima 10 do 32 klubova` | Dodaj ili izostavi klubove (Korak 4) dok nema 10 do 32. |
 | Siva liga, `igrina vlastita liga: Dovedi lige igre u ovu sezonu` | Igra je već ima. Koristi **Dovedi lige igre u ovu sezonu...**. |
 | **Dodaj u svoj svijet** ostaje siv | Nije označeno ništa što se može dodati, ili bi odabir prešao granicu novih klubova (red dolje). |
 | `<klub> bi igrao u dvije lige (<liga> i <liga>).` | Makni kvačicu klubu u jednoj od njih. |
@@ -616,7 +616,7 @@ logu Builda iza `error:`. `<...>` stoji za ime ili broj.
 | `Ova liga igra od veljače do prosinca kao liga iznad nje, a liga koja igra od veljače do prosinca još nema podjelu ni Aperturu/Clausuru.` | Daj ovom rangu **svi sa svima**. |
 | `Klubovi bez lige su svi novi klubovi: prvo maknite klubove iz igre (Uredi klub).` | Liga ima klubove iz igre. Na kartici **Klubovi** označi svakog i koristi **Više ▾ → Novi klub ovdje**, pa opet postavi **Klubovi bez lige**. |
 | `<liga> je ispod ove lige; klubovi bez lige nemaju ništa ispod sebe.` (ili `egzibicijska liga nema ligu ispod.`) | Druga liga ima ovu kao svoj **Rang**. Prvo promijeni tu ligu. |
-| `Liga ima od 10 do 24 klubova.` (kartica Klubovi) | Umetni klub / Makni klub bi ostavio ligu izvan 10 do 24. |
+| `Liga ima od 10 do 32 klubova.` (kartica Klubovi) | Umetni klub / Makni klub bi ostavio ligu izvan 10 do 32. |
 | `Prvo otvori NewLife Database na stranici NewLife.` | **NewLife klub...** treba NewLife mapu: otvori je jednom na **NewLife Database**. |
 | `Odaberi klub koji preuzima njegovo mjesto.` / `Daj novom klubu ime.` / `Klub ne može preuzeti vlastito mjesto.` | U **Klub iz igre** izaberi klub koji ga mijenja, ili upiši ime novog. |
 | `error: nema tablica igre -- Postavke > Raspakiraj tablice igre` | **5. Postavke → Raspakiraj tablice igre**. |

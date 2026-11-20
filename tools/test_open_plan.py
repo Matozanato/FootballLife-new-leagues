@@ -42,9 +42,13 @@ def main(base):
     T = tempfile.mkdtemp(prefix="openplan-")
     files = sorted(glob.glob(os.path.join(HERE, "testdata", "*", "*.json")))
     # clubs of the game in a new league (a recipe's game_clubs: a list), as ferraz's world had
-    # them: two of the game's clubs that play in no league
+    # them: two of the game's clubs that play in no league -- and in no cup: FL26 2.2 has Yokohama
+    # FC (164) in the Emperor's Cup only, FL 2027 Sparta Prague in the Europa League, and a club
+    # with a place in a competition needs the club that takes it (a plan problem, not this test's)
     names = B.game_clubs(base)
-    free = [t for t in B.game_others(base, B.game_leagues(base))[1] if not names[t][0].startswith("ML ")]
+    info = B.game_info(base)
+    free = [t for t in B.game_others(base, B.game_leagues(base))[1] if not names[t][0].startswith("ML ")
+            and not B.game_club_where(info, t)]
     tried, p = 0, None
     for f in files:
         r = B.load_recipe(f)

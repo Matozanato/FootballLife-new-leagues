@@ -94,8 +94,13 @@ local function read_world(ctx)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, nopool, fans = {}, {}, {}
+  local leagues, nopool, fans, fansx = {}, {}, {}, {}
   for line in f:lines() do
+    -- a finer followers share (of 10,000) for clubs with a fans line: FL 2027 worlds, 11.11.2026
+    local sh, xids = line:match("^%s*fansx%s+(%d+)%s+([%d%s]+)$")
+    if sh then
+      for t in xids:gmatch("%d+") do fansx[#fansx + 1] = { tonumber(t), tonumber(sh) } end
+    end
     local cls, pct, ids = line:match("^%s*fans%s+(%d+)%s+(%d+)%s+([%d%s]+)$")
     if cls then
       for t in ids:gmatch("%d+") do fans[#fans + 1] = { tonumber(t), tonumber(cls), tonumber(pct) } end
@@ -114,7 +119,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, nopool, fans
+  return leagues, nopool, fans, fansx
 end
 
 -- From the world file. SERVED: the slots the game fills with lists of its own (national teams,
@@ -237,8 +242,8 @@ function m.init(ctx)
     typedef int  (*fl26_clubs_own_pools_t)(const uint16_t*, int);
     typedef int  (*fl26_clubs_fans_t)(const uint32_t*, int);
   ]])
-  local world, nopool, fans = read_world(ctx)
-  nopool, fans = nopool or {}, fans or {}
+  local world, nopool, fans, fansx = read_world(ctx)
+  nopool, fans, fansx = nopool or {}, fans or {}, fansx or {}
   if world then
     SLOTS, REMAP_OWN, OWN = from_world(world)
     REMAP_OWN = own_remap(REMAP_OWN, OWN)
@@ -301,6 +306,28 @@ function m.init(ctx)
         arr[2 * i - 1] = r[2] * 256 + math.min(r[3], 255)
       end
       nfans = tonumber(ffi.cast("fl26_clubs_fans_t", pf)(arr, #fans))
+      if nfans < #fans then
+        log("fl26clubs: only " .. nfans .. " of the world's " .. #fans .. " followers lines taken -- " ..
+            "the rest count as the top club; install the modules again")
+      end
+      if #fansx > 0 then
+        local px = ffi.C.GetProcAddress(h, "fl26_clubs_fans2")
+        if px == nil then
+          log("fl26clubs: this fl26clubs.dll is older than the world (no fl26_clubs_fans2): " .. #fansx ..
+              " club(s) keep the whole-percent followers share and the game's season income -- install the modules again")
+        else
+          local ax = ffi.new("uint32_t[?]", 2 * #fansx)
+          for i, r in ipairs(fansx) do
+            ax[2 * i - 2] = r[1]
+            ax[2 * i - 1] = r[2]
+          end
+          local nx = tonumber(ffi.cast("fl26_clubs_fans_t", px)(ax, #fansx))
+          if nx < #fansx then
+            log("fl26clubs: " .. (#fansx - nx) .. " of the world's " .. #fansx ..
+                " fansx clubs have no fans line -- they keep the game's figures")
+          end
+        end
+      end
     end
   end
   -- with no slot and no kept club the readers are still replaced: the pool slots then only get

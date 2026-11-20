@@ -12,17 +12,18 @@ What goes in, and from where -- every file from a source that is ours and clean:
                             the pack is exactly what is published; otherwise this repository's.
   tools/native/*.c          the DLLs, compiled now with zig (tools/native/build-*.sh)
   the regen face pack       fl26regen_faces.bin (into modules) and the livecpk root
-                            "FL26 Regen Faces" (into livecpk), from $FL26_REGEN_FACES or
-                            ../fl26-modding-research/out/regenfaces. It holds game renders, so it
-                            is never in a repository, only in the package; without it the pack
-                            is built anyway and regens keep the generic face.
+                            "FL26 Regen Faces" (into livecpk): the face pool, built here by
+                            tools/facepool.py from tools/facepool_stats.json (no game renders,
+                            no portraits), or $FL26_REGEN_FACES's copy of it with portraits
+                            (tools/facemini.py pack). Anything else -- the 30.09. pack of game
+                            faces, a smaller or older pool -- stops the build (face_pack).
 
 fl26regions.lua and fl26regnames.lua are not in the pack: they name the competitions and
 regions of one world, so the builder makes them per world and switch-on puts them in place.
 
 The pack is checked before it is written out: no drive letters, no user folders.
 """
-import os, re, shutil, subprocess, sys
+import os, re, shutil, struct, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -34,10 +35,15 @@ ZIG = os.environ.get("ZIG") or next(
 
 # the lua.module lines, in load order (the order of the working install)
 ORDER = [
-    "fl26caps", "fl26appcap", "fl26regs600", "fl26slots250", "fl26slot7", "fl26guards", "fl26regfast", "fl26walk",
+    "fl26gameguard",            # first: a world of the other game stops the game before anything loads (07.11.)
+    "fl26caps",
+    "fl26match",                # FL 2027 only (it stands down in FL26): match ids past 65535, players past
+                                # 65535 (B408: GigaPack beta 1 shipped without it, a new career died)
+    "fl26appcap", "fl26regs600", "fl26slots250", "fl26slot7", "fl26guards", "fl26regfast", "fl26walk",
     "fl26compcache", "fl26joindll",
     "fl26hdr255", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist", "fl26squadlist",
+    "fl26confgroups",           # FL 2027 only (it stands down in FL26): Select Team / Competition Info by confederation
     "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
 ]
@@ -51,9 +57,24 @@ ORDER = [
 BUNDLES = {
     "fl26guards": ["fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
                    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10",
-                   "fl26nullguard11", "fl26nullguard12", "fl26nullguard13"],
+                   "fl26nullguard11", "fl26nullguard12", "fl26nullguard13",
+                   "fl26nullguard14",   # B475: cup bracket of a size the game has no bye list for
+                   "fl26nullguard15"],  # B491: BAL season end, a player key missing from the map
     "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard", "fl26kitguard"],
 }
+# FL 2027's own copy of a module, shipped as <module>.fl27.lua beside it: Install modules puts it in
+# under the module's name in an FL_2027.exe folder (leaguebuilder.shipped_source). The limits set
+# (patchset.py --fl27; since limits-headroom 07.11.: teams 8000, coaches 10000, regulations 2000,
+# players 180017, 4140 match ids a calendar day, 3600 standings tables) and the regulation recount
+# that goes with its 2000 records (mkregs.py 2000); FL26 keeps 0.3.0's
+# The season header: an FL27 set with the standings step (patchset.py <set>-standings) owns the
+# sites fl26hdr255 patches, and the FL27 copy of hdr255 stands down when it finds them done.
+# Select Team: FL 2027's slots 79/80 (the all-club lists) hold 8000, the P150 set's team array,
+# where FL26's hold 2600; the other slots pay for it (143 each with FL 2027's 465 slots, slots-wide:
+# mkslots.py 465 --big 8000). A
+# career keeps its own copy of the slot region, so FL26's module stays as it was (its careers).
+FL27 = {"fl26caps": "fl26caps.fl27", "fl26match": "fl26match.fl27", "fl26regs600": "fl26regs2000.fl27", "fl26hdr255": "fl26hdr255.fl27",
+        "fl26slots250": "fl26slots250.fl27"}
 # modules a shipped one replaced, not bundled into it: an old install still has their line, the
 # two overlap, the second refuses its bytes, and check() read that as "refused the game's exe"
 # (audit 12.10., GitHub #130). Build switches them off like the bundled ones (retired.txt).
@@ -66,23 +87,62 @@ PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
         "fl26edit": "build-edit.sh", "fl26walk": "build-walk.sh",
-        "fl26compcache": "build-compcache.sh", "fl26squadlist": "build-squadlist.sh"}
-def _faces_dir():
-    """$FL26_REGEN_FACES, else fl26-modding-research/out/regenfaces next to the repo or next to
-    any folder above it (a worktree sits deeper than the repo, and the faces were missed there)"""
-    if os.environ.get("FL26_REGEN_FACES"):
-        return os.environ["FL26_REGEN_FACES"]
-    d = REPO
-    while os.path.dirname(d) != d:
-        d = os.path.dirname(d)
-        f = os.path.join(d, "fl26-modding-research", "out", "regenfaces")
-        if os.path.isdir(f):
-            return f
-    return os.path.join(os.path.dirname(REPO), "fl26-modding-research", "out", "regenfaces")
-
-
-FACES = _faces_dir()
+        "fl26compcache": "build-compcache.sh", "fl26squadlist": "build-squadlist.sh",
+        "fl26confgroups": "build-confgroups.sh"}
+# DLLs that go out as committed, not built here: the bytes the GigaPack's seasons were played with
+# (B408: zig does not build fl26match.dll byte for byte again; the committed file is the tested one.
+# 16.11.2026 e7681449: source 9a5a47d + the loading fixes pl_fill, pl_bs and the walk cave, without the B465 work in progress)
+PREBUILT = ["fl26match"]
+# The face pack: the face pool (tools/facepool.py: 32,760 faces made from numbers, none a real
+# player's, no portraits), built here from the repository, or $FL26_REGEN_FACES when it is set (the
+# pool with portraits, tools/facemini.py pack or share: every portrait number needs its .dds). Until 17.11. the pack came from
+# fl26-modding-research/out/regenfaces, which still held the 30.09. pack of 103 game faces
+# ("FL26RF01", 6,704 bytes): every release candidate shipped that one, never the pool. The pack
+# is checked against the pool (facepool.pool_problems) and the build stops on anything else.
+FACES = os.environ.get("FL26_REGEN_FACES") or None
 FACE_ROOT = "FL26 Regen Faces"            # the livecpk root of the portraits (install_modules)
+
+
+def face_pack(out, log=print):
+    """modules\\fl26regen_faces.bin and livecpk\\FL26 Regen Faces of the pack under <out>: the
+    pool built now, or $FL26_REGEN_FACES's copy of it. Stops when the pack is not the pool."""
+    import facepool, tempfile
+    mods = os.path.join(out, "modules")
+    root = os.path.join(out, "livecpk", FACE_ROOT)
+    want = facepool.pool_pack()
+    if FACES:
+        src = os.path.join(FACES, "fl26regen_faces.bin")
+        if not os.path.isfile(src) or not os.path.isdir(os.path.join(FACES, FACE_ROOT)):
+            raise SystemExit("FL26_REGEN_FACES=%s has no fl26regen_faces.bin and %s\\ -- unset it to ship "
+                             "the face pool built from tools/facepool.py" % (FACES, FACE_ROOT))
+        data = open(src, "rb").read()
+        bad = facepool.pool_problems(data, want) + facepool.portrait_problems(data, os.path.join(FACES, FACE_ROOT))
+        if bad:
+            raise SystemExit("FL26_REGEN_FACES=%s: the face pack is not the face pool:\n  %s\n(unset "
+                             "FL26_REGEN_FACES to ship the pool built from tools/facepool.py)" % (FACES, "\n  ".join(bad)))
+        shutil.copy2(src, mods)
+        shutil.copytree(os.path.join(FACES, FACE_ROOT), root)
+        what = "from %s" % FACES
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            facepool.build(tmp, log=lambda *a: None)
+            data = open(os.path.join(tmp, "fl26regen_faces.bin"), "rb").read()
+            if data != want:
+                raise SystemExit("the face pool came out other than facepool.pool_pack()")
+            shutil.copy2(os.path.join(tmp, "fl26regen_faces.bin"), mods)
+            shutil.copytree(os.path.join(tmp, FACE_ROOT), root)
+        what = "built from tools/facepool.py"
+    import hashlib
+    md5 = hashlib.md5(data).hexdigest()
+    if md5 != facepool.POOL_MD5 and not FACES:
+        raise SystemExit("the face pool's md5 is %s, facepool.POOL_MD5 says %s -- a changed pool "
+                         "changes POOL_MD5 in the same commit" % (md5, facepool.POOL_MD5))
+    n = struct.unpack_from("<I", data, 520)[0]
+    made = game_portraits(root)
+    pics = sum(f.lower().endswith(".dds") for _d, _s, fs in os.walk(root) for f in fs)
+    log("pack: face pool %s: %d faces, md5 %s, %d portrait(s) (%d made %dx%d)"
+        % (what, n, md5, pics, made, PORTRAIT, PORTRAIT))
+    return n
 # written so that the line does not match itself
 PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-dump[s]", re.I)
 
@@ -178,6 +238,8 @@ def build(out, log=print):
             open(os.path.join(mods, m + ".lua"), "w", encoding="utf-8", newline="\n").write(bundle(m, BUNDLES[m]))
             continue
         shutil.copy2(source(m), os.path.join(mods, m + ".lua"))
+        if m in FL27:
+            shutil.copy2(source(FL27[m]), os.path.join(mods, m + ".fl27.lua"))
     env = dict(os.environ, ZIG=ZIG)
     sh = shutil.which("sh") or r"C:\Program Files\Git\bin\sh.exe"
     for name, script in DLLS.items():
@@ -190,14 +252,9 @@ def build(out, log=print):
             p = os.path.join(mods, junk)
             if os.path.exists(p):
                 os.remove(p)
-    faces = os.path.join(FACES, "fl26regen_faces.bin")
-    if os.path.exists(faces) and os.path.isdir(os.path.join(FACES, FACE_ROOT)):
-        shutil.copy2(faces, mods)
-        shutil.copytree(os.path.join(FACES, FACE_ROOT), os.path.join(out, "livecpk", FACE_ROOT))
-        log("pack: regen face pack from %s (%d portrait(s) made %dx%d)"
-            % (FACES, game_portraits(os.path.join(out, "livecpk", FACE_ROOT)), PORTRAIT, PORTRAIT))
-    else:
-        log("pack: NO regen face pack (%s) -- regens will keep the generic face" % FACES)
+    for name in PREBUILT:
+        shutil.copy2(os.path.join(HERE, "native", name + ".dll"), os.path.join(mods, name + ".dll"))
+    face_pack(out, log)
     open(os.path.join(mods, "..", "modules.txt"), "w", encoding="utf-8", newline="\n").write(
         "".join(m + "\n" for m in ORDER))
     open(os.path.join(mods, "..", "retired.txt"), "w", encoding="utf-8", newline="\n").write(

@@ -41,6 +41,7 @@ from PIL import Image, ImageDraw, ImageFont
 COMP, REG = 36, 2352
 C_ID, C_CODE = 0x05, 0x08
 R_ID, R_CID, R_GROUP, R_NAME = 0x02, 0x08, 0x0a, 0x14
+C_ID_HI, R_CID_HI = 0x07, 0x910    # the ids' high bytes (cidwide step, mkleague.CID_HI)
 NO_GROUP = 255
 FONT = r"C:\Windows\Fonts\arialbd.ttf"
 VARIANTS = [("_l", 256), ("_ll", 512), ("_b_l", 256), ("_b_ll", 512),
@@ -58,12 +59,12 @@ def competitions(base):
     for i in range(len(reg) // REG):
         r = reg[i * REG:(i + 1) * REG]
         if r[R_GROUP] == NO_GROUP:
-            names.setdefault(r[R_CID],
+            names.setdefault(r[R_CID] | r[R_CID_HI] << 8,
                              r[R_NAME:R_NAME + 0x73].split(bytes(1))[0].decode("utf-8", "replace"))
     out = []
     for i in range(len(comp) // COMP):
         r = comp[i * COMP:(i + 1) * COMP]
-        cid = r[C_ID]
+        cid = r[C_ID] | r[C_ID_HI] << 8
         out.append((cid, r[C_CODE:].split(bytes(1))[0].decode("latin1"), names.get(cid, "")))
     return out
 

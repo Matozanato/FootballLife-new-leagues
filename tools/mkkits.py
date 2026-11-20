@@ -33,7 +33,7 @@ read back out or modified.
 
   # --colours <json> {team id: [home shirt, away shirt]} in NewLife's words ("stripes #ffffff
   # #0052d5 #ffffff"): such a club gets the shipped kit nearest its own colours instead of the
-  # one its place in the roster gives
+  # one its place in the roster gives; a third word ("kit server") counts its donors apart
 
 `--unipar` is the shipped archive. Take the newest copy: the game reads the download cpks after
 Data, and data_s2526c.cpk carries the last one (dt34_g4.cpk has an older one):
@@ -51,6 +51,9 @@ the engine's plain fallback kit (seen in game 2026-09-27: donor 2655, no u2655p1
 
 Seen in game 2026-09-27: club 72163 with the files named 6627_ACL_* wears its donor's first
 and second kit in the pre-match screen and the Strip screen.
+
+--unicolor <the game's UniColor.bin> also writes UniColor.bin with a record per club of ours: the
+kit menus offer as many kits as it says, home and away for a team without one.
 
 This writes the per-club files and, with --archive, a repacked UniformParameter.bin with our
 entries appended under the same names. Sider looks the entry up by that name
@@ -163,8 +166,10 @@ def donors(raw, es, textures=None, skip=()):
 
 def kinds_of(blobs):
     """the kinds a club of ours is given: the three, and the third kit when it has one (the
-    realUni ones), or the three plain ones"""
-    return tuple(k for k in KINDS + (THIRD,) + PLAIN_KINDS if k in blobs)
+    realUni ones), or the three plain ones -- in the shipped archive's order, the player kits
+    before the goalkeeper's (1st, 2nd, 3rd, GK1st). Mato 07.11.: with the third written after
+    GK1st only two kits could be picked in FL27."""
+    return tuple(k for k in KINDS[:2] + (THIRD,) + KINDS[2:] + PLAIN_KINDS if k in blobs)
 
 
 def plain_donors(raw, es, skip=()):
@@ -251,20 +256,24 @@ def matched(clubs, pool, colours):
     firsts = [(tid, b["1st_realUni"]) for tid, b in pool]
     both = firsts + [(tid, b["2nd_realUni"]) for tid, b in pool]
     by_id = dict(pool)
-    used, out = {}, []
+    used, apart, out = {}, {}, []
     for i, c in enumerate(clubs):
-        home, away = [shirt(w) for w in (list(colours.get(c[0]) or []) + [None, None])[:2]]
+        want = list(colours.get(c[0]) or [])
+        home, away = [shirt(w) for w in (want + [None, None])[:2]]
         if not home:
             dtid, blobs = pool[i % len(pool)]
             out.append((c, (dtid, blobs)))
             continue
-        dtid = closest(firsts, home, used)[0]
-        used[dtid] = used.get(dtid, 0) + 1
+        # a third word ("kit server", B444): colours of a Kit Server kit, its donors counted apart
+        # so the NewLife clubs get the kits they got before
+        u = apart if len(want) > 2 else used
+        dtid = closest(firsts, home, u)[0]
+        u[dtid] = u.get(dtid, 0) + 1
         blobs = dict(by_id[dtid])
         blobs["1st_realUni"] = painted(blobs["1st_realUni"], home)
         if away:
-            atid, ablob = closest([x for x in both if x[0] != dtid], away, used)
-            used[atid] = used.get(atid, 0) + 1
+            atid, ablob = closest([x for x in both if x[0] != dtid], away, u)
+            u[atid] = u.get(atid, 0) + 1
             blobs["2nd_realUni"] = painted(ablob, away)
         out.append((c, (dtid, blobs)))
     return out
@@ -399,7 +408,60 @@ def write(argv, root, do_list, raw, es, hdr, pairs, items=None):
         os.makedirs(os.path.dirname(p), exist_ok=True)     # no club written: no folder yet (#54)
         open(p, "wb").write(out)
         print("wrote %s (%d bytes, shipped entries plus ours)" % (p, len(out)))
+    uc = argv[argv.index("--unicolor") + 1] if "--unicolor" in argv else None
+    if uc:
+        out, added = unicolor(uc, pairs)
+        p = os.path.join(root, TEAM_DIR.replace("/", os.sep), "UniColor.bin")
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, "wb").write(out)
+        print("wrote %s (%d clubs of ours added: the kit menus offer each its kits)" % (p, added))
     return 0
+
+
+# UniColor.bin (same folder): a record of 85 bytes per team, sorted by team id -- u32 id, u8 the
+# number of kits, then 10 slots of u16 kind and two RGB triples (shirt, second colour).  The kit
+# select menus offer as many kits as this count says; a team without a record gets home and away
+# only, which is what every club of ours had (mato 08.11.: "jos uvijek vidim samo dva dresa od
+# svake ekipe"), the third kit made, in UniformParameter and in Kit Server, but never offered.
+UC_REC, UC_SLOTS = 85, 10
+UC_KIND = {"1st": 0, "2nd": 1, "3rd": 2, "GK1st": 16}
+
+
+def unicolor_records(raw):
+    """{team id: record} of a UniColor.bin, unpacked"""
+    if len(raw) % UC_REC:
+        raise ValueError("UniColor.bin: %d bytes, not records of %d" % (len(raw), UC_REC))
+    return {struct.unpack_from("<I", raw, i)[0]: raw[i:i + UC_REC] for i in range(0, len(raw), UC_REC)}
+
+
+def unicolor_record(tid, dblobs):
+    """the record of a club of ours: one slot per kit it is given (kinds_of order), the colours
+    of each definition"""
+    kinds = kinds_of(dblobs)[:UC_SLOTS]
+    out = bytearray(struct.pack("<IB", tid, len(kinds)))
+    for k in range(UC_SLOTS):
+        if k < len(kinds):
+            c = colours_of(dblobs[kinds[k]])
+            out += struct.pack("<H", UC_KIND[kinds[k].replace("_realUni", "")]) + bytes(c[0]) + bytes(c[1])
+        else:
+            out += bytes(2) + bytes([255]) * 6
+    return bytes(out)
+
+
+def unicolor(path, pairs):
+    """the game's UniColor.bin with a record for every club of ours that has kits, sorted by
+    team id; the game's records stay byte for byte, a club the game has keeps its own"""
+    data, hdr = open(path, "rb").read(), None
+    if data[3:8] == b"WESYS":
+        hdr, data = data[:3], pesdb.wesys_unpack(data)
+    recs = unicolor_records(data)
+    added = 0
+    for (tid, _), (_, dblobs) in pairs:
+        if tid not in recs and kinds_of(dblobs):
+            recs[tid] = unicolor_record(tid, dblobs)
+            added += 1
+    out = b"".join(recs[t] for t in sorted(recs))
+    return (pesdb.wesys_pack(out, hdr) if hdr is not None else out), added
 
 
 def repack(items, pairs):

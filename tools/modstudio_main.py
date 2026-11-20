@@ -33,6 +33,10 @@ if __name__ == "__main__":
     # 0.2.4: Build runs in a process of its own (modstudio/apart.py); in the exe that process is
     # the exe again, and this sends it to the build instead of opening a second window
     multiprocessing.freeze_support()
+    # 0.3.1: the start's drawing runs in a process of its own (modstudio/splash.py), the exe again
+    if "--splash" in sys.argv:
+        from modstudio import splash
+        sys.exit(splash.alone(sys.argv[sys.argv.index("--splash") + 1]))
     if "--selftest-build" in sys.argv:
         i = sys.argv.index("--selftest-build")
         selftest_build(sys.argv[i + 1], sys.argv[i + 2])

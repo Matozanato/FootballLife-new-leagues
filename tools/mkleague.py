@@ -43,6 +43,55 @@ NAME_RUN2 = 0x4b2
 NAME_END = NAME_RUN2 + 10 * NAME_SLOT
 E_TEAM, E_EID, E_CID, E_ORDER = 0x00, 0x04, 0x08, 0x09
 
+# The competition id's high byte, read by the exe only with the caps set's cidwide step
+# (tools/cidwide.py; ids up to 1023). Zero in every shipped row and every world built before it,
+# so the readers below give the same id as the low byte alone. +0x910 is byte 0x53 of name slot
+# 19 (NAME_RUN2 + 9 * NAME_SLOT = 0x8bd): put_names keeps that slot's name to 82 bytes in a
+# wide world. The order (+9) has to stay below 64: the exe packs cid<<6 | order-1.
+CID_HI, R_CID_HI, E_CID_HI = 0x07, 0x910, 0x0b
+CID_LIMIT, ORDER_LIMIT = 1024, 64
+# True when the game's caps set has the cidwide step (mkworld.set_cid_wide): only then may an id
+# go past 255, and only then do the setters write the high byte -- a world below 256 is the same
+# bytes either way, as every high byte is zero already.
+CID_WIDE = False
+
+
+def comp_cid(b, o=0):
+    """the competition id of the Competition.bin row at b[o:]"""
+    return b[o + CID_OFF] | b[o + CID_HI] << 8
+
+
+def reg_cid(b, o=0):
+    """the competition id of the CompetitionRegulation.bin row at b[o:]"""
+    return b[o + R_CID] | b[o + R_CID_HI] << 8
+
+
+def ent_cid(b, o=0):
+    """the competition id of the CompetitionEntry.bin row at b[o:]"""
+    return b[o + E_CID] | b[o + E_CID_HI] << 8
+
+
+def _put_cid(b, lo, hi, cid):
+    if not 0 <= cid < (CID_LIMIT if CID_WIDE else 256):
+        raise ValueError("competition id %d does not fit: %s" % (
+            cid, "the game takes ids up to %d" % (CID_LIMIT - 1) if CID_WIDE else
+            "ids past 255 need the caps set with the cidwide step in the game"))
+    b[lo] = cid & 0xff
+    if CID_WIDE or cid > 255:
+        b[hi] = cid >> 8
+
+
+def set_comp_cid(b, cid, o=0):
+    _put_cid(b, o + CID_OFF, o + CID_HI, cid)
+
+
+def set_reg_cid(b, cid, o=0):
+    _put_cid(b, o + R_CID, o + R_CID_HI, cid)
+
+
+def set_ent_cid(b, cid, o=0):
+    _put_cid(b, o + E_CID, o + E_CID_HI, cid)
+
 
 def load(d, n):
     return bytearray(pesdb.wesys_unpack(open(os.path.join(d, n), "rb").read()))
@@ -93,7 +142,7 @@ def find_code(comp, code):
             return i
     cid = SHIPPED_CID.get(code)
     for i in range(n if cid is not None else 0):
-        if comp[i * COMP + CID_OFF] == cid:
+        if comp_cid(comp, i * COMP) == cid:
             return i
     return None
 
@@ -112,36 +161,44 @@ def put_names(b, off, s, skip=()):
     """the regulation at b[off:] called s in every name slot but those in skip"""
     for k in range(NAME_SLOTS):
         if k not in skip:
-            put(b, off + name_at(k), s, NAME_SLOT)
+            # slot 19 holds the competition id's high byte at +0x53 (R_CID_HI): in a wide world
+            # its name stops at 82 bytes and the rest of the slot is left as it is
+            n = R_CID_HI - name_at(k) if CID_WIDE and k == NAME_SLOTS - 1 else NAME_SLOT
+            put(b, off + name_at(k), s, n)
 
 
 def enc_region(rid):
-    """Competition.bin +3 from a region id, 0..127.
+    """Competition.bin +3 from a region id, 0..255: the region rotated left by three bits.
 
-    The byte: bits 3..7 = region bits 0..4, bit 0 = region bit 5, bit 1 = region bit 6, bit 2
-    unused (zero).
+    The byte: bits 3..7 = region bits 0..4, bit 0 = region bit 5, bit 1 = region bit 6, bit 2 =
+    region bit 7.
 
       * ids 0..31 are rid * 8, as they have always been -- the stock game reads bits 3..7 only;
       * bit 0 (ids 32..63) is read once sider/fl26reg64.lua or fl26reg128.lua is installed;
-      * bit 1 (ids 64..127) is read only by sider/fl26reg128.lua.
+      * bit 1 (ids 64..127) is read only by sider/fl26reg128.lua;
+      * bit 2 (ids 128..255) only by a caps set with the regions step (tools/regions.py).
 
-    Bits 0..2 were zero in every shipped row and bit 1 in every row ever written, so a world
-    that never uses a region >= 64 encodes and decodes exactly as before. Without the module a
-    high region silently decodes as a lower one (rid & 31, or rid & 63 under fl26reg64), so the
-    module and the data go together.
+    Bits 0..2 were zero in every shipped row, bit 1 in every row written before fl26reg128 and
+    bit 2 in every row written before the regions step, so a world that never uses a region >= 128
+    encodes and decodes exactly as before. Without the module a high region silently decodes as a
+    lower one (rid & 31, & 63 under fl26reg64, & 127 under fl26reg128 alone), so the module and the
+    data go together: the league builder hands out 128 and up only to a game whose caps set has
+    the step (REGION_WIDE, leaguebuilder.use_game).
     """
-    if not 0 <= rid < 128:
-        raise ValueError("region %d is outside 0..127" % rid)
-    return ((rid & 0x1f) << 3) | ((rid >> 5) & 3)
+    if not 0 <= rid <= REGION_WIDE:
+        raise ValueError("region %d is outside 0..%d" % (rid, REGION_WIDE))
+    return ((rid & 0x1f) << 3) | ((rid >> 5) & 7)
 
 
 def dec_region(byte):
-    """The region id in a Competition.bin +3 byte, read the way fl26reg128 makes the game read
-    it (bits 3..7, then bit 0 -> 5 and bit 1 -> 6). The inverse of enc_region for 0..127."""
-    return ((byte >> 3) & 0x1f) | ((byte & 3) << 5)
+    """The region id in a Competition.bin +3 byte, read the way the regions step makes the game
+    read it (bits 3..7, then bits 0..2 -> 5..7; fl26reg128 alone reads bits 0..1 only, which is the
+    same for every byte with bit 2 clear). The inverse of enc_region for 0..255."""
+    return ((byte >> 3) & 0x1f) | ((byte & 7) << 5)
 
 
 REGION_MAX = 127        # the top region fl26reg128 reads
+REGION_WIDE = 255       # the top region with fl26caps' regions step (tools/regions.py)
 
 
 R_TIER = 0x10                    # dword; bits 15-17 hold the division (1 = D1, 2 = D2, 3 = D3)
@@ -185,7 +242,7 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
     three files being written out and read back between every league.
     """
     ncomp, nreg, nent = len(comp) // COMP, len(regs) // REG, len(ents) // ENT
-    cids = {comp[i * COMP + CID_OFF] for i in range(ncomp)}
+    cids = {comp_cid(comp, i * COMP) for i in range(ncomp)}
     regids = {int.from_bytes(regs[i * REG + R_ID:i * REG + R_ID + 2], "little")
               for i in range(nreg)}
     if cid in cids:
@@ -200,20 +257,21 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
     if not quiet:
         print("competition row copied from %s (region %d, flag %d)"
               % (proto_code, c[REGION_OFF], c[FLAG_OFF]))
-    scid = c[CID_OFF]
-    c[REGION_OFF], c[CID_OFF] = region, cid       # a byte, not an id: see enc_region
+    scid = comp_cid(c)
+    c[REGION_OFF] = region                         # a byte, not an id: see enc_region
+    set_comp_cid(c, cid)
     put(c, CODE_OFF, code, COMP - CODE_OFF)
     comp += c
 
     # the regulation to copy is the one belonging to that same competition
-    rsrc = next(i for i in range(nreg) if regs[i * REG + R_CID] == scid)
+    rsrc = next(i for i in range(nreg) if reg_cid(regs, i * REG) == scid)
     g = bytearray(regs[rsrc * REG:(rsrc + 1) * REG])
     # +0x00 is a text id: non-zero means the menus look the name up and ignore the string
     # at +0x14.  Copying the Premier League's 79 gave a league called Premier League with
     # ten placeholder clubs in it.  Zero falls back to the inline name.
     g[R_NAMEID:R_NAMEID + 2] = bytes(2)
     g[R_ID:R_ID + 2] = reg.to_bytes(2, "little")
-    g[R_CID] = cid
+    set_reg_cid(g, cid)
     g[R_TEAMS] = (g[R_TEAMS] & 0xc0) | (len(teams) & 0x3f)
     if tier is not None:
         set_tier(g, tier)
@@ -226,7 +284,8 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
         e = bytearray(ENT)
         e[E_TEAM:E_TEAM + 4] = t.to_bytes(4, "little")
         e[E_EID:E_EID + 4] = (eid + 1 + k).to_bytes(4, "little")
-        e[E_CID], e[E_ORDER] = cid, k + 1
+        set_ent_cid(e, cid)
+        e[E_ORDER] = k + 1
         ents += e
     if not quiet:
         print("%s: competition %d, regulation %d, region %d, %d clubs, division %d"

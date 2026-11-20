@@ -27,4 +27,11 @@ c = W.europe_count([0] * 20)
 ok("no play-offs: room 36, the rest from the big five", c[0] == (20, 36)
    and "Champions League 20/36 (16 more from the big five)" in W.europe_count_text(c))
 ok("no Conference League", set(W.europe_count(shipped, uecl=False)) == {0, 1})
+# B425 (11.11.2026): FL 2027's rounds have their own direct entrants -- Prijedlog C 28 / 12 / 4, its wide
+# Conference League 28 / 12 / 0; the plan's summary counted a FL 2027 world against FL 2026's 28 / 20 / 20
+c = W.europe_count(shipped, rounds=W.C_CONFIG)
+ok("Prijedlog C: 28 / 12 / 4 straight in", [c[k][1] for k in (0, 1, 2)] == [28, 12, 4])
+c = W.europe_count(shipped, rounds=W.CW_CONFIG)
+ok("the wide Conference League: 28 / 12 / 0 straight in", [c[k][1] for k in (0, 1, 2)] == [28, 12, 0])
+ok("no rounds given: as before", W.europe_count(shipped, rounds=None) == W.europe_count(shipped))
 print("1..%d" % N)

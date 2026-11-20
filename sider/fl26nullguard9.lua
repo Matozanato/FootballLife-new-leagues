@@ -49,6 +49,12 @@ Install:
      -- after fl26nullguard8.lua, so the trampolines are written in a fixed order
   3. start the game and read sider.log
 
+FL 2027 (09.11.): its limits set widens the match id (fl26caps.fl27, M4) and has already written
+mov edx, dword ptr [rcx+rdx*4] + nop (8b149190) over the movzx at 0x140cd6a21 when this runs. The
+guard is the same there: the trampoline then does the widened read, four bytes for four, so both
+jumps keep their offsets. Without it the guard refused those bytes and Mod Studio's Home said
+"NOT READY" in every FL27 game.
+
 The exe has no ASLR (DllCharacteristics 0x8120), so the addresses are absolute and stable.
 The applier checks that anyway by verifying the bytes.
 --]]
@@ -85,8 +91,18 @@ local function tohex(s)
   return table.concat(out)
 end
 
+-- FL 2027: the limits set (fl26caps.fl27, loaded before us) has widened the read to a u32 one
+local WIDE_SITE = "8b542440488b4c24488b149190"
+local WIDE_TRAMP = "8b542440488b4c24484885c974098b149190e92e817afee9b1857afe00000000"
+
 function m.init(ctx)
   local n = #patches
+  if memory.read(patches[2].va, #WIDE_SITE / 2) == unhex(WIDE_SITE) then
+    patches[1].new = WIDE_TRAMP
+    patches[1].why = patches[1].why:gsub("movzx edx,word", "mov edx,dword")
+    patches[2].old = WIDE_SITE
+    log("fl26caps: nullguard9: the match id read is already u32 (FL 2027 limits), guarding that one")
+  end
   log(string.format("fl26caps: set '%s', %d patches, verifying", "nullguard9", n))
 
   -- pass 1: read only.  Nothing is written until every site has been confirmed.

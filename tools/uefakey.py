@@ -123,13 +123,13 @@ def candidates(recipe, base):
     comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
     regrow = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little"): regs[i * M.REG:(i + 1) * M.REG]
               for i in range(len(regs) // M.REG)}
-    region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+    region_of_cid = {M.comp_cid(comp, i * M.COMP): M.dec_region(comp[i * M.COMP + M.REGION_OFF])
                      for i in range(len(comp) // M.COMP)}
     out = []
     country = game_countries(base)
     for rid, name, clubs, _shipped in B.game_europe_tops(base):
         if rid in country:
-            cup = B.home_cup(regrow, region_of_cid, region_of_cid.get(regrow[rid][M.R_CID]))
+            cup = B.home_cup(regrow, region_of_cid, region_of_cid.get(M.reg_cid(regrow[rid])))
             out.append({"id": "g%d" % rid, "name": name, "country": country[rid], "clubs": clubs,
                         "cup": cup is not None, "game": True})
     conf = B.country_confederations(base)
@@ -143,11 +143,13 @@ def candidates(recipe, base):
     return out
 
 
-def ranked(recipe, base):
+def ranked(recipe, base, candidate_rows=None):
     """(the candidates in the recipe's uefa_rank order, the ones left out): a recipe without a
     ranking yet gets DEFAULT_ORDER by country, Russia left out; a league new since the ranking
     was saved goes in by its country's default rank"""
-    cands = candidates(recipe, base)
+    # The integrated editor already loaded these candidates in a worker. Reuse
+    # exactly the same ordering without repeating database scans on the UI thread.
+    cands = candidates(recipe, base) if candidate_rows is None else candidate_rows
     saved = [str(x) for x in recipe.get("uefa_rank") or []]
     if not saved:
         on = [c for c in cands if c["country"] not in OUT_BY_DEFAULT]

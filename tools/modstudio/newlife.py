@@ -297,7 +297,7 @@ class Release:
                 (have.setdefault(key, []) if c["in_game"] == "1" else by[key]).append(cid)
         out = []
         for (cty, name), ids in by.items():
-            best = sorted((P.overall(r) for i in ids for r in self.squads.get(i, [])), reverse=True)
+            best = sorted((P.level(r) for i in ids for r in self.squads.get(i, [])), reverse=True)
             top = best[:11 * len(ids)]
             out.append({"name": name, "key": (cty, name),
                         "country": country_of(cty) if cty.isdigit() else "", "clubs": sorted(ids),
@@ -314,11 +314,11 @@ class Release:
             want = {str(i).strip() for i in pick}
             mine = [r for r in self.squads.get(cid, []) if str(r.get("newlife_id", "")).strip() in want]
             if mine:
-                return sorted(mine, key=lambda r: -P.overall(r))[:P.SQUAD]
-        rows = sorted(self.squads.get(cid, []), key=lambda r: -P.overall(r))
+                return sorted(mine, key=lambda r: -P.level(r))[:P.SQUAD]
+        rows = sorted(self.squads.get(cid, []), key=lambda r: -P.level(r))
         gk = [r for r in rows if r.get("Registered Position") == "GK"][:3]
         out = gk + [r for r in rows if r.get("Registered Position") != "GK"]
-        return sorted(out[:P.SQUAD], key=lambda r: -P.overall(r))
+        return sorted(out[:P.SQUAD], key=lambda r: -P.level(r))
 
 
 def who(r):
@@ -348,7 +348,26 @@ def _full_name(a, b):
 _GAME_IDS = {}
 
 
-def game_twin(rel, db):
+_loose = P.loose_name                    # B421: the looser name of game_twin's second pass
+
+
+def _close(r, row, cm=3):
+    """a release row and a player of the game (lbplayers.Squads.row): one nationality, a year and cm
+    centimetres apart at most, the same side of the goalkeeper line (B421)"""
+    age, tall, a, t = (_num(x.get(f)) for x in (r, row) for f in ("Age", "Height (cm)"))
+    return (None not in (age, tall, a, t) and abs(a - age) <= 1 and abs(t - tall) <= cm
+            and str(r.get("Nationality") or "").strip() == str(row.get("Nationality") or "").strip() != ""
+            and not P.keeper_side(r.get("Registered Position") or "", row.get("Registered Position") or ""))
+
+
+def _him(r, g, db, twin):
+    """whether player g of the game is the player of release row r: the names fit
+    (P.same_player), or game_twin paired the two (B421: its second pass pairs names same_player
+    alone does not take, by the club, the nationality, the age and the height)"""
+    return P.same_player(r["name"], db.name(int(g))) or twin(r) == str(g)
+
+
+def game_twin(rel, db, national=()):
     """twin(row) -> the game's id (text) of the player a release row is when the release gives
     none, or "". B102 (David 17.10., JamesNotLike 19.10., Cala79 24.10.): NewLife 1.5b8 names no
     game id for some 1100 players the game has -- Elliot Anderson at Manchester City, the game's
@@ -356,8 +375,23 @@ def game_twin(rel, db):
     was a free agent: 447 such pairs in one world. The same player: the same full name, an age a
     year apart at most (the release's season and the game's), a height 3 cm apart at most, on
     the same side of the goalkeeper line; one player of the game and one row of the release so,
-    and nobody the release names by his id. A name and nothing else is too little."""
-    key = (id(rel), hash(bytes(db.players)))           # one release and one set of tables: read once
+    and nobody the release names by his id. A name and nothing else is too little.
+
+    B421 (11.11.2026, a Reddit report: "many duplicate players", "top players without clubs"):
+    the release and the game spell some names apart -- "Marc-Andre ter Stegen" and the game's
+    "M. ter Stegen", both at Ajax, "Everton Cebolinha" and "Everton" at Santos -- and each was a
+    new player (a new id, a made face) beside the game's, who lost his club: NewLife 1.6b4 on
+    FL 2027 had some 230 such pairs. A second pass takes who the first left, by a looser name
+    (_loose) and more than the name: the same nationality, the age and the height as above, and
+      - the release gives his id in the game, or
+      - the game has him at the club the release has him at (one such player there), or
+      - the height a centimetre apart at most, a name cut short or with a part left out (not a
+        single word, not another first name), and the game's player at no club the release
+        leaves alone (national: the national teams' ids -- without them only a player whose
+        every team the release has);
+    again one player of the game and one row of the release so."""
+    national = frozenset(national or ())
+    key = (id(rel), hash(bytes(db.players)), national)   # one release and one set of tables: read once
     if key in _GAME_IDS and _GAME_IDS[key][0] is rel:
         return _GAME_IDS[key][1]
     rows = [r for v in rel.squads.values() for r in v]
@@ -395,6 +429,75 @@ def game_twin(rel, db):
             found[id(r)] = str(hit[0])
     twice = collections.Counter(found.values())
     found = {k: g for k, g in found.items() if twice[g] == 1}
+    # B421: the second pass. First the ids the release gives: right when the names fit as before,
+    # and also when they fit loosely and the rest says it is him ("Hans Nicolussi Caviglia" with
+    # the id of the game's "Nicolussi Caviglia": the id was right and same_player threw it away).
+    # An id that names somebody else (the release's ids are FL 2026's, and FL 2027 gave some
+    # 1,800 of them to other players) leaves that player free to be found by his name.
+    def close(r, p, cm=3):
+        """the release row and the game's player: one nationality, a year and cm centimetres apart
+        at most, the same side of the goalkeeper line"""
+        age, tall = _num(r.get("Age")), _num(r.get("Height (cm)"))
+        return (age is not None and tall is not None and size(p)[0] is not None and size(p)[1] is not None
+                and abs(size(p)[0] - age) <= 1 and abs(size(p)[1] - tall) <= cm
+                and str(r.get("Nationality") or "").strip() == show(p, "Nationality")
+                and not P.keeper_side(r.get("Registered Position") or "", show(p, "Registered Position")))
+
+    taken = set(found.values())
+    right, by_id = set(), collections.defaultdict(list)
+    for r in rows:
+        g = _num(r.get("game_id"))
+        if g is None or g not in db.index:
+            continue
+        if P.same_player(r["name"], db.name(g)):
+            right.add(str(g))
+        elif id(r) not in found and str(g) not in taken and _loose(r["name"], db.name(g)) and close(r, g):
+            by_id[g].append(id(r))
+    for g, ids in by_id.items():
+        if len(ids) == 1 and str(g) not in right:
+            found[ids[0]] = str(g)
+    taken = set(found.values())
+    home = {int(c) for c, row in rel.clubs.items() if str(c).isdigit() and row.get("in_game") == "1"}
+    pool = collections.defaultdict(list)
+    for pid in db.index:
+        if str(pid) in right or str(pid) in taken:
+            continue
+        nat = show(pid, "Nationality")
+        for w in {P._letters(x) for x in P._words(db.name(pid))}:
+            if len(w) >= 3:
+                pool[(nat, w)].append(pid)
+    claims = collections.defaultdict(list)             # game player -> [(row, at his club)]
+    for cid, v in rel.squads.items():
+        here = int(cid) if str(cid).isdigit() and int(cid) in home else None
+        for r in v:
+            if id(r) in found:
+                continue
+            g = _num(r.get("game_id"))
+            if g is not None and g in db.index and P.same_player(r["name"], db.name(g)):
+                continue
+            nat = str(r.get("Nationality") or "").strip()
+            cm = _num(r.get("Height (cm)"))
+            if not nat or cm is None:
+                continue
+            fit = []
+            for p in {p for w in {P._letters(x) for x in P._words(r.get("name") or "")} for p in pool.get((nat, w), ())}:
+                if not close(r, p):
+                    continue
+                kind = _loose(r["name"], db.name(p))
+                if kind:
+                    fit.append((p, kind))
+            at = [p for p, _k in fit if here is not None and here in db.clubs_of.get(p, ())]
+            if len(at) == 1:
+                claims[at[0]].append((id(r), True))
+            elif not at and len(fit) == 1:
+                p, kind = fit[0]
+                if (kind in ("same", "part", "initial") and abs(size(p)[1] - cm) <= 1
+                        and all(t in home for t in db.clubs_of.get(p, ()) if t not in national)):
+                    claims[p].append((id(r), False))
+    for p, c in claims.items():
+        c = [x for x in c if x[1]] if sum(1 for x in c if x[1]) == 1 else c
+        if len(c) == 1:
+            found[c[0][0]] = str(p)
     _GAME_IDS.clear()
     _GAME_IDS[key] = (rel, lambda r: found.get(id(r), ""))
     return _GAME_IDS[key][1]
@@ -556,7 +659,7 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     pl = recipe.setdefault("players", {})
     mover, db = _movers(recipe, info, rel)
     proto = db.proto() if db is not None else []
-    league_ovr = [P.overall(r) for i in clubs for r in rel.squad(i, picks.get(str(int(i))))]
+    league_ovr = [P.level(r) for i in clubs for r in rel.squad(i, picks.get(str(int(i))))]
     stayed = elsewhere = 0
     for k, i in enumerate(clubs):
         c, s, e = _club_players(rel, i, mover, proto, league_ovr, picks.get(str(int(i))))
@@ -577,8 +680,9 @@ def link_below_game(recipe, added, parents, countries):
     name, its strength)] just put in the recipe; parents: the game's leagues with no league of the
     game below them (shipped_parents); countries: {regulation: country} (game_league_countries).
     The strongest league added for a country goes under its game league, when the country has
-    exactly one such league and no league of the recipe is under it already -- the game follows
-    one link down (GitHub #98). The release's own leagues of the game are not added, so the
+    exactly one such league and no league of the recipe is under it already -- a second one there
+    would make the two groups of one division (GitHub #98), which is the user's choice on the
+    Leagues page, not this one's. The release's own leagues of the game are not added, so the
     league is below. Only under a league of the game: two leagues of the release may be groups of
     one division. Returns [(league name, regulation, game league name)]."""
     taken = set()
@@ -606,8 +710,8 @@ def _movers(recipe, info, rel=None):
     mover(row) says what happens to the player of a release row (see add_league)"""
     pl = recipe.setdefault("players", {})
     db = P.Squads(info["base"]) if info and info.get("base") else None
-    twin = game_twin(rel, db) if rel is not None and db is not None else (lambda r: "")
     national = (info or {}).get("national") or set()
+    twin = game_twin(rel, db, national) if rel is not None and db is not None else (lambda r: "")
     taken = {str(r) for c in pl.values() for r in c.get("join") or []}   # moved by an earlier league
     leaving = collections.Counter()
 
@@ -624,8 +728,14 @@ def _movers(recipe, info, rel=None):
             g = twin(r)                       # B102: the release has no id for him, the game has him
         if db is None or not g.isdigit() or int(g) not in db.index:
             return "copy", None, False
-        if not P.same_player(r["name"], db.name(int(g))):
+        if not _him(r, g, db, twin):
             return "copy", None, False        # another database: that id is somebody else
+        clubs = (info or {}).get("clubs") or {}
+        if any(B.special_team((clubs.get(t) or ("",))[0]) for t in db.clubs_of.get(int(g), [])):
+            # a legend of the Classic Teams (or an ML default player) is not the namesake playing
+            # in a lower league today: Marcelo, Fernandinho and Nene left Monsters / Titans
+            # Classics for Brazilian Serie C/D clubs in the Megapack (08.11.)
+            return "copy", None, False
         if g in taken:
             return "keep", g, True            # an earlier league already has him
         old = [t for t in db.clubs_of.get(int(g), []) if t not in national]
@@ -675,6 +785,12 @@ def release_fields(r):
     if all(str(ch.get(s, "0")).strip() in ("0", "") for s in SKILLS):
         for s in SKILLS:
             ch.pop(s, None)
+    # Megapack (mato 06.11.): a release with a "shirt" column gives each player his club number
+    # (Build keeps every number once in the squad: lbplayers.unique_shirts). A release without
+    # one, every NewLife up to 1.6, reads as it did: the numbers come by position
+    n = P.given_shirt(r)
+    if n:
+        ch["shirt"] = str(n)
     return ch
 
 
@@ -707,7 +823,7 @@ def _club_players(rel, i, mover, proto, league_ovr, pick=None):
         else:
             ed[str(len(ed) - len(join))] = ch
     keep = max(len(sq) - len(join), P.MIN_SQUAD - len(join))
-    want = P.fill_level([P.overall(r) for r in sq], league_ovr)
+    want = P.fill_level([P.level(r) for r in sq], league_ovr)
     for n in range(len(ed) - len(join), keep):              # prototype players who stay
         if n < len(proto) and want is not None and str(n) not in ed:
             ed[str(n)] = P.at_level(proto[n], want)
@@ -769,7 +885,7 @@ def put_club(recipe, rel, x, k, cid, info=None):
     mover, db = _movers(recipe, info, rel)
     proto = db.proto() if db is not None else []
     mates = [j for j, y in rel.clubs.items() if y.get("league") and y.get("league") == c.get("league")]
-    league_ovr = [P.overall(r) for j in mates for r in rel.squad(j)]
+    league_ovr = [P.level(r) for j in mates for r in rel.squad(j)]
     entry, stayed, elsewhere = _club_players(rel, cid, mover, proto, league_ovr, picks_of(x, cid))
     pl[P.new_key(x["name"], k)] = entry
     return stayed, elsewhere
@@ -822,7 +938,7 @@ def repick(recipe, rel, x, k, pick, info=None):
     proto = db.proto() if db is not None else []
     c = rel.clubs[cid]
     mates = [j for j, y in rel.clubs.items() if y.get("league") and y.get("league") == c.get("league")]
-    league_ovr = [P.overall(r) for j in mates for r in rel.squad(j)]
+    league_ovr = [P.level(r) for j in mates for r in rel.squad(j)]
     entry, stayed, elsewhere = _club_players(rel, cid, mover, proto, league_ovr, picks_of(x, own))
     entry.update({f: old[f] for f in ("coach_portrait", "stadium") if old.get(f)})
     _keep_by_hand(entry, mine)
@@ -904,9 +1020,9 @@ def resized(recipe, rel):
     return out
 
 
-def to_update(recipe, rel):
-    """outdated and resized together, in the recipe's order"""
-    ids = {id(x) for x in outdated(recipe, rel) + resized(recipe, rel)}
+def to_update(recipe, rel, info=None):
+    """outdated, resized and lost together, in the recipe's order"""
+    ids = {id(x) for x in outdated(recipe, rel) + resized(recipe, rel) + lost(recipe, rel, info)}
     return [x for x in recipe["leagues"] if id(x) in ids]
 
 
@@ -920,11 +1036,13 @@ def _from_cache(path):
 
 # every list a league keeps per place (modstudio.project.Project.PLACE_LISTS)
 PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
+               ("club_coach_countries", ""),
                ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""),
                ("kit_folders", ""))
 # per place of a league: what the person set, which an update keeps for the same club (and a
 # league package's Kit Server folder, which belongs to its club, not to the place: 14.10.)
-KEEP_LISTS = (("club_coaches", ""), ("club_formations", ""), ("club_ids", ""), ("kit_folders", ""))
+KEEP_LISTS = (("club_coaches", ""), ("club_coach_countries", ""), ("club_formations", ""), ("club_ids", ""),
+              ("kit_folders", ""))
 # what an update takes from the release (and KEEP_LISTS put back club by club)
 FRESH = ("club_names", "club_abbrs", "club_crests", "club_kits", "club_away_kits", "game_clubs", "newlife",
          "clubs") + tuple(k for k, _e in KEEP_LISTS)
@@ -955,9 +1073,24 @@ def lineup(rel, x, rows, keep=None):
         raise Error("%s: NewLife %s has no league with its clubs" % (x["name"], rel.meta.get("version", "")))
     E = dict(by_key[k])
     if keeps_lineup(x) if keep is None else keep:
-        E["clubs"] = sorted(i for i in old_nl if i in rel.clubs and rel.clubs[i].get("in_game") != "1")
-        E["in_game"] = sorted(gc_old)
+        # B324: a club of the game the tables in use have not got (FL27 has no Wisla Krakow,
+        # 1695, nor 59 other clubs of FL26) is a new club of the release now (use_tables)
+        gone = [g for g in gc_old if g in rel.clubs and rel.clubs[g].get("in_game") != "1"]
+        E["clubs"] = sorted(i for i in old_nl + gone if i in rel.clubs and rel.clubs[i].get("in_game") != "1")
+        E["in_game"] = sorted(g for g in gc_old if g not in gone)
     return by_key[k], E
+
+
+def lost(recipe, rel, info):
+    """the recipe's NewLife leagues with a club of the game the tables in use have not got and
+    the release has as a club of its own (B324, Risto 05.11.: a world made with FL26 on FL27,
+    which has no Wisla Krakow, 1695): Update my leagues makes it a new club"""
+    if info is None or "clubs" not in info:
+        return []
+    rel.use_tables(info)
+    return [x for x in recipe["leagues"] if x.get("newlife")
+            and any(int(e["id"]) not in info["clubs"] and str(e["id"]) in rel.clubs
+                    and rel.clubs[str(e["id"])].get("in_game") != "1" for e in x.get("game_clubs") or [])]
 
 
 RELEASE_FIELDS = set(P.FIELDS) | {"name"} | set(P.IDENT)   # what a squad from the release sets: the rest is by hand
@@ -1457,7 +1590,7 @@ def game_scale(rel, db, clubs):
         for r in rel.squad(c):
             g = str(r.get("game_id", "")).strip()
             if g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g))):
-                a, b = P.overall(r), P.overall(db.row(int(g)))
+                a, b = P.level(r), P.level(db.row(int(g)))
                 if a and b:
                     ours.append(a)
                     game.append(b)
@@ -1498,7 +1631,7 @@ def _game_squads(recipe, rel, info, squads, new_players=True):
     n = collections.Counter()
     plan = {}
     level = game_scale(rel, db, squads.values())
-    twin = game_twin(rel, db)
+    twin = game_twin(rel, db, national)
     # B67: a player of the game the release has at a club but left out of its squad (rel.squad
     # keeps the best P.SQUAD: Barcelona of NewLife 1.4 had 60, its B team in it, and Joao Cancelo
     # was 42nd) stays at the club he has: taken away from it, nobody took him and he was a free
@@ -1511,14 +1644,14 @@ def _game_squads(recipe, rel, info, squads, new_players=True):
         top = {id(r) for r in rel.squad(c)} if ours else ()
         for g, r in ours:
             if id(r) not in top and P.same_player(r["name"], db.name(g)):
-                cut[str(g)] = (P.overall(r), c)
+                cut[str(g)] = (P.level(r), c)
     for t, c in sorted(squads.items()):
         have = [pid for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index]
         keep, join, add, ed = [], [], [], {}
         for r in rel.squad(c):
             ch = release_fields(r)
             ch.update(who(r))
-            o = P.overall(r)
+            o = P.level(r)
             if o and level(o) != o:
                 ch.update(P.at_level(r, level(o)))
             g = str(r.get("game_id", "")).strip()
@@ -1529,9 +1662,16 @@ def _game_squads(recipe, rel, info, squads, new_players=True):
                 g = str(one[0]) if len(one) == 1 else ""
                 if g:
                     r = dict(r, name=db.name(one[0]))
+            if not g:
+                # B421: the one player of the club with a looser fit of the name ("Robson Fernandes"
+                # and the game's "Robson", "Santiago Sosa Yung" and "Santiago Sosa") who is of his
+                # nationality, age and height: him, under the game's name
+                near = [p for p in have if p not in keep and _loose(r["name"], db.name(p)) and _close(r, db.row(p))]
+                if len(near) == 1:
+                    g, r = str(near[0]), dict(r, name=db.name(near[0]))
             if not (g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g)))):
                 g = twin(r) or g                  # B102: at another club of the game, or at none
-            if g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g))):
+            if g.isdigit() and int(g) in db.index and _him(r, g, db, twin):
                 if int(g) in have:
                     keep.append(int(g))
                     ed[g] = ch
@@ -1558,7 +1698,7 @@ def _game_squads(recipe, rel, info, squads, new_players=True):
             # make room when the joins fill the squad past P.CLUB_MAX
             n["skipped"] += len(add)
             over = max(len(have) - out + len(join) - P.CLUB_MAX, 0)
-            left.sort(key=lambda p: P.overall(db.row(p)) or 0)
+            left.sort(key=lambda p: P.level(db.row(p)) or 0)
             add, gone, full = [], left[:over], {}
         else:
             spare = [p for p in left if str(p) in cut and str(p) not in taken]     # B67: they stay

@@ -24,13 +24,13 @@ What "cold" is -- absent on a new player's PC, present on ours:
 
 Modes (the default is "all"):
   prepare   builds the cold copy: a minimal game folder OUTSIDE C: on a path with a space
-            (default "D:\FL26 cold test\game"), read from --from (default E:\instalacija, only
+            (default "E:\FL\FL26\tests\FL26 cold test\game"), read from --from (default E:\FL\FL26\game, only
             READ): FL_2026.exe, download\data_s2526*.cpk + data_extra*.cpk (for the first-start
             table unpack), SiderAddons with a sider.ini from before Mod Studio
             (sider_ini_backups, lines with "fl26" dropped), the modules without ours, every
             content server's map files without our lines, the kits the kit library lends
             numbers from (B214: the first, a light and a dark one); an empty --apdata with
-            settings.json = {"game": <copy>} only (without it Mod Studio guesses the game folder from the registry: E:\instalacija here); a
+            settings.json = {"game": <copy>} only (without it Mod Studio guesses the game folder from the registry: E:\FL\FL26\game here); a
             save folder of its own (FL26_SAVE_ROOT) -- never Documents\KONAMI.
   run       must run in the interactive session (session 1): starts the exe with APPDATA =
             --apdata, FL26_SAVE_ROOT = the copy's, FL26_DIR/EXE/SIDER unset; waits for the
@@ -48,7 +48,7 @@ and the Activate when --other-zip gives a second world), no question answered No
     set PYTHONIOENCODING=utf-8
     python tools/coldstart.py --zip D:\dev\fl26\modpack-build\FL26-Modpack-NL15B6-r10.zip ^
         --exe "D:\dev\fl26\ModStudio-editpack-d75bf38\FL26 Mod Studio\FL26ModStudio.exe" ^
-        [--game "D:\FL26 cold test\game"] [--apdata "D:\FL26 cold test\appdata"] [--shots DIR]
+        [--game "E:\FL\FL26\tests\FL26 cold test\game"] [--apdata "E:\FL\FL26\tests\FL26 cold test\appdata"] [--shots DIR]
         [--other-zip <a second world zip> | --make-other _FL26CroatiaD1D2cup] [--reset]
     python tools/coldstart.py prepare --dry-run ...     what would be copied, nothing written
 
@@ -59,8 +59,8 @@ import argparse, ctypes, glob, json, os, re, shutil, subprocess, sys, tempfile, 
 from ctypes import wintypes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC_DEFAULT = r"E:\instalacija"
-GAME_DEFAULT = r"D:\FL26 cold test\game"
+SRC_DEFAULT = r"E:\FL\FL26\game"
+GAME_DEFAULT = r"E:\FL\FL26\tests\FL26 cold test\game"
 MARKER = ".coldstart"
 TASK_DEFAULT = "FL26Uia"
 MAIN_TITLE = "FL Mod Studio"

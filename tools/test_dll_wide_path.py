@@ -60,5 +60,5 @@ for m in lbpack.ORDER:
             ok("%s: the path the DLL opens itself goes through ansi_path" % m, "ansi_path(" in src
                and "local function ansi_path(path)" in src)
 
-ok("every module of the pack that loads a DLL was read (9)", loaders == 9)
+ok("every module of the pack that loads a DLL was read (11, fl26match since B408)", loaders == 11)
 print("test_dll_wide_path: %d checks OK" % N)

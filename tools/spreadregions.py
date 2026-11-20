@@ -125,7 +125,7 @@ def preview(raw, ours):
     held = Counter()
     for i in range(len(raw) // REC):
         r = raw[i * REC:(i + 1) * REC]
-        if r[5] not in ours:
+        if M.comp_cid(r) not in ours:
             held[dec_region(r[REGION_OFF])] += 1
     print("")
     print("shipped competitions per region:")
@@ -168,7 +168,7 @@ def own_plan(raw, ours):
     used = set()
     for i in range(len(raw) // REC):
         r = raw[i * REC:(i + 1) * REC]
-        if r[5] not in ours:
+        if M.comp_cid(r) not in ours:
             used.add(dec_region(r[REGION_OFF]))
     # Anything of ours already sitting in a shipped country's region was put there on
     # purpose -- deepen.py does it to hang a third division under Ligue 2 -- so it keeps
@@ -176,8 +176,8 @@ def own_plan(raw, ours):
     settled = {}
     for i in range(len(raw) // REC):
         r = raw[i * REC:(i + 1) * REC]
-        if r[5] in ours and dec_region(r[REGION_OFF]) in used:
-            settled[ours[r[5]]] = dec_region(r[REGION_OFF])
+        if M.comp_cid(r) in ours and dec_region(r[REGION_OFF]) in used:
+            settled[ours[M.comp_cid(r)]] = dec_region(r[REGION_OFF])
     if settled:
         print("  leaving %d league(s) where they are, inside a shipped country: %s"
               % (len(settled), ", ".join("FL %d in region %d" % (fl, rid)
@@ -209,7 +209,7 @@ def shipped_plan(raw, ours):
     held = Counter()
     for i in range(n):
         r = raw[i * REC:(i + 1) * REC]
-        if r[5] in ours:
+        if M.comp_cid(r) in ours:
             continue                      # ours are being moved; do not count them
         held[dec_region(r[REGION_OFF])] += 1
     targets = sorted((rid for rid in held if rid not in NOT_A_COUNTRY),
@@ -259,7 +259,7 @@ def main():
     if show:
         for i in range(n):
             r = raw[i * REC:(i + 1) * REC]
-            cid = r[5]
+            cid = M.comp_cid(r)
             if cid in ours:
                 print("  FL %2d  comp %3d  region byte 0x%02x (id %d)"
                       % (ours[cid], cid, r[REGION_OFF], dec_region(r[REGION_OFF])))
@@ -268,7 +268,7 @@ def main():
     changed = 0
     for i in range(n):
         base = i * REC
-        cid = raw[base + 5]
+        cid = M.comp_cid(raw, base)
         if cid not in ours:
             continue
         if restore:

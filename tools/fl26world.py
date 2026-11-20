@@ -35,11 +35,16 @@ What comes from where:
                                          UEFA whatever the country). fl26catlist gives a region
                                          29..127 that continent's icons on the League Info page
   kickoff                                the slot the league follows in the Kick Off / Edit team
-                                         lists (fl26comptab; leaguebuilder kickoff_after)
+                                         lists (fl26comptab; leaguebuilder kickoff_chain)
   split                                  a split season (tools/mksplit.py): the total's row is the
                                          league line, its phases (format 12 regular, 13..15
                                          groups, same competition) the split line; carry=0 =
                                          the groups start from zero points (Apertura/Clausura)
+  gsplit                                 `gsplit <total> regular=<id> groups=<top>,<bottom>`: a
+                                         split season of the game's own (the Scottish Premiership
+                                         133 / 134 / 135, 136) that a league of the world stands
+                                         under (splittotal=). A play-off place named on its
+                                         regular phase is the final table's (fl26swiss, B425)
   uefa                                   the UEFA access list: one place per line, regulation,
                                          position, competition (0 UCL, 1 UEL, 2 UECL, 3..5 the
                                          other continents), alt -- fl26swiss's ACCESS format.
@@ -49,6 +54,28 @@ What comes from where:
   uecl                                   the Conference League's first-season entrants (team ids,
                                          mkuecl.py's pick from this world); written when the
                                          world has the Conference League
+  group                                  on a league line: the league is one group of a division
+                                         (GitHub #98), its exchange with the division above is the
+                                         gset line's (fl26chain), not a chain pair of its own
+  gset                                   a group set: the leagues of one division and the groups
+                                         below them, `gset <k> up=<id>:<n>,... low=<id>:<n>:<pref>,...`
+                                         -- n the clubs each sends (down from the upper ones, up
+                                         from the groups), pref the upper league a group's
+                                         promoted go to first (0 = none)
+  ghome                                  `ghome <league> <team id>,...`: the clubs a group was
+                                         built with and its zone_clubs (clubs above of its
+                                         region); one relegated into the set goes there when
+                                         it has a place, else it is a guest elsewhere and
+                                         comes home as soon as a place there is free
+  gborder                                `gborder <league> <team id>:<group>,...` (16.11.2026,
+                                         the recipe's zone_border): clubs of a group that may
+                                         move to the named neighbour group when a relegated
+                                         club of the group's region needs the place; in order
+  poff                                   a promotion / relegation play-off, `poff <cup> up=<id>
+                                         low=<id> [hold=<id>:<place>] entry=<id>:<place>,...`: the
+                                         cup's winner ends in up, the club it is played against
+                                         (hold, the place's holder by the counts, or the other
+                                         club of a tie of two) in low
 
 "Ours" are the league regulations (type 4) the shipped tables do not have. --base is the folder
 with the shipped tables (Competition*.bin, Country.bin); default FL26_PESDB, else out/base-pesdb.
@@ -63,12 +90,13 @@ import mkleague as M
 FORMAT = "# fl26world 1"
 KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "splittotal", "promote", "demote", "clubs", "legs",
         "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn",
-        "lcup", "lcuplow", "lcupn", "lcuptop", "cupthird", "pick")
+        "lcup", "lcuplow", "lcupn", "lcuptop", "cupthird", "pick", "group")
 NO_SLOT = 123
 
 # fl26chain.dll keeps this many cups to their leagues (fl26chain.c MAX_CUPS) and drops the rest;
 # fl26chain.lua sends the national cups first and the league cups (lcup=) after them
-MAX_CHAIN_CUPS = 128                # 16 until B178: eu5's 18th cup, the Greek Cup, played one round
+MAX_CHAIN_CUPS = 512                # 16 until B178: eu5's 18th cup, the Greek Cup, played one round;
+                                    # 128 until the league band (a cup or two for each of ~150 countries)
 
 
 def chain_cups(leagues):
@@ -130,11 +158,96 @@ POOL_PICK = {"europe": 69, "latam": 73, "africa": 75, "other": 71}
 # a slot of their own and before the pool and no-slot ids, so no group of the game is hidden.
 # 255 stays out: 0xff is "no league" in more than one place. 196 and below are taken: 191..196
 # split-season phases (mksplit), 188/189 the Europa play-offs, 186/187 the Conference League,
-# and the date stub (datecave.py) knows ids up to 255 only -- so 36 + 3 + 58 = 97 leagues is
-# the ceiling of this layout; the next one needs a wider date stub.
+# and the date stub (datecave.py) knew ids up to 255 only -- so 36 + 3 + 58 = 97 leagues was
+# the ceiling of this layout.
 EXTRA_IDS = tuple(range(254, 196, -1))
 EXTRA_SLOT = {r: 124 + i for i, r in enumerate(EXTRA_IDS)}      # 254 -> 124 ... 197 -> 181
 DEFAULT_SLOT.update(EXTRA_SLOT)
+# Past the 97: the league band 320..499 (wall97.md, step 2). Above every regulation id a world
+# of ours has used so far (cups went up to 309), so no old world or career sees an id change,
+# and below 512 as a hedge against a 9-bit use of the base id. Needs the wide date stub
+# (datecave.py, 1024-byte table) in a caps set whose --date-keys include the band, with the
+# shifts of band_shift(). The first 68 take the last free Select Team slots, 182..249
+# (fl26slots250, fl26slot7); the other 112 share a slot: the slot of their country's league that
+# has one of its own (leaguebuilder.share_slots, fl26comptab lets two leagues of ours of one
+# country share it), or none. Both come after every id above in the free list (id_rank), so a
+# world of up to 97 leagues gets exactly the ids and slots it got before the band existed.
+LEAGUE_BAND = range(320, 500)
+EXTRA2_IDS = tuple(range(320, 388))
+EXTRA2_SLOT = {r: 182 + i for i, r in enumerate(EXTRA2_IDS)}    # 320 -> 182 ... 387 -> 249
+SHARED_IDS = tuple(range(388, 500))
+DEFAULT_SLOT.update(EXTRA2_SLOT)
+# B346 (07.11.): a league on a shared slot played its season with the clubs (and the count) of
+# the slot's first league -- the game fills a league from its slot's list. So the shared ids get
+# slots of their own too, 250..361 (fl26slots250 makes 362 slots; fl26slot7 leaves a club of
+# such a league on 7, as a league with no slot); the name stays, for the worlds built before.
+SHARED_SLOT = {r: 250 + i for i, r in enumerate(SHARED_IDS)}   # 388 -> 250 ... 499 -> 361
+# mp40 (08.11.): slot 257 is the game's own "Other" heading too -- the pseudo-slot Select Team and
+# Edit fill with six special teams (0x140cbb7a0, research-findings "fl26editlist"). National 1
+# Groupe A of the Megapack sat on it (id 395) and the list showed it as "Other". So the id on
+# 257 goes to no league: 111 shared ids, 379 leagues in all. No released world reaches it (166+).
+OTHER_SLOT = 257
+SKIP_IDS = tuple(r for r, s in SHARED_SLOT.items() if s == OTHER_SLOT)     # (395,)
+for _r in SKIP_IDS:
+    del SHARED_SLOT[_r]
+SHARED_IDS = tuple(r for r in SHARED_IDS if r not in SKIP_IDS)
+DEFAULT_SLOT.update(SHARED_SLOT)
+# Past the 276 (band-wide, 07.11.; 277 before SKIP_IDS): the top band 920..1022, 103 more leagues, 379 in all. Not
+# above the band: the cups have had 500.. since the band came (the Megapack's go up to ~710), so
+# a league there would take the id of a cup a career already holds. The top of the base-id space
+# (a regulation id is stage << 10 | base id, 1..1023) is the one stretch no world's cup can have
+# reached -- free_comp_ids hands out 255..319, then 500 upward, and 920 is 486 cup ids away --
+# and from now on no cup takes it. 1023 (all ten bits) stays out. The 512 hedge of the band above
+# is spent: the cups of the 199-league FL27 world of B346's in-game check sit on 500..657, so the
+# game takes a base id past 511 for a competition; a LEAGUE past 511 is for the in-game test. The cups keep 255..319,
+# 500..919 and 1023: 486 ids, ~390 for the cups of 380 leagues. Ranked after every id above
+# (id_rank), so a world of up to 277 leagues gets exactly the ids and slots it got before.
+# Needs a caps set whose date stub dates 920..1022 (band_date_offsets; leaguebuilder.use_game
+# turns the band on only then) and, for Select Team, slots past the 362: SLOT_COUNT is what the
+# installed fl26slots makes, and a top id past it has no slot (NO_SLOT, as 183..185: the league
+# plays its season and is not in the Select Team list). slots-wide (07.11., mato: every league in
+# Select Team): FL 2027's fl26slots250.fl27.lua makes 465, so 920 -> 362 ... 1022 -> 464, a slot
+# of its own for every top id; slots 0..361 keep their numbers. FL26's copy stays at 362 (FL26
+# gets fixes only, and no FL26 caps set dates the top band, so no FL26 world has a league there).
+TOP_BAND = range(920, 1023)
+TOP_IDS = tuple(TOP_BAND)
+# SLOT_COUNT is what the game's fl26slots makes, read at Build (leaguebuilder.slot_count ->
+# set_slot_count): 465 with FL 2027's new module, 362 with FL26's or an FL 2027 one installed before
+# slots-wide; 362 until then (no game: tests, the command line). A top id past it has no slot.
+TOP_SLOT_FROM = 362     # the first slot past SHARED_SLOT's
+SLOT_BASE = 362         # fl26slots250 since B346, FL26's copy still
+SLOT_MAX = TOP_SLOT_FROM + len(TOP_IDS)      # 465: fl26slots250.fl27.lua (mkslots.py 465), comptab / editlist NSLOTS
+SLOT_COUNT = SLOT_BASE
+TOP_SLOT = {}
+
+
+def set_slot_count(n):
+    """the installed fl26slots makes `n` slots: the top ids below it get theirs (TOP_SLOT, in
+    DEFAULT_SLOT: 920 -> 362 ... 1022 -> 464), the rest none. Returns TOP_SLOT"""
+    global SLOT_COUNT, TOP_SLOT
+    for r in TOP_SLOT:
+        DEFAULT_SLOT.pop(r, None)
+    SLOT_COUNT = max(SLOT_BASE, min(int(n), SLOT_MAX))
+    TOP_SLOT = {r: TOP_SLOT_FROM + i for i, r in enumerate(TOP_IDS) if TOP_SLOT_FROM + i < SLOT_COUNT}
+    DEFAULT_SLOT.update(TOP_SLOT)
+    return TOP_SLOT
+
+
+BASE_ID_LIMIT = 1024    # regulation base ids are 10 bits (the date stub's table, fl26join, comptab)
+LEAGUE_IDS = tuple(LEAGUE_BAND) + TOP_IDS     # every id past the 97 a league may take
+
+
+def band_shift(r):
+    """the date stub's day shift (0..6) for an id of EXTRA_IDS, LEAGUE_BAND or TOP_BAND: 197 +2,
+    198 +1, 199 +0, 200 +6 ... down by one a day, as the shipped sets date 197..255, and on through
+    the bands (320 +5, 321 +4 ... 920 +0, 921 +6 ...). The caps set's --date-offsets for them."""
+    return (199 - r) % 7
+
+
+def band_date_offsets(top=True):
+    """{regulation id: day shift} for the band 320..499 and (`top`) the top band 920..1022: what
+    a caps set's --date-keys / --date-offsets add for them"""
+    return {r: band_shift(r) for r in (LEAGUE_IDS if top else LEAGUE_BAND)}
 
 
 def pool_rid(slot):
@@ -144,7 +257,15 @@ def pool_rid(slot):
 
 def id_rank(r):
     """sort key of a regulation id in the builder's free list: a slot of its own first, then the
-    slots of the two small "other clubs" groups, the ids with no slot, the two big groups"""
+    slots of the two small "other clubs" groups, the ids with no slot, the two big groups, then
+    the league band: its ids with a slot of their own, then the ones that share one, then the
+    top band (920..1022) last of all"""
+    if r in EXTRA2_SLOT:
+        return (4, 0)           # the band, after every id of the 97 ...
+    if r in SHARED_IDS:
+        return (5, 0)           # ... and the ids that share a slot after the ones with their own
+    if r in TOP_BAND:
+        return (6, 0 if r in TOP_SLOT else 1)   # ... and the top band after the whole 277
     s = DEFAULT_SLOT.get(r)
     if s is None:
         return (2, 0)
@@ -193,9 +314,10 @@ CONMEBOL_STAGE_IDS = set(CONMEBOL_STAGE_TARGETS)
 # Conference League; the Conference League's are out, and so is a loser whose round is missing.
 # Each round takes sixteen less eight for each round that feeds it, so every round of the
 # Conference League eliminates eight and costs eight more clubs: 116 in Europe with the three
-# play-offs, 132 with all nine rounds. A round is (competition 0..2, stage 0..2).
-QSTAGES = ("play-off", "third qualifying round", "second qualifying round")
-QROUND_NUMBER = {1: 3, 2: 2}                     # stage -> the round a qround line names
+# play-offs, 132 with all nine rounds. A round is (competition 0..2, stage 0..2; stage 3 the first
+# qualifying round in July, FL 2027 only: Q1_CONFIG).
+QSTAGES = ("play-off", "third qualifying round", "second qualifying round", "first qualifying round")
+QROUND_NUMBER = {0: 0, 1: 3, 2: 2, 3: 1}         # stage -> the round a qround line names (0: C_CONFIG's play-offs)
 _ALL = [(c, s) for s in range(3) for c in range(3)]
 # the round sets the League Builder picks from, the most rounds first (pick_rounds): every one
 # needs (Champions League, Europa League, Conference League) new qualifying clubs as noted
@@ -206,6 +328,59 @@ QCONFIGS = [
     [(0, 0), (0, 1), (1, 0), (2, 0)],                                # 24 / 8 / 16
     [(0, 0), (1, 0), (2, 0)],                                        # 16 / 16 / 16: the play-offs
 ]
+# FL 2027 only (mato 06.11., notes/uefa-q1-srpanj.md "Prijedlog A"): a first qualifying round
+# (stage 3) in July for the Champions League and the Conference League, 32 clubs each, and their
+# second qualifying rounds of 32 after it (q_size). No Europa League second qualifying round: the
+# Champions League first round's losers go to the Conference League's second (q_down), and the
+# Europa League's own qualifying places to the Conference League's first round (fl26swiss.dll).
+# 56 / 0 / 32 new qualifying clubs, 88 in all; the play-offs and the league phases as ever. The
+# League Builder picks it for an FL 2027 world only (leaguebuilder europe_rounds), whose places
+# fill it (pick_rounds_q1); an FL 2026 world never has a stage 3. fl26swiss.dll plays the first
+# round from a career's second summer; in the first, the second rounds take the clubs it would
+# have sent them.
+Q1_CONFIG = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (2, 0), (2, 1), (2, 2), (2, 3)]
+# FL 2027 only, "Prijedlog C" (mato 07.11., notes/uefa-q1-srpanj.md), as UEFA's: first qualifying
+# rounds in July for the Champions League (32) and the Europa League (16), every competition's
+# second and third rounds, and the Europa League's and the Conference League's August play-offs
+# of 32 -- regulations of their own (stage 0 rounds in the world file, `qround 11 0` / `qround 12
+# 0`; 188 and 189 stay February's). Sizes C_SIZE (the rest sixteen); new clubs 56 / 40 / 16, 112
+# in all; direct entrants 28 / 12 / 4 (direct_room). The losers of both first rounds go to the
+# Conference League's second round. The League Builder picks it before Q1_CONFIG for an FL 2027
+# world whose places fill it (pick_rounds_c; c_places moves Conference League qualifying places
+# up to the Europa League's). fl26swiss.dll plays the first rounds from a career's second summer;
+# in the first, the second rounds take their room and the qualifying places past it go to the
+# Conference League's second round.
+C_CONFIG = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1), (2, 2)]
+C_SIZE = {(0, 2): 32, (0, 3): 32, (1, 0): 32, (1, 1): 32, (2, 0): 32, (2, 1): 32, (2, 2): 32}
+# FL 2027 only, Prijedlog C with a wide Conference League (mato 07.11.: "kvalifikacije za europu
+# prosiriti ako je to moguce"; PLACES.md: 20 places in it instead of ~110): C_CONFIG and a July
+# first qualifying round for the Conference League too, every Conference League round as big as
+# the game's tables and the DLL take -- 62 clubs (31 ties: the master's six-bit club count, 63 at
+# most, and fl26swiss Q_MAX 64) for its first and second rounds, 40 for its third and its play-off.
+# The Champions League's and the Europa League's rounds stay C's. New clubs 56 / 40 / 74 = 170 (C
+# 112): the Conference League's 62 / 7 / 1 / 4 from the first round to the play-off; direct
+# entrants 28 / 12 / 0 -- its league phase is the play-off's 20 winners and the Europa League
+# play-off's 16 losers, and a place the list gives its league phase goes to its play-off, as the
+# big leagues' sixth and seventh do at UEFA. The losers of its first round are out. The League
+# Builder picks it before C_CONFIG for an FL 2027 world whose places fill it (pick_rounds_cw);
+# its own rounds take regulation ids after C's (mkeuropo.qualifying), so a world built with C
+# keeps those. fl26swiss.dll plays the first rounds from a career's second summer; in the first,
+# the Conference League's second round takes the 62 new clubs its first would have sent it.
+CW_CONFIG = C_CONFIG + [(2, 3)]
+CW_SIZE = {(0, 2): 32, (0, 3): 32, (1, 0): 32, (1, 1): 32, (2, 0): 40, (2, 1): 40, (2, 2): 62, (2, 3): 62}
+QROUND_MAX = 62                   # the most clubs a qualifying round takes (31 ties; mkeuropo _copy_ties)
+C_TOPUP = 3                       # Champions League qualifying places C / CW may be short of (below)
+
+
+def c_world(rounds):
+    """rounds are C_CONFIG's (the Europa League's first qualifying round: Prijedlog C only), or
+    CW_CONFIG's"""
+    return rounds is not None and (1, 3) in rounds
+
+
+def cw_world(rounds):
+    """rounds are CW_CONFIG's: Prijedlog C with the Conference League's first qualifying round"""
+    return c_world(rounds) and (2, 3) in rounds
 
 
 def q_up(rounds, r):
@@ -215,18 +390,38 @@ def q_up(rounds, r):
 
 
 def q_down(rounds, r):
-    """where round r's losers go: a round, "phase" for the league phase below, None out"""
+    """where round r's losers go: a round, "phase" for the league phase below, None out -- a first
+    qualifying round's (Q1_CONFIG) to the Europa League's second, or without one the Conference
+    League's second (fl26swiss q_down)"""
     c, s = r
     if c == 2:
         return None
     if s == 0:
         return "phase"
+    if s == 3 and c_world(rounds):                 # Prijedlog C: both first rounds' to the UECL Q2
+        return (2, 2)
+    if s == 3 and (c + 1, 2) not in rounds:
+        return (2, 2) if (2, 2) in rounds else None
     return (c + 1, s - 1) if (c + 1, s - 1) in rounds else None
 
 
+def q_size(rounds, r):
+    """the clubs round r holds: sixteen; 32 for a first qualifying round and for the second
+    qualifying round of a competition that has one (fl26swiss q_n); C_CONFIG's C_SIZE, CW_CONFIG's
+    CW_SIZE"""
+    c, s = r
+    if cw_world(rounds):
+        return CW_SIZE.get(r, PLAYOFF)
+    if c_world(rounds):
+        return C_SIZE.get(r, PLAYOFF)
+    return 2 * PLAYOFF if s == 3 or (s == 2 and (c, 3) in rounds) else PLAYOFF
+
+
 def q_room(rounds, r):
-    """round r's new clubs: sixteen, less eight for every round that feeds it"""
-    return PLAYOFF - PLAYOFF // 2 * sum(1 for j in rounds if j != r and (q_up(rounds, j) == r or q_down(rounds, j) == r))
+    """round r's new clubs: its size (sixteen), less half the size of every round that feeds it
+    (eight; sixteen from a round of 32)"""
+    return q_size(rounds, r) - sum(q_size(rounds, j) // 2 for j in rounds
+                                   if j != r and (q_up(rounds, j) == r or q_down(rounds, j) == r))
 
 
 def qual_room(rounds):
@@ -234,10 +429,10 @@ def qual_room(rounds):
     return {q: sum(q_room(rounds, r) for r in rounds if r[0] == q - UCLQ) for q in PLAYOFFS}
 
 
-def qual_places(out):
+def qual_places(out, rounds=None):
     """{UCLQ / UELQ / UECLQ: clubs the uefa lines out send to that competition's qualifying}: its
-    own places and the direct places past the competition's direct entrants"""
-    room = direct_room(out)
+    own places and the direct places past the competition's direct entrants (direct_room)"""
+    room = direct_room(out, rounds)
     return {q: sum(1 for e in out if e[2] == q) + max(0, sum(1 for e in out if e[2] == win) - room[win])
             for q, (win, _l) in PLAYOFFS.items()}
 
@@ -259,10 +454,77 @@ def pick_rounds(out, uecl=True):
     return [r for r in QCONFIGS[-1] if r[0] in listed]
 
 
+def pick_rounds_q1(out, uecl=True):
+    """FL 2027: Q1_CONFIG when the uefa lines out fill it -- the Champions League's qualifying
+    places its 56 new clubs, the Europa League's and the Conference League's together its 32 (the
+    Europa League's go to the Conference League's first round) -- else None"""
+    if not uecl:
+        return None
+    have, need = qual_places(out), qual_room(Q1_CONFIG)
+    if have[UCLQ] >= need[UCLQ] and have[UELQ] + have[UECLQ] >= need[UELQ] + need[UECLQ]:
+        return list(Q1_CONFIG)
+    return None
+
+
+def c_fills(out, rounds):
+    """the uefa lines out (c_places' already) fill the new qualifying clubs of rounds (C_CONFIG or
+    CW_CONFIG), each competition's -- the Champions League's up to C_TOPUP short: the European
+    places of reality are 54 or 55 there and C takes 56, so fl26swiss tops the last up from the
+    big five, as it does any round short of clubs (the count of before saw Belgium's shipped
+    places of FL26, 155, next to FL 2027's 115 and passed a list three short; access_alias)"""
+    have, need = qual_places(out, rounds), qual_room(rounds)
+    return all(have[q] >= need[q] - (C_TOPUP if q == UCLQ else 0) for q in PLAYOFFS)
+
+
+def pick_rounds_c(out, uecl=True):
+    """FL 2027: C_CONFIG when the uefa lines out (c_places' already) fill each competition's new
+    qualifying clubs, 56 / 40 / 16 (c_fills) -- else None"""
+    if not uecl:
+        return None
+    if c_fills(out, C_CONFIG):
+        return list(C_CONFIG)
+    return None
+
+
+def pick_rounds_cw(out, uecl=True):
+    """FL 2027: CW_CONFIG when the uefa lines out (c_places(rounds=CW_CONFIG)'s already) fill each
+    competition's new qualifying clubs, 56 / 40 / 74 (c_fills) -- else None"""
+    if not uecl:
+        return None
+    if c_fills(out, CW_CONFIG):
+        return list(CW_CONFIG)
+    return None
+
+
+def c_places(out, rank=None, rounds=None):
+    """C_CONFIG's uefa lines: the Europa League's qualifying takes 40 new clubs, and a list made
+    for 28 / 20 / 20 direct entrants (the shipped one: 16 / 24 / 32 for the rounds, with the direct
+    places past 28 / 12 / 4) leaves it short and the Conference League's past its 16. The
+    Conference League qualifying places it has no room for, the first of them (the strongest),
+    become Europa League qualifying places, after the others (by rank when given, as uefa_places
+    orders a qualifying). rounds: CW_CONFIG's room instead (74 in the Conference League's
+    qualifying, so fewer move up). Returns (lines, the lines moved, as they were)"""
+    rounds = rounds if cw_world(rounds) else C_CONFIG
+    have, need = qual_places(out, rounds), qual_room(rounds)
+    ecl = [i for i, e in enumerate(out) if e[2] == UECLQ]
+    n = min(need[UELQ] - have[UELQ], have[UECLQ] - need[UECLQ], len(ecl))
+    if n <= 0:
+        return list(out), []
+    moved = set(ecl[:n])
+    up = [(e[0], e[1], UELQ, e[3]) for i, e in enumerate(out) if i in moved]
+    rest = [e for i, e in enumerate(out) if i not in moved]
+    at = max([i + 1 for i, e in enumerate(rest) if e[2] in (0, UCLQ, 1, UELQ)] or [0])
+    block = [e for e in rest[:at] if e[2] == UELQ] + up
+    if rank:
+        block.sort(key=lambda e: rank.get(place_league(e), UNRANKED))
+    head = [e for e in rest[:at] if e[2] != UELQ]
+    return head + block + rest[at:], [out[i] for i in sorted(moved)]
+
+
 def rounds_text(rounds):
     """'Champions League: second qualifying round, third qualifying round, play-off; ...'"""
     names = dict(COMPETITIONS)
-    return "; ".join("%s: %s" % (names[c], ", ".join(QSTAGES[s] for s in (2, 1, 0) if (c, s) in rounds))
+    return "; ".join("%s: %s" % (names[c], ", ".join(QSTAGES[s] for s in (3, 2, 1, 0) if (c, s) in rounds))
                      for c in range(3) if any(r[0] == c for r in rounds))
 
 # Continental cups the game does not have, built by tools/mkccup.py and run by fl26swiss.dll from
@@ -273,6 +535,7 @@ def rounds_text(rounds):
 # not. A cup is built only in a world where some league names it.
 _J1, _CSL, _SPL, _MLS = 52, 120, 162, 51
 _BRA, _ARG, _CHI, _COL = 29, 30, 67, 168
+_COL_SEASON = 119                 # Colombia's whole season (168 + 169), when a world gives it places as one
 CCUPS = [
     (6, "CAF Champions League", "FL_CAFCL", 5, []),
     (7, "CAF Confederation Cup", "FL_CAFCC", 5, []),
@@ -362,6 +625,21 @@ ACCESS_COUNTRY = {_ENG: "England", _ITA: "Italy", _ESP: "Spain", _FRA: "France",
                   _DEN: "Denmark", _BEL: "Belgium"}
 UNRANKED = 999                    # a place whose league has no association rank: after the ranked ones
 
+# Request #5 (06.11.): FL 2027 plays Belgium's top division as one league of 18, regulation
+# 115, with no split -- the access list's 155 (FL26's regular phase) is not in its tables, the DLL
+# found no table for it and Belgium had no European club in an FL 2027 world. Where the tables in
+# use have no 155 the places go to 115 (leaguebuilder.access_alias), as uefa lines of the world.
+ACCESS_FALLBACK = {_BEL: 115}
+
+
+def shipped_access(alias=None):
+    """SHIPPED_ACCESS with the regulations of alias ({regulation: in its place}, the plan's
+    access_alias) swapped"""
+    if not alias:
+        return SHIPPED_ACCESS
+    a = {int(k): int(v) for k, v in alias.items()}
+    return [(a.get(r, r), n, c, alt) for r, n, c, alt in SHIPPED_ACCESS]
+
 
 def place_league(e):
     """the regulation a uefa place belongs to: its own, or for a cup winner's place (position 0)
@@ -369,7 +647,7 @@ def place_league(e):
     return e[0] if e[1] else e[3]
 
 
-def uefa_places(own, replace=(), uecl=True, rank=None):
+def uefa_places(own, replace=(), uecl=True, rank=None, alias=None, extra=(), rounds=None):
     """the uefa lines of a world whose own leagues have places: the shipped list and the world's
     places, competition by competition (Champions League first, as fl26swiss hands them out in
     list order), each competition's shipped places before the world's -- except the play-off,
@@ -386,43 +664,64 @@ def uefa_places(own, replace=(), uecl=True, rank=None):
     assoc_rank). The qualifying's places then go in that order, the world's and the shipped ones
     alike, so the places past the room are the weakest associations' (B250, monkusgigus 26.10.:
     the 31 Champions League qualifying places of the Europack's new leagues came first and left
-    no room for the Greek champion, Portugal's second or Belgium's)."""
+    no room for the Greek champion, Portugal's second or Belgium's).
+
+    alias: shipped regulations the tables in use do not have, and the one in each's place (request #5,
+    FL 2027's Belgium): the shipped list is written with those, even for a world with no places
+    of its own, as the DLL's own list names the missing one.
+    extra: Champions League qualifying places listed after all the others -- FL 2027's first
+    qualifying round, the champions of the European leagues with no place of their own
+    (leaguebuilder europe_rounds). rounds: the qualifying rounds whose room counts (default
+    pick_rounds); C_CONFIG's also move Conference League qualifying places up (c_places)."""
     own = [tuple(int(x) for x in e) for e in own]
+    extra = [tuple(int(x) for x in e) for e in extra]
     replace = set(replace)
-    if not own and not replace:
+    if not own and not replace and not alias and not extra:
         return [], {}
     out = []
     for c, _n in COMPETITIONS:
         if c in UEFA_LINE:
             mine = [e for e in own if e[2] == c]
-            shipped = [e for e in SHIPPED_ACCESS if e[2] == c and e[0] not in replace]
+            shipped = [e for e in shipped_access(alias) if e[2] == c and e[0] not in replace]
             if c in PLAYOFFS and rank:
                 out += sorted(mine + shipped, key=lambda e: rank.get(place_league(e), UNRANKED))
             else:
                 out += mine + shipped if c in PLAYOFFS else shipped + mine
-    return out, crowded(out, own, pick_rounds(out, uecl))
+            if c == UCLQ:
+                out += extra
+    own = own + extra
+    if c_world(rounds):
+        out, moved = c_places(out, rank, rounds)
+        for e in moved:                              # the world's own moved up count as the Europa League's
+            if e in own:
+                own[own.index(e)] = (e[0], e[1], UELQ, e[3])
+    return out, crowded(out, own, pick_rounds(out, uecl) if rounds is None else rounds)
 
 
-def direct_room(out):
+def direct_room(out, rounds=None):
     """{competition: direct entrants} for the uefa lines out: 36, less eight for every play-off
-    (listed in out) whose winners join it or whose losers drop into it"""
+    (listed in out) whose winners join it or whose losers drop into it -- with C_CONFIG's rounds
+    half each play-off's size, all three in: 28 / 12 / 4"""
     room = {0: FIELD, 1: FIELD, 2: FIELD}
+    cw = c_world(rounds)
     for q, (win, lose) in PLAYOFFS.items():
-        if any(e[2] == q for e in out):
-            room[win] -= PLAYOFF // 2
+        if cw or any(e[2] == q for e in out):
+            half = q_size(rounds, (q - UCLQ, 0)) // 2 if cw else PLAYOFF // 2
+            room[win] -= half
             if lose is not None:
-                room[lose] -= PLAYOFF // 2
+                room[lose] -= half
     return room
 
 
-def europe_count(comps, uecl=True):
+def europe_count(comps, uecl=True, rounds=None):
     """the European places counter (pepponeee 29.10.): {competition: (places, room)} for the
     league phases -- comps is the competition of every place of the world (the title holders'
     too), room the clubs each takes straight in (direct_room: 36, less eight for each play-off
-    feeding it). Fewer places than room: the game fills the rest with the next clubs of the big
-    five; more: the last go to the competition's qualifying, or get none"""
+    feeding it; with FL 2027's rounds, Prijedlog C's 28 / 12 / 4 or 0). Fewer places than room:
+    the game fills the rest with the next clubs of the big five; more: the last go to the
+    competition's qualifying, or get none"""
     comps = [int(c) for c in comps]
-    room = direct_room([(0, 0, c, 0) for c in comps])
+    room = direct_room([(0, 0, c, 0) for c in comps], rounds)
     return {c: (comps.count(c), room[c]) for c in ((0, 1, 2) if uecl else (0, 1))}
 
 
@@ -445,19 +744,25 @@ def crowded(out, own, rounds=None):
     places past its direct entrants go to its own qualifying when it has one (fl26swiss), ahead of
     the qualifying's shipped places; only the world's own count against its room -- sixteen with
     the play-offs alone, that of the rounds (pick_rounds) when given"""
-    over, room = {}, direct_room(out)
+    over, room = {}, direct_room(out, rounds)
     qroom = qual_room(rounds) if rounds is not None else {q: PLAYOFF for q in PLAYOFFS}
+    # FL 2027's first qualifying round: the Europa League's qualifying places go to the Conference
+    # League's first round (fl26swiss) and count against its room
+    merge = rounds is not None and (2, 3) in rounds and not qroom[UELQ]
+    cw = c_world(rounds)                              # C_CONFIG: every qualifying on, listed or not
     for q, (win, _lose) in PLAYOFFS.items():
-        if not any(e[2] == q for e in out):
+        if not (cw or any(e[2] == q for e in out)) or (merge and q == UELQ):
             continue
         spill = max(0, sum(1 for e in out if e[2] == win) - room[win])
         n = spill + sum(1 for e in own if e[2] == q)
+        if merge and q == UECLQ:
+            n += max(0, sum(1 for e in out if e[2] == 1) - room[1]) + sum(1 for e in own if e[2] == UELQ)
         if n > qroom[q]:
             over[q] = (n, qroom[q])
     for c in (0, 1, 2):
         q = [k for k, (w, _l) in PLAYOFFS.items() if w == c][0]
         n = sum(1 for e in out if e[2] == c)
-        if n > room[c] and not any(e[2] == q for e in out):
+        if n > room[c] and not (cw or any(e[2] == q for e in out)):
             over[c] = (n, room[c])
     return over
 
@@ -479,12 +784,13 @@ def read_uefa(path):
 ALIASES = {"SOUTH KOREA": "Republic of Korea", "KOREA REPUBLIC": "Republic of Korea"}
 
 
-def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=(), qrounds=()):
+def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=(), qrounds=(), groups=()):
     """leagues: list of dicts with 'id', any of KEYS, and 'name'; splits: (total, regular,
     [groups]) for the split seasons among them; uefa: (regulation, position, competition, alt)
     places; uecl: the Conference League's first-season team ids; ccups: the ccup lines as
-    tools/mkccup.py prints them; qrounds: (competition 10..12, round 3 or 2, regulation) of the
-    qualifying rounds in front of the play-offs"""
+    tools/mkccup.py prints them; qrounds: (competition 10..12, round 3, 2 or 1, regulation) of the
+    qualifying rounds in front of the play-offs; groups: the gset, ghome and poff lines
+    (group_lines)"""
     lines = [FORMAT, "world %s" % name]
     for L in leagues:
         parts = ["league %d" % L["id"]]
@@ -492,9 +798,15 @@ def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=(), qrou
         if L.get("name"):
             parts.append("name=%s" % L["name"].replace("\n", " ").strip())
         lines.append(" ".join(parts))
+    seen = set()
+    for L in leagues:                    # B425: a split season of the game's own a league stands under
+        g = L.get("gsplit")
+        if g and g[0] not in seen:
+            seen.add(g[0])
+            lines.append("gsplit %d regular=%d groups=%s" % (g[0], g[1], ",".join(map(str, g[2]))))
     for s in splits:                     # (total, regular, [groups], extra words ...)
-        total, regular, groups = s[:3]
-        lines.append("split %d regular=%d groups=%s%s" % (total, regular, ",".join(map(str, groups)),
+        total, regular, phases = s[:3]
+        lines.append("split %d regular=%d groups=%s%s" % (total, regular, ",".join(map(str, phases)),
                                                           "".join(" " + w for w in s[3:])))
     for e in uefa:
         lines.append("uefa %d %d %d %d" % tuple(e))
@@ -503,8 +815,59 @@ def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=(), qrou
     for q in qrounds:
         lines.append("qround %d %d %d" % tuple(q))
     lines += list(ccups)
+    lines += list(groups)
     with open(path, "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(lines) + "\n")
+
+
+def group_lines(gsets=(), homes=(), poffs=(), borders=None):
+    """The world file's lines for GitHub #98. gsets: [(ups [(id, n)], lows [(id, n, pref id or 0)])];
+    homes: {league: [team ids]}; poffs: [(cup, up, low, hold (id, place) or None, [(id, place)])];
+    borders (16.11.2026, zone_border): {group: [(team id, neighbour group)]} in the recipe's order"""
+    out = []
+    for k, (ups, lows) in enumerate(gsets):
+        out.append("gset %d up=%s low=%s" % (k, ",".join("%d:%d" % tuple(u) for u in ups),
+                                             ",".join("%d:%d:%d" % tuple(l) for l in lows)))
+    for lid in sorted(homes):
+        if homes[lid]:
+            out.append("ghome %d %s" % (lid, ",".join(str(t) for t in homes[lid])))
+    for cup, up, low, hold, entry in poffs:
+        out.append("poff %d up=%d low=%d%s entry=%s" % (cup, up, low, " hold=%d:%d" % tuple(hold) if hold else "",
+                                                       ",".join("%d:%d" % tuple(e) for e in entry)))
+    for lid in sorted(borders or {}):
+        if borders[lid]:
+            out.append("gborder %d %s" % (lid, ",".join("%d:%d" % tuple(e) for e in borders[lid])))
+    return out
+
+
+def read_borders(path):
+    """{group: [(team id, neighbour group)]} of a world file's gborder lines, as fl26chain.lua reads
+    them; {} for a world without them (every world built before 16.11.2026)"""
+    out = {}
+    for line in open(path, encoding="utf-8"):
+        w = line.split()
+        if len(w) >= 3 and w[0] == "gborder" and w[1].isdigit():
+            out.setdefault(int(w[1]), []).extend(tuple(int(x) for x in e.split(":")) for e in w[2].split(",") if e)
+    return out
+
+
+def read_groups(path):
+    """(gsets, homes, poffs) of a world file, as group_lines takes them -- the reading fl26chain.lua does"""
+    gsets, homes, poffs = [], {}, []
+    pairs = lambda v: [tuple(int(x) for x in e.split(":")) for e in v.split(",") if e]
+    for line in open(path, encoding="utf-8"):
+        w = line.split()
+        if not w:
+            continue
+        kv = dict(b.partition("=")[::2] for b in w[2:] if "=" in b)
+        if w[0] == "gset" and "up" in kv and "low" in kv:
+            gsets.append((pairs(kv["up"]), pairs(kv["low"])))
+        elif w[0] == "ghome" and len(w) >= 3:
+            homes[int(w[1])] = [int(t) for t in w[2].split(",") if t]
+        elif w[0] == "poff" and "entry" in kv:
+            hold = tuple(int(x) for x in kv["hold"].split(":")) if "hold" in kv else None
+            poffs.append((int(w[1]), int(kv["up"]), int(kv["low"]), hold, pairs(kv["entry"])))
+    return gsets, homes, poffs
 
 
 def read_world(path):
@@ -553,6 +916,10 @@ def load(d, n):
 
 
 SPLIT_TOTAL, F_TOTAL, F_REGULAR, F_GROUPS = 9, 11, 12, (13, 14, 15)
+# A season of two tournaments of the game (Colombia 119 = 168 + 169, the MLS 51 = 166 + 167): a total
+# of type 5, format 6, and its halves of type 4, format 7 and 8, whose +0x06 names the total
+# (leaguebuilder.game_season_totals, the world file's seasonsum line)
+SEASON_TOTAL, F_SEASON_TOTAL, F_SEASON_HALVES = 5, 6, (7, 8)
 
 
 def fmt(g):
@@ -567,7 +934,7 @@ def from_tables(root, base, countries_file=None):
     comp, regs = load(p, "Competition.bin"), load(p, "CompetitionRegulation.bin")
     shipped = {int.from_bytes(load(base, "CompetitionRegulation.bin")[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
                for i in range(len(load(base, "CompetitionRegulation.bin")) // M.REG)}
-    region = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+    region = {M.comp_cid(comp, i * M.COMP): M.dec_region(comp[i * M.COMP + M.REGION_OFF])
               for i in range(len(comp) // M.COMP)}
     rows = [regs[i * M.REG:(i + 1) * M.REG] for i in range(len(regs) // M.REG)]
     rid = lambda g: int.from_bytes(g[M.R_ID:M.R_ID + 2], "little")
@@ -580,10 +947,10 @@ def from_tables(root, base, countries_file=None):
         if i in shipped or g[M.R_TYPE] not in (4, SPLIT_TOTAL):
             continue
         if g[M.R_TYPE] == 4 and fmt(g) in (F_REGULAR,) + F_GROUPS:
-            phases.setdefault(g[M.R_CID], []).append((fmt(g), i))
+            phases.setdefault(M.reg_cid(g), []).append((fmt(g), i))
             continue
         legs = (int.from_bytes(g[0x10:0x14], "little") >> 12) & 7
-        L = {"id": i, "cid": g[M.R_CID], "region": region.get(g[M.R_CID]), "tier": M.get_tier(g),
+        L = {"id": i, "cid": M.reg_cid(g), "region": region.get(M.reg_cid(g)), "tier": M.get_tier(g),
              "clubs": g[M.R_TEAMS] & 0x3f, "legs": legs or None,
              "name": pesdb.cstr(g[M.R_NAME:M.R_NAME + M.NAME_SLOT]) if hasattr(pesdb, "cstr")
                      else bytes(g[M.R_NAME:M.R_NAME + M.NAME_SLOT]).split(b"\0")[0].decode("utf-8", "replace")}
@@ -607,9 +974,15 @@ def from_tables(root, base, countries_file=None):
     for L in leagues:
         up = byid.get(L.get("above"))
         if L.get("above") in shipped and up is not None and up[M.R_TYPE] == 4 and fmt(up) == F_REGULAR:
-            tot = next((rid(h) for h in rows if h[M.R_TYPE] == SPLIT_TOTAL and h[M.R_CID] == up[M.R_CID]), None)
+            tot = next((rid(h) for h in rows if h[M.R_TYPE] == SPLIT_TOTAL and M.reg_cid(h) == M.reg_cid(up)), None)
             if tot is not None:
                 L["splittotal"] = tot
+                # B425: the season's groups too (formats 13 and 14: the top and the bottom one), for
+                # the `gsplit` line -- a play-off's place of the regular phase is the final table's
+                grp = [next((rid(h) for h in rows if h[M.R_TYPE] == 4 and M.reg_cid(h) == M.reg_cid(up) and fmt(h) == f), None)
+                       for f in F_GROUPS[:2]]
+                if None not in grp:
+                    L["gsplit"] = (tot, L["above"], grp)
     splits = []
     for L in leagues:
         ph = sorted(phases.get(L["cid"], []))

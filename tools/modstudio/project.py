@@ -4,6 +4,7 @@ The recipe is the same JSON leaguebuilder.py builds from.  The tables are the ga
 Team/Competition/Player tables, unpacked once from the person's game into
 %APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables), FL27's into tables27.
 """
+import bigjson
 import copy, json, os, pickle, shutil, time, zlib
 
 from PySide6.QtCore import QObject, Signal
@@ -27,19 +28,91 @@ def tables_key(game):
     return "tables_fl27" if is_27(game) else "tables"
 
 
-def blank():
-    return {"world": "_FL26MyWorld", "leagues": [], "edits": {}, "players": {}}
+DEFAULT_WORLD = "_FL26MyWorld"
+
+
+def rename_in(recipe, old, new):
+    """Project.rename_league on any recipe: the league `old`, which has the name `new` already,
+    keeps everything that names it by name pointing at it. B487 (pop1806 16.11.): a plain recipe
+    too, the one Make it editable reads back from the plan, where a league renamed before it
+    still had its old name (pages.myworld.carry_added)"""
+    if old == new:
+        return
+    me = next((L for L in recipe["leagues"] if L["name"] == new), None)
+    if me is not None:      # the last Build's ids follow it there (leaguebuilder.plan, built_as)
+        me["built_as"] = [x for x in me.get("built_as") or [] if x not in (old, new)] + [old]
+    for L in recipe["leagues"]:
+        if L.get("above") == old:
+            L["above"] = new
+    recipe.setdefault("players", {})
+    # D17 (20.11.2026): every section keyed by a club of the league, "<league>/<n>" -- not only the
+    # squads: club_money (FL 2027 budget, fame, fans) kept the old name, so after a Build the ten
+    # clubs of a renamed league lost their money and got the estimate
+    for sect in list(recipe):
+        d = recipe[sect]
+        if not isinstance(d, dict):
+            continue
+        for k in [k for k in d if isinstance(k, str) and k.rpartition("/")[0] == old]:
+            d["%s/%s" % (new, k.rpartition("/")[2])] = d.pop(k)
+    for c in recipe.get("preseason_cups") or []:
+        c["clubs"] = ["%s/%s" % (new, x.rpartition("/")[2]) if isinstance(x, str) and x.rpartition("/")[0] == old
+                      else x for x in c.get("clubs") or []]
+    for p in (recipe.get("packs") or {}).values():
+        p["leagues"] = [new if n == old else n for n in p.get("leagues") or []]
+        p["players"] = ["%s/%s" % (new, k.rpartition("/")[2]) if k.rpartition("/")[0] == old else k
+                        for k in p.get("players") or []]
+
+
+def built_team_ids(built, names, n):
+    """the team ids the last Build gave a league's clubs, for the clubs as they stand NOW (B305,
+    evannoteven 31.10.2026): by the club's name, as the next Build keeps them
+    (leaguebuilder.pinned_tid), not by place -- after Insert club every club under the new one
+    showed the id of the club above it, and the new one an id it will never get. `built` is the
+    league in the last Build's plan (teams, club_names), `names` the recipe's club_names, `n` its
+    clubs. None for a club the Build has not seen: its id is handed out at Build"""
+    teams = list((built or {}).get("teams") or [])
+    if not teams:
+        return []
+    then = [str(x or "").strip().lower() for x in ((built or {}).get("club_names") or [])]
+    if not then:                           # a plan of before club_names was kept: by place, as it was
+        return teams
+    now = [str(x or "").strip().lower() for x in list(names)[:int(n or 0)]]
+    out = []
+    for k in range(int(n or 0)):
+        nm = now[k] if k < len(now) else ""
+        if nm:
+            # by name; a club renamed where it stands (the name its place had is gone from the
+            # league) keeps showing its place's id, as before
+            j = then.index(nm) if nm in then else (k if (then[k:k + 1] or [""])[0] not in [""] + now else None)
+        else:                              # a club with no name of its own keeps its place's id
+            j = k if not (then[k:k + 1] or [""])[0] else None
+        t = teams[j] if j is not None and j < len(teams) else None
+        out.append(t if isinstance(t, int) and t not in out else None)
+    return out
+
+
+def blank(world=None):
+    return {"world": world or DEFAULT_WORLD, "leagues": [], "edits": {}, "players": {}}
+
+
+def _key(path):
+    return os.path.normcase(os.path.abspath(path))
 
 
 class Project(QObject):
     changed = Signal()          # the recipe changed (any page)
     saved = Signal()            # it was saved by itself (autosave)
+    _bg_done = Signal(int, str, bool)   # a big recipe written by the worker: change count, file, ok
     tables_changed = Signal()   # tables loaded or unloaded
 
     def __init__(self, app):
         super().__init__()
         self.app = app
-        self.recipe = blank()
+        # B399: the recipe copies (recipes\<world>.json) that are this open world's own: the one it
+        # was read from and the ones written for it. A copy of that name not in here is another
+        # world's, and keep_copy never writes over it
+        self._own = set()
+        self.recipe = blank(self.free_world() if app is not None else None)
         self.path = None
         self.dirty = False
         # 0.2.5: Undo and Redo of the whole world (mato 16.10.): a copy of the recipe before each
@@ -245,7 +318,7 @@ class Project(QObject):
                         name = B.text(g[B.M.R_NAME:B.M.R_NAME + B.M.NAME_SLOT])
                         if name and rid not in comps:
                             comps[rid] = name
-                        cid_of[rid] = g[B.M.R_CID]          # a world's own wins over the game's
+                        cid_of[rid] = B.M.reg_cid(g)          # a world's own wins over the game's
                 except (OSError, ValueError, B.BuildError):
                     pass
             self._stages = {}
@@ -277,6 +350,7 @@ class Project(QObject):
     def touch(self):
         self._remember()
         self.dirty = True
+        self._gen = getattr(self, "_gen", 0) + 1
         self.changed.emit()
         self._autosave_soon()
 
@@ -286,6 +360,7 @@ class Project(QObject):
         and closing asked about changes while the status bar said the world was saved"""
         self._remember()
         self.dirty = True
+        self._gen = getattr(self, "_gen", 0) + 1
         self._autosave_soon()
 
     # ---- undo ----
@@ -386,8 +461,9 @@ class Project(QObject):
         self._keep(places)
         self._snap_at = now
 
-    def _forget(self):
-        self._undo, self._redo, self._snap, self._snap_at = [], [], self._split(self.recipe), 0.0
+    def _forget(self, snap=None):
+        """snap: _split(the recipe) made already, off the window's thread"""
+        self._undo, self._redo, self._snap, self._snap_at = [], [], snap or self._split(self.recipe), 0.0
 
     def can_undo(self):
         return bool(self._undo)
@@ -417,6 +493,7 @@ class Project(QObject):
         self._keep(places)
         self._snap_at = 0.0
         self.dirty = True
+        self._gen = getattr(self, "_gen", 0) + 1
         self.changed.emit()
         self._autosave_soon()
         return back
@@ -445,8 +522,76 @@ class Project(QObject):
             self._timer = QTimer(self)
             self._timer.setSingleShot(True)
             self._timer.setInterval(1500)
-            self._timer.timeout.connect(self.autosave)
+            self._timer.timeout.connect(self._autosave_bg)
+            self._bg_done.connect(self._autosave_landed)
         self._timer.start()
+
+    BIG = 16 << 20      # a recipe whose text is this long is written by a worker (the GigaPack's: 260 MB)
+
+    def _autosave_bg(self):
+        """the save a moment after a change. A big world's recipe is 2.4 s of json.dumps: on the
+        window's thread the window stopped that long after every change (B480, the stall recorder
+        15.11.2026, project._write under autosave). So its text is made and written next to the
+        file by a worker, in small steps, and the window only moves it into place -- when nothing
+        was changed meanwhile; else it is thrown away and the next save does it again"""
+        if not self.dirty:
+            return
+        if getattr(self, "_size", 0) < self.BIG:
+            return self.autosave()
+        if getattr(self, "_bg", None) is not None:
+            self._timer.start()                 # one at a time: after the one under way
+            return
+        import threading
+        try:
+            if self.path:
+                target = self.path
+            else:
+                os.makedirs(self.copies_dir(), exist_ok=True)
+                target = os.path.join(self.copies_dir(), self.recipe["world"] + ".json")
+        except (OSError, KeyError, TypeError, ImportError):
+            return self.autosave()
+        gen, recipe, tmp = getattr(self, "_gen", 0), self.recipe, target + ".bg.tmp"
+
+        def work():
+            ok = False
+            try:
+                text = self._text(recipe, steps=True)
+                with open(tmp, "w", encoding="utf-8") as f:
+                    for i in range(0, len(text), 1 << 22):
+                        f.write(text[i:i + (1 << 22)])
+                ok = True
+            except Exception:           # changed under it (a dict that grew), or the disk
+                pass
+            try:
+                self._bg_done.emit(gen, tmp, ok)
+            except RuntimeError:        # the window is gone
+                pass
+        self._bg = (recipe, self.path, target)
+        threading.Thread(target=work, name="autosave", daemon=True).start()
+
+    def _autosave_landed(self, gen, tmp, ok):
+        recipe, path, target = self._bg
+        self._bg = None
+        same = (ok and gen == getattr(self, "_gen", 0) and recipe is self.recipe and path == self.path
+                and tmp == target + ".bg.tmp")
+        try:
+            if same and self.dirty:
+                if self.path:
+                    os.replace(tmp, self.path)
+                else:
+                    self.app.settings["last_recipe"] = self.keep_copy(ready=tmp)
+                    self.app.save_settings()
+                self.dirty = False
+                self.saved.emit()
+                return
+        except (OSError, KeyError, TypeError):
+            pass
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        if self.dirty:
+            self._timer.start()
 
     def autosave(self):
         """into the world's own file when it has one, else into the copy the next start opens
@@ -476,34 +621,23 @@ class Project(QObject):
 
     def rename_league(self, old, new):
         """keep everything that names a league by name pointing at it"""
-        if old == new:
-            return
-        me = self.league(new)
-        if me is not None:      # the last Build's ids follow it there (leaguebuilder.plan, built_as)
-            me["built_as"] = [x for x in me.get("built_as") or [] if x not in (old, new)] + [old]
-        for L in self.recipe["leagues"]:
-            if L.get("above") == old:
-                L["above"] = new
-        pl = self.players()
-        for k in list(pl):
-            lg, _s, n = k.rpartition("/")
-            if lg == old:
-                pl["%s/%s" % (new, n)] = pl.pop(k)
-        for c in self.recipe.get("preseason_cups") or []:
-            c["clubs"] = ["%s/%s" % (new, x.rpartition("/")[2]) if isinstance(x, str) and x.rpartition("/")[0] == old
-                          else x for x in c.get("clubs") or []]
-        for p in (self.recipe.get("packs") or {}).values():
-            p["leagues"] = [new if n == old else n for n in p.get("leagues") or []]
-            p["players"] = ["%s/%s" % (new, k.rpartition("/")[2]) if k.rpartition("/")[0] == old else k
-                            for k in p.get("players") or []]
+        rename_in(self.recipe, old, new)
+
+    def club_keyed(self):
+        """D17 (20.11.2026): the recipe's sections other than the squads that are keyed by a club
+        of a new league, "<league>/<n>" (club_money: FL 2027 budget, fame, fans). They stayed by
+        place when a club was inserted, removed or moved, and under the old name of a renamed
+        league, so a club got the money of another or the estimate"""
+        return [d for s, d in self.recipe.items() if s != "players" and isinstance(d, dict)]
 
     def drop_league(self, name, keep=0):
         """forget player changes of a league's clubs from place `keep` on (all when 0)"""
+        for pl in [self.players()] + self.club_keyed():
+            for k in list(pl):
+                lg, _s, n = k.rpartition("/") if isinstance(k, str) else ("", "", "")
+                if lg == name and n.isdigit() and int(n) >= keep:
+                    pl.pop(k)
         pl = self.players()
-        for k in list(pl):
-            lg, _s, n = k.rpartition("/")
-            if lg == name and n.isdigit() and int(n) >= keep:
-                pl.pop(k)
         for c in self.recipe.get("preseason_cups") or []:      # its clubs leave the pre-season cups
             c["clubs"] = [x for x in c.get("clubs") or [] if not (
                 isinstance(x, str) and x.rpartition("/")[0] == name
@@ -522,6 +656,7 @@ class Project(QObject):
     # (a league package's Kit Server folders too: they stayed by place, so after Remove club the
     # clubs below wore the next club's kit -- pepponeee98's Serie C, 14.10.)
     PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
+                   ("club_coach_countries", ""),
                    ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""),
                    ("kit_folders", ""))
 
@@ -546,6 +681,7 @@ class Project(QObject):
         src, to = "%s/%d" % (name, k), "%s/%d" % (dst, nD)
         pl = self.players()
         entry = pl.pop(src, None)
+        others = [(d, d.pop(src)) for d in self.club_keyed() if src in d]
         MOVING = "<the club that moves>"
 
         def place(j):                  # a place of league `name` after the move: (league, place)
@@ -574,6 +710,8 @@ class Project(QObject):
             D.setdefault("newlife", {})["clubs"] = lst + [0] * (nD - len(lst)) + [nl_id]
         if entry is not None:
             pl[to] = entry
+        for d, v in others:
+            d[to] = v
         for lst, i, r in joins:
             lst[i] = r
         for c in self.recipe.get("preseason_cups") or []:
@@ -623,6 +761,13 @@ class Project(QObject):
             else:
                 nl.pop(at)
             L["newlife"]["clubs"] = nl
+        if L.get("club_order"):           # request #6: the Select Team order is by place too
+            co = [moved(int(k)) for k in L["club_order"]]
+            co = [k for k in co if k is not None]
+            if co:
+                L["club_order"] = co
+            else:
+                L.pop("club_order")
         gc = []
         for e in L.get("game_clubs") or []:
             k = moved(int(e.get("at", 0)))
@@ -632,12 +777,13 @@ class Project(QObject):
             L["game_clubs"] = gc
         else:
             L.pop("game_clubs", None)
-        pl = self.players()
-        old = {k: pl.pop(k) for k in list(pl) if k.rpartition("/")[0] == name and k.rpartition("/")[2].isdigit()}
-        for k, v in old.items():
-            m = moved(int(k.rpartition("/")[2]))
-            if m is not None:
-                pl["%s/%d" % (name, m)] = v
+        for pl in [self.players()] + self.club_keyed():
+            old = {k: pl.pop(k) for k in list(pl) if isinstance(k, str)
+                   and k.rpartition("/")[0] == name and k.rpartition("/")[2].isdigit()}
+            for k, v in old.items():
+                m = moved(int(k.rpartition("/")[2]))
+                if m is not None:
+                    pl["%s/%d" % (name, m)] = v
 
         def ref(x):
             if isinstance(x, str) and x.rpartition("/")[0] == name and x.rpartition("/")[2].isdigit():
@@ -658,8 +804,70 @@ class Project(QObject):
         self.touch()
         return True
 
+    def free_world(self, stem=DEFAULT_WORLD):
+        """B399 (10.11.): a name for a new world that no world has yet -- _FL26MyWorld, else
+        _FL26MyWorld2, 3, ... New world named every world _FL26MyWorld, and its first change was
+        saved by itself into recipes\\_FL26MyWorld.json: over the recipe of the player's world of
+        that name (55 leagues became one). Taken: a world in the game's livecpk or content folders
+        (worlds.check_name), and a recipe copy Mod Studio keeps of a world (recipes\\*.json)"""
+        try:
+            kept = {n[:-5].lower() for n in os.listdir(self.copies_dir()) if n.lower().endswith(".json")}
+        except (OSError, ImportError):
+            kept = set()
+        game = getattr(self.app, "game", None)
+        from modstudio import worlds as WL
+        for i in range(1, 10000):
+            name = stem if i == 1 else "%s%d" % (stem, i)
+            if name.lower() in kept:
+                continue
+            if game is not None and getattr(game, "livecpk_dir", None):
+                try:
+                    if WL.check_name(game, name):
+                        continue
+                except (OSError, TypeError, AttributeError):
+                    pass
+            return name
+        return stem
+
+    def copy_taken(self, world):
+        """B399: recipes\\<world>.json is the recipe copy of another world than the open one (a
+        name the open world must not take: its next autosave would go into that file)"""
+        try:
+            p = os.path.join(self.copies_dir(), world + ".json")
+        except ImportError:
+            return False
+        return os.path.exists(p) and _key(p) not in self._own
+
+    def untouched(self):
+        """the open world is the empty one of New world or of a first start, and nothing was done
+        with it yet (no file, no copy, no change)"""
+        r = self.recipe
+        return (not self.path and not self.dirty and not self._own and not r.get("leagues")
+                and not any((r.get("edits") or {}).values()) and not r.get("players"))
+
+    def claim(self, path):
+        """the recipe copy at `path` is the open world's own (Rename world moved it with the world)"""
+        if path:
+            self._own.add(_key(path))
+
+    def owns(self, path):
+        return bool(path) and _key(path) in self._own
+
+    def _let_go(self, new):
+        """B480: the recipe open till now and its copy for Undo go to letgo's thread, freed there in
+        small steps. Freed here, by `self.recipe = new`, the GigaPack's (220,000 players) kept
+        Python's lock with the window's thread inside it: 7.2 s of a stopped window at the end of
+        Make it editable (the exe test of beta4o, hangstacks: adopt -> PyObject_SetAttr -> Py_Dealloc)"""
+        from . import letgo
+        old = getattr(self, "recipe", None)
+        letgo.drop(*[x for x in (old, getattr(self, "_snap", None), getattr(self, "_undo", None),
+                                 getattr(self, "_redo", None)) if x is not None and x is not new])
+        del old
+
     def new(self):
-        self.recipe, self.path, self.dirty = blank(), None, False
+        self._let_go(None)
+        self.recipe, self.path, self.dirty = blank(self.free_world()), None, False
+        self._own = set()
         self._forget()
         self._open_next(None)
         self.changed.emit()
@@ -679,9 +887,9 @@ class Project(QObject):
 
     def open(self, path, copy=False):
         """load a recipe; copy=True for the copy Build keeps (keep_copy): Save then asks for a name"""
-        self.adopt(json.load(open(path, encoding="utf-8")), path, copy)
+        self.adopt(bigjson.load(open(path, encoding="utf-8")), path, copy)
 
-    def adopt(self, r, path, copy=False):
+    def adopt(self, r, path, copy=False, snap=None):
         """a recipe read already becomes the open one: open() without the reading, for a recipe read
         off the window's thread (the Modpack's is 132 MB, 1.4 s of json.load)"""
         if not str(r.get("world", "")).startswith("_FL26"):
@@ -694,12 +902,26 @@ class Project(QObject):
             if not self.base:
                 raise B.BuildError("this is the plan of a built world, not a world file: "
                                    "put the world in the game and open it in My world")
-            r, copy = B.recipe_from_plan(r, self.base), True
+            r, copy, snap = B.recipe_from_plan(r, self.base), True, None
         r.setdefault("leagues", [])
         r.setdefault("edits", {})
         r.setdefault("players", {})
+        self._let_go(r)
         self.recipe, self.path, self.dirty = r, None if copy else path, False
-        self._forget()
+        try:
+            self._size = os.path.getsize(path)      # a big one is saved by a worker (_autosave_bg)
+        except (OSError, TypeError):
+            self._size = 0
+        # B399: the file it was read from is its own; with copy, the copy under its name too (Build's
+        # copy of it, or a world's plan read back: that world's recipe)
+        self._own = set()
+        self.claim(path)
+        if copy:
+            try:
+                self.claim(os.path.join(self.copies_dir(), str(r.get("world", "")) + ".json"))
+            except ImportError:
+                pass
+        self._forget(snap)
         self._open_next(path)
         self.changed.emit()
 
@@ -713,25 +935,112 @@ class Project(QObject):
         from modstudio.app import APPDIR
         return os.path.join(APPDIR, "recipes")
 
-    def keep_copy(self):
+    def keep_copy(self, ready=None):
         """write the recipe to %APPDATA%\\FL26ModStudio\\recipes\\<world>.json and return that path.
         Build keeps one there each time, and the next start opens the latest recipe again, so the
         leagues are not lost when Mod Studio is closed without Save recipe (GitHub #40). The
-        recipe's own file, its name and the unsaved mark are not touched."""
+        recipe's own file, its name and the unsaved mark are not touched.
+
+        B399: a copy of that name that is not the open world's own (another world's recipe) is never
+        written over: it is moved aside first, to <world>.json.prev (.prev2, .prev3, ...: one kept
+        aside before is not replaced either), and the status bar says where it is. For a world kept
+        in a file of its own (Open a world..., Save as) Build's copy of the same name is that world's
+        from an earlier session: one .prev of it, replaced the next time."""
         d = self.copies_dir()
         os.makedirs(d, exist_ok=True)
         p = os.path.join(d, self.recipe["world"] + ".json")
-        self._write(p)
+        aside = None
+        if os.path.exists(p) and _key(p) not in self._own:
+            aside = p + ".prev"
+            n = 2
+            while not self.path and os.path.exists(aside):
+                aside, n = "%s.prev%d" % (p, n), n + 1
+            os.replace(p, aside)
+        if ready:                   # written already, next to it (_autosave_bg)
+            os.replace(ready, p)
+        else:
+            self._write(p)
+        self.claim(p)
+        if aside and not self.path:
+            try:
+                from modstudio.i18n import _
+                self.app.status(_("Another world's recipe had the name %s: it is kept in %s.")
+                                % (self.recipe["world"], aside))
+            except Exception:
+                pass
         return p
 
-    def _write(self, path):
-        clean = dict(self.recipe)
+    def keep_copy_bg(self, done):
+        """keep_copy() with the recipe's text made and written by a worker, in small steps (bigjson),
+        then put in place on the window's thread; done(path, or None when it could not be written).
+        B480 (16.11.2026): Build's keep_copy on the window's thread stood it still 2.1-2.4 s with the
+        GigaPack's 260 MB recipe (json.dumps). Same text as keep_copy writes. The caller keeps the
+        recipe from changing meanwhile (Build's buttons off); a change made under it anyway (another
+        page) writes the copy again; done(None) for a disk that refuses it"""
+        from modstudio.ui import run_job
+        try:
+            d = self.copies_dir()
+            os.makedirs(d, exist_ok=True)
+            tmp = os.path.join(d, self.recipe["world"] + ".json.keep.tmp")
+        except (OSError, KeyError, TypeError, ImportError):
+            done(None)
+            return
+        recipe, gen = self.recipe, getattr(self, "_gen", 0)
+
+        def job(_progress):
+            text = self._text(recipe, steps=True)
+            with open(tmp, "w", encoding="utf-8") as f:
+                for i in range(0, len(text), 1 << 22):
+                    f.write(text[i:i + (1 << 22)])
+            return len(text)
+
+        def moved():
+            """changed while the worker wrote it (another page): a copy of what is open now"""
+            if getattr(self, "_gen", 0) == gen and self.recipe is recipe:
+                return False
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            self.keep_copy_bg(done)
+            return True
+
+        def landed(n):
+            if moved():
+                return
+            try:
+                path = self.keep_copy(ready=tmp)
+                self._size = n
+            except (OSError, KeyError, TypeError):
+                path = None
+            done(path)
+
+        def failed(_tb):
+            if moved():
+                return
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            done(None)
+        run_job(job, landed, failed)
+
+    def _text(self, recipe, steps=False):
+        """the recipe as its file's text. steps: in small steps (bigjson), for a worker thread:
+        the same text, and the window keeps its turns"""
+        clean = dict(recipe)
         clean["players"] = {k: v for k, v in (clean.get("players") or {}).items()
                             if v.get("edits") or v.get("add") or v.get("remove") or v.get("join")
                             or v.get("coach_portrait") or v.get("stadium")}
+        if steps:
+            return bigjson.dumps(clean, indent=1, ensure_ascii=False)
         # dumps, not dump: dump() streams through the pure-Python encoder, 2.6 s on the Modpack's
         # 132 MB recipe against 0.9 s (the window stood still on a switch, coldstart 17.10.)
-        text = json.dumps(clean, indent=1, ensure_ascii=False)
+        return json.dumps(clean, indent=1, ensure_ascii=False)
+
+    def _write(self, path):
+        text = self._text(self.recipe)
+        self._size = len(text)
         with open(path + ".tmp", "w", encoding="utf-8") as f:
             f.write(text)
         os.replace(path + ".tmp", path)

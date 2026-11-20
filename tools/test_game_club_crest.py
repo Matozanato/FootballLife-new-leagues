@@ -34,6 +34,7 @@ class FakeDialog:
         self.result = (name, abbr, CREST)
         self.portrait_path = kw.get("portrait") or ""
         self.stadium_value = kw.get("stadium") or {}
+        self.coach_name = kw.get("coach") or ""
 
     def finish(self):
         return True
@@ -66,6 +67,7 @@ def main():
         p.game_cl = {5001: ("Al Foo", "ALF"), 5002: ("Al Bar", "ALB")}
         p.game_other = [5001, 5002]
         page = PB.GameLeagues(types.SimpleNamespace(project=p))
+        page.show()                             # B480: a page that is not on screen fills a turn later
         page.fill()
         row = next(i for i, x in enumerate(page.shown_rows) if x[0] == OTHERS)
         page.list.setCurrentRow(row)

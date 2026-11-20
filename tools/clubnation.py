@@ -26,7 +26,7 @@ import collections, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import pesdb
-from mkleague import COMP, ENT, REGION_OFF, CID_OFF, E_TEAM, E_CID, dec_region
+from mkleague import COMP, ENT, REGION_OFF, CID_OFF, E_TEAM, E_CID, dec_region, comp_cid, ent_cid
 
 T_REC, T_ID = 1532, 0x08
 T_NAT_BIT, NAT_BITS = 562, 9
@@ -91,11 +91,11 @@ def main():
         c = comps[i * COMP:(i + 1) * COMP]
         cc = rc.get(dec_region(c[REGION_OFF]))
         if cc is not None:
-            comp_country[c[CID_OFF]] = cc
+            comp_country[comp_cid(c)] = cc
     club_country = {}
     for i in range(len(ents) // ENT):
         e = ents[i * ENT:(i + 1) * ENT]
-        tid, cid = u32(e, E_TEAM), e[E_CID]
+        tid, cid = u32(e, E_TEAM), ent_cid(e)
         if tid >= min_id and cid in comp_country:
             club_country.setdefault(tid, set()).add(comp_country[cid])
 

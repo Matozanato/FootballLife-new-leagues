@@ -117,6 +117,20 @@ def place(src, lib, rel, team_id=None, numbers=None):
     return os.path.relpath(dst, lib)
 
 
+OURS = "FL26 Mod Studio:"       # lbstadiums.TAG without its "# ": the comment of a line a Build wrote
+
+
+def take_line(r, rel):
+    """a club's kit line points at an imported kit. B321 (Tysonche35 04.11.): Import kits over the
+    line a Build wrote (a made kit, a pack's kit) kept its "FL26 Mod Studio:" comment, so the next
+    Build took the line for one of its own: out it went and the made kit was back. The line is the
+    user's now, so that comment goes with the old folder"""
+    r.fields[1:2] = [rel]
+    if r.comment.startswith(OURS):
+        r.comment = ""
+    r.touch()
+
+
 def _dialog_class():
     # Dialog lives in builder.py, which imports the League Builder; load it only when asked
     from .builder import Dialog
@@ -145,12 +159,15 @@ def _dialog_class():
             self.cm, self.view = crestmatch, view
             self.tab = view.map_tabs[0]
             p = project(view.app)
-            teams, _c = p.names() if p is not None and p.base is not None else ({}, {})
+            # B441 (Shawn 12.11.): with the game's tables unread (p.base None) the list was empty and
+            # every folder said "no club found", without a word why. The world's own clubs are in
+            # the world's tables: those are matched even then, and the box says what is missing
+            teams, _c = p.names() if p is not None else ({}, {})
             worlds = set()
-            if p is not None and p.base is not None:
+            if p is not None:
                 import leaguebuilder as B
                 try:
-                    game = set(B.game_clubs(p.base))
+                    game = set(B.game_clubs(p.base)) if p.base is not None else set()
                     for db in p.world_tables():
                         worlds |= set(B.game_clubs(db)) - game
                 except (OSError, ValueError, B.BuildError):
@@ -244,6 +261,8 @@ def _dialog_class():
                     it.setForeground(1, QBrush(QColor(theme.SUBTLE)))
                 self.tree.addTopLevelItem(it)
             self.said.setText(_("%d kit folders, %d matched to a club.") % (len(self.found), len(m)))
+            if not self.clubs:
+                self.said.setText(_("no game tables -- Settings > Unpack the game's tables"))
 
         def ok(self):
             lib = self.view.folder()
@@ -267,8 +286,7 @@ def _dialog_class():
                     rel = place(src, lib, library_path(self.folder.text(), src), tid,
                                 self.numbers.currentData())
                     if have:
-                        have[-1].fields[1:2] = [rel]
-                        have[-1].touch()
+                        take_line(have[-1], rel)
                         self.tab.switch_off_others(have[-1])
                     else:
                         mf.add(Row([str(tid), rel], quoted=[1]), after=self.tab.last_like(Row([str(tid)])))

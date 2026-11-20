@@ -33,6 +33,11 @@ the lua file; nothing touches the game.
 
     python hdr127.py                  the 127-entry module
     python hdr127.py 120              a smaller step, if 127 turns out to cost too much
+
+FL 2027 limits sets: the standings step (patchset.py <set>-standings, tools/standings.py) owns
+these sites instead -- the same trampolines (bound_trampoline below) on its own page, a header of
+1024 and the phase tables moved to the top of a grown object -- and the FL 2027 copy of
+fl26hdr255 stands down when it finds them done.  This generator stays for FL26's hdr modules.
 """
 import os
 import struct

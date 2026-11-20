@@ -4,19 +4,142 @@ Honest list, as of 2026-09-28. Addresses are given so that a fault offset in you
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
-## Open in Mod Studio 0.3.0 beta, Football Life 2027 (2026-11-01)
+## Open in Mod Studio 0.4.0 (2026-11-21)
 
+- **A running career does not get the new leagues, cups and clubs of a world's update.** A career
+  keeps its own copy of the clubs, squads and competitions; what an update adds comes only in a
+  new Master League. The career goes on with the leagues it has (Install offers Update only when
+  it can, see the FAQ, *Updating a shared world without breaking careers*).
 - **The Worldpack and Europe pack zips carry FL26's players.** A world zip brings its own player
   tables (`common\etc\pesdb\Player.bin` and the rest), made from FL26's when the pack was built,
   so in FL27 those worlds play with FL26's squads. A world built in FL27 has FL27's players.
 - **NewLife is not checked on FL27 yet.** Its clubs and players were matched to FL26's.
+- **With a very large world the Mod Studio window can still stop for a moment** (B480; the
+  GigaPack). Nothing is lost, do not close it. Most stops are gone in this beta (the Build click,
+  the look into a world zip, the end of its install, the first opening of Leagues, *Edit
+  league...*). Left: *Make it editable...* about 2-3.5 s when the PC's memory is full, saving an
+  edit about 4 s, installing the GigaPack zip, the game starting while Mod Studio is minimized or
+  the end of a Build up to about 7 s, opening a very large world when Mod Studio starts about 2.5 s, and Export of a world the GigaPack's size about
+  14 s at the very end, while the zip is finished (it does finish). A few shorter ones (changing
+  the language, the start screen, opening *Edit league...*) are about 1-1.5 s.
+- **Check the plan and the start of a Build can stop the window for about 2 s** (our test of
+  0.4.0) when Mod Studio is in Español, Français, Português or Hrvatski. The plan's summary is
+  translated line by line (`i18n.tr`, `pages/builder.py`) on the window's thread, not in the
+  background. Nothing is lost, do not close it; in English the summary is not translated and
+  there is no such stop.
+- **At the first start, while Mod Studio reads a very large world zip, the window can stop for
+  about 2 s** (our test of 0.4.0, the GigaPack zip). It goes on by itself; do not close it.
+- **Make it editable...: its last two lines stay English** in every language. The bar at the
+  bottom of the window says "copied into the backup: ..." and "...: made editable (the backup:
+  ...)" in English (`worlds.py`, they have no translation yet); the line before them, that
+  counts the megabytes copied, is in your language.
+- **Update after you built an editable world counts files your Build wrote as yours.** Make the
+  GigaPack editable, build it, then install the next version: "Ready to play" says thousands of
+  files you added or changed were kept. Most are what the Build itself wrote (`kitmaker.txt` of
+  the drawn kits, `Player.bin`, `Team.bin`, kit `.bin`s). Nothing is lost and the new version goes
+  in clean; the copies are in `SiderAddons\ModStudio\kept` and can be deleted. A renamed club's
+  old kit folder also stays in the game unused (not in `map.txt`).
+- **Updating a world you share: new leagues are kept apart, new clubs in old leagues are not**
+  (pack makers, FL 2027). Build now keeps every row of the version before in the world's
+  competition tables where it was and puts new leagues and cups after them (FAQ, *Updating a
+  shared world without breaking careers*, step 5). For a version exported with an older Mod Studio
+  (its id list has no order of the tables), set the recipe's `id_tables` to its world zip, or the
+  Build lays the tables out the old way and warns. A new league or cup only appears in a new
+  Master League; what a running career of the version before does with the new leagues' clubs is
+  not checked in the game yet. A club new to the world entered in a league or cup the version
+  before has still breaks its careers (a career has none of the club's players): Build and Export
+  say so, and Install offers Replace. `tools/check_update_ids.py <old zip> <new zip>` says whether
+  an update is safe.
+- **Updating a world you share: keep the players' ages** (pack makers). If an update changes the
+  age of players it keeps, a career of the version before takes them for regens when it loads
+  and gives them new names. GigaPack beta 4 keeps beta 3's ages.
+- **An Export counts as shared at once** (pack makers). Every Export that is not a *test zip* is
+  kept as the version shared last, even if you never share that zip, and the next Build keeps
+  that version's ids. For a zip you did not share, remove its
+  `recipes\ledgers\<world>.<lineage>.<n>.fl26ids` (and `.issued`). Two exports of the same world
+  at the same moment can get the same version number.
+- **Check the plan does not list clubs renamed since the shared version.** The Build log and
+  Install name them.
+- **Become a Legend: why a player can go missing from 1 to 2 July of the second season is not
+  known yet** (B491, `c0000409`, an edited Europe pack on FL 2027). This beta guards it
+  (`fl26nullguard15`, in `fl26guards.lua`): the missing player is skipped and the career goes on.
+- **FL27: the AFC Champions League has no Individual Titles and Team of the Competition** in
+  Competition Info. That is the game's own cup and the game's own rule; the other continental
+  cups have them in this beta.
+- **New clubs wear a borrowed kit in Player Info and the career menus** (B175). In matches and in
+  Edit they wear their own.
+- **Kits Mod Studio draws with its own numbers: the player's name is under the back number, not
+  above it** (seen in the game on 0.4.0). These are the drawn kits of a game whose kit library
+  lends them no numbers (a fresh install); `tools/kitnumbers.py` gives them `NameY` 12 and
+  `BackNumberY` 19. Fixed in the next version.
+- **A few faces of the South Asia group look European or African.**
+- **Build, step "2. Build the world": the question before it says the world will be put in the
+  game**, but that step switches nothing; use *3. Switch it on*. After the tables are unpacked
+  it can ask twice.
+- **A renamed world keeps the old zip name in Install's list.** Rename a world made from a zip,
+  then install that zip's next version: Install asks whether to install a mod of the same name
+  as well (press Yes), and the list then has two entries of that name, the older one is your
+  renamed world. Both worlds are fine; tell them apart by the time.
+- **The top bar can show a world zip's old name** after that world was made editable and built
+  again; its card in My world is right.
 - **SmokePatch's `common\SleeveBadge.lua` logs a Lua error** (`folder` nil, line 367) for the
-  clubs a world adds. The game plays on.
+  clubs a world adds, up to 0.3.0. The game plays on. From the version after 0.3.0 a world's
+  competitions get a line in `content\SleeveBadge\map.txt` when the world is switched on, and the
+  error is gone.
 - **FL27 started without its launcher can close while a new Master League is created or on its
   first days** (no error box; Windows logs `FL_2027.exe` at `0x1531cc313` or `0x1484ed4c0`,
   sometimes `0x141fea5ba`). It happens when `FL_2027.exe` (and Sider) are started directly; started
   through **FL 2027 start.exe**, its shortcut or **Start the game** in Mod Studio, it did not
   (2026-11-03). Start FL27 through the launcher.
+- **FL27: the 3rd European qualifying round's two legs are five days apart** (this beta, B463;
+  Thursday, then Tuesday). The 2nd qualifying round and the play-off are a week apart (2026/27's
+  play-off six days: 27 August, 2 September); a week for all three rounds does not fit between
+  the start of a season (5 August) and FL27's own league phase (8 September).
+- **A continental cup's preliminary round is a first, simple format** (0.3.0 beta 3, FL27
+  only). One round of one-match ties on 20 August for the places marked in the recipe
+  (`europe_pre`), 32 clubs at most; the real competitions play two legs and more rounds, which
+  come later. There is no dialog for it: the key is written into the recipe by hand. The round
+  shows in Competition Info as a competition of its own (`<cup> Preliminary Round`).
+- **Colombia's and the MLS's whole season.** Places given to **Liga BetPlay DIMAYOR** or
+  **Major League Soccer** go by the two tournaments' tables added together (fl26swiss
+  `ssum_keep`, the world file's `seasonsum` line). Checked in the game for Colombia on 0.4.0
+  (a one-season test on 20.11.2026): Competition Info > Colombia > Liga BetPlay DIMAYOR >
+  Standings shows the whole-season table (38 matches, the Apertura and the Clausura added
+  together), and the Copa Libertadores and Copa Sudamericana places went by it. The MLS's split
+  season is not checked in the game yet. A league put
+  under Colombia's league goes under its first tournament, and who goes down from Colombia's
+  league is the game's own standings at the end of the year, not this table.
+- **The classic Libertadores with places of the game's leagues is not checked in the game yet**
+  (next update). A game league given Libertadores places of its own now plays only those; the
+  clubs the game added are replaced on the day the field is set (`sider.log`: "is of a league
+  whose Libertadores places the world sets"). Checked without the game only as far as the build.
+- **A club's B team can end up in the same league as its first team.** There is no rule for
+  B teams yet: when a first team goes down into the league its B team plays in (for example
+  RSC Anderlecht and RSC Anderlecht Futures in the Challenger Pro League), both stay there and
+  play each other. The season goes on normally; only the real-life rule (the B team goes down
+  instead) is missing. Seen in a whole-season test on 2026-11-19.
+
+Reported by players and not reproduced or not measured by us yet (each needs a repeat on a game
+without other Sider mods, with `sider.ini` and `sider.log`):
+
+- **With a very large world, Master League days and phases can take long** (B460, FL 2027).
+  Players report waits of minutes between phases; we measured the start of a career (launcher to
+  the hub about 2 minutes), not a manual Advance.
+- **A Cyprus club of a very large world loads very slowly** (B471, FL 2027), a few minutes after
+  the last scene by the player's count. Not measured by us.
+- **Become a Legend in New Zealand's Central League: an empty Calendar and another
+  competition's result screen** (B465, FL 2027). Not seen in our careers at Island Bay United (Master League to 2030, Become a Legend).
+- **Argentina's lower leagues of a world of your own: no promotion and relegation at the
+  season's end** (B472, FL 2027, 0.3.0). `sider.log` says the season table was missing (0 clubs).
+- **AFC Champions League: two clubs of one country can still meet in a group** (B464, FL 2027).
+  Since 0.4.0 the clubs that fill the field are spread over the groups by country, so a group is no
+  longer all Japanese, but a pair of one country can stay: `sider.log` says how many ("groups after
+  the stand-ins: N pair(s) of one country in a group"); our test season had one, in one group of eight.
+- **Clubs of a few small countries without crests** (B483, FL 2027; São Tomé and Príncipe,
+  Macau, Tahiti, East Timor).
+- **Kits you linked to clubs yourself are gone after a world's update** (B497, FL 2027). What
+  Install keeps of your own files is in `SiderAddons\ModStudio\kept\<world>-<time>`; whether this
+  player's kits are there is not known.
 
 ## Open in Mod Studio 0.2.4 (2026-10-20)
 
@@ -78,7 +201,9 @@ numbers are in [limits.md](research/limits.md).
   and third seasons' July between the two CAF winners, each time with that year's winners
   (2026-10-01).
 - **Leagues of 10 to 28 clubs** with the right number of rounds, different sizes in one world
-  (26 and 28 clubs played their 50 and 54 rounds on 2026-10-25).
+  (26 and 28 clubs played their 50 and 54 rounds on 2026-10-25). A league plays 54 rounds at
+  most, so 29 to 32 clubs meet once (29 to 31 rounds): the builder takes them, but no such league
+  has played a whole season in the game yet.
 - **The menus**: up to 36 new leagues in Select Team (past 32 the plan names the ones that take the place of a game's "Other ..." group or get none), every one in Kick Off, Edit mode and Database →
   Competition Info, under its own country's name and flag.
 
@@ -98,12 +223,14 @@ numbers are in [limits.md](research/limits.md).
   damaged.
 - **A saved career belongs to its world.** It loads only with the same world switched on, and
   any change to a league's clubs needs a new career.
-- **A new league outside Europe can read as European in the board's objectives** (issues #43,
-  #70): a first division of a new country that plays August to May keeps the UEFA code, because
-  the game's July season-end step promotes and relegates only for that code, so the Master
-  League board can ask for the Champions League. Its places still go to its own continent's
-  cups. Not fixed yet: it needs a change inside the game's continent lookup and a test in the
-  game. Fixed along the way: the borrowed League Info line ("... South American based
+- **A new league in Africa, North and Central America or Oceania can read as European in the
+  board's objectives** (issues #43, #70): a first division of a new country that plays August to
+  May keeps the UEFA code, because the game's July season-end step promotes and relegates only
+  for that code, so the Master League board can ask for the Champions League. Its places still
+  go to its own continent's cups. For a club of an Asian or South American league the board asks
+  for the AFC Champions League or the Libertadores (the objective since 0.2.0, the meeting's
+  text since the update after 0.3.0); the game has no objective for the other three continents'
+  cups, so that part is not fixed. Fixed along the way: the borrowed League Info line ("... South American based
   leagues", 0.1.7: our leagues carry no such line now), the League Info cup icons (they follow
   the country's confederation from the world file since 0.1.3.1), and the list order (0.1.6: a
   new Asian league comes before *Other Clubs (Asia)*, a CONCACAF one after MLS, and in 0.1.7 a
@@ -156,9 +283,26 @@ numbers are in [limits.md](research/limits.md).
 | New Master League setup, right after the manager settings, with an **Edit Data file saved on an older world** (a rebuilt world numbers its players differently; the saved squads still name the old numbers) | `0x140f325a4` | **Guarded 2026-10-14** by `fl26nullguard11.lua` (in `fl26guards.lua`): a squad entry whose player no longer exists is skipped. Without the guard: move `EDIT00000000` (and `EDIT00000000.fl26x`) out of `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\<id>\save` before starting the career, and the game writes a fresh one. |
 | Master League season, any day with matches, with an **Edit Data file saved on an older world** (the same squads as above) | `0x141321d00` | **Guarded 2026-10-22** by `fl26nullguard12.lua` (in `fl26guards.lua`): the game adds to a value of every player of a team (bits 18–24 of the player record at `+0x13c`, kept within 0–100) and did not check that the player was found. `fl26nullguard11` lets the career start past such a squad entry, but the entry stays in the squad, and this loop met it in the season: two new careers on the Europack, day 301 and day 75. Without the guard: move the old `EDIT00000000` aside as above and start a new career. |
 | Master League, late December, when the game picks the clubs of next year's pre-season friendly cup (regulation 106) | `0x14135a384` | **Guarded 2026-10-24** by `fl26nullguard13.lua` (in `fl26guards.lua`): the pick (`0x141359a60`) takes clubs from the end of a list of candidates until the cup is full and never compared with the list's start, so with fewer candidates than places it read below the list. Seen in a World Modpack career (Sporting FC, Costa Rica) three times out of three, day 346–348. The guard stops the loop when the candidates run out; the caller then tops the list up or leaves the cup alone, as the game already does. Without the guard: no workaround known. |
+| A cup's bracket screen (Competition Info > the cup > Fixtures, and the page the game opens after your match of a round) when the cup has a field the screen has no layout for (17, 19, 21-23, 25-27, 29 or 31 clubs) | `0x140b34501` (guard site `0x140b344b8`) | **Guarded 2026-11-18** by `fl26nullguard14.lua` (in `fl26guards.lua`; B475, FL 2027, the Worldpack's Copa Argentina of 26): the screen asked for the list of empty places to hide and got none. With the guard it shows the cup's clubs on the first places and hides the rest. The cause is still there: the game fills a country's cup from its leagues, so a world whose top league has fewer clubs than the cup's bracket still gets a cup of that odd size (B278 was the same screen; `fl26chain` cuts only the cups of a world's chained leagues to a size the screen draws, and a cup of the game like this one is not one of them). Checked in the game: without the guard the screen closed the game, with it the game went on. |
 | Startup, 9–11 seconds in, occasionally | — | Shipped game bug, reproduces on a clean install. Start again. |
 
 ## Missing or unverified features
+
+- **Groups of one division and promotion play-offs (GitHub #98), not checked in the game yet.**
+  Several leagues under one league (three Serie C groups under Serie B, Regionalliga groups
+  under a 3. Liga) and the recipe's `playoff` are built and checked on a fake game image
+  (`test_chain_groups.c`) and in Build (`test_league_groups.py`); a whole season in the game
+  is still to come. Groups take no split, Apertura/Clausura, February-December season or
+  `cup_join`; a country cup with groups below it takes the linked group only. A play-off is
+  filled the day after the last round of its leagues and must be played before the season's
+  end in July, or the counts stand (`sider.log`: `play-off ... no winner`). A club relegated
+  into groups goes to its own region's group when the recipe gives it one (`zone_clubs`) and the
+  group has a place, else to a group under the league it fell from, else to the group with the
+  most room. When more clubs of one region come down than their group sends up (two of Girone A,
+  one place), one plays a season in another group as a guest and goes home at the next season's
+  end when there is a place; a federation would move a border club of Girone A instead, which
+  fl26chain does only for the clubs the recipe names (`zone_border`): we have no towns or
+  coordinates to choose them. Not checked in the game yet (16.11.2026).
 
 - **The hub's "Next" strip shows no European matches (0.2.0).** It reads a per-club event
   table the game fills on its own (at calendar `+0x3f180`, moved by the patch set); the
@@ -234,7 +378,8 @@ numbers are in [limits.md](research/limits.md).
 - **The league rank only counts to three, which breaks pyramids deeper than that.** Measured
   2026-09-22: the rank lives in the top two bits of the rulebook's flags word, so a third,
   fourth and fifth division all store the value 3. The League Info panel then shows a league
-  as its own lower league, and the relegation gate — which asks "is the league below me a
+  as its own lower league (that part had another cause as well, the page's builder itself,
+  mended 2026-11-11 in `fl26catlist`: B420), and the relegation gate — which asks "is the league below me a
   third division, and am I a second" — cannot separate them.
   `sider/experimental/fl26rank.lua` moves the field down one bit (147 in-place rewrites, into
   a bit the shipped loader never sets) so it counts to seven, and `fl26deeprank.lua` rewrites
@@ -289,8 +434,12 @@ numbers are in [limits.md](research/limits.md).
   Both phases sit under the same competition key (the country, `under key 29` in
   `sider.log`), and the game looks a split's phase up by that key (`0x1414ce270` under
   `0x14134a540`); the shipped data never has two splits in one country. Since 0.1.4 the
-  builder refuses a second split or Apertura/Clausura league in a country. Giving the second
-  one a key of its own is not tried yet.
+  builder refused a second split or Apertura/Clausura league in a country. **Since the next
+  version** fl26swiss.dll hands each split's phases only the regulations of their own split
+  when they ask their country's list (the nine callers of `0x1415415f0` and the group finder
+  `0x1414cee10`, `splits by competition live` in `sider.log`), and the builder takes up to 32
+  split leagues, more than one a country. A country with an Apertura/Clausura and a split that
+  carries its points is still refused (the carry goes by the key). Being checked in the game.
 - **National team call-ups do not stay in a Master League career** (2026-09-30). A world with
   one player called up to South Korea and one dropped: `PlayerAssignment.bin` of the build had
   both changes, and 279 days into a career the live South Korea squad did not have the called-up
@@ -1200,6 +1349,12 @@ calendar.
   the July rollover, but the link is there, so the league was moved rather than trusted.
   Verified on a new world: league 190 enters the season with all its clubs and every round
   dated.
+- 2026-11-11 (B427, 0.3.0 beta 3, FL 2027): a Kick Off between two clubs of a league whose
+  competition id is past 255 wore **another league's sleeve badge and scoreboard** (a Serbian
+  third-tier league showed the J.League's): SmokePatch's `CommonLib.lua` reads the id as one
+  byte. `fl26slotnames.lua` now sets CommonLib's lists after every read of
+  `CompetitionEntry.bin`. Measured on the GigaPack's built world by `test_kickoff_wide.py`
+  (137 mixed lists before, none after).
 - 2026-09-25 (GitHub issue #2): `fl26slotnames.lua` left a **blank heading** on any slot of
   its list that has no league of yours on it. It now falls back to the heading the slot
   always had ("Asia-Oceania", "Classic Teams", ...), so the default list is safe in any

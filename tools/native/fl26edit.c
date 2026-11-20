@@ -57,6 +57,12 @@
 #define INNER_SIZE   0xa7c858u          /* what goes to disk (0x50 header + 0xa7c808)         */
 #define TEAMS        2048
 #define MANAGERS     4096               /* the database has room for 3400 (fl26caps)          */
+/* A caps set with more room than 0.3.0's (FL27's limits set: 4800 clubs, 6800 managers) gives the
+ * tables its own caps: fl26caps writes them into the mode copy's constructor, `mov ebp, teams` at
+ * 0x1414010b1 and `mov ebx, coaches` at 0x1414010fc, and the tables follow what is there. Up to
+ * 0.3.0's 2400 / 3400 nothing changes. */
+#define TEAMS_CAP_RVA  0x14010b1
+#define COACH_CAP_RVA  0x14010fc
 #define NT           4
 
 #define EXT          OLD_SIZE           /* our block, from the old end of the object          */
@@ -353,6 +359,12 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
   uint64_t mgr = *(uint64_t*)(B + MGR_GLOBAL);
   if (mgr && *(uint64_t*)(uintptr_t)(mgr + 0x70)) { logf("the Edit data exists already -- too late to grow it"); return 3; }
 
+  /* the caps set's room, when it is more than 0.3.0's */
+  if (B[TEAMS_CAP_RVA] == 0xbd && *(uint32_t*)(B + TEAMS_CAP_RVA + 1) > 2400)
+    for (int k = 0; k < 3; k++) T[k].cap = *(uint32_t*)(B + TEAMS_CAP_RVA + 1);
+  if (B[COACH_CAP_RVA] == 0xbb && *(uint32_t*)(B + COACH_CAP_RVA + 1) > 3400)
+    T[3].cap = *(uint32_t*)(B + COACH_CAP_RVA + 1);
+
   /* the new layout */
   uint32_t at = EXT + EXT_HDR;
   for (int k = 0; k < NT; k++) { T[k].new_off = at; at += T[k].cap * T[k].rec; }
@@ -382,7 +394,7 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
   }
   uint32_t ms = g_new_size - (8 + 0xa09880);          /* the ctor zeroes up to the new end */
   if (!put(exe_base + CTOR_MEMSET, &ms, 4)) return 5;
-  uint32_t cap = TEAMS, mcap = MANAGERS;
+  uint32_t cap = T[0].cap, mcap = T[3].cap;
   if (!put(exe_base + CAP_RVA + 1, &cap, 4)) return 5;
   if (!put(exe_base + MCAP_RVA + 1, &mcap, 4)) return 5;
   void* acc[NT] = { (void*)acc0, (void*)acc1, (void*)acc2, (void*)acc3 };
@@ -394,7 +406,7 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
   if (!(g_ctor = (ctor_fn)wrap(B + CTOR_RVA, sizeof SIG_CTOR, (void*)ctor_hook))) return 5;
   if (!jmp_to(exe_base + SAVE_RVA, t, 14)) return 5;
   logf("live: Edit data %#x -> %#x bytes, %d clubs per table (team data / squad / tactics), %d managers; "
-       "records past the old places saved to %s", OLD_SIZE, g_new_size, TEAMS, MANAGERS, g_side);
+       "records past the old places saved to %s", OLD_SIZE, g_new_size, T[0].cap, T[3].cap, g_side);
   return 0;
 }
 

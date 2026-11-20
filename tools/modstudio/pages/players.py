@@ -14,7 +14,7 @@ import leaguebuilder as B
 import playeredit as E
 from .. import theme
 from ..i18n import _, tr
-from ..ui import hint, row, ask, error, info, section
+from ..ui import hint, row, ask, error, info, section, run_job, denied
 from .builder import BuilderPage
 
 RATING = ["-", "B", "A"]          # position ratings 0 1 2, as the game's Edit mode shows them
@@ -44,6 +44,9 @@ class Players(BuilderPage):
                    None,
                    ("Import CSV...", self.import_csv),
                    ("Export CSV...", self.export_csv),
+                   ("Export all players (CSV)...", self.export_world,
+                    "Every player of the world in the game, at every club and without one, in one table "
+                    "for Excel: ids, clubs, leagues"),
                    None,
                    ("Import transfers...", self.import_transfers,
                     "A CSV of transfers (player, to, and from if two players share a name) moves every "
@@ -161,6 +164,13 @@ class Players(BuilderPage):
         self.outer.addWidget(split, 1)
         self.project.changed.connect(self.recipe_changed)
 
+    def heightForWidth(self, width):
+        # UI test 15.11.2026 (beta 4f, 1920x1080 maximized): Save under the inspector showed only
+        # after scrolling the page. The hints wrap, so the page's scroll area asks height-for-width,
+        # and the layout's answer is the preferred height -- the whole Basics form and the pitch.
+        # Only the minimum belongs here: the tabs and the pitch scroll inside (as on the Cups page).
+        return self.outer.minimumHeightForWidth(width)
+
     # ---- the inspector ----
     def _inspector(self):
         w = QWidget()
@@ -269,9 +279,14 @@ class Players(BuilderPage):
             c.toggled.connect(lambda _v, n=n: self.edited(n))
         tabs.addTab(self._scroll(sw), _("Skills"))
         v.addWidget(tabs, 1)
+        # pop1806, 14.11.2026: a name typed here was taken when the field was left, with nothing
+        # to press and nothing that said so -- people could not tell whether it had been kept
+        self.b_save = QPushButton(_("Save"))
+        self.b_save.setToolTip(_("Keep what you changed for this player now. The game shows it after Build."))
+        self.b_save.clicked.connect(self.save_player)
         self.b_undo = QPushButton(_("Undo changes to this player"))
         self.b_undo.clicked.connect(self.undo_player)
-        v.addWidget(row(self.b_undo))
+        v.addWidget(row(self.b_save, self.b_undo))
         return w
 
     def _spin(self, lo, hi):
@@ -355,6 +370,11 @@ class Players(BuilderPage):
             self.fill_leagues()
 
     def refresh(self):
+        # B332 (snellejelle_2 05.11.2026, errors.log of 0.3.0): with no game tables (a switch between
+        # FL26 and FL27, or before they are unpacked) the squad came from nowhere and a club with
+        # players who join it crashed the page ('NoneType' object has no attribute 'row' in
+        # joiner_row); now the banner says so and the clubs show what the recipe has
+        self.need_tables()
         self.fill_leagues()
 
     def recipe_changed(self):
@@ -406,7 +426,14 @@ class Players(BuilderPage):
         if d and d[0] == "new":
             L = self.project.league(d[1])
             if L:
+                # a place a club of the game has: that club, not a club of ours with numbered players
+                # (B324, Risto 05.11.); one the game has not got is left out
+                game = {int(e.get("at", -1)): int(e["id"]) for e in L.get("game_clubs") or []}
                 for k, n in enumerate(self.new_names(L)):
+                    if k in game:
+                        if game[k] in self.project.game_cl:
+                            self.cl.addItem(self.game_name(game[k]), str(game[k]))
+                        continue
                     self.cl.addItem(n, P.new_key(L["name"], k))
         elif d:
             teams = next((t for r, c, n, t in self.project.game_lgs if r == d[1]), None)
@@ -535,7 +562,7 @@ class Players(BuilderPage):
     def game_player(self, key):
         """is `key` the id of a game player who is not in this club: one of another club, or one
         of no club (a free agent: he signs for this one)"""
-        if not str(key).isdigit() or self.is_national():
+        if not str(key).isdigit() or self.is_national() or self.project.squads() is None:
             return False
         try:
             self.project.squads().row(int(key))
@@ -548,7 +575,8 @@ class Players(BuilderPage):
         src, n = P.split_ref(ref)
         if src is not None:
             return src
-        return next((str(t) for t in self.project.squads().clubs_of.get(n, []) if not self.is_national(str(t))), None)
+        sq = self.project.squads()                   # None: no game tables (B332)
+        return next((str(t) for t in (sq.clubs_of.get(n, []) if sq else []) if not self.is_national(str(t))), None)
 
     def joiner_row(self, ref):
         """a player who joins this club, as the rows show him (before this club's changes)"""
@@ -556,12 +584,14 @@ class Players(BuilderPage):
         sq = self.project.squads()
         if src is None:
             try:
+                if sq is None:                     # no game tables (B332): who he is is not known here
+                    raise KeyError(n)
                 r = sq.row(n)
             except KeyError:
                 return {"player": ref, "name": "?"}
             r["from"] = ", ".join(self.game_name(t) for t in sq.clubs_of.get(n, [])) or _("no club")
             return r
-        proto = sq.proto()
+        proto = sq.proto() if sq is not None else []
         r = dict(proto[n]) if n is not None and n < len(proto) else {}
         r.update(((self.project.players().get(src) or {}).get("edits") or {}).get(str(n), {}))
         r["player"] = ref
@@ -648,7 +678,7 @@ class Players(BuilderPage):
                 if dest and dest != self.club:
                     out[i] = (key, m, ch, True)
                     self.state[key] = _("to %s") % self.club_label(dest)
-        base = len(self.rows)
+        base = self.next_order()
         for i, a in enumerate(c.get("add") or []):
             like = next((r for r in self.rows if r["player"] == str(a.get("like"))), self.rows[0] if self.rows else {})
             m = dict(like)
@@ -942,9 +972,15 @@ class Players(BuilderPage):
         c = self.changes()
         if key in (c.get("join") or []):              # he takes the next order, and a free shirt at Build
             r = dict(self.joiner_row(key))
-            r.update(order=str(len(self.rows) + len(c.get("add") or []) + c["join"].index(key)), shirt="")
+            r.update(order=str(self.next_order() + len(c.get("add") or []) + c["join"].index(key)), shirt="")
             return r
         return next((r for r in self.rows if r["player"] == key), {})
+
+    def next_order(self):
+        """the order after the squad's last, where Build puts a player added or one who joins (its
+        highest + 1: a base squad's orders have gaps -- FL26 2.2's 30 run to 34, FL27's to 37 -- so the
+        squad's length, used up to 0.3.0, put a newcomer on an order a player had, B331)"""
+        return max([int(r["order"]) for r in self.rows if str(r.get("order", "")).isdigit()] + [len(self.rows) - 1]) + 1
 
     def own_id(self, key):
         """can this row's player take an id of the recipe's own? a new club's, or one added here"""
@@ -991,6 +1027,9 @@ class Players(BuilderPage):
         if self._filling or self.cur is None or not self.club:
             return
         if key == "id" and not self.own_id(self.cur):
+            return
+        if key == "order":
+            self.put_order(self.cur, int(self._get("order") or 0))
             return
         val = self._get(key)
         if key == "id" and val:
@@ -1091,9 +1130,26 @@ class Players(BuilderPage):
             self.edited(n)
 
     # ---- actions ----
+    def save_player(self):
+        """Save: what is typed in a field and not taken yet is taken (a field is otherwise taken
+        when it is left), the world is written to its file now, and the page says so"""
+        if self.cur is not None and self.club and not self._filling:
+            for key, w in list(self.ed.items()):
+                if isinstance(w, QLineEdit) and w.isModified():
+                    self.edited(key)
+                    w.setModified(False)
+        self.project.autosave()
+        if self.project.dirty:
+            self.say(_("Could not save your world: check the folder it is saved in."), "err")
+        else:
+            self.say(_("Saved. The game shows it after Build."), "ok")
+
     def undo_player(self):
         if self.cur and not self.cur.startswith(NEW):
-            (self.changes().get("edits") or {}).pop(self.cur, None)
+            ed = self.changes().get("edits") or {}
+            ch = ed.pop(self.cur, None)
+            if ch and "order" in ch and any("order" in x for x in ed.values()):
+                ed[self.cur] = {"order": ch["order"]}     # B331: his place stays, or he shares one
             self.project.mark()
             self.fill_squad()
 
@@ -1104,22 +1160,24 @@ class Players(BuilderPage):
             self.fill_squad()
 
     def set_orders(self, orders):
-        """orders: {key: order text}; keys of added players too"""
+        """orders: {key: order text}; keys of added players too. Every player of the club gets his
+        order written out, those not in `orders` (players who leave) after them.
+        B331 (snellejelle_2 05.11.2026): an order equal to the player's "original" one was left out,
+        and the original is the base squad's order for his place, which FL26 and FL27 number apart
+        (place 25: 27 and 25; 28 in FL26 1.3's) -- a club ordered over one game's tables had two
+        players on one order in the other's, and the Build stopped. A player who leaves kept his old order too, and had it
+        back on top of someone else's when he was taken back."""
         auto = self.auto_formation()           # the formation shown, which the order is made for
+        rest = [k for k, m, ch, g in self.view() if k not in orders]
+        orders = dict(orders)
+        orders.update({k: str(len(orders) + n) for n, k in enumerate(rest)})
         c = self.changes(True)
         ed = c.setdefault("edits", {})
         for key, o in orders.items():
             if key.startswith(NEW):
                 c["add"][int(key[1:])]["order"] = o
-                continue
-            orig = self.original(key)
-            ch = ed.setdefault(key, {})
-            if o == str(orig.get("order", "")):
-                ch.pop("order", None)
             else:
-                ch["order"] = o
-            if not ch:
-                ed.pop(key, None)
+                ed.setdefault(key, {})["order"] = o
         if auto is not None and any("order" in ch for ch in ed.values()):
             # 0.2.4: Build keeps a 4-2-3-1 for a squad ordered here, so the formation picked from
             # the squad, which this order is made for, becomes the club's own
@@ -1132,6 +1190,19 @@ class Players(BuilderPage):
                 L["club_formations"] = forms
         self.project.mark()
         self.fill_squad()
+
+    def put_order(self, key, place):
+        """Squad order typed for one player: he moves to that place and the ones between move up one.
+        B331: the number alone was written, so two players could have one order (Jong Genk: 26 twice).
+        A move, not a swap: the box changes with every digit typed (2, then 26), and two moves of
+        one player end where the last puts him."""
+        live = [x[0] for x in self.view() if not x[3]]
+        if key not in live:                    # one who leaves has no place in the order
+            self.fill_squad()
+            return
+        live.remove(key)
+        live.insert(max(0, min(place, len(live))), key)
+        self.set_orders({k: str(n) for n, k in enumerate(live)})
 
     def shift(self, d):
         v = self.view()
@@ -1370,6 +1441,39 @@ class Players(BuilderPage):
         P.export_csv(p, [dict(m, player_id=self.player_id(k, ch)) for k, m, ch, gone in self.view() if not gone])
         self.app.status(_("Squad written to %s") % p)
 
+    def export_world(self, parent=None):
+        """Export all players (CSV)...: every player of the world in the game -- the game's and the
+        world's new ones, at every club and the free agents -- in one CSV (exportplayers.py). The
+        tables are the ones the game reads: the world switched on in sider.ini (built here or
+        from a zip), else the game's own unpacked tables. Players > More and My world > More"""
+        import exportplayers as X
+        parent = parent or self
+        title = _("Export all players (CSV)...")
+        worlds = self.project.world_tables()
+        db = worlds[0] if worlds else self.project.base
+        if not db:
+            error(parent, title, _("no game tables -- Settings > Unpack the game's tables"))
+            return
+        lives = self.project.live_worlds() if worlds else []
+        name = (lives[0] if lives else "game") + "-players.csv"
+        start = os.path.join(self.app.settings.get("players_csv_dir") or "", name)
+        p, _f = QFileDialog.getSaveFileName(parent, title, start, "CSV (*.csv)")
+        if not p:
+            return
+        self.app.settings["players_csv_dir"] = os.path.dirname(p)
+        base, free = self.project.base, _("Free agent")
+
+        def done(got):
+            self.app.busy(False)
+            self.app.status(_("%d players written to %s") % (got["players"], got["out"]))
+
+        def failed(tb):
+            self.app.busy(False)
+            if not denied(parent, tb):
+                error(parent, title, _("Nothing was written:") + "\n\n" + str(tb).strip().splitlines()[-1])
+        self.app.busy(True, _("Exporting all players..."))
+        run_job(lambda _progress: X.export(db, p, base=base, free=free), done, failed)
+
     def import_csv(self):
         if not self.rows:
             return
@@ -1409,12 +1513,16 @@ class Players(BuilderPage):
             orig = self.original(key)
             cur = ed.setdefault(key, {})
             for k, v in ch.items():
-                if v == str(orig.get(k, "")):
+                if v == str(orig.get(k, "")) and k != "order":
                     cur.pop(k, None)
                 else:
                     cur[k] = v
             if not cur:
                 ed.pop(key, None)
+        if any("order" in ch for ch in got.values()):
+            # B331: a table's orders, as they come, can share one or leave players without one:
+            # the squad in the order they make, every order written out
+            self.set_orders({k: str(n) for n, (k, m, ch, g) in enumerate(x for x in self.view() if not x[3])})
         self.project.mark()
         self.fill_squad()
         text = _("%d players changed.") % len(got)

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QScroll
 
 from .. import backups, checks, installer, modfix, theme
 from ..i18n import _
+from .restore import reason_text
 from ..ui import Page, Stat
 
 STATE_WORD = {"ok": "OK", "warn": "LOOK", "err": "FIX"}
@@ -57,12 +58,22 @@ class _ListLine(QLabel):
     def _fit(self):
         fm, n = self.fontMetrics(), len(self.names)
         width = max(60, self.width())
+        line = lambda k: ", ".join(self.names[:k]) + ("" if k == n else ", … +%d" % (n - k))
         text = ("… +%d" % n) if n else ""
-        for k in range(n, 0, -1):
-            t = ", ".join(self.names[:k]) + ("" if k == n else ", … +%d" % (n - k))
-            if fm.horizontalAdvance(t) <= width:
-                text = t
-                break
+        if n and fm.horizontalAdvance(line(n)) <= width:
+            text = line(n)
+        elif n:
+            # the most names that fit, found by halving (one by one from the end it measured a
+            # line of 317 leagues 300 times: 0.35 s at every visit and every resize)
+            lo, hi = 0, n - 1                 # lo fits (0: only "… +N"), hi + 1 does not
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if fm.horizontalAdvance(line(mid)) <= width:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            if lo:
+                text = line(lo)
         QLabel.setText(self, text)
 
 
@@ -405,7 +416,8 @@ class Overview(Page):
 
         kept = os.path.join(P.copies_dir(), r.get("world", "") + ".json")
         changed = True
-        if os.path.exists(kept):
+        # (a ready world never asks: its copy can be 255 MB, 3 s of reading for nothing)
+        if os.path.exists(kept) and not any(installer.ready_world(g, w) for w in live):
             try:
                 from .. import filecache
                 old = filecache.json_file(kept)
@@ -454,7 +466,7 @@ class Overview(Page):
                 rows.insert(0, line + (None, None if line[0] == "ok" else
                                        (_("Install now"), lambda: modfix.install_now(self) and self.refresh())))
         if g.ok() and os.path.isdir(g.sider_dir):
-            rows.append(("ok", _("Packs installed here"), str(len(installer.records(g.sider_dir))), None))
+            rows.append(("ok", _("Packs installed here"), str(len(installer.records_seen(g.sider_dir))), None))
             hist = backups.history(g.sider_dir)
         else:
             hist = []
@@ -516,7 +528,8 @@ class Overview(Page):
         for h in hist[:6]:
             t = h["time"]
             when = "%s.%s. %s:%s" % (t[6:8], t[4:6], t[9:11], t[11:13])
-            self._change(when, h.get("reason") or h["file"])
+            # in the window's language, as Restore points says it (09.11.: "Switch on: scoreboards map" in Spanish)
+            self._change(when, reason_text(h.get("reason")) or h["file"])
         if not hist:
             self.recent_rows.addWidget(_label(_("Nothing changed yet."), "subtle"))
 

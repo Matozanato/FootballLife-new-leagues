@@ -17,7 +17,8 @@ new club starts with the same squad, a copy of the first shipped club with SQUAD
 
 Every value is the text a cell of playeredit.py's CSV takes ("CF", "Right", "85"), checked with
 playeredit.parse when the world is built; "name", "shirt" and "order" are the name (all four
-name slots), the shirt number and the squad order (the first eleven by order start); "face" is
+name slots), the shirt number (his own in the squad: whoever else wore it takes a free one,
+unique_shirts) and the squad order (the first eleven by order start); "face" is
 a face folder, moved to the player's id when the world is built (lbfaces.py); "portrait" is a
 picture, the player's portrait ("mini face") without a face of his own (player_portraits).
 
@@ -38,6 +39,17 @@ there wears, and the squad he left closes its order up behind him.
 place) or one of "add" -- so a face, portrait or option file made for that id finds him. It has
 to be above the game's own ids (Player.bin keeps them in id order) and free.
 
+A club's "roles" names its captain and set-piece takers (the six flags of ROLES):
+
+    "players": {
+      "Liga Example/3": {"roles": {"captain": "4", "penalties": "9", "left corners": "+0"}},
+      "72318":          {"roles": {"captain": "180590"}}
+    }
+
+A player is named the way "edits" keys him: a new club's player by his place in the squad, one of
+its "add" list by "+n", a club of the game's by his id. The roles it names are the club's; the
+ones it leaves out are picked as for a club with none (pick_roles). recipe_roles.
+
 "coach_portrait" is a picture for the club's manager.  The game shows a manager's portrait from
 common/render/symbol/coach/coach_<coach id>.png, 256 pixels square (1001 of them in dt15_x64.cpk,
 940 of the 961 shipped coaches have one; the Master League's own managers are in coachML/<id>.png).
@@ -48,7 +60,7 @@ import collections, csv, functools, os, re
 
 import pesdb
 import playeredit as E
-from lbrating import WEIGHTS, move, rating, shift_to, shifted   # what Mod Studio shows (B53)
+from lbrating import FIELDS as RATING_FIELDS, move, rating, shift_to, shifted   # what Mod Studio shows (B53)
 
 P_REC, P_ID = E.P_REC, E.P_ID
 A_REC = E.A_REC
@@ -210,6 +222,31 @@ def same_player(a, b):
     return wa[-1] == wb[-1] and len(wa[-1]) >= 3 and wa[0][:1] == wb[0][:1]
 
 
+def loose_name(a, b):
+    """how the names of a release row and of a player of the game may be one man's (B421, the
+    second pass of newlife.game_twin, and checktwins.py), or "": "same" the same letters or words; "one" a name of one word
+    that is a word of the other ("Rafael" / "Rafael Monteiro"); "part" every word of the shorter
+    name in the longer ("Gonzalez Pirez" / "Leandro Gonzalez Pirez"); "initial" the same surname
+    and a first name cut short ("M. ter Stegen" / "Marc-Andre ter Stegen", "Leo" / "Leonardo");
+    "first" the same surname and first letter only ("Giorgos" / "Georgios"). A name alone proves
+    nothing: game_twin asks the club or the nationality, the age and the height with it."""
+    wa = [w for w in map(_letters, _words(a)) if w]
+    wb = [w for w in map(_letters, _words(b)) if w]
+    if not wa or not wb:
+        return ""
+    if sorted(wa) == sorted(wb) or "".join(wa) == "".join(wb):
+        return "same"
+    short, full = (wa, wb) if len(wa) <= len(wb) else (wb, wa)
+    if len(short) < len(full) and all(w in full for w in short) and max(map(len, short)) >= 4:
+        return "one" if len(short) == 1 else "part"
+    if wa[-1] == wb[-1] and len(wa[-1]) >= 3 and wa[0][:1] == wb[0][:1]:
+        f, g = sorted((wa[0], wb[0]), key=len)
+        if (len(f) <= 2 or g.startswith(f)) and all(w in full for w in short[1:]):
+            return "initial"
+        return "first"
+    return ""
+
+
 class Squads:
     """the players of a set of tables (the game's, or a built world's)"""
 
@@ -244,8 +281,7 @@ class Squads:
             # rated like the Players page (rating(), the game's number): the mean of the five
             # GK abilities made Ter Stegen a 91 here and an 85 in the game (cwrti, 23.10.)
             need = {"Nationality", "Registered Position", "Age"}
-            for _c, w in WEIGHTS.values():
-                need |= set(w)
+            need |= set(RATING_FIELDS)
             out = []
             for pid, o in self.index.items():
                 rec = self.players[o:o + P_REC]
@@ -287,6 +323,21 @@ class Squads:
         return rows
 
 
+# FL 2027 (mato 07.11.2026: "ratinzi i budzeti su nam bitni, za realnost karijera"; FL27 only):
+# Build measures squads and brings players to a level with the game's own rating (lbrating), so
+# a placeholder player brought to 63 shows 63. FL26 keeps the rough overall it always had: its
+# worlds' abilities do not change. use_game sets it.
+EXACT = False
+
+
+def level(row):
+    """the rating Build measures a player with: the game's own in FL 2027, overall() in FL26"""
+    if EXACT:
+        import lbrating
+        return lbrating.rating(row)
+    return overall(row)
+
+
 def fill_level(club, league):
     """the rating a prototype player who stays at a NewLife club is brought to: the club's own
     players' lower quarter, or the league's when the club has fewer than three; None: no ratings"""
@@ -297,6 +348,9 @@ def fill_level(club, league):
 def at_level(row, want):
     """{ability: text} that move every ability of `row` by one amount, so its rating is `want`
     (as Mod Studio's Squad level does: abilities stop at 40 and 99)"""
+    if EXACT:
+        import lbrating
+        return lbrating.shifted(row, lbrating.shift_to([row], want))
     d = want - overall(row)
     return {n: str(max(40, min(99, int(row.get(n) or 40) + d))) for n, _b in E.ABILITIES}
 
@@ -377,9 +431,16 @@ def fill_newlife(pl, base, log=print):
             if c is not None:
                 fit_places(c)
         clubs = [out.get(new_key(L["name"], k)) or {} for k in range(len(nl))]
-        own = [[overall(ch) for ch in (c.get("edits") or {}).values() if "Registered Position" in ch] for c in clubs]
+        own = [[level(ch) for ch in (c.get("edits") or {}).values() if "Registered Position" in ch] for c in clubs]
         league = [x for xs in own for x in xs]
+        # B433 (Xxspedd's Build log, 12.11.2026): a club of the game that plays in this league has
+        # its own squad and is no club Build makes. It got a squad of prototypes here all the same,
+        # which the next step threw away with "players of <league>/<n>: the club was not built,
+        # skipped" -- 89 such lines for a large world, each one read as a club gone wrong
+        game = {int(k) for k in (L.get("game_clubs") or {})}
         for k, c in enumerate(clubs):
+            if k in game and not c:
+                continue                  # the game's own club: its squad is the game's
             if not c.get("edits") and c.get("join"):
                 continue                  # the game's players take its places
             if proto is None:
@@ -390,13 +451,13 @@ def fill_newlife(pl, base, log=print):
             d = None
             if want is None:
                 d = round(TIER_LEVEL[min(tier_of(L, mine), len(TIER_LEVEL)) - 1]
-                          - sum(overall(r) for r in proto) / len(proto))
+                          - sum(level(r) for r in proto) / len(proto))
             edits = c.setdefault("edits", {})
             gone = set(c.get("remove") or [])
             for place in range(min(SQUAD, len(proto))):
                 key = str(place)
                 if key not in edits and key not in gone:
-                    edits[key] = at_level(proto[place], want if d is None else overall(proto[place]) + d)
+                    edits[key] = at_level(proto[place], want if d is None else level(proto[place]) + d)
                     n += 1
                     nt += d is not None
             if edits and new_key(L["name"], k) not in out:
@@ -452,12 +513,12 @@ def fill_tiers(pl, base, log=print):
                 proto = Squads(base).proto()
                 if not proto:
                     return out
-            d = round(want - sum(overall(r) for r in proto) / len(proto))
+            d = round(want - sum(level(r) for r in proto) / len(proto))
             moved = 0
             for place in range(min(SQUAD, len(proto))):
                 key = str(place)
                 if key not in edits and key not in gone:
-                    edits[key] = at_level(proto[place], overall(proto[place]) + d)
+                    edits[key] = at_level(proto[place], level(proto[place]) + d)
                     moved += 1
             if not edits:
                 del c["edits"]
@@ -528,6 +589,46 @@ def position_shirts(squad, lineup=None):
     return out
 
 
+def given_shirt(ch):
+    """the shirt number a player's change gives (1-99), or None"""
+    v = str((ch or {}).get("shirt", "") or "").strip()
+    return int(v) if v.isdigit() and 1 <= int(v) <= 99 else None
+
+
+def unique_shirts(squad, given):
+    """{key: new shirt number} for the players of one squad who share a number: squad
+    [(key, shirt, registered position)] in squad order, given the keys whose number the recipe
+    (or a pack) gives. A given number stays with its player -- the first of the squad, should the
+    recipe give one number twice -- and anybody else who wears it takes a free one of his line's
+    usual numbers (LINE_SHIRTS), a keeper's number only for a keeper. Megapack (mato 06.11.): a
+    pack names every player's number; the players it does not name (prototype stand-ins, the
+    game's own players of a club it changes) kept theirs and two players wore the same one."""
+    worn, clash = set(), []
+    for k, s, pos in squad:
+        if k in given:
+            if s in worn:
+                clash.append((k, pos))
+            else:
+                worn.add(s)
+    for k, s, pos in squad:
+        if k not in given:
+            if s in worn:
+                clash.append((k, pos))
+            else:
+                worn.add(s)
+    out = {}
+    for k, pos in clash:
+        keeper = pos == "GK"
+        n = next((x for x in LINE_SHIRTS[LINE_OF.get(pos, "MID")] if x not in worn
+                  and (keeper or x not in E.KEEPER_SHIRTS)), None)
+        if n is None:
+            free = [x for x in range(1, 100) if x not in worn]
+            n = next((x for x in free if (x in E.KEEPER_SHIRTS) == keeper), free[0])
+        worn.add(n)
+        out[k] = n
+    return out
+
+
 def best_eleven(rows, lineup=None):
     """{player: new order} that puts the strongest player for each place of the formation at
     orders 0-10 (the formation hands out places in that order) -- lineup, the role of each
@@ -554,7 +655,7 @@ def best_eleven(rows, lineup=None):
             # a goalkeeper in goal, and nobody else while there is one; no goalkeeper outfield
             # while an outfield player is left (Dinamo Zagreb's third keeper at centre back)
             keeper = (r.get("Registered Position") == "GK") == (pos == "GK")
-            o = overall(dict(r, **{"Registered Position": pos}))
+            o = level(dict(r, **{"Registered Position": pos}))
             return (keeper, own or not needed(r), own or rating == 1, o - (0 if own else SECOND_POS), own, o)
         if not left:
             break
@@ -629,11 +730,11 @@ def pick_formation(rows, formations):
     for n, r in enumerate(rows):
         reg = r.get("Registered Position")
         if reg and reg != "GK":
-            out.append((-overall(r), n, r))
+            out.append((-level(r), n, r))
     out = [r for _o, _n, r in sorted(out)[:PICK_FROM]]
     if not out:
         return None
-    ovs = [overall(r) for r in out]
+    ovs = [level(r) for r in out]
     lo, hi = min(ovs), max(ovs)
     players = []
     for r, o in zip(out, ovs):
@@ -719,7 +820,7 @@ def sign_keepers(db, log=print):
             continue
         r = sq.row(pid)
         if r.get("name") and key(r["name"]) not in names:
-            pool.append((pid, overall(r), int(r.get("Age") or 0), r.get("Registered Position")))
+            pool.append((pid, level(r), int(r.get("Age") or 0), r.get("Registered Position")))
     kind = {pos: k for k, poss, _n in SHAPE for pos in poss}
     assigns = sq.assigns
     eid = max(u32(assigns, i * A_REC + E.A_EID) for i in range(len(assigns) // A_REC)) + 1
@@ -740,8 +841,8 @@ def sign_keepers(db, log=print):
             count[k] += 1
         if not need:
             continue
-        level = sorted((overall(r) for r in rows), reverse=True)[:11]
-        want = (sum(level) / len(level) if level else 65) - 3
+        top = sorted((level(r) for r in rows), reverse=True)[:11]
+        want = (sum(top) / len(top) if top else 65) - 3
         packs = [u32(assigns, a + E.A_PACK) for _o, _p, _s, a in v]
         order = max(o for o, _p, _s, _a in v) + 1
         for k in need:
@@ -836,6 +937,77 @@ def set_roles(db, tids=None, log=print):
     if done:
         open(os.path.join(db, "PlayerAssignment.bin"), "wb").write(pesdb.wesys_pack(bytes(assigns)))
         log("  a captain and set-piece takers for %d clubs that had none" % len(done))
+    return done
+
+
+def role_refs(changes, tids, ids):
+    """{team id: {role: player id}} from the recipe's "roles" (see the top of this file), and the
+    problems found: [text]. changes: the recipe's "players"; tids: {club key: team id} of the new
+    clubs; ids: what apply returned ({club key: {"0": player id, "+0": ...}}). A role that is not
+    one of ROLES, or a player the club does not have, is a problem and is left out."""
+    out, bad = {}, []
+    for club, c in sorted(changes.items()):
+        want = c.get("roles") or {}
+        if not want:
+            continue
+        tid = int(club) if str(club).isdigit() else tids.get(club)
+        if tid is None:
+            bad.append("roles of %s: no such club" % club)
+            continue
+        mine = ids.get(club) or {}
+        got = {}
+        for role, ref in sorted(want.items()):
+            if role not in ROLES:
+                bad.append("roles of %s: no role %r (%s)" % (club, role, ", ".join(ROLES)))
+                continue
+            ref = str(ref).strip()
+            pid = mine.get(ref)
+            if pid is None and ref.isdigit() and str(club).isdigit():
+                pid = int(ref)                         # a club of the game keys its players by id
+            if pid is None:
+                bad.append("roles of %s: %s -- no player %s" % (club, role, ref))
+                continue
+            got[role] = int(pid)
+        if got:
+            out[tid] = got
+    return out, bad
+
+
+def recipe_roles(db, wanted, log=print):
+    """writes the roles the recipe names: wanted {team id: {role: player id}}. Each club's own flags
+    are cleared first, then every role it names goes to that player, the rest as pick_roles has them
+    (so set_roles leaves the club alone afterwards). A player not in the club's squad is skipped with
+    a word in the log. Returns {team id: {role: player id}} as written."""
+    if not wanted:
+        return {}
+    sq = Squads(db)
+    assigns = sq.assigns
+    done = {}
+    for tid in sorted(wanted):
+        v = sq.by_club.get(tid) or []
+        at = {pid: o for _ord, pid, _s, o in v}
+        rows = [sq.row(pid, shirt, order) for order, pid, shirt, _o in v if pid in sq.index]
+        if not rows:
+            log("  roles of club %d: it has no squad, skipped" % tid)
+            continue
+        got = {role: int(r["player"]) for role, r in pick_roles(rows).items()}
+        for role, pid in wanted[tid].items():
+            if pid in at:
+                got[role] = pid
+            else:
+                log("  roles of club %d: player %d (%s) is not in its squad, picked instead" % (tid, pid, role))
+        for _ord, _pid, _s, o in v:
+            pack = u32(assigns, o + E.A_PACK) & ~(((1 << len(ROLES)) - 1) << ROLE_SHIFT)
+            assigns[o + E.A_PACK:o + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        for k, role in enumerate(ROLES):
+            if role in got:
+                o = at[got[role]]
+                pack = u32(assigns, o + E.A_PACK) | 1 << (ROLE_SHIFT + k)
+                assigns[o + E.A_PACK:o + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        done[tid] = got
+    if done:
+        open(os.path.join(db, "PlayerAssignment.bin"), "wb").write(pesdb.wesys_pack(bytes(assigns)))
+        log("  the recipe's captain and set-piece takers for %d clubs" % len(done))
     return done
 
 
@@ -1075,6 +1247,11 @@ def player_portraits(portraits, root, log=print):
     return done
 
 
+def shipped_ids(shipped):
+    """the player ids of a Player.bin's bytes (the game's own: lbplayers' `shipped`)"""
+    return {u32(shipped, i * P_REC + P_ID) for i in range(len(shipped) // P_REC)}
+
+
 def _runs(ids):
     """sorted ids as "a-b" / "a" words"""
     out, ids = [], sorted(ids)
@@ -1096,9 +1273,9 @@ def new_face_lines(base, db, faces=(), portraits=(), per=64):
     if not os.path.exists(os.path.join(db, "Player.bin")):
         return face_app_lines(faces, per)
     shipped, players = load(base, "Player.bin"), load(db, "Player.bin")
-    top = max(u32(shipped, i * P_REC + P_ID) for i in range(len(shipped) // P_REC))
+    game = shipped_ids(shipped)
     own = {u32(players, i * P_REC + P_ID) for i in range(len(players) // P_REC)}
-    own = {pid for pid in own if pid > top}
+    own -= game                                        # above the game's top, or in a gap below it
     own -= {pid for pid, _f in faces}
     keep = own & {pid for pid, _p in portraits}
     lines = []
@@ -1188,8 +1365,80 @@ def _pair(old, new, how):
     return out
 
 
+SIMILAR = 0.85     # (before 18.11.2026: a name this like the one before, difflib, was a respelling)
+
+
+def _respelling(a, b):
+    """two names as letters (_letters) that are one name spelt two ways: the same letters (marks only:
+    Marić / Maric), two letters next to each other the other way round, or one letter more (Jon /
+    John Smith, Mohamed / Mohammed) -- never one letter for another. review 18.11.2026: a share of like letters (SIMILAR) held Petrović and
+    Petković, Marko and Mario Marić, Ivanović and Jovanović -- other players -- to be one"""
+    if a == b:
+        return True
+    if len(a) == len(b):
+        d = [i for i in range(len(a)) if a[i] != b[i]]
+        return len(d) == 2 and d[1] == d[0] + 1 and a[d[0]] == b[d[1]] and a[d[1]] == b[d[0]]
+    if abs(len(a) - len(b)) != 1:
+        return False
+    s, l = (a, b) if len(a) < len(b) else (b, a)
+    i = next((k for k in range(len(s)) if s[k] != l[k]), len(s))
+    return len(s) >= 4 and s[i:] == l[i + 1:]
+
+
+def _weak_dates(*sides):
+    """{(club, date)} of the birth dates that say nothing about who a player is: the 1st of January (a
+    year the source knew, no day) and a date two players of one club have on one side. sides:
+    {(club, key): _who}, every player of the last Build and of this one"""
+    weak, seen = set(), set()
+    for side in sides:
+        count = collections.Counter((club, w[2]) for (club, _k), w in side.items() if w[2])
+        weak |= {cd for cd, n in count.items() if n > 1}
+        seen |= set(count)
+    for (club, d) in seen:
+        if re.search(r"(^|\D)0?1[-./]0?1([-./]|$)|-01-01$", d):
+            weak.add((club, d))
+    return weak
+
+
+def _named_places(left_old, left_new, how, same=None, weak=None, merged=None):
+    """17.11.2026 (the GigaPack's id ledger): what is left once every player was looked for by who he
+    is, at his club and at the others ({(club, key): _who} both, matched ones leave them). A place
+    the last Build had as a placeholder (no name, no NewLife id) that the recipe names now keeps the
+    place's id -- 91 squad places named since GigaPack beta 3 would have taken new ids, and the
+    careers of beta 3 lost those players. So does a player renamed where he stands whose birth date
+    says he is the same one (a date of _weak_dates says nothing), or whose name is a respelling of
+    the one before (_respelling) when no birth date tells them apart (the same date, also a weak one, or none). Returns [((club,
+    key) now, (club, key) then)]. After the other clubs were looked at: a player who came from
+    another club to a placeholder's place keeps his own id.
+    same: the club keys whose team id is the one the last Build's key had (leaguebuilder.follow_tids);
+    a place of any other club is not the same place (review 17.11.: a club taken out moved the next
+    one onto its key, and its named players took the gone club's ids). None: every club.
+    weak: _weak_dates of every player (of left_old and left_new when not given). merged: a list that
+    gets (name then, name now) of every pair taken as one player by a respelling (_respelling)"""
+    out = []
+    weak = _weak_dates(left_old, left_new) if weak is None else weak
+    for ck in [ck for ck in left_new if ck in left_old]:
+        if same is not None and ck[0] not in same:
+            continue
+        a, b = left_old[ck], left_new[ck]
+        if not b[1] or not _same_one(a, b):
+            continue
+        strong = a[2] and a[2] == b[2] and (ck[0], a[2]) not in weak
+        # review 3, 18.11.2026: a respelling with the same weak date on both sides (1 January, a date
+        # two of the club share -- common in the GigaPack's African and Asian leagues) is the same
+        # player too; two different dates never get here (_same_one)
+        respelt = a[1] and not (a[0] or b[0]) and _respelling(a[1], b[1])
+        if respelt and not strong and a[1] != b[1] and merged is not None:
+            merged.append((a[3], b[3]))
+        if (not a[1] and not a[0]) or strong or respelt:
+            out.append((ck, ck))
+            del left_old[ck], left_new[ck]
+            how["placeholder named, or renamed with his birth date or a respelling, in his place"] += 1
+    return out
+
+
 def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top, prev_people=None,
-              retired=None, log=None):
+              retired=None, log=None, shipped=None, same_clubs=None):
     """the ids the last Build gave the world's own players stay theirs (GitHub #126): a face linked
     to a new player by his id -- in the game's Edit mode or a face pack -- was lost when a change
     elsewhere handed the ids out in another order. prev: {club: {player key: id}} of the last
@@ -1206,7 +1455,10 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
 
     retired, a set: ids of players no longer in the world (the ids file keeps them). The ids of
     the last Build's players who are gone now go in; none of them is given to anyone else, as
-    long as an id below PID_MAX is free -- when none is, one is, and the log says so."""
+    long as an id below PID_MAX is free -- when none is, one is, and the log says so.
+
+    shipped, a set: the game's own player ids. Given, an id in a gap below game_top is the world's
+    too (FreeIds hands those out once the ids above game_top are gone), and is kept as one above."""
     log = log or (lambda *_a: None)
     if retired is None:
         retired = set()
@@ -1227,7 +1479,9 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
             want = int(want)
         except (TypeError, ValueError):
             return None
-        return want if game_top < want <= PID_MAX else None
+        if game_top < want <= PID_MAX:
+            return want
+        return want if shipped is not None and 0 < want < game_top and want not in shipped else None
 
     # who each player was at the last Build, and who each is now
     old_of, new_of, ids_of = {}, {}, {}
@@ -1267,6 +1521,8 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
             new_of[club] = {str(k): _who("", "", "") for k in range(len(first[club]))}
 
     how = collections.Counter()
+    weak = _weak_dates({(c, k): w for c, o in old_of.items() for k, w in o.items()},
+                       {(c, k): w for c, n in new_of.items() for k, w in n.items()})
     pairs = []                                         # (club now, key now, the id he keeps)
     for club, o in old_of.items():
         if club in new_of:
@@ -1292,6 +1548,12 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
                 pairs.append((nks[0][0], nks[0][1], ids_of[oks[0]]))
                 del left_old[oks[0]], left_new[nks[0]]
                 how[label] += 1
+    merged = []
+    for (club, key), was in _named_places(left_old, left_new, how, same_clubs, weak, merged):
+        pairs.append((club, key, ids_of[was]))
+    if log and merged:                    # review 18.11.2026: which names were taken as one player
+        log("  ids: %d players kept their id under a name spelt another way: %s%s" % (
+            len(merged), "; ".join("%s -> %s" % m for m in merged[:20]), " ..." if len(merged) > 20 else ""))
 
     # pin: {player id now: the id he takes}. A player is pinned once: one team id under two club
     # keys (a NewLife club listed twice) lists the same players twice, and a second pin of a
@@ -1330,7 +1592,7 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
     # had room for. The ids the movers leave are free again (not a gone player's: retired), and
     # each goes straight to the id he ends on, through a stand-in past PID_MAX that never stays.
     busy = (set(index) - moving) | wanted | taken
-    free = FreeIds(game_top, busy, retired, log)
+    free = FreeIds(game_top, busy, retired, log, shipped)
     final = dict(pin)
     for pid in sorted(moving - set(pin)):
         final[pid] = free.take()
@@ -1357,20 +1619,41 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
 class FreeIds:
     """the world's free player ids, lowest first above the game's own: not one in `busy` (it
     grows with every id handed out) nor one in `retired` (the ids of players no longer in the
-    world). Only when no other id below PID_MAX is left is a retired id given again, with a
+    world). shipped (a set of the game's own ids) given, the gaps between them below the game's
+    top come next, lowest first, once the ids above it are gone: FL27's players run to 186534,
+    which leaves 75,609 ids above the top and 160,139 in the gaps (the limits branch: 120,000 new
+    players). A world that fits above the top gets the ids it got before.
+    Only when no other id below PID_MAX is left is a retired id given again, with a
     NOTE in the log: a career started on an earlier Build shows that player as somebody else."""
 
-    def __init__(self, game_top, busy, retired, log=None):
+    def __init__(self, game_top, busy, retired, log=None, shipped=None):
         self.next, self.busy, self.retired = game_top + 1, busy, retired
+        self.shipped = shipped
+        self.hole_top = min(max(shipped), PID_MAX + 1) if shipped else 0
+        self.hole = 1
         self.log = log or (lambda *_a: None)
         self.reused = []
+
+    def _hole(self):
+        """the lowest free id in a gap below the game's own top, or None"""
+        while self.hole < self.hole_top and (self.hole in self.shipped or self.hole in self.busy
+                                             or self.hole in self.retired):
+            self.hole += 1
+        if self.hole >= self.hole_top:
+            return None
+        pid = self.hole
+        self.hole += 1
+        return pid
 
     def take(self):
         while self.next in self.busy or self.next in self.retired:
             self.next += 1
+        hole = self._hole() if self.next > PID_MAX and self.shipped else None
         if self.next <= PID_MAX:
             pid = self.next
             self.next += 1
+        elif hole is not None:
+            pid = hole
         else:
             left = sorted(self.retired - self.busy)
             if not left:
@@ -1402,7 +1685,8 @@ def _renumber(players, assigns, index, old, pid, where=None):
 
 
 def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None,
-          prev=None, prev_names=None, formations=None, picked=None, prev_people=None, retired=None):
+          prev=None, prev_names=None, formations=None, picked=None, prev_people=None, retired=None,
+          same_clubs=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
@@ -1432,19 +1716,61 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     players, assigns = load(src, "Player.bin"), load(src, "PlayerAssignment.bin")
     index = {u32(players, i * P_REC + P_ID): i * P_REC for i in range(len(players) // P_REC)}
     shipped = load(base, "Player.bin")
-    game_top = max(u32(shipped, i * P_REC + P_ID) for i in range(len(shipped) // P_REC))
+    game = shipped_ids(shipped)                        # the game's own ids: a gap between them is free
+    game_top = max(game)
     shipped_n = len(shipped)                           # records past these are the world's own
 
+    # mato 09.11.: squad_of looked at every assignment for each club -- 4433 clubs of
+    # _FL26Megapack times ~160000 records, minutes per pass, and Build makes several passes. The
+    # records of each club are indexed now, the index made again whenever the club column of
+    # PlayerAssignment.bin is not the one it was made from (a player moved, a record added); placed
+    # keeps it up to date where Build itself moves or adds one, as it does for most clubs
+    by_tid = [None, None]
+
+    def placed(ao, tid):
+        """assignment ao (just written or added) is club tid's now"""
+        if by_tid[0] is None:
+            return
+        col, at = by_tid
+        i, now = ao // A_REC, tid.to_bytes(4, "little")
+        if i == len(col) // 4:
+            col += now
+        elif i < len(col) // 4:
+            at[int.from_bytes(col[i * 4:i * 4 + 4], "little")].remove(ao)
+            col[i * 4:i * 4 + 4] = now
+        else:
+            by_tid[0] = None
+            return
+        at[tid].append(ao)
+
     def squad_of(tid):
-        return sorted(((u32(assigns, i * A_REC + E.A_PACK) & E.ORDER_MASK) >> E.ORDER_SHIFT,
-                       u32(assigns, i * A_REC + E.A_PID), i * A_REC)
-                      for i in range(len(assigns) // A_REC) if u32(assigns, i * A_REC + E.A_TID) == tid)
+        n = len(assigns) // A_REC
+        with memoryview(assigns) as m, m[:n * A_REC] as whole, whole.cast("I") as words:
+            col = words[E.A_TID // 4::A_REC // 4].tobytes()
+        if by_tid[0] != col:
+            at = collections.defaultdict(list)
+            for i, t in enumerate(int.from_bytes(col[k:k + 4], "little") for k in range(0, len(col), 4)):
+                at[t].append(i * A_REC)
+            by_tid[:] = [bytearray(col), at]
+        return sorted(((u32(assigns, o + E.A_PACK) & E.ORDER_MASK) >> E.ORDER_SHIFT, u32(assigns, o + E.A_PID), o)
+                      for o in by_tid[1].get(tid, ()))
+
+    # B331 (snellejelle_2 05.11.2026): each player's place in his club before the recipe, by (club,
+    # player id): a squad whose orders clash closes up by it
+    before = collections.defaultdict(list)
+    for i in range(len(assigns) // A_REC):
+        o = i * A_REC
+        before[u32(assigns, o + E.A_TID)].append(((u32(assigns, o + E.A_PACK) & E.ORDER_MASK) >> E.ORDER_SHIFT,
+                                                   u32(assigns, o + E.A_PID)))
+    place_before = {(tid, pid): n for tid, v in before.items() for n, (_o, pid) in enumerate(sorted(v))}
+    del before
 
     # a new club's squad as mkplayers left it: place n in it is the recipe's key "n"
     first = {key: [pid for _o, pid, _a in squad_of(tid)] for key, tid in tids.items()}
     added_ids = {}                                     # club -> [id of each "add" entry]
     reserved = _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top,
-                         prev_people=prev_people, retired=retired, log=log)
+                         prev_people=prev_people, retired=retired, log=log, shipped=game,
+                         same_clubs=same_clubs)
 
     # the recipe keys a new club by its league's name as Mod Studio wrote it, the plan by the
     # name Build uses (stripped): a stray space or a change of case left a whole NewLife club
@@ -1521,12 +1847,15 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
 
     changed = added = removed = joined = 0
     reserved_ids = set(reserved.values())         # ids kept for later adds, never handed out here
+    holes = []                                    # the FreeIds of the gaps below game_top, made once
     next_pid = game_top + 1                      # fill the gaps above the game's own ids: from
                                                   # max(index) + 1 a rebuilt world drifts upwards
                                                   # with every Build (220246 -> 288301 in three
                                                   # builds, 12.-14.10.2026) until it crosses PID_MAX
     eid = max(u32(assigns, i * A_REC + E.A_EID) for i in range(len(assigns) // A_REC)) + 1
     drop = set()
+    given = set()                                      # assignments whose shirt number the recipe gives
+    came = {}                                          # (club, player id) -> n: the n-th to come in (B331)
     touched = set()                                    # clubs whose squad order may have gaps
     later = {}                                         # club -> {ref: changes} of players who join it
     tsrc = next((d for d in (db, base) if os.path.exists(os.path.join(d, "Team.bin"))), None)
@@ -1565,6 +1894,10 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             like = str(ch.get("like", ""))
             srcpid = int(like) if like.isdigit() and int(like) in index else (sq[0][1] if sq else None)
             if srcpid is None:
+                # B390: a club the game left empty (NewLife "Bring the game's leagues": join + add,
+                # no "like") -- its own squad has no one yet, the first player who joins it does
+                srcpid = next((refs[str(r)] for r in c.get("join") or [] if refs.get(str(r)) in index), None)
+            if srcpid is None:
                 raise Error("players of %s: nothing to copy a new player from" % club)
             if len(index) + 1 > cap:
                 raise Error("the player table is full (%d)" % cap)
@@ -1580,7 +1913,12 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                     pid += 1
                 if pid > PID_MAX:
                     try:
-                        pid = FreeIds(PID_MAX, set(index) | reserved_ids, retired, log).take()
+                        # a gap below the game's top, then a gone player's id. Made once: its busy
+                        # set grows with what it hands out, and every other id given from here on
+                        # is above the top (next_pid, new_id) or reserved already
+                        if not holes:
+                            holes.append(FreeIds(PID_MAX, set(index) | reserved_ids, retired, log, game))
+                        pid = holes[0].take()
                     except Error:
                         raise Error("players of %s: no free player id left below %d (the game packs a "
                                     "player id into 18 bits)" % (club, PID_MAX + 1) + FULL)
@@ -1599,11 +1937,15 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             for off, v in ((E.A_EID, eid), (E.A_PID, pid), (E.A_TID, tid),
                            (E.A_PACK, E.with_shirt(order << E.ORDER_SHIFT, shirt))):
                 e[off:off + 4] = v.to_bytes(4, "little")
+            came[(tid, pid)] = len(came)
             eid += 1
             ao = len(assigns)
             assigns += e
+            placed(ao, tid)
             sq.append((order, pid, ao))
             _write(players, assigns, index[pid], ao, ch)
+            if given_shirt(ch):
+                given.add(ao)
             _media(faces, portraits, pid, ch)
             added += 1
         beyond = []
@@ -1622,6 +1964,8 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 renumber(pid, new_id(ch["id"], pid))
                 pid = int(ch["id"])
             _write(players, assigns, index[pid], ao, ch)
+            if given_shirt(ch):
+                given.add(ao)
             _media(faces, portraits, pid, ch)
             changed += 1
         if beyond:
@@ -1634,6 +1978,9 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
         for tid in p.get("teams") or []:
             kinds.setdefault(tid, (False, p.get("country")))
     signed = {}                                        # player id -> the club that signed him
+    by_pid = collections.defaultdict(list)             # player id -> his assignments, in file order
+    for i in range(len(assigns) // A_REC):
+        by_pid[u32(assigns, i * A_REC + E.A_PID)].append(i * A_REC)
     for club, c in changes.items():
         tid = club_tid(club)
         if tid is None or not c.get("join"):
@@ -1644,8 +1991,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 continue
             pid = refs[str(ref)]
             pid = renamed.get(pid, pid)
-            rows = [(i * A_REC, u32(assigns, i * A_REC + E.A_TID)) for i in range(len(assigns) // A_REC)
-                    if u32(assigns, i * A_REC + E.A_PID) == pid and i * A_REC not in drop]
+            rows = [(ao, u32(assigns, ao + E.A_TID)) for ao in by_pid.get(pid, ()) if ao not in drop]
             if any(t == tid for _ao, t in rows):
                 log("  players of %s: player %d is already there" % (club, pid))
                 continue
@@ -1674,6 +2020,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 touched.add(u32(assigns, ao + E.A_TID))
                 assigns[ao + E.A_TID:ao + E.A_TID + 4] = tid.to_bytes(4, "little")
                 assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
+                placed(ao, tid)
             else:
                 e = bytearray(A_REC)
                 for off, v in ((E.A_EID, eid), (E.A_PID, pid), (E.A_TID, tid), (E.A_PACK, pack)):
@@ -1681,9 +2028,14 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 eid += 1
                 ao = len(assigns)
                 assigns += e
+                placed(ao, tid)
+                by_pid[pid].append(ao)
+            came[(tid, pid)] = len(came)
             ch = (later.get(club) or {}).get(str(ref))
             if ch:
                 _write(players, assigns, index[pid], ao, ch)
+                if given_shirt(ch):
+                    given.add(ao)
                 _media(faces, portraits, pid, ch)
                 changed += 1
             joined += 1
@@ -1769,6 +2121,21 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
         shirts += 1
     if shirts:
         log("  players: %d clubs' first keeper given the 1" % shirts)
+    # Megapack (mato 06.11.): the numbers a recipe or a pack gives are the club's own -- each one
+    # once in its squad. Whoever else wore one (a stand-in, a player of the game it does not name)
+    # takes a free one; a club whose recipe gives no number is not looked at
+    given -= drop
+    renumbered = 0
+    for tid in sorted({u32(assigns, ao + E.A_TID) for ao in given}):
+        sq = [(ao, E.shirt_of(u32(assigns, ao + E.A_PACK)),
+               E.show("Registered Position", E.getf(players[index[pid]:index[pid] + P_REC], "Registered Position")))
+              for _o, pid, ao in squad_of(tid) if ao not in drop and pid in index]
+        for ao, n in unique_shirts(sq, given).items():
+            pack = E.with_shirt(u32(assigns, ao + E.A_PACK), n)
+            assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
+            renumbered += 1
+    if renumbered:
+        log("  players: %d players took a free number, the recipe gives theirs to a teammate" % renumbered)
     if drop:
         keep = bytearray()
         for i in range(len(assigns) // A_REC):
@@ -1790,13 +2157,37 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             faces[:] = [f for f in faces if f[0] not in drop_ids]
         if portraits is not None:
             portraits[:] = [f for f in portraits if f[0] not in drop_ids]
+    # B331 (snellejelle_2 05.11.2026, FL27): "squad orders clash: club 71584: two players have squad
+    # order 25" stopped the whole Build. A club ordered on the Players page over FL26's tables kept
+    # an order only where it differed from the game's, and FL27's base squad numbers its places
+    # otherwise (place 25: order 28 in FL26 1.3's, 27 in 2.2's, 25 in FL27's), so a player with no
+    # order of his own landed on another's; a game club's order made over the other game's squad
+    # (pepponeee 04.11., players FL27 does not have) the same. Such a squad closes up like one someone left, ties by the place
+    # each had before the recipe (newcomers after, in the order they came), with a note naming it;
+    # _check_orders below stays the last word
+    seen, clashing = set(), {}
+    for i in range(len(assigns) // A_REC):
+        k = (u32(assigns, i * A_REC + E.A_TID), (u32(assigns, i * A_REC + E.A_PACK) & E.ORDER_MASK) >> E.ORDER_SHIFT)
+        if k in seen:
+            clashing.setdefault(k[0], set()).add(k[1])
+        seen.add(k)
+    key_of = {club_tid(club): club for club in changes}
+    was = {pid: old for old, pid in renamed.items()}  # a placeholder who took an id of the recipe's
     # a squad someone left closes up -- orders 0, 1, 2 ... in the order they had -- so its
     # first eleven are still eleven
-    for tid in touched:
-        for n, (order, pid, ao) in enumerate(squad_of(tid)):
+    for tid in touched | set(clashing):
+        def tie(x, tid=tid):
+            return (x[0], place_before.get((tid, was.get(x[1], x[1])), 1 << 30), came.get((tid, x[1]), 0), x[1])
+        sq = sorted(squad_of(tid), key=tie)
+        for n, (order, pid, ao) in enumerate(sq):
             if order != n:
                 pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | n << E.ORDER_SHIFT
                 assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        if tid in clashing:
+            log("  NOTE: players of %s: two players had one squad order (%s) -- the squad is closed up, orders "
+                "0-%d in the order it had; set the order on the Players page again to change it"
+                % (club_label(pl, base, db, tid, key_of.get(tid, str(tid))),
+                   ", ".join(str(o) for o in sorted(clashing[tid])), len(sq) - 1))
     # a squad past what the game holds keeps its first ones: the last to come (joins, adds) are
     # left out with a note naming the club, not a stop. 0.2.4 beta stopped the Build on "players
     # of 130: 42 players -- a club has at most 40", and the club was the same one twice in the
@@ -1827,11 +2218,16 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                             "; the club is in your world %d times (%s): keep it in one league"
                             % (len(homes), ", ".join(homes)) if len(homes) > 1 else ""))
     if len(players) > shipped_n:
-        # Player.bin is in id order, as the game ships it; an id of the recipe's own can land
-        # anywhere above the game's, so the world's part is put back in order
-        recs = sorted((players[o:o + P_REC] for o in range(shipped_n, len(players), P_REC)),
-                      key=lambda r: u32(r, P_ID))
-        players = players[:shipped_n] + b"".join(recs)
+        # Player.bin is in id order, as the game ships it (outside a career the game finds a
+        # player by a binary search by id, 0x1414b80f0); an id of the recipe's own can land
+        # anywhere above the game's, so the world's part is put back in order -- and once one is
+        # in a gap below the game's top (FreeIds, a world past the ids above it), the whole table
+        recs = [players[o:o + P_REC] for o in range(shipped_n, len(players), P_REC)]
+        if any(u32(rec, P_ID) < game_top for rec in recs):
+            recs = [players[o:o + P_REC] for o in range(0, len(players), P_REC)]
+            players = bytearray(b"".join(sorted(recs, key=lambda rec: u32(rec, P_ID))))
+        else:
+            players = players[:shipped_n] + b"".join(sorted(recs, key=lambda rec: u32(rec, P_ID)))
     _check_orders(assigns)
     retired -= set(index)                              # an id in use again (the recipe's own) is nobody's old one
     if ids is not None:

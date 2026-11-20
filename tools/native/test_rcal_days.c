@@ -34,6 +34,10 @@ static int g_today_test = 0;
 int rcal_test_today(void) { return g_today_test; }
 int rcal_test_invites(int k, uint16_t id) { (void)k; (void)id; return 0; }
 int rcal_test_recday(uint16_t id) { (void)id; return -1; }
+/* B329: the calendar's ids a day (day_load) and a round's matches, for the load case only */
+static int g_tload_on = 0, g_tload[365];
+int rcal_test_dayload(int d) { return g_tload_on ? g_tload[d] : 0; }
+int rcal_test_round(uint16_t id) { (void)id; return g_tload_on ? 12 : 0; }
 
 static int fails = 0;
 /* the game's push_back of a calendar vector (0x141586640), for more_dates */
@@ -165,6 +169,7 @@ static int ccup_days_of(int k, uint32_t* out)
 int main(void)
 {
   static date_t r[64];
+  g_rmemo_on = 0;                                      /* the cases below ask one league many ways */
   uint32_t d1[256], d2[256];
   g_test_year = 2025;                                  /* the 2025/26 season */
 
@@ -300,6 +305,83 @@ int main(void)
     expect(ccup_feeds(0, 340) && !ccup_of_league(0, 340), "league 340 feeds cup 500 by its cup's winner (alt=)");
     rcal_case("league 340", 340, 30, 0, r);
     clear_of("the continental cup's group and knockout days, two days clear", r, 30, cc, ncc, 3);
+  }
+
+  printf("A cup behind a pre-round (12.11.2026: the CONCACAF Champions Cup of 16, the CAF cups)\n");
+  {
+    /* cup 0 (510): a knockout whose two places are both winners of pre-round 600's ties -- the
+         champions of 340 and 351 v the champion of 352 and the runner-up of 351;
+       cup 1 (520/521): champion 354 itself and the winner of pre-round 601 (353 1. v 354 2.);
+       cup 2 (530/531): third of 354 itself and the winner of pre-round 602 -- a small country's
+         champion (355 1.) v the winner of cup 361, else league 357's second */
+    static ccup_t keep_c[3]; static lpre_t keep_l[3];
+    int keep_nc = g_nccup, keep_nl = g_nlpre;
+    memcpy(keep_c, g_ccup, sizeof keep_c); memcpy(keep_l, g_lpre, sizeof keep_l);
+    g_nccup = 3; g_nlpre = 3;
+    memset(g_ccup, 0, 3 * sizeof g_ccup[0]);
+    memset(g_lpre, 0, 3 * sizeof g_lpre[0]);
+    g_ccup[0].reg = 510; g_ccup[0].ko = 510; g_ccup[0].n = 2;
+    g_ccup[0].ereg[0] = 600 + 1024; g_ccup[0].ereg[1] = 600 + 2048;
+    g_ccup[1].reg = 520; g_ccup[1].ko = 521; g_ccup[1].groups = 4; g_ccup[1].n = 2;
+    g_ccup[1].ereg[0] = 354; g_ccup[1].erank[0] = 1; g_ccup[1].ereg[1] = 601 + 1024;
+    g_ccup[2].reg = 530; g_ccup[2].ko = 531; g_ccup[2].groups = 4; g_ccup[2].n = 2;
+    g_ccup[2].ereg[0] = 354; g_ccup[2].erank[0] = 3; g_ccup[2].ereg[1] = 602 + 1024;
+    static const uint16_t L0[][2] = { { 340, 1 }, { 351, 1 }, { 352, 1 }, { 351, 2 } };
+    g_lpre[0].reg = 600; g_lpre[0].ko = 510; g_lpre[0].fill = 226; g_lpre[0].days[0] = g_lpre[0].days[1] = 232;
+    g_lpre[0].ties = 2; g_lpre[0].single = 1;
+    for (int i = 0; i < 4; i++) { g_lpre[0].ereg[i] = L0[i][0]; g_lpre[0].erank[i] = (uint8_t)L0[i][1]; }
+    g_lpre[1].reg = 601; g_lpre[1].ko = 521; g_lpre[1].fill = 226; g_lpre[1].days[0] = g_lpre[1].days[1] = 232;
+    g_lpre[1].ties = 1; g_lpre[1].single = 1;
+    g_lpre[1].ereg[0] = 353; g_lpre[1].erank[0] = 1; g_lpre[1].ereg[1] = 354; g_lpre[1].erank[1] = 2;
+    g_lpre[2].reg = 602; g_lpre[2].ko = 531; g_lpre[2].fill = 226; g_lpre[2].days[0] = g_lpre[2].days[1] = 232;
+    g_lpre[2].ties = 1; g_lpre[2].single = 1;
+    g_lpre[2].ereg[0] = 355; g_lpre[2].erank[0] = 1; g_lpre[2].ereg[1] = 361; g_lpre[2].erank[1] = 0; g_lpre[2].ealt[1] = 357;
+
+    expect(ccup_tier(&g_ccup[0]) == 0, "a cup whose every place is a pre-round's, champions in the pre-round: a champions' cup");
+    expect(ccup_tier(&g_ccup[1]) == 0, "a cup with a champion's place of its own: a champions' cup (as before)");
+    expect(ccup_tier(&g_ccup[2]) == 1, "a cup with places of its own and no champion's: the cup below, whatever its pre-round holds");
+    for (int i = 0; i < 4; i++) g_lpre[0].erank[i] = 2;
+    expect(ccup_tier(&g_ccup[0]) == 1, "a cup whose every place is a pre-round's, no champion in it: the cup below");
+    for (int i = 0; i < 4; i++) g_lpre[0].erank[i] = (uint8_t)L0[i][1];
+    g_nlpre = 0;
+    expect(ccup_tier(&g_ccup[0]) == 1, "... and without its pre-round (an older world file): the cup below, as before");
+    g_nlpre = 3;
+
+    expect(ccup_feeds(0, 340) && ccup_feeds(0, 351) && ccup_feeds(0, 352), "the pre-round's leagues feed the cup");
+    expect(!ccup_feeds(0, 353) && !ccup_feeds(0, 399), "a league of another cup's pre-round, or of none, does not");
+    expect(ccup_feeds(1, 353) && ccup_feeds(1, 354), "cup 1: the league of its pre-round and the league with a place");
+    expect(ccup_feeds(2, 355) && ccup_feeds(2, 357), "cup 2: the small champion's league and the cup winner's fallback league");
+    expect(gc_feeds(340, GC_CWC) && !gc_feeds(355, GC_CWC), "the Club World Cup's days: for the champions' cup's pre-round leagues only");
+    g_ccup[0].cal = 1;
+    expect(!ccup_feeds(0, 340), "a South American calendar cup: its pre-round's leagues are not taken (the Libertadores' weeks)");
+    g_ccup[0].cal = 0;
+
+    busy_t bz[BUSY_MAX];
+    int nb = busy_set(340, bz), pre = 0, ko = 0;
+    for (int i = 0; i < nb; i++) {
+      pre |= bz[i].kind == BZ_CONT && bz[i].day == 232;
+      ko |= bz[i].kind == BZ_CONT && bz[i].day == ccup_day(&g_ccup[0], 1, 0);
+    }
+    expect(pre && ko, "league 340's busy days: the pre-round's day and the cup's first knockout day");
+    nb = busy_set(354, bz); pre = 0;
+    for (int i = 0; i < nb; i++) pre |= bz[i].kind == BZ_CONT && bz[i].day == 232;
+    expect(pre, "league 354 (a place of its own and one in the pre-round): the pre-round's day too");
+    g_lpre[1].ereg[1] = 353; g_lpre[1].erank[1] = 2;       /* 354 now has its own place only */
+    nb = busy_set(354, bz); pre = 0;
+    for (int i = 0; i < nb; i++) pre |= bz[i].kind == BZ_CONT && bz[i].day == 232;
+    expect(!pre, "... a league with a place of its own only: not the pre-round's day");
+    nb = busy_set(399, bz); pre = 0;
+    for (int i = 0; i < nb; i++) pre |= bz[i].kind == BZ_CONT;
+    expect(!pre, "a league of no cup: no continental day at all");
+
+    uint32_t cc[16]; int ncc = 0;
+    cc[ncc++] = 232;
+    for (int i = 0; i < 7; i++) cc[ncc++] = ccup_day(&g_ccup[0], 1, i);
+    g_rmemo_on = 0;
+    rcal_case("league 340", 340, 30, 0, r);
+    clear_of("the pre-round's day and the cup's knockout days, two days clear", r, 30, cc, ncc, 3);
+    memcpy(g_ccup, keep_c, sizeof keep_c); memcpy(g_lpre, keep_l, sizeof keep_l);
+    g_nccup = keep_nc; g_nlpre = keep_nl;
   }
 
   printf("A big August-May league with Champions League places (the Club World Cup)\n");
@@ -524,6 +606,72 @@ int main(void)
     expect(more_dates(11, &test_vec, 58, 60, 0) == 58, "without the game's push_back the calendar is left as it was");
     free(test_vec.b);
     g_base = 0;
+  }
+
+  printf("\nB329: fifteen leagues on one real-calendar line, the days already busy (the 120k world)\n");
+  {
+    static uint16_t RL[15][8];
+    for (int i = 0; i < 15; i++) {
+      static const uint16_t L[8] = { 0, 226, 142, 354, 7, 96, 16, 0 };
+      memcpy(RL[i], L, sizeof L);
+      RL[i][0] = (uint16_t)(600 + i);
+    }
+    fl26_swiss_rcal(&RL[0][0], 15);
+    g_today_test = 181;
+    static uint16_t first[15][46];
+    int same = 1;
+    for (int i = 0; i < 15; i++) {                     /* as before: no load known */
+      memset(r, 0, sizeof(date_t) * 46);
+      rcal_dates((uint16_t)(600 + i), rcal_of((uint16_t)(600 + i)), r, 46, 1);
+      for (int j = 0; j < 46; j++) { if (i && first[0][j] != r[j].day) same = 0; first[i][j] = (uint16_t)r[j].day; }
+    }
+    expect(same, "with no load every league of the line gets the same 46 days (what the 120k world did)");
+    g_tload_on = 1; g_rmemo_on = 1; g_nrmemo = 0;
+    for (int d = 0; d < 365; d++) g_tload[d] = 650;    /* the game's own and the leagues dated before */
+    int over = 0, picks = 0, ok = 1;
+    static uint16_t got[15][46];
+    for (int i = 0; i < 15; i++) {
+      memset(r, 0, sizeof(date_t) * 46);
+      int m = rcal_dates((uint16_t)(600 + i), rcal_of((uint16_t)(600 + i)), r, 46, 1);
+      if (m < 0) { ok = 0; continue; }
+      picks++;
+      for (int j = 0; j < 46; j++) { got[i][j] = (uint16_t)r[j].day; g_tload[r[j].day] += 12; }   /* filed */
+      in_order_check(i ? "  and the next" : "a league dated with the load", r, 46);
+    }
+    for (int d = 0; d < 365; d++) if (g_tload[d] > 792 - LOAD_SPARE) over++;
+    char line[160];
+    snprintf(line, sizeof line, "all 15 dated (%d), no day past %d ids (%d are)", picks, 792 - LOAD_SPARE, over);
+    expect(ok && picks == 15 && over == 0, line);
+    int differ = 0;
+    for (int i = 1; i < 15; i++) if (memcmp(got[i], got[0], sizeof got[0])) differ++;
+    snprintf(line, sizeof line, "the leagues spread over other days (%d of 14 differ from the first)", differ);
+    expect(differ >= 7, line);
+    memset(r, 0, sizeof(date_t) * 46);                 /* the game asks again for the next match */
+    rcal_dates(600, rcal_of(600), r, 46, 1);
+    int again = 1;
+    for (int j = 0; j < 46; j++) if (r[j].day != got[0][j]) again = 0;
+    expect(again, "asked again the same day, a league keeps its days though its own matches are on them now");
+    g_today_test = 182;
+    memset(r, 0, sizeof(date_t) * 46);
+    rcal_dates(600, rcal_of(600), r, 46, 1);
+    expect(g_nrmemo == 15, "the next day it is dated afresh, in the same slot");
+    g_today_test = 183; g_nrmemo = 0;                  /* all dated before any is filed */
+    for (int d = 0; d < 365; d++) g_tload[d] = 650;
+    static int plan[365];
+    memset(plan, 0, sizeof plan);
+    picks = 0;
+    for (int i = 0; i < 15; i++) {
+      memset(r, 0, sizeof(date_t) * 46);
+      if (rcal_dates((uint16_t)(600 + i), rcal_of((uint16_t)(600 + i)), r, 46, 1) < 0) continue;
+      picks++;
+      for (int j = 0; j < 46; j++) plan[r[j].day] += 12;
+    }
+    over = 0;
+    for (int d = 0; d < 365; d++) if (650 + plan[d] > 792 - LOAD_SPARE) over++;
+    snprintf(line, sizeof line, "dated before filed: all 15 (%d), no day past %d ids once filed (%d are)", picks, 792 - LOAD_SPARE, over);
+    expect(picks == 15 && over == 0, line);
+    g_tload_on = 0; g_rmemo_on = 0;
+    g_today_test = 0;
   }
 
   printf(fails ?"\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);

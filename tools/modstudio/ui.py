@@ -1,6 +1,7 @@
 """small building blocks every page uses: headers, banners, cards, a background runner"""
 import traceback
-from PySide6.QtCore import Qt, QObject, QPoint, QRect, QRunnable, QSize, QThreadPool, Signal
+from html import escape as _html_escape
+from PySide6.QtCore import Qt, QObject, QPoint, QRect, QRunnable, QSize, QThreadPool, QTimer, Signal
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton,
                                QVBoxLayout, QWidget, QSizePolicy, QFileDialog, QToolButton, QLayout)
 from .i18n import _
@@ -97,6 +98,12 @@ class Stat(QFrame):
         self._full = ""
 
     def set(self, text, state="", tip=""):
+        # the same again: nothing to do (B480, 17.11.: the header is set on every sider.ini save and
+        # every content change, and each set polished the box and its label anew -- styles worked out
+        # again, events for every listener; 2 of the samples of a 4 s stop in the exe test)
+        if getattr(self, "_was", None) == (text, state, tip):
+            return
+        self._was = (text, state, tip)
         self._full = text or ""
         self.val.setProperty("state", state)
         self.setProperty("state", state)
@@ -127,6 +134,10 @@ class Page(QWidget):
     title = ""
     hint = ""
     help = ""
+    # B487c (pop1806 16.11.): a page whose changes Make it editable... does not carry (it reads the
+    # world's recipe again from its plan; only players, the edit tab, renamed and added leagues go
+    # with it) says so over the page while the open world is a ready world from a zip
+    zip_notice = False
 
     def __init__(self, app):
         super().__init__()
@@ -156,6 +167,58 @@ class Page(QWidget):
         self.banner.hide()
         self.banner.linkActivated.connect(self.banner_link)
         self.outer.addWidget(self.banner)
+        self.zip_note = None
+        if self.zip_notice:
+            self._zip_note()
+
+    def _zip_note(self):
+        """B487c: the notice of a ready world, under the title; it does not block editing (testers
+        browse a ready world). Its own label: the banner is say()'s, and say("") hides it"""
+        n = self.zip_note = QLabel()
+        n.setObjectName("banner_warn")
+        n.setWordWrap(True)
+        n.setTextFormat(Qt.RichText)
+        n.linkActivated.connect(self.banner_link)
+        n.hide()
+        self.outer.insertWidget(1, n)        # under the title, above the page's hint
+        app = self.app
+        # Make it editable... emits ini_changed and content_changed and adopts the recipe (changed);
+        # Import your world, another world opened or another game folder: the same signals
+        bus = getattr(app, "bus", None)
+        for sig in ((bus.ini_changed, bus.content_changed, bus.game_changed) if bus is not None else ()):
+            sig.connect(self.zip_note_update)
+        project = getattr(app, "project", None)
+        if project is not None and hasattr(project, "changed"):
+            project.changed.connect(self.zip_note_update)
+        self.zip_note_update()
+
+    def zip_note_update(self, *_a):
+        """shown while the open world is a ready world from a zip, not made editable yet"""
+        if self.zip_note is None:
+            return
+        from . import installer as I
+        g, project = getattr(self.app, "game", None), getattr(self.app, "project", None)
+        recipe = getattr(project, "recipe", None) or {}
+        w = str(recipe.get("world") or "").strip()
+        try:
+            on = bool(w and g is not None and g.ok() and I.ready_world(g, w))
+        except Exception:
+            on = False
+        if on:
+            text = _html_escape(_("This world came from a zip. To change it, first use My world > Make it "
+                                 "editable... Changes to leagues, clubs, cups and settings made before that "
+                                 "are not kept (players' names and edits are)."), quote=False)
+            # a page outside My world (Trophies) has no Make it editable... in sight: a link there,
+            # the page: link every banner has (banner_link)
+            if (getattr(self.app, "section_of", None) or {}).get(type(self).__name__) != "World":
+                text += ' <a href="page:Build">%s</a>' % _html_escape(_("Open My world"), quote=False)
+            self.zip_note.setText("⚠ " + text)
+        self.zip_note.setVisible(on)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self.zip_note is not None:
+            self.zip_note_update()
 
     def action(self, text, slot, kind=None, tip=None):
         b = QPushButton(_(text))
@@ -213,6 +276,52 @@ class Page(QWidget):
     def shown(self):
         """called each time the page is opened"""
         self.refresh()
+
+    def on_change(self, fill, now=None):
+        """a slot for project.changed: fill() at once while the page is on screen; behind another
+        page, on the next turn of the window (once for any number of changes meanwhile), after
+        now() at once (what other pages read from this one). B480 (16.11.2026): after Make it
+        editable and at the end of a world zip install the GigaPack's world came in with every
+        page behind the one on screen filling in the same turn -- Leagues, New leagues, Clubs:
+        1.0 s of a stopped window in the stall probe, each of them 0.2-0.4 s. One turn each now
+        (17.11.: a turn of its own, _OWED -- three timers of 0 s posted together all ran in the
+        same turn, 0.5 s of a stopped window with 220,000 players in the stall test)
+
+        17.11. (the exe test of beta4p, GigaPack): and still each of those turns stopped the window,
+        0.5-1.0 s right after Make it editable -- New leagues' 317 rows, logos and Select Team boxes
+        made for a page nobody looked at, and opened later it filled itself again anyway (every page
+        that uses this fills in shown()). So a page behind another one does not fill at all now: it
+        fills when it is opened (app.open_page -> shown), and `now` still runs at once"""
+        def slot(*_a):
+            if now is not None:
+                now()
+            if self.isVisible():
+                fill()
+        return slot
+
+
+_OWED = []                  # the fills of pages behind the one on screen and next_turn()'s, one per turn
+
+
+def next_turn(fn):
+    """fn() on a turn of the window of its own, after the fills and calls queued before it. B480
+    (17.11.2026): two timers of 0 s posted apart -- the end of an install's next step and a page's
+    fill -- still ran in the same turn, with no turn for the stall recorder in between (0.4-0.5 s
+    of a stopped window with 220,000 players). One queue for all of them, one per turn"""
+    _OWED.append(fn)
+    if len(_OWED) == 1:
+        QTimer.singleShot(0, _run_owed)
+
+
+def _run_owed():
+    if not _OWED:
+        return
+    fn = _OWED.pop(0)
+    if _OWED:
+        # the next one on the next turn, after a paint; posted before this one runs, so a box this
+        # one opens does not hold the rest until it is closed
+        QTimer.singleShot(0, _run_owed)
+    fn()
 
 
 class HelpMark(QToolButton):
@@ -438,18 +547,72 @@ class Job(QRunnable):
         if progress:
             self.s.progress.connect(progress)
 
-    def run(self):
+    def _emit(self, name, x):
+        """self.s.<name>.emit(x); nothing when the signals' object is gone already (beta4s 18.11.2026: a worker
+        that finished after its owner went -- the window closed, the program on its way out -- raised
+        "Signal source has been deleted" in the worker thread)"""
         try:
-            r = self.fn(self.s.progress.emit)
+            getattr(self.s, name).emit(x)
+        except RuntimeError:
+            pass
+
+    def run(self):
+        def progress(x):
+            PROGRESS_SENT[0] += 1            # for FL26_STALLS: was the window busy with these?
+            self._emit("progress", x)
+        try:
+            r = self.fn(progress)
         except (Exception, SystemExit):
             # the builder's tools stop with SystemExit("message"); let through a worker thread it
             # ends the whole program with no window (0.2.2: "the app closes on Build")
-            self.s.failed.emit(traceback.format_exc())
+            self._emit("failed", traceback.format_exc())
             return
-        self.s.done.emit(r)
+        self._emit("done", r)
 
 
 _JOBS = []
+PROGRESS_SENT = [0]                      # progress lines the workers have sent so far
+
+
+FIRST_S = 0.08               # in_steps: the most its first calls take in the same turn
+
+
+def in_steps(owner, name, todo, first=24, slice_s=0.02):
+    """the calls of todo without standing the window still (11.11.: a table of 317 leagues got a
+    combo in every row, 5 ms each, and the page stood still for 2-6 s): the first ones now -- the
+    rows on screen --, the rest a few per turn of the event loop. A newer in_steps of the same
+    owner and name drops what is left of an older one (its rows are gone)"""
+    import time
+    from PySide6.QtCore import QTimer
+    runs = owner.__dict__.setdefault("_step_runs", {})
+    runs[name] = mine = runs.get(name, 0) + 1
+    todo = list(todo)
+    # B480 (17.11.): the first ones within FIRST_S as well -- 24 combos are 0.04-0.08 s, but with a
+    # worker thread busy or the memory paged out they were 0.3 s and more of a stopped window
+    t0 = time.perf_counter()
+    at = [0]
+    while at[0] < min(first, len(todo)):
+        fn = todo[at[0]]
+        at[0] += 1
+        fn()
+        if time.perf_counter() - t0 >= FIRST_S:
+            break
+
+    def more():
+        if runs.get(name) != mine:
+            return
+        t0 = time.perf_counter()
+        while at[0] < len(todo) and time.perf_counter() - t0 < slice_s:
+            fn = todo[at[0]]
+            at[0] += 1
+            fn()
+            if runs.get(name) != mine:        # fn changed the table: these rows are gone
+                return
+        if at[0] < len(todo):
+            QTimer.singleShot(0, more)
+
+    if at[0] < len(todo):
+        QTimer.singleShot(0, more)
 
 
 def run_job(fn, done=None, failed=None, progress=None):

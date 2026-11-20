@@ -16,6 +16,7 @@ import leaguebuilder as B
 import lbservers
 from modstudio import worlds as WL, installer as I
 from modstudio.game import Game
+os.environ["FL26_LEDGER_STORE"] = tempfile.mkdtemp(prefix="fl26ledgers-")   # review 3, 18.11.2026: never the real history
 
 W = "_FL26TestReady"
 fails = []

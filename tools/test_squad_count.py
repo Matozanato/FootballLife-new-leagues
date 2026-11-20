@@ -57,6 +57,17 @@ def main():
     ok("Anderlecht: 28 - 2 to Kortrijk = 26 (the call-up does not count)", PB.squad_size(p, 174) == 26)
     ok("Brugge: 25 + 1 = 26", PB.squad_size(p, 269) == 26)
     ok("Belgium: 3 + 2 called up = 5", PB.squad_size(p, 9) == 5)
+    # 11.11.: a list of clubs reads who signs whom once (0.5 s of the Leagues page with 4,500 clubs)
+    with PB.signed_once(p):
+        ok("the same numbers inside signed_once: %r" % [PB.squad_size(p, t) for t in (2013, 174, 269, 9)],
+           [PB.squad_size(p, t) for t in (2013, 174, 269, 9)] == [29, 26, 26, 5])
+        pl2 = p.players()
+        ok("it is the one reading while the list is filled", PB._SIGNED[0] is not None and PB._SIGNED[0][0] is pl2)
+    ok("and nothing is kept after it", PB._SIGNED[0] is None)
+    pl["269"]["join"].append("1022")
+    ok("a change after it counts: Kortrijk 28, Brugge 27",
+       (PB.squad_size(p, 2013), PB.squad_size(p, 269)) == (28, 27))
+    pl["269"]["join"].remove("1022")
 
     page = PB.GameLeagues(types.SimpleNamespace(project=p))
     it = QTreeWidgetItem()

@@ -21,6 +21,25 @@ pool (1600 with fl26caps); the slots the game fills from team region codes or me
     N    lists (dwords)   79/80   0..5, 69..78   every other slot   counts at
    250       92125         1600       750              333           0x59f74
    128       92186         1600       750              706           0x5a068
+   250 --big 2600          2600       750              324           0x59f74   (fl26slots250.lua, 0.3.0)
+   250 --big 8000          8000       750              277           0x59f74   (fl26slots250.fl27.lua until B346)
+   362 --big 2600          2600       750              218           0x59e94   (fl26slots250.lua since B346)
+   465 --big 8000          8000       750              143           0x59dc4   (fl26slots250.fl27.lua, slots-wide)
+
+How far N goes (slots-wide, 07.11.): not the engine. The slot is a dword everywhere the exe keeps
+it (comptab row +4, the nine compares below), the builder makes one heap vector per slot, and
+the club lists share the one fixed region, so every slot added costs each ordinary slot a little:
+at 1000 slots it holds 64 clubs, and MIN_PER stops it there (a regulation lists 48 at most).
+Past 416 slots the two tables no longer fit the module's one page, so it allocates two or three
+pages in one call (tables_at); fl26clubs.dll takes any N up to 1024 and finds the tables through
+the accessors' lea. Two things only show up past 379 / 362: get and set refused slot 379 too
+(`cmp al,0x7b`, fixed for N > 379), and a club of a league on a slot >= 250 keeps team.slot 7
+(fl26slot7's byte), as the leagues on 250..361 already do.
+
+The FL 2027 copy: FL26_EXE=<FL_2027.exe> python mkslots.py 465 --big 8000 --out
+sider/experimental/fl26slots250.fl27.lua (the P150 caps set's 8000 teams; the bytes it reads are
+FL26 2.2's at every site, so the module is the same but for the layout). 277 is still far above
+any one competition (a league 28 + nothing, a cup 48), and the region and pool slots keep 750.
 
 Slot 123 stays the engine's "no slot" sentinel: id2slot (0x1414cb2e0) and cid2slot
 (0x1414cb030) answer 123 when a competition has no row, three Select-Team builders push
@@ -40,14 +59,23 @@ import sys
 import capstone
 
 IMAGE_BASE = 0x140000000
-EXE = os.path.join(os.environ.get("FL26_DIR", r"E:\instalacija"), "FL_2026.exe")
-SIDER = r"D:\dev\fl26\wt\limits\sider"           # read only: overlap checks
+# FL26_EXE names the exe itself (FL 2027's FL_2027.exe, as patchset.py takes it)
+EXE = os.environ.get("FL26_EXE") or os.path.join(os.environ.get("FL26_DIR", r"E:\FL\FL26\game"), "FL_2026.exe")
 HERE = os.path.dirname(os.path.abspath(__file__))
+SIDER = os.path.join(os.path.dirname(HERE), "sider")   # read only: overlap checks and the template
+                                                       # (was the old limits worktree's)
 
 PAGE = 0x163400000            # our own page; fl26caps has 0x163000000
 CODE = PAGE                   # stubs
 OFF_TAB = PAGE + 0x800        # N dwords: first dword of each slot's list
-CAP_TAB = PAGE + 0xc00        # N dwords: capacity of each slot
+CAP_TAB = PAGE + 0xc00        # N dwords: capacity of each slot (both lower past 256 slots, main())
+PAGE_SIZE = 0x1000            # what the module allocates at PAGE: more past 416 slots (tables_at)
+NMAX = 1024                   # B346 (07.11.): 362 = a slot of its own for every regulation id of the band;
+                              # slots-wide (07.11.): 465 = the top band 920..1022 too. 1024 is what
+                              # fl26clubs.dll takes (slots_layout: n > 1024 refused), and MIN_PER below
+                              # stops the region well before that
+MIN_PER = 64                  # an ordinary slot holds one competition's clubs: a regulation lists at
+                              # most 48 (fl26clubs.c MAX_CLUBS, the game's own cap), so 64 is room to spare
 
 OLD_N = 123
 SENTINEL = 0x7b
@@ -175,13 +203,15 @@ class Asm:
 
 
 def layout(n):
-    if not OLD_N < n <= 250:
-        raise SystemExit("N must be 124..250")
+    if not OLD_N < n <= NMAX:
+        raise SystemExit("N must be 124..%d" % NMAX)
     listdw = (OLD_CNT - 2 * n) // 4
     cnt = listdw * 4
     big = {s: c for s, c in BIG.items() if s < n}
     normal = [s for s in range(n) if s != SENTINEL and s not in big]
     per = (listdw - sum(big.values())) // len(normal)
+    if per < MIN_PER:
+        raise SystemExit("%d slots leave %d entries for an ordinary slot, fewer than %d" % (n, per, MIN_PER))
     caps = [0] * n
     for s in normal:
         caps[s] = per
@@ -196,15 +226,38 @@ def layout(n):
     return dict(listdw=listdw, cnt=cnt, caps=caps, offs=offs, per=per, used=at)
 
 
+def tables_at(n):
+    """(first-entry table, capacity table, bytes the module allocates at PAGE) for n slots.
+    Up to 256 slots the tables sit at +0x800 / +0xc00 as they always did. Past 256 both move
+    down to +0x300, right after the code (B346), still on the one page up to 416 slots. Past 416
+    the capacity table runs into the next page, so the module allocates more than one page --
+    in ONE VirtualAlloc from PAGE: a second call for PAGE + 0x1000 cannot work (VirtualAlloc
+    reserves from a 64 KB boundary, 07.11. in the game: "could not get the page at
+    0x163401000"), one call for 0x2000 bytes at a 64 KB boundary takes both. Nothing else can
+    sit there: the 64 KB from PAGE are ours either way. Up to 416 slots the bytes are exactly
+    the ones the module had."""
+    if 4 * n <= 0x400:
+        return PAGE + 0x800, PAGE + 0xc00, 0x1000
+    off = PAGE + 0x300
+    cap = off + ((4 * n + 0xf) & ~0xf)
+    size = (cap + 4 * n - PAGE + 0xfff) & ~0xfff
+    assert size <= 0x10000, "N too big for the 64 KB from PAGE"
+    return off, cap, size
+
+
 def accessor_stubs(n, L, base):
     """The four accessors that need the tables.  Registers clobbered: the originals' own.
     Each body starts on a 16-byte boundary, the same placement main() uses."""
     N32 = struct.pack("<I", n).hex()
     CNT = struct.pack("<I", L["cnt"]).hex()
+    # get and set refuse the sentinel with `cmp al,0x7b`, which also refuses 379 (0x17b), 635 ...:
+    # fine up to 379 slots, and those modules keep their bytes; past that the whole register
+    # (`cmp eax,0x7b`, as count and setcount always did) -- slotsemu found slot 379 dead
+    SENT = "3c7b" if n <= 0x17b else "83f87b"
     out = {}
 
     a = Asm(base)                     # get: rax, rdx (as the original)
-    a.b("89d0"); a.b("3d" + N32); a.j8(0x73, "F"); a.b("3c7b"); a.j8(0x74, "F")
+    a.b("89d0"); a.b("3d" + N32); a.j8(0x73, "F"); a.b(SENT); a.j8(0x74, "F")
     a.b("0fb79441" + CNT)             # movzx edx, word [rcx+rax*2+CNT]
     a.b("443bc2"); a.j8(0x73, "F")    # cmp r8d, edx ; jae F
     a.rip("488d15", CAP_TAB); a.b("443b0482"); a.j8(0x73, "F")   # i >= capacity
@@ -225,7 +278,7 @@ def accessor_stubs(n, L, base):
 
     base = (base + len(out["count"]) + 15) & ~15
     a = Asm(base)                     # set: rax, rdx
-    a.b("89d0"); a.b("3d" + N32); a.j8(0x73, "R"); a.b("3c7b"); a.j8(0x74, "R")
+    a.b("89d0"); a.b("3d" + N32); a.j8(0x73, "R"); a.b(SENT); a.j8(0x74, "R")
     a.rip("488d15", CAP_TAB); a.b("443b0482"); a.j8(0x73, "R")
     a.rip("488d15", OFF_TAB); a.b("8b1482"); a.b("4401c2")
     a.b("44890c91")
@@ -383,6 +436,9 @@ def main():
     d = open(EXE, "rb").read()
     secs = sections(d)
     L = layout(n)
+    global OFF_TAB, CAP_TAB, PAGE_SIZE
+    OFF_TAB, CAP_TAB, PAGE_SIZE = tables_at(n)
+    pages = [PAGE]
 
     # 1. the accessors must be exactly what was read
     for k, (va, h) in ACC.items():
@@ -498,7 +554,13 @@ def main():
     tail = tmpl[tmpl.index("local PAGES"):]
     summary = ("competition slots 123 -> %d (slot 123 kept as sentinel), per-slot capacity "
                "%d, slots 79/80 %d, %d patches" % (n, L["per"], BIG[79], len(patches)))
-    tail = (tail.replace("--[[PAGES]]", "0x%x" % PAGE)
+    if PAGE_SIZE != 0x1000:
+        # the template reserves 0x1000 bytes at each page; the tables need more (tables_at)
+        for a, b in (('ffi.cast("void*", page), 0x1000, kind', 'ffi.cast("void*", page), 0x%x, kind' % PAGE_SIZE),
+                     ("page, page + 0x1000))", "page, page + 0x%x))" % PAGE_SIZE)):
+            assert tail.count(a) == 1, a
+            tail = tail.replace(a, b)
+    tail = (tail.replace("--[[PAGES]]", ", ".join("0x%x" % pg for pg in pages))
                 .replace("--[[SET]]", "slots%d" % n)
                 .replace("--[[SUMMARY]]", summary)
                 .replace("fl26caps_VirtualAlloc", "fl26slots_VirtualAlloc")

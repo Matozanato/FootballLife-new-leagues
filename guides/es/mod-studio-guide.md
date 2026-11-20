@@ -137,9 +137,20 @@ Arriba en la ventana, de izquierda a derecha:
 |---|---|
 | **1. Inicio** | El mundo del juego, la comprobación previa, las acciones rápidas |
 | **2. Mi mundo** | Tus mundos como tarjetas, y las pestañas **Construcción**, **Ligas**, **Clubes**, **Jugadores**, **Equipaciones**, **Estadios** y **Copas** (sección 3.1) |
-| **3. Contenido del juego** ▾ | **Balones**, **Comentarios**, **Música**, **Otro contenido** |
+| **3. Contenido del juego** ▾ | **Balones**, **Comentarios**, **Música**, **Trofeos**, **Otro contenido** |
 | **4. Herramientas** ▾ | **Módulos Lua**, **Carpetas de contenido**, **Perfiles**, **Puntos de restauración**, **Diagnóstico** |
 | **5. Ajustes** | Carpeta del juego, carpeta de Sider, idioma, carreras de Master League, las tablas del juego |
+
+Navegación actual: Copas y Trofeos conservan los cambios pendientes al navegar. Aplicar los incorpora a la receta; Descartar restaura los valores actuales del proyecto. Los torneos de pretemporada siguen fuera de Copas, en Ligas → Más.
+
+- **Game Countries**: `Mi mundo → Copas → Países del juego`.
+- **Our Countries**: `Mi mundo → Copas → Nuestros países`.
+- **Competitions**: `Mi mundo → Copas → Continental → Competiciones`.
+- **Qualification**: `Mi mundo → Copas → Continental → Clasificación`.
+- **UEFA Ranking / First-season clubs**: `Mi mundo → Copas → Continental → UEFA → Clasificación`.
+- **Trofeos**: `GAME CONTENT → TROPHIES`.
+
+Las franjas de CONMEBOL moderna se verificaron visualmente en FL27: Bolivia muestra tres posiciones azules y cuatro naranjas. No se ha verificado independientemente su comportamiento dentro de FL26. Los emblemas continentales Dark/Light superan pruebas automáticas, pero su representación en el juego no está completamente verificada. Los campos opcionales `continental_emblems` mantienen la compatibilidad con mundos existentes. Sin modo moderno se generan la Libertadores clásica y la Sudamericana clásica, como antes de 0.2.5.
 
 **Archivo** tiene **Mundo nuevo**, **Abrir un mundo...**, **Guardar tu mundo como...**,
 **Cambios en este mundo...** (todo lo que tu mundo cambia en el juego en una sola lista; elige
@@ -179,17 +190,17 @@ en el juego y desactiva los demás.
 
 **Las pestañas** de debajo de las tarjetas cambian el mundo abierto: **Construcción** (sección
 8.2), **Ligas**, **Clubes** y **Jugadores** (sección 8), **Equipaciones** y **Estadios** (sección
-6). **Copas ▾** abre las ventanas de copas: **Torneos de pretemporada**, **Copas de nuestros
-países**, **Copas de los países del juego** y **Nombres de las competiciones**. A la derecha:
+6). **Copas** es una página integrada para copas nacionales y competiciones continentales. Los torneos de pretemporada siguen en **Ligas → Más**. A la derecha:
 
 - **NewLife Database** abre la página de NewLife (sección 8.4);
 - **+ Añadir...** es una sola ventana para tres cosas: un zip de mundo (un Modpack), un paquete de
   ligas (`.fl26pack`) y la NewLife Database (una carpeta o sus zip). Suelta el archivo encima o
   usa **Elegir un archivo...** / **Elegir una carpeta...**. Dice en una línea verde qué
   encontró; para un paquete de ligas muestra las ligas para marcar y cuántas competiciones
-  tendrá el mundo. **Añadir** lo pasa a la página que toca: un zip de mundo a **Importa tu
-  mundo** (sección 4), un paquete a tu mundo, la NewLife Database a su página. Nada llega al
-  juego hasta **Construir e instalar**;
+  tendrá el mundo. El botón dice lo que hace: **Instalar el mundo** para un zip de mundo
+  (**Importa tu mundo**, sección 4, lo instala enseguida, sin Build), **Añadir e instalar** para un
+  paquete de ligas (las ligas marcadas entran en tu mundo y **Construir e instalar** empieza solo),
+  **Añadir** para la NewLife Database (se abre su página);
 - **Más ▾** tiene **Paquetes de ligas** (sección 9), **Importar un zip de mundo** (sección 4),
   **NewLife Database** y **Carpetas de contenido** (sección 5).
 
@@ -224,11 +235,7 @@ continente; las divisiones de cada país van juntas, de arriba abajo (Bundesliga
 liga...**, **Añadir división inferior**, **Clubes y nombres**, **Jugadores** y **Quitar**; una
 liga del juego tiene su nombre, logo y clubes (sección 8, "Las ligas del juego"). **Añadir liga**
 crea una nueva. **Lugares en Select Team** muestra dónde puso el último Build cada una de tus
-ligas; su columna **Select Team** es una lista: *Automático* (decide el orden) o *en lugar de* uno de los grupos del juego (Otras ligas europeas, Otros equipos latinoamericanos, Otros clubes (África), Otros). La liga elegida ahí ocupa el lugar de ese grupo en el siguiente Build, sea cual sea el orden, y los clubes del grupo ya no salen en Select Team (una liga por grupo; con un mundo sudamericano los Otros equipos latinoamericanos sobran, vmican). En una Master League empezada después de ese Build los clubes de la liga ocupan también el lugar del grupo: Team Info los muestra bajo la liga, y son los clubes con los que la Libertadores o el Mundial de Clubes se completan desde ese grupo; los clubes del grupo quedan sin liga. Un mundo con asociaciones CONMEBOL conserva el lugar de los Otros equipos latinoamericanos. **Más ▾** tiene **Torneos de pretemporada**, **Copas de nuestros países**, **Copas de los
-países del juego**, **Plazas europeas de las ligas del juego**, **Clubes europeos de la primera
-temporada**, **Ranking UEFA**, **Plazas sudamericanas** (con su casilla **Competiciones modernas de la CONMEBOL**), **Países de la CONMEBOL sin liga** (con las competiciones modernas), **Nombres de las competiciones**, **IDs
-de competiciones**, **Orden de las ligas**, **Temporadas de las ligas del juego** y **Nombre del
-mundo y archivo...**. Esta última abre la página con el nombre del mundo y la lista de tus ligas
+ligas; su columna **Select Team** es una lista: *Automático* (decide el orden) o *en lugar de* uno de los grupos del juego (Otras ligas europeas, Otros equipos latinoamericanos, Otros clubes (África), Otros). La liga elegida ahí ocupa el lugar de ese grupo en el siguiente Build, sea cual sea el orden, y los clubes del grupo ya no salen en Select Team (una liga por grupo; con un mundo sudamericano los Otros equipos latinoamericanos sobran, vmican). En una Master League empezada después de ese Build los clubes de la liga ocupan también el lugar del grupo: Team Info los muestra bajo la liga, y son los clubes con los que la Libertadores o el Mundial de Clubes se completan desde ese grupo; los clubes del grupo quedan sin liga. Un mundo con asociaciones CONMEBOL conserva el lugar de los Otros equipos latinoamericanos. **Más ▾** tiene **Torneos de pretemporada**, **Nombres de las competiciones**, **IDs de competiciones**, **Orden de las ligas**, **Temporadas de las ligas del juego**, **Nombre del mundo y archivo...**. Esta última abre la página con el nombre del mundo y la lista de tus ligas
 (las guías antiguas la llaman *Ligas nuevas*).
 
 ## 4. Importa tu mundo
@@ -340,6 +347,14 @@ desactivado así.
 
 ## 6. Contenido del juego: los servidores de contenido
 
+**Contenido del juego > Trofeos** edita las carpetas de trofeos del mundo seleccionado.
+Elige una competición y su carpeta, y pulsa **Aplicar** para incorporar las asignaciones
+a la receta; **Construir** copia los archivos. **Descartar cambios** restaura los valores
+actuales de la receta. Navegar a otra página conserva los cambios pendientes y cada
+mundo mantiene su borrador separado. Sustituye a Ligas > Más > Trofeos y conserva el
+formato de receta existente. Copas contiene las copas nacionales, Ranking UEFA,
+clubes europeos de la primera temporada y clasificación continental.
+
 Cada una de estas páginas pertenece a un servidor de contenido. **Equipaciones** y **Estadios**
 son pestañas de **2. Mi mundo**; **Balones**, **Comentarios**, **Música** y **Otro contenido**
 están en **3. Contenido del juego**. **Otro contenido** tiene una pestaña para **Marcadores**,
@@ -412,7 +427,7 @@ Trabajas en las pestañas de **2. Mi mundo**.
 |---|---|
 | **Nombre** | El nombre de la liga en el juego. No puede haber dos iguales. |
 | **País** | Da la bandera y el lugar donde aparece la liga. Un país para el que el juego no tiene liga recibe un título propio. |
-| **Clubes** | De 10 a 24 (de 1 a 24 para clubes sin liga). |
+| **Clubes** | De 10 a 32 (de 8 a 32 en Football Life 2027; de 1 a 24 para clubes sin liga). |
 | **Clubes sin liga** | Para un club, o unos pocos, sin una liga alrededor (0.1.8): por ejemplo solo el BATE Borisov de Bielorrusia. Elige el grupo al que van: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* o *Classic Teams* -- donde el juego guarda sus propios clubes que no juegan en ninguna liga (Dynamo Kyiv, Wydad Casablanca ...). En Select Team aparecen en ese grupo. Tienen nombre, escudo, equipaciones, entrenador, formación, jugadores y estadio como cualquier club nuevo (**Editar club**, **Jugadores**); el nombre de arriba es solo cómo los lista Mod Studio. No juegan liga, copa ni competición europea, y todo lo demás de este diálogo sale en gris. En *Ligas* un grupo así muestra *sin liga (...)* en lugar de un ID de liga. |
 | **Formato** | *Todos contra todos*, de 1 a 4 veces, *se divide en dos (estilo escocés)* o *Apertura y Clausura*: dos torneos por temporada (septiembre a principios de enero, enero a mayo), cada uno desde cero puntos, luego una liguilla de 8 o 4 clubes (o ninguna). La tabla de toda la temporada decide ascensos y descensos. 18 clubes como máximo. Una liga dividida tiene 46 jornadas como máximo, antes y después de la división juntas (16 clubes dos veces son 30, así que su grupo más grande dos veces puede tener 8 clubes, 14 jornadas). Por ahora, solo una liga por país puede dividirse o jugar Apertura/Clausura. **La división en dos y el Apertura y Clausura son experimentales**: funcionan, pero aún tienen más fallos abiertos que todos contra todos, el formato totalmente probado. La ventana lo dice debajo de los formatos. Sigue avisando de lo que encuentres. |
 | **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. La lista tiene también las ligas divididas del juego (Scottish Premiership, 3F Superliga, Jupiler Pro League): la liga que va debajo de una de ellas sube y baja con su fase regular, como en el Modpack. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). Una liga que ya tiene otra liga nueva debajo sale en gris (0.1.9): el juego solo sigue un enlace hacia abajo desde una liga, así que los grupos de una misma división (tres grupos de la Serie C bajo la Serie B) todavía no son posibles. |
@@ -434,19 +449,20 @@ su archivo de logo. La columna **#** es el lugar de la liga en el orden (**Subir
 *sin sitio (se juega)*. Un `*` ahí significa que el orden cambió desde entonces: vuelve a construir para
 ver dónde va. Arrastrar una liga en la pestaña **Ligas** la mueve solo entre los puestos que ya tienen aquí las ligas de su continente.
 
-**Torneos de pretemporada** (Ligas → Más, o Mi mundo → Copas): eliminatorias amistosas de 4 u 8 clubes invitados en julio, antes de la temporada, emparejados en el orden en que los pones (el primero contra el segundo ...). Un club es de una liga nueva o un club del juego (su id); al menos uno tiene que ser de una liga nueva, y su país organiza el torneo. Una carrera empieza en agosto, así que el primero se juega en la segunda temporada. Cada torneo puede tener su **Logo**; vacío: se dibuja uno.
+**Torneos de pretemporada** (Ligas → Más): eliminatorias amistosas de 4 u 8 clubes invitados en julio, antes de la temporada, emparejados en el orden en que los pones (el primero contra el segundo ...). Un club es de una liga nueva o un club del juego (su id); al menos uno tiene que ser de una liga nueva, y su país organiza el torneo. Una carrera empieza en agosto, así que el primero se juega en la segunda temporada. Cada torneo puede tener su **Logo**; vacío: se dibuja uno.
 
-**Copas de nuestros países** (Ligas → Más, o Mi mundo → Copas): las copas de tus propias ligas en una sola tabla. Para cada primera división: su copa nacional, su supercopa y su copa de la liga, cada una con su nombre y su logo. Son los mismos campos que en **Editar liga...**, sin abrir cada liga.
+**Copas de nuestros países** (Mi mundo → Copas → Nuestros países): las copas de tus propias ligas en una sola tabla. Para cada primera división: su copa nacional, su supercopa y su copa de la liga, cada una con su nombre y su logo. Son los mismos campos que en **Editar liga...**, sin abrir cada liga.
 
-**Copas de los países del juego** (Ligas → Más, o Mi mundo → Copas): una copa de la liga -- la Carabao Cup, por ejemplo -- para ligas del juego. Marca **Copa de la liga** junto a una liga: ella y la liga de debajo, hasta 44 clubes, un partido por ronda desde finales de agosto hasta la final a mediados de marzo, por sorteo, con los clubes de la propia liga pasando directamente a la segunda ronda (la misma copa que la de una liga nueva), en días que el calendario de ligas y copas del juego deja libres. **Supercopa**, el campeón contra el ganador de la copa, solo donde el juego no tiene (Brasil, Chile, Escocia, Grecia, EE. UU.). Es una supercopa a partido único de dos clubes. Se juega a finales de julio; en un país de febrero a diciembre (la Supercopa de Chile, la Supercopa Rei) se juega a finales de enero, entre el campeón y el ganador de la copa de la temporada que acaba de terminar. Cuando aún no hay ganador de copa (el primer verano de una carrera nueva), o el campeón ganó también la copa, juega el subcampeón de la liga. Nombre vacío: el nombre de la liga y *League Cup* / *Super Cup*. **Logo** junto a cada nombre: una imagen para esa copa; sin ella, un emblema con las iniciales de la copa. Los cambios aquí necesitan **Instalar los módulos** (o Construir e instalar), un Build nuevo y una carrera nueva.
+**Copas de los países del juego** (Mi mundo → Copas → Países del juego): una copa de la liga -- la Carabao Cup, por ejemplo -- para ligas del juego. Marca **Copa de la liga** junto a una liga: ella y la liga de debajo, hasta 44 clubes, un partido por ronda desde finales de agosto hasta la final a mediados de marzo, por sorteo, con los clubes de la propia liga pasando directamente a la segunda ronda (la misma copa que la de una liga nueva), en días que el calendario de ligas y copas del juego deja libres. **Supercopa**, el campeón contra el ganador de la copa, solo donde el juego no tiene (Brasil, Chile, Escocia, Grecia, EE. UU.). Es una supercopa a partido único de dos clubes. Se juega a finales de julio; en un país de febrero a diciembre (la Supercopa de Chile, la Supercopa Rei) se juega a finales de enero, entre el campeón y el ganador de la copa de la temporada que acaba de terminar. Cuando aún no hay ganador de copa (el primer verano de una carrera nueva), o el campeón ganó también la copa, juega el subcampeón de la liga. Nombre vacío: el nombre de la liga y *League Cup* / *Super Cup*. **Logo** junto a cada nombre: una imagen para esa copa; sin ella, un emblema con las iniciales de la copa. Los cambios aquí necesitan **Instalar los módulos** (o Construir e instalar), un Build nuevo y una carrera nueva.
 
-**Plazas europeas de las ligas del juego** (Ligas → Más): qué puestos de la Premier League, LaLiga, la Serie A ... van a qué competición europea. La lista muestra las plazas del juego; marca **Plazas propias para esta liga** para cambiarlas. Una liga sin marcar mantiene las del juego, una liga marcada sin filas no manda a nadie.
 
-**Ranking UEFA** (Ligas → Más, 0.1.7): todas las ligas europeas del mundo -- las del juego y tus
+**Plazas europeas de las ligas del juego** (Mi mundo → Copas → Continental → Clasificación): qué puestos de la Premier League, LaLiga, la Serie A ... van a qué competición europea. La lista muestra las plazas del juego; marca **Plazas propias para esta liga** para cambiarlas. Una liga sin marcar mantiene las del juego, una asignación vacía o solo de copas generadas puede conservar el acceso nativo, como explica el editor.
+
+**Ranking UEFA** (Mi mundo → Copas → Continental → UEFA → Clasificación → UEFA Ranking..., 0.1.7): todas las ligas europeas del mundo -- las del juego y tus
 primeras divisiones nuevas -- en una lista, el país más fuerte primero. Arrastra una liga (o
 **Subir** / **Bajar**) para cambiar el orden, desmárcala para que no tenga plaza europea, y
 **Orden de la UEFA** devuelve la lista al ranking de asociaciones de la UEFA para 2026-27. A la
-derecha se ve lo que recibe cada liga, y **Aceptar** lo escribe: las plazas de la clave de la UEFA
+derecha se ve lo que recibe cada liga, y **APLICAR RANKING UEFA AL BORRADOR** añade el resultado al borrador; usa **Aplicar** en Copas para guardarlo: las plazas de la clave de la UEFA
 para 2024-27 -- el puesto 1 tiene cinco plazas de Champions League, el 6 dos y una de play-off, el
 30 una en la segunda ronda previa de la Champions League y tres en la de la Conference League,
 etcétera, incluida la plaza del campeón de copa en la Europa League. Un mundo nunca tiene los 55
@@ -461,17 +477,9 @@ previa van a las rondas en el orden de la clave, el país más fuerte a la ronda
 fase de liga. Después aún puedes cambiar a mano las plazas de cualquier liga (*Europa* en la
 liga, *Plazas europeas de las ligas del juego*): Build usa las plazas, no el ranking.
 
-**Plazas sudamericanas** (Ligas → Más, 0.1.7): para cada liga sudamericana, las
-cuatro del juego y las tuyas, qué puestos van a la Copa Libertadores, a su fase previa y a la Copa
-Sudamericana. Las plazas de Libertadores de las ligas del juego son las del juego (Brasil 1.º-4.º y
-el campeón de la Copa do Brasil, fase previa 5.º-6.º, etcétera -- lo mismo que muestra el
-Competition Info del juego); la Copa Sudamericana es de Mod Studio, así que la lista muestra
-cuántos clubes manda a ella cada liga del juego con tus plazas dentro: primero tus ligas, luego
-Brasil, Argentina, Chile y Colombia, un club cada una por turnos hasta llegar a 32. Un club que ya
-está en la Libertadores o en su fase previa deja su sitio al siguiente de su liga. **Comprobar el
-plan** escribe la misma lista siempre que el mundo tiene una plaza de Libertadores o Sudamericana.
+**Plazas sudamericanas** (Mi mundo → Copas → Continental → CONMEBOL → Clasificación, 0.1.7): Clasificación permite editar juntas las primeras divisiones sudamericanas originales y añadidas. Las asociaciones sin liga admitidas siguen disponibles manualmente. Auto Set Continental Places requiere el modo moderno y las diez primeras divisiones jugables; sus cuotas fijas solo entran en el borrador de Copas. Sin modo moderno se genera la Sudamericana clásica con sus plazas; no hay Recopa.
 
-**Competiciones modernas de la CONMEBOL** (una casilla en **Plazas sudamericanas**;
+**Competiciones modernas de la CONMEBOL** (Mi mundo → Copas → Continental → CONMEBOL;
 vmardonesdev y nissindiaz, #146): la clasificación de la Libertadores en tres fases (fase 1: 6
 clubes, fase 2: 13 clubes y los tres ganadores de la fase 1, fase 3: los ocho ganadores de la fase
 2), una Copa Sudamericana con una primera fase de 32 clubes y una repesca tras los grupos, y la
@@ -480,11 +488,9 @@ Recopa Sudamericana en febrero. Activada, la ventana Liga ofrece **Libertadores,
 juego solo tienen las plazas que les des en **Plazas europeas de las ligas del juego**, y **Países
 de la CONMEBOL sin liga** da plazas a los clubes de un país sin liga en tu mundo. La ventana cuenta
 las plazas frente al cupo que necesita Build (26 plazas de grupos de Libertadores, 13 en la fase 2,
-6 en la fase 1, 12 de grupos de la Sudamericana, 32 en su primera fase). Desactivada, por defecto,
-un mundo construye las competiciones clásicas exactamente como antes; al desactivarla solo se quitan
-las plazas que tienen las modernas, después de preguntar.
+6 en la fase 1, 12 de grupos de la Sudamericana, 32 en su primera fase). Desactivada: el sistema original de Libertadores y la Sudamericana clásica (8 grupos de 4 y eliminatorias). Desactivar el modo moderno pide confirmación antes de quitar sus plazas exclusivas.
 
-**Nombres de las competiciones** (Ligas → Más, o Mi mundo → Copas): un nombre y un logo nuevos para las copas, supercopas y competiciones continentales del juego -- la FA Cup, la Champions League, la Libertadores ... -- y para las copas continentales que construye el mundo (CAF Champions League, Copa Confederación, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, Supercopa CAF). Todas las fases de la competición reciben el nombre. Vacío: el del juego. Las ligas del juego se renombran en *Ligas* (elige una liga del juego).
+**Nombres de las competiciones** (Ligas → Más): un nombre y un logo nuevos para las copas, supercopas y competiciones continentales del juego -- la FA Cup, la Champions League, la Libertadores ... -- y para las copas continentales que construye el mundo (CAF Champions League, Copa Confederación, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, Supercopa CAF). Todas las fases de la competición reciben el nombre. Vacío: el del juego. Las ligas del juego se renombran en *Ligas* (elige una liga del juego).
 
 **IDs de competiciones** (Ligas → Más): todas las competiciones del mundo del juego, ligas y copas, con su id. El juego tiene sitio para 255; Mi mundo muestra cuántas se usan.
 
@@ -492,7 +498,7 @@ las plazas que tienen las modernas, después de preguntar.
 
 **Temporadas de las ligas del juego** (Ligas → Más, experimental): Japón, China, Brasil, Chile y Arabia Saudí juegan de febrero a diciembre en el juego. Marca uno y sus ligas juegan de agosto a mayo como Europa: la temporada empieza en agosto, los ascensos y descensos son en verano, sus copas pasan a fechas de agosto a mayo y sus plazas continentales salen de la tabla que terminó en mayo. Una división tuya debajo de una de esas ligas la sigue. Colombia y EE. UU. juegan Apertura y Clausura y no se pueden mover. Vuelve a construir el mundo y empieza una carrera nueva.
 
-**Clubes europeos de la primera temporada** (Ligas → Más, 0.1.8): elige a mano los clubes de la
+**Clubes europeos de la primera temporada** (Mi mundo → Copas → Continental → UEFA → Clasificación → Clubes de la primera temporada..., 0.1.8): elige a mano los clubes de la
 fase de la Champions League, la Europa League y la Conference League en la primera temporada de
 una carrera nueva. Tus clubes entran primero y el juego llena el resto; desde la segunda
 temporada deciden las plazas europeas.
@@ -608,6 +614,14 @@ propio juego. Elige un club (o **Más → Jugadores** en Clubes) y luego un juga
   cuando cambias su orden, el club mantiene esa formación;
 - **Exportar CSV... / Importar CSV...** (en **Más**): edita una plantilla en una hoja de cálculo. Primero
   exporta, cambia las celdas y vuelve a importar las mismas columnas.
+- **Exportar todos los jugadores (CSV)...** (en **Más**, y en **Mi mundo > Más**): todos los jugadores
+  del mundo que está en el juego -- los del juego y los nuevos del mundo, en cada club, y los agentes
+  libres -- en una sola tabla para Excel (UTF-8, separada por comas): player_id, name, shirt_name,
+  club_id, club, league, club_country, nationality, age, height, position, rating, source (`game` o
+  `new`). Lee las tablas que usa el juego: el mundo activado (construido aquí o desde un zip), o las
+  del propio juego cuando no hay ningún mundo activado. Útil para encontrar el ID o el club de un
+  jugador. Desde la línea de comandos: `python tools/exportplayers.py <carpeta del mundo o de las
+  tablas> out.csv`.
 - **Importar una plantilla desde una tabla...** (en **Más**): cualquier tabla de jugadores se convierte en
   la plantilla del club -- escrita a mano, una lista copiada de una web, o una exportación de otro
   juego de fútbol. Las columnas se reconocen por su nombre (nombre, posición, edad o fecha de
@@ -728,16 +742,16 @@ puede construir mientras el listo está activado: Build pregunta antes y avisa d
 mundo listo; **Activar** en su tarjeta lo devuelve, con sus carreras. Para cambiar el propio
 mundo listo: **Hacerlo editable...** (sección 3.1).
 
-**Incluir la Liga Conferencia** (pestaña Construcción, en Opciones del mundo, activado por defecto)
+**Incluir la Liga Conferencia** (Copas → Continental → UEFA, activado por defecto)
 construye también la Liga Conferencia: una fase de liga de 36 clubes y un play-off en febrero,
 como las otras dos. La Liga de Campeones y la Liga Europa reciben su fase de liga de 36 y su
 play-off de febrero en cualquier caso. Desactivado: sin Liga Conferencia. (Mod Studio 0.1.3 y
 anteriores dejaban la Liga de Campeones y la Liga Europa en los grupos de cuatro del juego cuando
 estaba desactivado, y el mod no puede llevarlos -- se rompían; Comprobaciones marca ese mundo:
-vuelve a construirlo.) **Logo de la Conference League** al lado: tu propia imagen para ella;
+vuelve a construirlo.) Selecciona Conference League en esa página para editar su logo: tu propia imagen para ella;
 vacío: se dibuja un emblema UECL (el juego no tiene ninguno). **Nombre de la Conference League**
-debajo: cómo la llama el juego, *FL Conference League* si está vacío (escribe *UEFA Conference
-League* si quieres); un nombre nuevo necesita construir el mundo otra vez. Los dos los usa
+debajo: cómo la llama el juego, *UEFA Conference League* si está vacío. Se conservan los nombres personalizados;
+un nombre nuevo necesita construir el mundo otra vez. Los dos los usa
 también **Construir solo las copas europeas...**.
 
 > **Plazas europeas.** Las plazas que das a tus ligas van después de las que tienen las ligas del
@@ -788,15 +802,14 @@ de la MLS, 0.1.7), uno de la CONCACAF después de la MLS, y los africanos y de O
 > la Copa Libertadores, su fase previa o la AFC Champions League no entra en su sorteo. Una copa
 > de la CAF o de la OFC con menos de 4 plazas toma primero las plazas de la siguiente copa de la
 > CAF (con dos y dos, la CAF Champions League se queda las cuatro), y luego los siguientes
-> puestos de tus ligas. **Supercopa de la CAF** (pestaña Construcción, Opciones del mundo,
-> activada por defecto) enfrenta a los ganadores de las dos copas de la CAF en un partido a
+> puestos de tus ligas. **Supercopa de la CAF** (Copas → Continental → CAF → Competiciones, activada por defecto) enfrenta a los ganadores de las dos copas de la CAF en un partido a
 > finales de julio, desde la segunda temporada de la carrera.
 >
 > Una liga que puede mandar un club a la Copa Libertadores, a la AFC Champions League o al
 > Mundial de Clubes deja libres sus días de partido: no hay jornada de liga el día antes
 > ni el día después.
 
-> **Sorteo de la copa nacional** (pestaña Construcción, Opciones del mundo) decide cómo se sortean
+> **Sorteo de la copa nacional** (pestaña Copas, Copas nacionales) decide cómo se sortean
 > las copas nacionales de tus ligas. *Con cabezas de serie* (por defecto): los clubes de primera
 > división pasan directamente y juegan las rondas finales, se reparten por igual entre las dos
 > mitades del cuadro y en las primeras rondas se cruzan con clubes de ligas inferiores en lugar
@@ -815,7 +828,7 @@ está guardado**): en su propio archivo `.json` cuando lo tiene, si no en
 **Archivo → Guardar tu mundo como...** guarda una copia con otro nombre, **Archivo → Abrir un
 mundo...** recupera uno y **Archivo → Mundo nuevo** empieza uno vacío.
 
-**Construir solo las copas europeas...** (pestaña Construcción, Opciones del mundo; **Solo las copas europeas...** en Inicio) construye un mundo solo con la nueva
+**Construir solo las copas europeas...** (pestaña Construcción, Paso a paso; **Solo las copas europeas...** en Inicio) construye un mundo solo con la nueva
 Champions League y Europa League -- fase liga de 36 y el play-off de febrero -- y la Liga Conferencia cuando **Incluir la Liga Conferencia** está marcado. Sin ligas nuevas; los clubes y ligas
 del juego quedan como están y tu mundo no cambia. Pide un nombre de mundo (`_FL26Euro` por
 defecto), lo construye y ofrece activarlo. Solo puede estar un mundo en el juego, así que sustituye a
@@ -832,7 +845,7 @@ un mundo con ligas nuevas: un mundo con ligas nuevas ya tiene el formato nuevo.
 |---|---|
 | Ligas nuevas por mundo | Sin número fijo. Cada liga, copa y supercopa del mundo ocupa una de las 255 competiciones del juego (el propio juego usa unas 90); **2. Mi mundo** muestra cuántas se usan. Nuestro mundo de prueba juega 86 ligas nuevas. |
 | Países nuevos | 99 |
-| Clubes por liga | 10 – 24 |
+| Clubes por liga | 10 – 32: hasta 28 clubes se enfrentan de 1 a 4 veces, de 29 a 32 una sola vez (una liga juega 54 jornadas como máximo). De 29 a 32 es nuevo y aún no se ha jugado una temporada entera en el juego |
 | Clubes nuevos en total | unos 1500 (la línea de abajo de la página NewLife Database dice cuántos caben en tu juego) |
 | Veces que se enfrentan los clubes | 1 – 4 |
 | Ligas que se dividen | 2 por mundo |
@@ -873,7 +886,7 @@ hicieron para FL26.
   primera división de esta temporada es la del año pasado con dos ascendidos, por ejemplo. La
   fila de la liga lleva un `*`. Un club solo puede estar en una liga de tu mundo. Si ya está en
   una de tus ligas con otro nombre, el mensaje nombra esa liga y el nombre que tiene allí.
-- Una liga admite de 10 a 24 clubes, sus clubes nuevos y los del juego juntos; las demás salen en gris. Una liga que ya es del juego (la Premier League, la Championship ...) también sale en gris (0.1.9): ya está en el juego, llévala a la temporada de NewLife con **Más → Llevar las ligas del juego a esta temporada...** más abajo. La línea de abajo cuenta los clubes
+- Una liga admite de 10 a 32 clubes, sus clubes nuevos y los del juego juntos; las demás salen en gris. Una liga que ya es del juego (la Premier League, la Championship ...) también sale en gris (0.1.9): ya está en el juego, llévala a la temporada de NewLife con **Más → Llevar las ligas del juego a esta temporada...** más abajo. La línea de abajo cuenta los clubes
   nuevos de tu mundo frente al número que admite el juego.
 - Los clubes que el juego ya tiene entran en la liga nueva como clubes del juego (sección 8,
   *Clubes que el juego ya tiene*), en sus últimos puestos, con su nombre, escudo, equipaciones y
@@ -1064,8 +1077,8 @@ mundos y mods instalados con él). No se borra nada: queda guardado en
 **Ajustes** (**5. Ajustes**): **Carpeta del juego**, **Carpeta de Sider** (cuando hay más de una),
 **Idioma (Language)**, **Carreras de Master League** (**Cada mundo guarda sus propias carreras (la
 carpeta de partidas guardadas cambia con el mundo)**, sección 3.1), **Las tablas del juego**
-(**Desempaquetar las tablas del juego**, **Usar otra carpeta de tablas...**, sección 2) y **Abrir
-la carpeta de ajustes del programa**.
+(**Desempaquetar las tablas del juego**, **Usar otra carpeta de tablas...**, sección 2), **Animaciones (las páginas, los botones y los diálogos aparecen suavemente)**
+(desmárcala para una ventana sin ellas) y **Abrir la carpeta de ajustes del programa**.
 
 ## 11. Cuando algo va mal
 

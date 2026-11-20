@@ -169,4 +169,5 @@ def main():
 
 
 if __name__ == "__main__":
+    os.environ["FL26_LEDGER_STORE"] = tempfile.mkdtemp(prefix="fl26ledgers-")   # review 3, 18.11.2026: never the real history
     main()

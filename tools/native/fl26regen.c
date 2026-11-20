@@ -403,7 +403,7 @@ static unsigned draw_potential(uint32_t id)
 static uint8_t g_regen_set[(1u << SET_BITS) / 8];
 static void set_regen(uint32_t id) { if (id < (1u << SET_BITS)) g_regen_set[id >> 3] |= (uint8_t)(1u << (id & 7)); }
 
-/* ---- faces: a regen gets one of a few pack faces of his part of the world ----
+/* ---- faces: a regen gets one of the pack's faces of his part of the world ----
  *
  * The game draws a player from a sorted table of 72-byte records at [[exe + 0x3705e10] + 0x60]
  * + 0x50910 (count u16 at + 0x260552), filled from PlayerAppearance.bin: u32 id, 8 zero bytes,
@@ -414,8 +414,10 @@ static void set_regen(uint32_t id) { if (id < (1u << SET_BITS)) g_regen_set[id >
  * group, so the same regen always gets the same face and the same portrait
  * (common\render\symbol\player\regen\<number>.dds, the loader rewrites the request). The
  * records are written again every so often (the loader calls fl26_regen_faces), so a table the
- * game builds again gets them back. */
-typedef struct { uint8_t group, pad; uint16_t key; uint8_t data[APP_LEN]; } face_t;
+ * game builds again gets them back. The version 2 pack is the face pool (tools/facepool.py):
+ * 32,000 faces made from numbers in two blocks, none a real player's, and without portraits
+ * (the game shows its own picture for a player without one). */
+typedef struct { uint8_t group, block; uint16_t key; uint8_t data[APP_LEN]; } face_t;
 static uint8_t  g_nat_group[512];
 static face_t*  g_faces;
 static int      g_nfaces;
@@ -425,16 +427,35 @@ static uint32_t g_rlist_id[MAX_RLIST];
 static int16_t  g_rlist_face[MAX_RLIST];
 static int      g_nrlist;
 
+/* the faces of each group, in the pack's order (made at the load): a pool of 20,000 faces is
+   not walked twice for every player of a 100,000-player world. A version 2 face's second byte
+   is its block (tools/facepool.py BLOCKS): the faces of block 0 come first in a group's index,
+   the later blocks' after them, each in the pack's order; g_all_idx is the same for the whole
+   pack (a nationality the pack does not place). */
+static int32_t* g_grp_idx;
+static int32_t* g_all_idx;
+static int      g_grp_start[256], g_grp_cnt[256], g_grp_cnt0[256], g_nfaces0;
+/* face k of n, of which the first n0 are block 0. One block (a version 1 pack, the 06.11. pool):
+   k mod n, the face as before the blocks. With later blocks the pick stays the old one for n0 of
+   n players: a second number of the id says whether he takes one of block 0 (the face he had
+   with a pack of block 0 alone) or one of the faces added after it, so a bigger pool keeps most
+   of a career's faces and every face is still worn as often */
+static int pick_of(uint32_t id, uint64_t k, int n, int n0)
+{
+  if (n0 <= 0 || n0 >= n) return (int)(k % (uint64_t)n);
+  if (mix(id ^ 0xb10c5eedull) % (uint64_t)n < (uint64_t)n0) return (int)(k % (uint64_t)n0);
+  return n0 + (int)(k % (uint64_t)(n - n0));
+}
 static int face_of(uint32_t id, unsigned nat)
 {
   if (!g_nfaces) return -1;
-  /* a nationality the pack does not place, or a group without faces: any face of the pack */
-  int g = nat < 512 ? g_nat_group[nat] : 0xff, n = 0;
-  for (int i = 0; i < g_nfaces; i++) n += g_faces[i].group == g;
-  if (!n) { g = -1; n = g_nfaces; }
-  int k = (int)(mix(id ^ 0x5eedfaceull) % (uint64_t)n);
-  for (int i = 0; i < g_nfaces; i++) if ((g < 0 || g_faces[i].group == g) && k-- == 0) return i;
-  return -1;
+  /* a nationality the pack does not place, or a group without faces: any face of the pack.
+     The k-th face of the group in the pack's order, as before the index (the same face for
+     the same id with a version 1 pack) */
+  int g = nat < 512 ? g_nat_group[nat] : 0xff, n = g_grp_cnt[g];
+  uint64_t k = mix(id ^ 0x5eedfaceull);
+  if (!n || !g_grp_idx) return g_all_idx ? g_all_idx[pick_of(id, k, g_nfaces, g_nfaces0)] : (int)(k % (uint64_t)g_nfaces);
+  return g_grp_idx[g_grp_start[g] + pick_of(id, k, n, g_grp_cnt0[g])];
 }
 static unsigned char* app_record(uint32_t id)
 {
@@ -490,6 +511,11 @@ static newp_t*  g_nlist;
 static int      g_nnlist;
 /* the appearance record each of them is drawn from when the table has none (see app_lookup) */
 static unsigned char* g_syn;
+/* how many the two hold: as many as the world lists, not a fixed 65,536 (the Megapack lists
+   86,400 and the 20,864 of the highest ids -- 241,280 on, a whole league of new clubs -- kept the
+   default look, 06.11.2026). 80 bytes a player: 7 MB for the Megapack, 21 MB at the id bound */
+static int      g_ncap;
+#define NEW_SLACK 4096
 static unsigned char* g_new_blk;
 static uint32_t g_new_n;
 
@@ -536,10 +562,26 @@ static void new_scan(void)
   unsigned char* blk = block();
   uint32_t n = blk ? player_count(blk) : 0;
   if (!g_nnew || !g_nfaces || !n || (blk == g_new_blk && n == g_new_n)) return;
-  if (!g_nlist && !(g_nlist = (newp_t*)calloc(MAX_RLIST, sizeof(newp_t)))) return;
-  if (!g_syn) g_syn = (unsigned char*)calloc(MAX_RLIST, APP_STRIDE);   /* never freed: lookups hold pointers */
+  int want = 0;                                  /* first how many: room for every one of them */
+  for (uint32_t i = 0; i < n; i++) {
+    uint32_t id = *(uint32_t*)(blk + (size_t)i * STRIDE + R_ID);
+    if (id >= g_new_min && id <= g_new_max && new_range(id) >= 0) want++;
+  }
+  if (want > g_ncap) {
+    /* bigger ones; the old two stay allocated (never freed: a lookup may still hold a pointer
+       into g_syn), and the count goes to 0 before the lists change hands */
+    int cap = want + NEW_SLACK;
+    newp_t* nl = (newp_t*)calloc((size_t)cap, sizeof(newp_t));
+    unsigned char* sy = (unsigned char*)calloc((size_t)cap, APP_STRIDE);
+    if (nl && sy) { g_nnlist = 0; g_nlist = nl; g_syn = sy; g_ncap = cap; }
+    else {
+      free(nl); free(sy);
+      logf("new players: no memory for %d of them, %d get a pack face", want, g_ncap);
+      if (!g_ncap) return;
+    }
+  }
   g_new_blk = blk; g_new_n = n; g_nnlist = 0;
-  for (uint32_t i = 0; i < n && g_nnlist < MAX_RLIST; i++) {
+  for (uint32_t i = 0; i < n && g_nnlist < g_ncap; i++) {
     unsigned char* r = blk + (size_t)i * STRIDE;
     uint32_t id = *(uint32_t*)(r + R_ID);
     if (id < g_new_min || id > g_new_max) continue;  /* most players: no range to look through */
@@ -556,7 +598,7 @@ static void new_scan(void)
     *(uint32_t*)r = g_nlist[i].id;
     if (g_nlist[i].face >= 0) memcpy(r + APP_DATA, g_faces[g_nlist[i].face].data, APP_LEN);
   }
-  logf("new players: %d of the world's ids in the database get a pack face", g_nnlist);
+  logf("new players: %d of the world's ids in the database get a pack face (%d listed in it)", g_nnlist, want);
 }
 
 /* ---- the appearance lookups: a new player the table has no room for ----
@@ -573,6 +615,102 @@ typedef void*   (*lkp_fn)(void*, uint64_t);
 static lkc_fn g_lkc;
 static lkp_fn g_lkp;
 static uint32_t g_syn_hits;
+
+/* ---- capture mode: one chosen player wears pack face k, so the game renders that face ----
+ *
+ * For the portraits of the face pool (tools/facemini.py makes them from screenshots of Edit's
+ * player screen). Off unless modules\fl26regen_capture.txt is there when the game starts: the
+ * loader then calls fl26_regen_capture_watch, and a thread reads that file every 100 ms:
+ *   player <id> face <k>   player <id> is drawn with pack face k: both appearance lookups answer
+ *                          for him with it, before the table and the new players' records, and
+ *                          his own table record (if he has one) is written at every faces pass
+ *   faces <lo>-<hi>        the answer lists the database's players of those ids: the pack face
+ *                          each one gets and his name (to pick a pilot's faces)
+ *   off, an empty file, no file: nobody
+ * The answer is modules\fl26regen_capture.ack (written whole, then renamed over the old one):
+ *   seq <n>                         one more for every new content of the file
+ *   player <id> face <k> served <n>  n = the game's appearance lookups of him since k was set
+ * A lookup after k was set is what tells that the game read the new face; Edit's player screen
+ * builds the head again when the player is opened again. */
+#define CAP_BUFS 4
+static volatile uint32_t g_cap_id;               /* 0 = nobody */
+static volatile int      g_cap_face = -1;
+static unsigned char     g_cap_rec[CAP_BUFS][APP_STRIDE];
+static volatile long     g_cap_cur;
+static volatile long     g_cap_served;
+static uint32_t          g_cap_lo, g_cap_hi;     /* the "faces" range, 0 = none */
+
+static int cap_num(const char* t, uint32_t max, uint32_t* out)
+{
+  uint64_t v = 0; int n = 0;
+  for (; *t >= '0' && *t <= '9'; t++, n++) { v = v * 10 + (uint64_t)(*t - '0'); if (n > 9) return 0; }
+  if (!n || *t || v > max) return 0;
+  *out = (uint32_t)v;
+  return 1;
+}
+/* the capture file: 1 = a player and his face, 2 = a "faces" range (both may be set; the last
+   line of a kind wins); 0 = nobody. Ids below 1,048,576, faces up to MAX_FACES */
+#define CAP_MAX_FACE 32767
+static int cap_parse(const char* s, uint32_t* id, int* face, uint32_t* lo, uint32_t* hi)
+{
+  int got = 0;
+  *id = 0; *face = -1; *lo = *hi = 0;
+  while (*s) {
+    const char* e = s;
+    while (*e && *e != '\n') e++;
+    char line[160]; int n = (int)(e - s); if (n > (int)sizeof line - 1) n = sizeof line - 1;
+    memcpy(line, s, n); line[n] = 0;
+    s = *e ? e + 1 : e;
+    char* h = strchr(line, '#'); if (h) *h = 0;
+    char* tok[6]; int nt = 0;
+    for (char* p = line; *p && nt < 6; ) {
+      while (*p == ' ' || *p == '\t' || *p == '\r') *p++ = 0;
+      if (!*p) break;
+      tok[nt++] = p;
+      while (*p && *p != ' ' && *p != '\t' && *p != '\r') { if (*p >= 'A' && *p <= 'Z') *p += 32; p++; }
+    }
+    if (!nt) continue;
+    uint32_t a, b;
+    if (nt == 4 && !strcmp(tok[0], "player") && !strcmp(tok[2], "face") &&
+        cap_num(tok[1], (1u << SET_BITS) - 1, &a) && a && cap_num(tok[3], CAP_MAX_FACE, &b)) {
+      *id = a; *face = (int)b; got |= 1;
+    } else if (nt == 2 && !strcmp(tok[0], "faces")) {
+      char* d = strchr(tok[1], '-');
+      if (d) *d = 0;
+      if (cap_num(tok[1], (1u << SET_BITS) - 1, &a) && (d ? cap_num(d + 1, (1u << SET_BITS) - 1, &b) : (b = a, 1)) &&
+          a && a <= b && b - a < 4096) { *lo = a; *hi = b; got |= 2; }
+    } else if (nt == 1 && !strcmp(tok[0], "off")) {
+      *id = 0; *face = -1; got &= ~1;
+    }
+  }
+  return got;
+}
+/* the file's new content: 0 nobody, 1 player <id> wears face k, -1 k is not a face of the pack */
+static int cap_apply(const char* text)
+{
+  uint32_t id, lo, hi; int face;
+  int got = cap_parse(text, &id, &face, &lo, &hi);
+  g_cap_lo = (got & 2) ? lo : 0; g_cap_hi = (got & 2) ? hi : 0;
+  if (!(got & 1)) { g_cap_id = 0; g_cap_face = -1; return 0; }
+  if (!g_faces || face >= g_nfaces) { g_cap_id = 0; g_cap_face = face; return -1; }
+  long next = (g_cap_cur + 1) % CAP_BUFS;        /* a buffer nobody was handed lately */
+  unsigned char* r = g_cap_rec[next];
+  memset(r, 0, APP_STRIDE);
+  *(uint32_t*)r = id;
+  memcpy(r + APP_DATA, g_faces[face].data, APP_LEN);
+  MemoryBarrier();
+  g_cap_cur = next; g_cap_face = face; g_cap_served = 0;
+  MemoryBarrier();
+  g_cap_id = id;
+  return 1;
+}
+static unsigned char* cap_find(uint64_t key)
+{
+  uint32_t c = g_cap_id;
+  if (!c || ((uint32_t)(key >> 32) & 0xf00fffffu) != c) return 0;
+  InterlockedIncrement(&g_cap_served);
+  return g_cap_rec[g_cap_cur];
+}
 static unsigned char* syn_find(uint64_t key)
 {
   if (!g_syn || !g_nnlist) return 0;
@@ -585,6 +723,8 @@ static unsigned char* syn_find(uint64_t key)
 }
 static uint8_t lkc_hook(void* obj, void* out, uint64_t key)
 {
+  unsigned char* c = g_cap_id ? cap_find(key) : 0;
+  if (c && out) { memcpy(out, c, APP_STRIDE); return 1; }
   uint8_t ok = g_lkc(obj, out, key);
   if (ok & 1) return ok;
   unsigned char* r = syn_find(key);
@@ -594,6 +734,8 @@ static uint8_t lkc_hook(void* obj, void* out, uint64_t key)
 }
 static void* lkp_hook(void* obj, uint64_t key)
 {
+  unsigned char* c = g_cap_id ? cap_find(key) : 0;
+  if (c) return c;
   void* r = g_lkp(obj, key);
   return r ? r : (void*)syn_find(key);
 }
@@ -688,14 +830,20 @@ static uint64_t unpack_hook(void* a)
     for (int d = 1; d < 128; d++) if (hist[d] > hist[k]) k = d;
     k -= 64;
     g_stat[4] = (uint32_t)(k < 0 ? 0 : k);
-    uint32_t named = 0, kept = 0;
+    uint32_t named = 0, kept = 0, gone = 0;
     memset(g_regen_set, 0, sizeof g_regen_set);  /* another save: other regens */
     g_nrlist = 0;
     for (uint32_t i = 0; i < n; i++) {
       unsigned char* r = blk + (size_t)i * STRIDE;
       uint64_t dbname;
       int db = map_get(*(uint32_t*)(r + R_ID), &dbname);
-      if (db < 0) continue;
+      if (db < 0) {
+        /* B496: the save holds a player whose id the world no longer has (a pack update merged
+           two copies of one player and dropped an id). The game finds no name for him and shows
+           "Players". He gets a name from the pool, the same one at every load (it follows his id). */
+        if (!memcmp(r + R_NAME, "Players", 8) && rename_player(r)) gone++;
+        continue;
+      }
       int age = r[R_AGE] & 0x3f;
       if (age - db != k && age < db + k) {
         note_regen(r);
@@ -706,8 +854,9 @@ static uint64_t unpack_hook(void* a)
         if (rename_player(r)) named++;
       }
     }
-    g_stat[3] += named + kept;
-    logf("load: %u players, %d year(s) played, %u regens named again, %u kept the name the save holds", n, k, named, kept);
+    g_stat[3] += named + kept + gone;
+    logf("load: %u players, %d year(s) played, %u regens named again, %u kept the name the save holds, %u named whose id the world no longer has",
+         n, k, named, kept, gone);
   }
   return ret;
 }
@@ -848,33 +997,70 @@ __declspec(dllexport) int fl26_regen_is(uint32_t id)
   return id < (1u << SET_BITS) && (g_regen_set[id >> 3] >> (id & 7) & 1);
 }
 
-/* the face pack: "FL26RF01", 512 bytes nationality -> group (0xff none), u32 n, n faces of
-   60 bytes (u8 group, u8 0, u16 portrait number, 56 appearance bytes). Returns the face count. */
+/* the face pack: "FL26RF01" or "FL26RF02", 512 bytes nationality -> group (0xff none), u32 n,
+   n faces of 60 bytes (u8 group, u8 block (version 2; 0 in version 1), u16 portrait number,
+   56 appearance bytes). Version 1 is
+   the 30.09. pack of game faces (at most 4,095); version 2 the face pool (tools/facepool.py, up
+   to 32,767: face numbers are int16 here) whose faces have no portrait (number 0xffff). The two
+   are read alike. Returns the face count (0 while the appearance table is not found). */
+#define MAX_FACES 32767
 __declspec(dllexport) int fl26_regen_faces_load(const char* path)
 {
   FILE* f = fopen(path, "rb");
   if (!f) return 0;
-  char magic[8]; uint32_t n = 0; int ok = 0;
-  if (fread(magic, 1, 8, f) == 8 && !memcmp(magic, "FL26RF01", 8) &&
-      fread(g_nat_group, 1, 512, f) == 512 && fread(&n, 4, 1, f) == 1 && n > 0 && n < 4096 &&
-      (g_faces = (face_t*)calloc(n, sizeof(face_t))) && fread(g_faces, sizeof(face_t), n, f) == n) ok = 1;
+  char magic[8]; uint32_t n = 0; int ok = 0, v2 = 0;
+  free(g_faces); g_faces = 0; free(g_grp_idx); g_grp_idx = 0; free(g_all_idx); g_all_idx = 0; g_nfaces = 0;
+  if (fread(magic, 1, 8, f) == 8 && (!memcmp(magic, "FL26RF01", 8) || (v2 = !memcmp(magic, "FL26RF02", 8))) &&
+      fread(g_nat_group, 1, 512, f) == 512 && fread(&n, 4, 1, f) == 1 && n > 0 && n < (v2 ? MAX_FACES + 1u : 4096u) &&
+      (g_faces = (face_t*)calloc(n, sizeof(face_t))) && fread(g_faces, sizeof(face_t), n, f) == n &&
+      (g_grp_idx = (int32_t*)calloc(n, sizeof(int32_t))) && (g_all_idx = (int32_t*)calloc(n, sizeof(int32_t)))) ok = 1;
   fclose(f);
-  if (!ok) { memset(g_nat_group, 0xff, sizeof g_nat_group); free(g_faces); g_faces = 0; return 0; }
+  if (!ok) {
+    memset(g_nat_group, 0xff, sizeof g_nat_group);
+    free(g_faces); g_faces = 0; free(g_grp_idx); g_grp_idx = 0; free(g_all_idx); g_all_idx = 0;
+    return 0;
+  }
+  if (!v2) for (uint32_t i = 0; i < n; i++) g_faces[i].block = 0;     /* a version 1 pack: one block */
+  memset(g_grp_cnt, 0, sizeof g_grp_cnt);
+  memset(g_grp_cnt0, 0, sizeof g_grp_cnt0);
+  g_nfaces0 = 0;
+  for (uint32_t i = 0; i < n; i++) {
+    g_grp_cnt[g_faces[i].group]++;
+    if (!g_faces[i].block) { g_grp_cnt0[g_faces[i].group]++; g_nfaces0++; }
+  }
+  for (int g = 0, s = 0; g < 256; g++) { g_grp_start[g] = s; s += g_grp_cnt[g]; }
+  int fill[256]; memcpy(fill, g_grp_start, sizeof fill);
+  int fill0 = 0;
+  for (int pass = 0; pass < 2; pass++)          /* block 0 first, then the later blocks */
+    for (uint32_t i = 0; i < n; i++)
+      if (!g_faces[i].block == !pass) { g_grp_idx[fill[g_faces[i].group]++] = (int32_t)i; g_all_idx[fill0++] = (int32_t)i; }
   g_nfaces = (int)n;
-  logf("face pack: %d faces%s", g_nfaces, g_app_tab_disp ? "" : " -- but the appearance table was not found, faces off");
+  int groups = 0;
+  for (int g = 0; g < 256; g++) groups += g_grp_cnt[g] > 0;
+  logf("face pack v%d: %d faces in %d groups (%d of them block 0)%s", v2 ? 2 : 1, g_nfaces, groups, g_nfaces0,
+       g_app_tab_disp ? "" : " -- but the appearance table was not found, faces off");
   return g_app_tab_disp ? g_nfaces : 0;
 }
 
-/* the portrait number of a regen's or a new player's face, or -1 (neither, no face for him, or
-   a new player who keeps his own portrait) */
+/* the face (its number in the pack) player id of nationality nat gets, or -1 without a pack:
+   for the tests (tools/test_face_pool.py), the same pick a regen and a new player get */
+__declspec(dllexport) int fl26_regen_face_pick(uint32_t id, unsigned nat)
+{
+  return face_of(id, nat & 0x1ff);
+}
+
+/* a face's portrait number, or -1: a pool face has none (0xffff) */
+static int portrait(int f) { return g_faces[f].key == 0xffff ? -1 : g_faces[f].key; }
+/* the portrait number of a regen's or a new player's face, or -1 (neither, no face for him, a
+   face without a portrait, or a new player who keeps his own portrait) */
 __declspec(dllexport) int fl26_regen_face(uint32_t id)
 {
   if (!fl26_regen_is(id)) {
     const newp_t* e = new_find(id);
-    return e && !e->keep && e->face >= 0 ? g_faces[e->face].key : -1;
+    return e && !e->keep && e->face >= 0 ? portrait(e->face) : -1;
   }
   for (int i = 0; i < g_nrlist; i++)
-    if (g_rlist_id[i] == id) return g_rlist_face[i] < 0 ? -1 : g_faces[g_rlist_face[i]].key;
+    if (g_rlist_id[i] == id) return g_rlist_face[i] < 0 ? -1 : portrait(g_rlist_face[i]);
   return -1;
 }
 
@@ -889,6 +1075,16 @@ __declspec(dllexport) int fl26_regen_new(uint32_t from, uint32_t to, int keep)
   g_new_blk = 0; g_new_sorted = 0;             /* scan again */
   return ++g_nnew;
 }
+
+#ifdef FL26REGEN_TEST
+/* tools/test_face_pool.py only (built with -DFL26REGEN_TEST, never shipped): a database block
+   of its own, [[base + OWNER_RVA] + 0x48] with the count at + count_disp, so new_scan runs on it */
+__declspec(dllexport) void fl26_regen_test_block(uint64_t base, uint32_t count_disp)
+{
+  g_base = base; g_count_disp = count_disp; g_new_blk = 0;
+}
+__declspec(dllexport) int fl26_regen_test_scan(void) { new_scan(); return g_nnlist; }
+#endif
 
 /* a player who was given a face made for another player (Mod Studio's Face, moved to his id at
    Build) takes that player's appearance too: the face model brings the head, but the body --
@@ -975,9 +1171,14 @@ __declspec(dllexport) int fl26_regen_faces(void)
   g_written = 0;
   new_scan();
   n += apply_copies();                         /* first: the room may not hold everyone */
-  for (int i = 0; i < g_nrlist; i++) n += apply_face(g_rlist_id[i], g_rlist_face[i], 0);
+  uint32_t cap = g_cap_id;                     /* capture mode: his face is the capture face */
+  for (int i = 0; i < g_nrlist; i++) if (g_rlist_id[i] != cap) n += apply_face(g_rlist_id[i], g_rlist_face[i], 0);
   for (int i = 0; i < g_nnlist; i++)
-    if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face, !g_lkp);
+    if (g_nlist[i].id != cap && !fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face, !g_lkp);
+  if (cap) {
+    unsigned char* r = g_lkp ? app_record(cap) : app_insert(cap);
+    if (r) memcpy(r + APP_DATA, g_cap_rec[g_cap_cur] + APP_DATA, APP_LEN);
+  }
   static int told_syn;
   if (g_syn_hits && !told_syn++) logf("appearance: new players past the table now drawn with their face (%u lookups so far)", g_syn_hits);
   QueryPerformanceCounter(&t1);
@@ -992,6 +1193,109 @@ __declspec(dllexport) int fl26_regen_faces(void)
   }
   return n;
 }
+
+/* ---- capture mode: the thread that reads the capture file (see cap_parse) ---- */
+static char g_cap_txt[MAX_PATH], g_cap_ack[MAX_PATH];
+static int face_index_of(uint32_t id)            /* the pack face a regen or new player wears, or -1 */
+{
+  if (fl26_regen_is(id)) {
+    for (int i = 0; i < g_nrlist; i++) if (g_rlist_id[i] == id) return g_rlist_face[i];
+    return -1;
+  }
+  const newp_t* e = g_nlist ? new_find(id) : 0;
+  return e ? e->face : -1;
+}
+static void cap_write_ack(long seq, int status)
+{
+  char tmp[MAX_PATH + 8];
+  snprintf(tmp, sizeof tmp, "%s.tmp", g_cap_ack);
+  FILE* f = fopen(tmp, "wb");
+  if (!f) return;
+  fprintf(f, "seq %ld\n", seq);
+  if (status > 0) fprintf(f, "player %u face %d served %ld\n", g_cap_id, g_cap_face, g_cap_served);
+  else if (status < 0) fprintf(f, "bad face %d (the pack has %d)\n", g_cap_face, g_nfaces);
+  else fprintf(f, "off\n");
+  if (g_cap_lo) {
+    /* read as the start thread reads it: this thread never trusts a pointer it has not checked */
+    unsigned char** po = (unsigned char**)(uintptr_t)(g_base + OWNER_RVA);
+    unsigned char* owner = readable(po, 8) ? *po : 0;
+    unsigned char* blk = owner && readable(owner + 0x48, 8) ? *(unsigned char**)(owner + 0x48) : 0;
+    uint32_t n = blk && readable(blk + g_count_disp, 4) ? player_count(blk) : 0;
+    int listed = 0;
+    if (n && readable(blk, (size_t)n * STRIDE))
+      for (uint32_t i = 0; i < n; i++) {
+        unsigned char* r = blk + (size_t)i * STRIDE;
+        uint32_t id = *(uint32_t*)(r + R_ID);
+        if (id < g_cap_lo || id > g_cap_hi) continue;
+        char nm[NAME_LEN + 1]; memcpy(nm, r + R_NAME, NAME_LEN); nm[NAME_LEN] = 0;
+        fprintf(f, "id %u face %d name %s\n", id, face_index_of(id), nm);
+        listed++;
+      }
+    fprintf(f, "faces %u-%u: %d player(s) in the database\n", g_cap_lo, g_cap_hi, listed);
+  }
+  fclose(f);
+  MoveFileExA(tmp, g_cap_ack, MOVEFILE_REPLACE_EXISTING);
+}
+static DWORD WINAPI cap_thread(LPVOID unused)
+{
+  (void)unused;
+  static char cur[4096], last[4096];
+  long seq = 0, told = -1; int status = 0, first = 1;
+  ULONGLONG listed = 0;
+  for (;;) {
+    size_t n = 0;
+    FILE* f = fopen(g_cap_txt, "rb");
+    if (f) { n = fread(cur, 1, sizeof cur - 1, f); fclose(f); }
+    cur[n] = 0;
+    int changed = first || strcmp(cur, last);
+    if (changed) {
+      memcpy(last, cur, n + 1); seq++; first = 0;
+      status = cap_apply(cur);
+      logf("capture: %s", status > 0 ? "a player wears a pack face" : status < 0 ? "not a face of the pack" : "nobody");
+    }
+    long s = g_cap_served;
+    ULONGLONG now = GetTickCount64();
+    /* the list again every 2 s while one is asked: the database may come after the file */
+    if (changed || s != told || (g_cap_lo && now - listed > 2000)) {
+      told = s; listed = now;
+      cap_write_ack(seq, status);
+    }
+    Sleep(100);
+  }
+  return 0;
+}
+/* the loader: the capture file is there (paths in the system's code page); 1 = watching */
+__declspec(dllexport) int fl26_regen_capture_watch(const char* txt, const char* ack)
+{
+  static int started;
+  if (started || !txt || !ack || strlen(txt) >= MAX_PATH || strlen(ack) + 5 >= MAX_PATH) return started;
+  strcpy(g_cap_txt, txt); strcpy(g_cap_ack, ack);
+  HANDLE th = CreateThread(0, 0, cap_thread, 0, 0, 0);
+  if (!th) return 0;
+  CloseHandle(th);
+  started = 1;
+  logf("capture mode ON: %s (answers in %s)", txt, ack);
+  return 1;
+}
+/* the player drawn with the capture face (0 = nobody) and that face: the loader hides his real
+   face and sends his portrait to the face's */
+__declspec(dllexport) int fl26_regen_capture_id(void) { return (int)g_cap_id; }
+__declspec(dllexport) int fl26_regen_capture_face(void) { return g_cap_id ? g_cap_face : -1; }
+
+#ifdef FL26REGEN_TEST
+/* tools/test_facemini.py: the capture file's reading without a game */
+__declspec(dllexport) int fl26_regen_test_cap_parse(const char* text, uint32_t* out4)
+{
+  uint32_t id, lo, hi; int face;
+  int got = cap_parse(text, &id, &face, &lo, &hi);
+  out4[0] = id; out4[1] = (uint32_t)face; out4[2] = lo; out4[3] = hi;
+  return got;
+}
+__declspec(dllexport) int fl26_regen_test_cap_apply(const char* text) { return cap_apply(text); }
+/* what the appearance lookups answer for key (id in bits 32..), 0 = the game's own answer */
+__declspec(dllexport) const unsigned char* fl26_regen_test_cap_find(uint64_t key) { return cap_find(key); }
+__declspec(dllexport) long fl26_regen_test_cap_served(void) { return g_cap_served; }
+#endif
 
 /* regens, named at regen, loads, named at load, years played at the last load, pool size,
    new potentials, regens past the side table */

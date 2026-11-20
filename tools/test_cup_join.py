@@ -1,7 +1,7 @@
 """python test_cup_join.py <folder with the game's tables> -- B228 (jibibi 24.10.): a new third
 division under a shipped second one can put its first clubs into the country's cup next to the
 game's two divisions, as the real Coupe de France takes the lower leagues: Ligue 1 + Ligue 2 +
-the first clubs of National, 48. Build raises the cup's bracket to the field, the third
+the first clubs of National, 44 (48 until B334). Build raises the cup's bracket to the field, the third
 division's line carries cupthird= and cupn=, fl26chain.lua sends them to fl26chain.dll
 (fl26_chain_cupthird). Without the tick nothing changes."""
 import glob, os, re, shutil, sys, tempfile
@@ -68,34 +68,34 @@ def build(base, join):
 
 
 def main(base):
-    ok("the field: Ligue 1 18 + Ligue 2 21 + 18 of National -> 48", B.cup_join_field(COUPE, 39, 18) == 48)
-    ok("44 + 4 -> 48", B.cup_join_field(COUPE, 44, 4) == 48)
+    ok("the field: Ligue 1 18 + Ligue 2 21 + 18 of National -> 44", B.cup_join_field(COUPE, 39, 18) == 44)
+    ok("B334: never 48, the bracket FL27 lays out wrong (40 + 8 -> 44)", B.cup_join_field(COUPE, 40, 8) == 44 and 48 not in B.CUP_JOIN_SIZES)
     ok("44 + 3: no field past 44 it fills -> none", B.cup_join_field(COUPE, 44, 3) == 0)
     ok("36 + 6 -> 40", B.cup_join_field(COUPE, 36, 6) == 40)
     ok("a cup whose calendar is not known: none", B.cup_join_field(999, 36, 18) == 0)
-    ok("48 is the most fl26chain.dll's lists hold",
-       max(B.CUP_JOIN_SIZES) == int(re.search(r"#define MAX_CLUBS\s+(\d+)", open(CHAIN_C, encoding="utf-8").read()).group(1)))
+    ok("no field past what fl26chain.dll's lists hold",
+       max(B.CUP_JOIN_SIZES) <= int(re.search(r"#define MAX_CLUBS\s+(\d+)", open(CHAIN_C, encoding="utf-8").read()).group(1)))
     ok("every field leaves 64 - n byes, a layout the bracket screen has",
        all(64 - n in B.BRACKET_SIZES for n in B.CUP_JOIN_SIZES))
 
     pl, leagues, teams, said, recipe = build(base, True)
     p = next(q for q in pl["leagues"] if q["name"] == "Test National")
-    ok("Check the plan says it", "and the first %d of this league: 48 clubs" % (48 - p["cup_two"]) in said)
+    ok("Check the plan says it", "and the first %d of this league: 44 clubs" % (44 - p["cup_two"]) in said)
     ok("plan: the Coupe de France (%d) is the cup of the region" % COUPE, p.get("cupfield") and p["cupfield"][0] == COUPE)
-    ok("plan: National joins it, 48 clubs (%s)" % p.get("cup_join"), p.get("cup_join") == 48)
+    ok("plan: National joins it, 44 clubs (%s)" % p.get("cup_join"), p.get("cup_join") == 44)
     ok("Ligue 1 18 + Ligue 2 21 (the game plays it with its 21 entries): 39", p.get("cup_two") == 39)
     line = next(L for L in leagues if L["id"] == p["rid"])
     ok("its line: cup=, cuptop=, cuplow= the game's (%s)" % {k: line.get(k) for k in ("cup", "cuptop", "cuplow")},
        (line.get("cup"), line.get("cuptop"), line.get("cuplow"), line.get("cupall")) == (COUPE, LIGUE1, LIGUE2, 1))
-    ok("its line: cupthird= itself, cupn=48", line.get("cupthird") == p["rid"] and line.get("cupn") == 48)
-    ok("the cup's bracket raised to 48 in the world's tables (%s)" % teams.get(COUPE), teams.get(COUPE) == 48)
+    ok("its line: cupthird= itself, cupn=44", line.get("cupthird") == p["rid"] and line.get("cupn") == 44)
+    ok("the cup's bracket raised to 44 in the world's tables (%s)" % teams.get(COUPE), teams.get(COUPE) == 44)
     ok("fl26world.cup_thirds", fl26world.cup_thirds(leagues) == [(COUPE, p["rid"])])
     got = lua_cups(leagues)
     if got is None:
         print("skip - Lua from_world (pip install lupa to run it)")
     else:
         ok("fl26chain.lua sends the cup with its third division (%s)" % got,
-           any(c[0] == COUPE and c[5] == p["rid"] and c[4] == 48 and c[3] for c in got))
+           any(c[0] == COUPE and c[5] == p["rid"] and c[4] == 44 and c[3] for c in got))
     ok("the recipe keeps the tick", next(L for L in recipe["leagues"] if L["name"] == "Test National").get("cup_join"))
 
     pl, leagues, teams, said, recipe = build(base, False)

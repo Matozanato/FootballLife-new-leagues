@@ -9,7 +9,7 @@ a built world folder shows the crests from there.
 The page in this process (QT_QPA_PLATFORM=offscreen), a Project with no tables, a fake game folder.
 No game.
 """
-import os, shutil, sys, tempfile, types
+import os, shutil, sys, tempfile, time, types
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -78,7 +78,19 @@ def main():
             assert im.save(os.path.join(flag, "e_%06d_r.png" % tid))
         with open(os.path.join(wdir, "leaguebuilder-plan.json"), "w", encoding="utf-8") as f:
             f.write('{"leagues": [{"name": "Liga Pack", "cid": 140, "teams": [101, 102, 103]}]}')
+        # B480 (17.11.): the page asks a worker for the plan (built_plan then=) and fills again, when
+        # it is on screen, once the plan is read -- the page on screen, the loop turned until then
+        from modstudio import ui
+        from modstudio.pages import builder as PB
+        page.show()
+        page.fill()
         page.show_ours(0)
+        t0 = time.time()
+        while (PB._PLAN_READS or ui._JOBS or ui._OWED) and time.time() - t0 < 30:
+            qa.processEvents()
+            time.sleep(0.01)
+        qa.processEvents()
+        ok("the plan was read by its worker", not PB._PLAN_READS and not ui._JOBS)
         c = cells(page)
         ok("B89: with a built world the first two clubs show the crests the build wrote", c[0][1] and c[1][1])
         ok("the third (no file) keeps the dash", c[2] == ("—", False))

@@ -69,7 +69,7 @@ def in_name(o):
 def regions(d):
     """{competition id: region id} from Competition.bin (mkleague.dec_region)"""
     comp = M.load(d, "Competition.bin")
-    return {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+    return {M.comp_cid(comp, i * M.COMP): M.dec_region(comp[i * M.COMP + M.REGION_OFF])
             for i in range(len(comp) // M.COMP)}
 
 
@@ -83,8 +83,8 @@ def find(rs, want):
 def phases_of(rs, total):
     """the rows of the total's own competition id whose format is 12..15, sorted by format,
     the total itself left out"""
-    cid = total[M.R_CID]
-    return sorted((g for g in rs if g[M.R_CID] == cid and fmt(g) in PHASE_FMTS
+    cid = M.reg_cid(total)
+    return sorted((g for g in rs if M.reg_cid(g) == cid and fmt(g) in PHASE_FMTS
                    and g is not total and rid(g) != rid(total)), key=fmt)
 
 
@@ -92,7 +92,7 @@ def describe(side, g, region):
     return ("  %-5s reg %3d  type %d  fmt %2d  clubs %2d  rounds %d  region %s  tier %d"
             "  +0x04=0x%04x  +0x06=0x%04x  +0x7e=0x%04x  +0x10=0x%08x  +0x30c=0x%08x"
             % (side, rid(g), g[M.R_TYPE], fmt(g), g[M.R_TEAMS] & 0x3f, rounds(g),
-               region.get(g[M.R_CID], "-"), M.get_tier(g), u16(g, R_PROMO), u16(g, R_PARENT),
+               region.get(M.reg_cid(g), "-"), M.get_tier(g), u16(g, R_PROMO), u16(g, R_PARENT),
                u16(g, R_BELOW_LINK), u32(g, R_RND), u32(g, 0x30c)))
 
 

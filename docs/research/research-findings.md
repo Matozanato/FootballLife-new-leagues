@@ -13748,3 +13748,35 @@ Other things learned there, FL26 2.2 (FL27 1.00 has the same bytes):
   0x1414b6a60()->+0x48), +0x7c the league above, +0x7e the one below, 0x140ea1c00(reg, 0) clubs up,
   0x140ea0bb0(reg) clubs down; it also wants +0x304's top bits 10, which the Druga NL
   (0x6002dd00) has not though the game draws its two up arrows.
+
+### Select Team: what orders the countries, the divisions and the clubs (2026-11-06, static, FL_2027.exe)
+
+Read in FL_2027.exe without running it (FL 2027 1.00, the FL26 2.2 code with SmokePatch's hooks;
+the addresses are the FL26 ones).
+
+**Countries and divisions.** The list of competitions is sorted by 0x140eadae0, a less-than of two
+regulation records. The keys, in order:
+1. +0x308 bits 23..28 (the competition's kind): kinds 0x31..0x34 go before all others.
+2. The region (+0x30c bits 7..12), by its place in the 28-entry list at 0x1427d5760. fl26catlist
+   points the lea at 0x140eadb9a to its own list and raises the count at 0x140eadbb4. The world
+   file's `order` line feeds that list, the recipe's `country_order`.
+3. The confederation (+0x300 bits 25..28), by its place in the 9-entry list at 0x1427d5810.
+4. The kind again, by its place in the 53-entry list at 0x1427d5840.
+5. The promotion chain: a walks down its +0x7e links (the league below, 0x1414bc860 for the next
+   record). If it meets b, a goes first.
+
+So within one country the divisions follow the promotion chain, the top division first. Two
+leagues with no chain between them compare equal, and nothing else orders them. An own division
+order would mean either a hook on this comparator or a different chain. A different chain means
+different promotion, so it is not offered.
+
+**Clubs.** The heading builder of the team-select screens, 0x140c93780, gets a slot's clubs
+through 0x141518610. That function copies the slot list with the readers 0x1414d62c0 (count) and
+0x1414d6290 (get) as it is. Neither function sorts. The game lists a league's clubs in
+CompetitionEntry order. That was seen in game when clubs of the game joined a league of ours
+and came last (10.10.); where the boot fill takes that order from was not read. fl26clubs.dll serves our slots from the regulation's clubs (+0x170), in
+the same entry order. The A-Z order of our leagues is therefore Build's: `club_order()` in
+leaguebuilder.py re-enters the clubs A-Z (`club_sort_key`, without "FC" and the like). Since
+request #6 (FL 2027 only), a league's `club_order` puts its places first in that order and the
+rest A-Z. Only the entries' order changes, never a club's id or place. Not yet checked in game.
+

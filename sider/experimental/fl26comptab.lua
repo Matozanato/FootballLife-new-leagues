@@ -28,8 +28,10 @@ Slots: the engine has 123 competition slots; the shipped table leaves 27 of them
 21 September this module hands out 20 of those 27, which is every one of our leagues that
 lacked a row or sat on the hidden slot 123 -- so all 39 are meant to be selectable now, none
 is season-only any more, and seven slots are still spare. Sharing a slot is normal in the
-shipped data (24 slots carry more than one competition, one of them carries ten), but nothing
-of ours needs to share, so nothing of ours does.
+shipped data (24 slots carry more than one competition, one of them carries ten). Since the
+league band (fl26world.SHARED_IDS, 388..499) leagues of ours share too: two leagues of ours of
+the same country (country= in the world file) may sit on one slot; any other slot asked for
+twice still aborts.
 
 The 123 is a sentinel, not a field width -- the slot field is a dword, and 123 is what
 0x1414cb2e0 returns for a competition with no row. Raising it is possible and costed in
@@ -65,6 +67,12 @@ Requires sider.ini: luajit.ext.enabled = 1 (global ffi).
 local m = {}
 
 local BASE, STRIDE, NROWS = 0x1434fdf00, 0x108, 165
+-- The row count is an imm32 at every COUNT_SITES site and the two by-index loops that walk the
+-- table count in dwords (wall97.md, 0x1414cac40 / 0x1414ce170), and the lookup by id compares a
+-- word, so nothing in the exe stops at 255 rows: that was our own guard, from when a world could
+-- not have more than 97 leagues. 1024 covers every base regulation id (id & 0x3ff); the copy is
+-- 1024 * 0x108 = 264 KB, one VirtualAlloc.
+local MAX_ROWS = 1024
 local OFF_ID, OFF_SLOT, OFF_PROMOTE, OFF_DEMOTE = 0x00, 0x04, 0x30, 0x34
 local OFF_NAME, OFF_SHORT = 0x38, 0x3c
 local OFF_SPLIT_TEXT, OFF_INFO_TEXT = 0x44, 0x48   -- League Info lines (split format, "eligibility")
@@ -228,7 +236,7 @@ local function apply_world(world)
   local inworld = {}
   for _, L in ipairs(world) do inworld[L.id] = L end
   OUR_IDS, RESLOT, APPEND, COUNTS, SHIPPED_DEMOTE, ID_COUNTRY = {}, {}, {}, {}, {}, {}
-  local reshape = {}
+  local reshape, groupsum = {}, {}
   for id, spec in pairs(RESHAPE) do
     local L = inworld[id]
     if L then reshape[id] = { from = spec.from, slot = (L.slot and L.slot ~= 123) and L.slot or spec.slot } end
@@ -243,7 +251,12 @@ local function apply_world(world)
     elseif L.slot and not RESHAPE[L.id] then APPEND[#APPEND + 1] = { L.id, L.slot } end
     if L.promote or L.demote then COUNTS[L.id] = { L.promote or 0, L.demote or 0 } end
     if L.above and not inworld[L.above] then
-      SHIPPED_DEMOTE[L.above] = math.max(SHIPPED_DEMOTE[L.above] or 0, L.promote or 3)
+      if L.group then
+        -- groups of one division under it (GitHub #98): it sends down what they all send up
+        groupsum[L.above] = (groupsum[L.above] or 0) + (L.promote or 0)
+      else
+        SHIPPED_DEMOTE[L.above] = math.max(SHIPPED_DEMOTE[L.above] or 0, L.promote or 3)
+      end
     end
     -- under a shipped split season the League Info panel keys on the season's total (B92)
     if L.splittotal and not inworld[L.splittotal] then
@@ -251,6 +264,7 @@ local function apply_world(world)
     end
     if L.country then ID_COUNTRY[L.id] = L.country end
   end
+  for id, n in pairs(groupsum) do SHIPPED_DEMOTE[id] = math.max(SHIPPED_DEMOTE[id] or 0, n) end
 end
 
 -- code sites: {va, expected bytes (hex)}
@@ -289,18 +303,18 @@ local function row_set(row, off, bytes) return row:sub(1, off) .. bytes .. row:s
 -- to extend, so the function is hooked with one of our own, keyed on the slots this module
 -- has just handed out. A slot the table leaves at 0xffff falls through to the original code,
 -- so the 23 shipped answers do not change. The stub (Stagnant09's, issue #11):
---   0x00 cmp ecx,0xf9 ; ja 0x24        slots are 0..249 (fl26slots250); anything above is not ours
+--   0x00 cmp ecx,NSLOTS-1 ; ja 0x24    slots are 0..NSLOTS-1 (fl26slots250); anything above is not ours
 --   0x0c mov eax,ecx ; lea rdx,[tbl]
 --   0x15 movzx eax,word [rdx+rax*2]    our country for that slot
 --   0x19 cmp ax,-1 ; je 0x24 ; ret     0xffff: not ours, let the engine answer
 --   0x24 the engine's own 18 prologue bytes, replayed, then jmp SLOT_FN+0x12
---   0x3b 250 u16, one per slot (slots above 123 exist only with fl26slots250)
+--   0x3b NSLOTS u16, one per slot (slots above 123 exist only with fl26slots250)
 -- The stub writes nothing to the stack, so the replayed prologue is all the frame the
 -- original needs; the rip-relative load at +0x12 still runs where it was compiled.
 local SLOT_FN = 0x140c950d0
 local SLOT_FN_PROLOGUE = "48895c240855488d6c24a94881ecd0000000"   -- 18 bytes
 local SLOT_FN_RESUME = 0x12
-local NSLOTS = 250
+local NSLOTS = 465   -- fl26slots250 makes 362 since B346 (07.11.), FL 2027's copy 465 (slots-wide: the top band 920..1022 too)
 
 -- FL27 (SmokePatch, 31.10.2026): the function starts with their jmp (5 bytes, the rest as
 -- shipped) to a stub of their own that answers from its own {slot, country} list and returns --
@@ -329,7 +343,7 @@ local function install_flags(slot_country, named)
   if theirs then back = rel32(stub + 0x24 + 5, theirs) else back = rel32(stub + 0x3b, SLOT_FN + SLOT_FN_RESUME) end
   local into = rel32(SLOT_FN + 5, stub)
   if not (back and into) then log("fl26comptab: flag stub out of jump range -- no flags"); return end
-  local code = "\129\249\249\0\0\0" .. "\15\135\24\0\0\0" .. "\137\200" .. "\72\141\21\38\0\0\0"
+  local code = "\129\249" .. string.char((NSLOTS - 1) % 256, math.floor((NSLOTS - 1) / 256), 0, 0) .. "\15\135\24\0\0\0" .. "\137\200" .. "\72\141\21\38\0\0\0"
             .. "\15\183\4\66" .. "\102\61\255\255" .. "\15\132\1\0\0\0" .. "\195"
   if theirs then
     code = code .. "\233" .. back .. string.rep("\144", 0x3b - 0x24 - 5)
@@ -575,11 +589,17 @@ function m.init(ctx)
           elseif taken[sl] then
             log(string.format("fl26comptab: slot %d is already competition %d, not free -- aborting", sl, taken[sl]))
             clash = true
+          elseif mine[sl] and ID_COUNTRY[id] and ID_COUNTRY[id] == ID_COUNTRY[mine[sl]] then
+            -- two leagues of ours of one country (the league band's shared ids, 388..499 in
+            -- fl26world): the slot lists the clubs of both, as the shipped table does for
+            -- the competitions it puts on one slot. The first keeps the flag (step 6).
+            log(string.format("fl26comptab: slot %d shared by %d and %d, one country (%d)",
+                              sl, mine[sl], id, ID_COUNTRY[id]))
           elseif mine[sl] then
             log(string.format("fl26comptab: slot %d asked for twice, by %d and %d -- aborting", sl, mine[sl], id))
             clash = true
           end
-          mine[sl] = id
+          mine[sl] = mine[sl] or id
         end
       end
     end
@@ -637,7 +657,7 @@ function m.init(ctx)
     if i then rows[i] = row_set(rows[i], OFF_DEMOTE, string.char(d)) end
   end
   local n = #rows
-  if n > 255 then log("fl26comptab: too many rows -- aborting"); return end
+  if n > MAX_ROWS then log(string.format("fl26comptab: %d rows, more than %d -- aborting", n, MAX_ROWS)); return end
 
   -- 4. allocate the copy within +-2GB of the code, write it
   local body = table.concat(rows)

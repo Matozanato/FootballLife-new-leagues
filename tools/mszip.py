@@ -11,6 +11,7 @@ FL Mod Studio in one folder:
                         (tools/lbpack.py)
   README.html           the guide (guides/en/mod-studio-guide.md)
   README.<hr|es|fr|pt>.html  the same in Croatian, Spanish, French, Portuguese (guides/<code>/mod-studio-guide.md)
+  LICENSE.txt           the FL Mod Studio License; LICENSE-MIT.txt for 0.3.0 and older and the MIT parts
 
 Frozen from a staged copy of tools/ without the lines that point at
 this machine's folders, and every staged source inside the .exe, the pack and the guides is
@@ -26,11 +27,11 @@ STAGE = os.path.join(WORK, "src")
 NAME = "FL26ModStudio"
 PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-dump[s]", re.I)
 LOCAL_PATH_LINE = re.compile(r'^\s*sys\.path\.insert\(0, r"[A-Za-z]:\\[^"]*"\)\s*$')
-HIDDEN = ["leaguebuilder", "lbplayers", "lbrating", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack", "lbstadiums", "lbtrophies",
+HIDDEN = ["leaguebuilder", "bigjson", "lbplayers", "lbrating", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack", "lbstadiums", "lbtrophies", "mktrophyvariants",
           "mkplayers", "mksplit", "mkreshape", "mkphases", "mkuecl", "mkeuropo", "mkkits", "mkemblems",
           "mkcrests", "mkregioncats", "mkregnames", "mkcup", "mkccup", "mkcoaches", "mkcatflags", "mkmpcol", "mkteamcrest", "afp",
-          "siderdir", "mktactics", "shieldcrest", "crestmatch", "kitpics", "lbservers", "kitmaker",
-          "siderroot", "cpkread", "countries", "flpaths", "caltab", "boundscan", "capstone", "py7zr",
+          "siderdir", "mktactics", "shieldcrest", "crestmatch", "kitpics", "kitnumbers", "kitnumbers_data", "lbservers", "kitmaker", "kitpatterns",
+          "siderroot", "cpkread", "countries", "flpaths", "caltab", "boundscan", "capstone", "py7zr", "regions", "rowkeep",
           "PIL.Image", "PIL.DdsImagePlugin"]
 
 CSS = """
@@ -73,31 +74,50 @@ def check_pack(pack):
     for f in sorted(os.listdir(mods)):
         text = open(os.path.join(mods, f), "rb").read().decode("utf-8", "replace").lower()
         bad += ["%s: %s" % (f, why) for site, why in KNOWN_BAD.items() if site in text]
-    caps = os.path.join(mods, "fl26caps.lua")
     sider = os.path.join(REPO, "sider")
     for g in sorted(os.listdir(sider)):
-        if (g.startswith("fl26caps.") and g.endswith(".lua") and g not in ("fl26caps.lua", "fl26caps.template.lua")
-                and not same_text(caps, os.path.join(sider, g))):
-            bad.append("fl26caps.lua is not the generated sider/%s -- copy it over sider/fl26caps.lua" % g)
-    game = os.environ.get("FL26_DIR")
-    gmods = os.path.join(game, "SiderAddons", "modules") if game else None
-    if gmods and os.path.isdir(gmods):
-        for f in sorted(os.listdir(mods)):
-            g = os.path.join(gmods, f)
-            if f.endswith(".lua") and (not os.path.exists(g) or not same_text(os.path.join(mods, f), g)):
-                (bad if f == "fl26caps.lua" else untested).append(
-                    f + (": not the one installed in the game (FL26_DIR) -- test the shipped file" if f == "fl26caps.lua" else ""))
-    elif "--untested" in sys.argv:
-        print("pack check: FL26_DIR not set, the modules are not compared with the game's (--untested)")
-    else:
-        bad.append("FL26_DIR is not set, so nothing says these modules were played in the game -- "
-                   "set it to the game folder you test with (or pass --untested for a fork's own build)")
-    # 0.2.0 went out once without the regen faces (lbpack only logs a missing face pack)
-    if "--no-faces" not in sys.argv and not (
-            os.path.exists(os.path.join(mods, "fl26regen_faces.bin"))
-            and os.path.isdir(os.path.join(pack, "livecpk", "FL26 Regen Faces"))):
-        bad.append("no regen face pack in the package -- set FL26_REGEN_FACES (or pass --no-faces "
-                   "for a fork without the face renders)")
+        if (g.startswith("fl26caps.") and g.endswith(".lua")
+                and g not in ("fl26caps.lua", "fl26caps.fl27.lua", "fl26caps.template.lua")):
+            # an FL 2027 set (patchset.py --fl27) is the pack's fl26caps.fl27.lua, the others its fl26caps.lua
+            want = "fl26caps.fl27.lua" if ".fl27." in g else "fl26caps.lua"
+            if not same_text(os.path.join(mods, want), os.path.join(sider, g)):
+                bad.append("%s is not the generated sider/%s -- copy it over sider/%s" % (want, g, want))
+    # the FL 2027 copies (<name>.fl27.lua) go into an FL_2027.exe folder under the plain name, so
+    # they are compared with FL27_DIR's modules, the rest with FL26_DIR's
+    for env, mine in (("FL26_DIR", lambda f: ".fl27." not in f), ("FL27_DIR", lambda f: ".fl27." in f)):
+        if env == "FL27_DIR" and not any(".fl27." in f for f in os.listdir(mods)):
+            continue
+        game = os.environ.get(env)
+        gmods = os.path.join(game, "SiderAddons", "modules") if game else None
+        if gmods and os.path.isdir(gmods):
+            for f in sorted(os.listdir(mods)):
+                if not (f.endswith(".lua") and mine(f)):
+                    continue
+                plain = f.replace(".fl27.", ".")
+                g = os.path.join(gmods, plain)
+                if not os.path.exists(g) or not same_text(os.path.join(mods, f), g):
+                    (bad if plain == "fl26caps.lua" else untested).append(
+                        f + (": not the one installed in the game (%s) -- test the shipped file" % env
+                             if plain == "fl26caps.lua" else ""))
+        elif "--untested" in sys.argv:
+            print("pack check: %s not set, the modules are not compared with the game's (--untested)" % env)
+        else:
+            bad.append("%s is not set, so nothing says these modules were played in the game -- "
+                       "set it to the game folder you test with (or pass --untested for a fork's own build)" % env)
+    # 0.2.0 went out once without the regen faces (lbpack only logs a missing face pack), and every
+    # candidate up to 17.11. with the 30.09. pack of 103 game faces instead of the face pool
+    faces = os.path.join(mods, "fl26regen_faces.bin")
+    if "--no-faces" not in sys.argv:
+        if not (os.path.exists(faces) and os.path.isdir(os.path.join(pack, "livecpk", "FL26 Regen Faces"))):
+            bad.append("no regen face pack in the package -- lbpack.py builds the face pool "
+                       "(or pass --no-faces for a fork without it)")
+        else:
+            import facepool
+            data = open(faces, "rb").read()
+            bad += ["fl26regen_faces.bin: %s" % b for b in facepool.pool_problems(data)]
+            if data[:8] == facepool.MAGIC2:
+                bad += ["fl26regen_faces.bin: %s" % b for b in
+                        facepool.portrait_problems(data, os.path.join(pack, "livecpk", "FL26 Regen Faces"))]
     for f in untested:
         print("pack check: NOT PLAYED in the game in this form: %s" % f)
     return bad
@@ -201,6 +221,12 @@ def main():
     for code in langs:
         guide(os.path.join(REPO, "guides", code, "mod-studio-guide.md"),
               os.path.join(OUT, "README.%s.html" % code), code)
+    # the licence goes with every copy (LICENSE, rule 3); the MIT one for 0.3.0 and older and the contributors' parts
+    for src, dst in (("LICENSE", "LICENSE.txt"), ("LICENSE-MIT", "LICENSE-MIT.txt")):
+        with open(os.path.join(REPO, src), encoding="utf-8") as f:
+            text = f.read()
+        with open(os.path.join(OUT, dst), "w", encoding="utf-8", newline="\r\n") as f:
+            f.write(text)
     for f in ["README.html"] + ["README.%s.html" % c for c in langs] + [os.path.join("pack", "modules.txt")]:
         for i, l in enumerate(open(os.path.join(OUT, f), encoding="utf-8"), 1):
             if PRIVATE.search(l):

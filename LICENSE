@@ -1,21 +1,26 @@
-MIT License
+FL Mod Studio License
 
-Copyright (c) 2026 Matozanato
+Copyright (c) 2026 Matozanato and the FL Mod Studio team
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+FL Mod Studio is free. You may use it, copy it, change it and share it, also as part of
+your own mod or tool, as long as you follow these rules:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Do not sell FL Mod Studio. You may not sell it, ask money for it, or put it behind a
+   paywall, in its original or a changed form, alone or bundled with anything else.
+   This also covers paid downloads of it and paid "packages" that include it.
+2. Do not remove or hide the "Powered by FL ModStudio" mark, in the program or in what
+   the program puts into the game, and do not make it harder to see.
+3. Keep this license and the copyright notices with every copy or changed version you
+   share, and say clearly what you changed.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Packs, worlds and other content you make WITH FL Mod Studio are yours. This license does
+not cover them and does not stop you from sharing or selling your own work. Content made
+by other people keeps its own rules.
+
+Parts of FL Mod Studio were shared under the MIT License by their authors. Those parts,
+and every version of FL Mod Studio up to and including 0.3.0, stay under the MIT License;
+their notices are kept in the files.
+
+FL MOD STUDIO IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH FL MOD STUDIO OR ITS USE.

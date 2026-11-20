@@ -67,7 +67,7 @@ def main():
     entries = [bytearray(ents[i * M.ENT:(i + 1) * M.ENT]) for i in range(len(ents) // M.ENT)]
     by_cid = {}
     for e in entries:
-        by_cid.setdefault(e[M.E_CID], []).append(e)
+        by_cid.setdefault(M.ent_cid(e), []).append(e)
     for lst in by_cid.values():
         lst.sort(key=lambda e: e[M.E_ORDER])
 
@@ -75,11 +75,11 @@ def main():
     # does not, so shrinking a league never leaves a Champions League club without a league
     elsewhere = {}
     for e in entries:
-        elsewhere.setdefault(int.from_bytes(e[M.E_TEAM:M.E_TEAM + 4], "little"), set()).add(e[M.E_CID])
+        elsewhere.setdefault(int.from_bytes(e[M.E_TEAM:M.E_TEAM + 4], "little"), set()).add(M.ent_cid(e))
     pool, keep = [], {}
     for r, p in plan.items():
         o = rows[r]
-        cid = regs[o + M.R_CID]
+        cid = M.reg_cid(regs, o)
         mine = sorted(by_cid.get(cid, []), key=lambda e: (
             len(elsewhere[int.from_bytes(e[M.E_TEAM:M.E_TEAM + 4], "little")]) == 1, e[M.E_ORDER]))
         n = int(p["clubs"])
@@ -93,21 +93,21 @@ def main():
         want = int(p["clubs"]) - len(keep[r])
         if want > len(pool):
             raise SystemExit("reg %d needs %d more clubs, only %d are free" % (r, want, len(pool)))
-        cid = regs[rows[r] + M.R_CID]
+        cid = M.reg_cid(regs, rows[r])
         for t in pool[:want]:
             eid += 1
             e = bytearray(M.ENT)
             e[M.E_TEAM:M.E_TEAM + 4] = t.to_bytes(4, "little")
             e[M.E_EID:M.E_EID + 4] = eid.to_bytes(4, "little")
-            e[M.E_CID] = cid
+            M.set_ent_cid(e, cid)
             keep[r].append(e)
         grown[r] = want
         pool = pool[want:]
 
-    planned = {regs[rows[r] + M.R_CID] for r in plan}
+    planned = {M.reg_cid(regs, rows[r]) for r in plan}
     new_ents = bytearray()
     for e in entries:
-        if e[M.E_CID] not in planned:
+        if M.ent_cid(e) not in planned:
             new_ents += e
     for r, p in plan.items():
         o = rows[r]

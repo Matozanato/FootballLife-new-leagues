@@ -35,7 +35,7 @@ fl26swiss does exactly that for the league phase, and docs/fixture-dates-arbitra
 the general case. Clone something that does not already run, or expect collisions.
 
     python mkphases.py --base ...\pesdb --out ...\livecpk\_FL26Conf ^
-                       --like UEFA_EUROPA_LEAGUE --name "FL Conference League" --code FL_UECL
+                       --like UEFA_EUROPA_LEAGUE --name "UEFA Conference League" --code FL_UECL
 
 Changing a phase into something the source did not have is what --phase is for, and it is the
 only way to build a shape nobody ships. Give it the phase's number in table order and the four
@@ -135,12 +135,12 @@ def find_cid(comp, code):
     i = M.find_code(comp, code)          # by code, or by its shipped id (GitHub #54)
     if i is None:
         raise SystemExit("no competition coded %s (nor with its usual id)" % code)
-    return i, comp[i * M.COMP + M.CID_OFF]
+    return i, M.comp_cid(comp, i * M.COMP)
 
 
 def phases(regs, cid):
     """[(master row index, [replica row indexes])], in table order."""
-    rows = [i for i in range(len(regs) // M.REG) if regs[i * M.REG + M.R_CID] == cid]
+    rows = [i for i in range(len(regs) // M.REG) if M.reg_cid(regs, i * M.REG) == cid]
     masters, replicas = [], {}
     for i in rows:
         r = regs[i * M.REG:(i + 1) * M.REG]
@@ -175,7 +175,7 @@ def main():
         raise SystemExit("%s is a single-phase competition -- mkleague.py or mkcup.py does "
                          "that, and does it with fewer ways to go wrong" % like)
 
-    used_cid = {comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)}
+    used_cid = {M.comp_cid(comp, i * M.COMP) for i in range(len(comp) // M.COMP)}
     used_reg = {rid_of(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)}
     cid = get("--cid", None)            # the first free one only when none is given (B159, as mkcup)
     cid = int(cid) if cid is not None else [c for c in W.cid_pool() if c not in used_cid][0]
@@ -225,7 +225,7 @@ def main():
     c = bytearray(comp[src_i * M.COMP:(src_i + 1) * M.COMP])
     if "--region" in a:
         c[M.REGION_OFF] = int(get("--region"))
-    c[M.CID_OFF] = cid
+    M.set_comp_cid(c, cid)
     M.put(c, M.CODE_OFF, get("--code", "FL_MULTI_PHASE"), M.COMP - M.CODE_OFF)
     comp += c
 
@@ -233,12 +233,12 @@ def main():
     added = 0
     master_no = {mi: n for n, (mi, _r) in enumerate(plan, start=1)}
     for i in range(len(regs) // M.REG):
-        if regs[i * M.REG + M.R_CID] != src_cid or i in dropped:
+        if M.reg_cid(regs, i * M.REG) != src_cid or i in dropped:
             continue
         g = bytearray(regs[i * M.REG:(i + 1) * M.REG])
         g[M.R_NAMEID:M.R_NAMEID + 2] = bytes(2)
         g[M.R_ID:M.R_ID + 2] = remap[rid_of(g)].to_bytes(2, "little")
-        g[M.R_CID] = cid
+        M.set_reg_cid(g, cid)
         if g[R_GROUP] != NO_GROUP:
             back = int.from_bytes(g[R_BACK:R_BACK + 2], "little")
             g[R_BACK:R_BACK + 2] = remap[back].to_bytes(2, "little")
@@ -254,7 +254,7 @@ def main():
     teams = [int(x) for x in get("--teams", "").split(",") if x.strip()]
     if not teams:
         teams = [int.from_bytes(ents[i * M.ENT:i * M.ENT + 4], "little")
-                 for i in range(len(ents) // M.ENT) if ents[i * M.ENT + M.E_CID] == src_cid]
+                 for i in range(len(ents) // M.ENT) if M.ent_cid(ents, i * M.ENT) == src_cid]
         print("")
         print("no --teams given, so the %d clubs of %s are entered" % (len(teams), like))
     eid = max(int.from_bytes(ents[i * M.ENT + M.E_EID:i * M.ENT + M.E_EID + 4], "little")
@@ -263,7 +263,8 @@ def main():
         e = bytearray(M.ENT)
         e[M.E_TEAM:M.E_TEAM + 4] = t.to_bytes(4, "little")
         e[M.E_EID:M.E_EID + 4] = (eid + 1 + k).to_bytes(4, "little")
-        e[M.E_CID], e[M.E_ORDER] = cid, k + 1
+        M.set_ent_cid(e, cid)
+        e[M.E_ORDER] = k + 1
         ents += e
 
     if dropped:

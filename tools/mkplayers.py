@@ -127,6 +127,10 @@ def main():
                                                   # It was 179673 written out, and FL27's new clubs'
                                                   # players took the holes under its top, which
                                                   # lbplayers does not keep from Build to Build
+    # past 262143, the gaps between the game's own ids below its top, lowest first (the limits
+    # branch: FL27 has 75,609 ids above its top and 160,139 in the gaps; lbplayers.FreeIds hands
+    # them out in the same order). Player.bin is then put in id order by lbplayers.apply.
+    top, hole = max(index), 1
     eid = max(int.from_bytes(assigns[i * A_REC + A_EID:i * A_REC + A_EID + 4], "little")
               for i in range(len(assigns) // A_REC)) + 1
     made = 0
@@ -135,7 +139,11 @@ def main():
             while pid in index:
                 pid += 1
             if pid > 262143:
-                raise SystemExit("no free player id left below 262144 (the game packs a player id into 18 bits)")
+                while hole < top and hole in index:
+                    hole += 1
+                if hole >= top:
+                    raise SystemExit("no free player id left below 262144 (the game packs a player id into 18 bits)")
+                pid = hole
             r = bytearray(players[index[src_pid] * P_REC:(index[src_pid] + 1) * P_REC])
             r[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             nm = pname % (made + 1)
@@ -148,7 +156,11 @@ def main():
             e[A_TID:A_TID + 4] = club.to_bytes(4, "little")
             e[A_PACK:A_PACK + 4] = pack.to_bytes(4, "little")
             assigns += e
-            pid += 1
+            if pid < top:
+                hole = pid + 1
+                pid = 262144                      # the next one from the gaps too
+            else:
+                pid += 1
             eid += 1
             made += 1
     os.makedirs(outdb, exist_ok=True)

@@ -79,6 +79,7 @@ ROLE = {0: "", 1: "domestic league", 2: "cup or qualifying", 4: "club group stag
         8: "second round", 9: "apertura", 10: "clausura", 11: "split total",
         12: "regular season", 13: "top group", 14: "second group", 15: "lower group"}
 REG_REC, R_ID, R_CID, R_KIND, R_GROUP, R_TEAMS, R_ROLE, R_GROUPS = 2352, 2, 8, 9, 0x0a, 0x0b, 0x0d, 0x10
+R_CID_HI = 0x910                # the competition id's high byte (cidwide step, mkleague.R_CID_HI)
 NO_GROUP = 255
 PESDB = os.path.join("common", "etc", "pesdb")
 
@@ -142,7 +143,7 @@ def codes(raw):
     out = {}
     for i in range(len(raw) // 36):
         r = raw[i * 36:(i + 1) * 36]
-        out[r[5]] = r[8:].split(bytes(1))[0].decode("latin1")
+        out[r[5] | r[7] << 8] = r[8:].split(bytes(1))[0].decode("latin1")
     return out
 
 
@@ -151,7 +152,7 @@ def lineups(raw):
     out = {}
     for i in range(len(raw) // 12):
         r = raw[i * 12:(i + 1) * 12]
-        out.setdefault(r[8], set()).add(int.from_bytes(r[0:4], "little"))
+        out.setdefault(r[8] | r[0xb] << 8, set()).add(int.from_bytes(r[0:4], "little"))
     return out
 
 
@@ -204,15 +205,16 @@ def shapes(mraw, braw, comp_raw, base_comp):
         return []
     have = set()
     if base_comp:
-        have = {base_comp[i * 36 + 5] for i in range(len(base_comp) // 36)}
+        have = {base_comp[i * 36 + 5] | base_comp[i * 36 + 7] << 8 for i in range(len(base_comp) // 36)}
     code = codes(comp_raw) if comp_raw else {}
     out = {}
     for i in range(len(mraw) // REG_REC):
         r = mraw[i * REG_REC:(i + 1) * REG_REC]
-        if r[R_GROUP] != NO_GROUP or r[R_CID] in have:
+        cid = r[R_CID] | r[R_CID_HI] << 8      # the high byte: the cidwide step (mkleague.R_CID_HI)
+        if r[R_GROUP] != NO_GROUP or cid in have:
             continue
         groups = r[R_GROUPS] & 0x1f
-        out.setdefault(r[R_CID], []).append(
+        out.setdefault(cid, []).append(
             "%d-club %s%s%s" % (r[R_TEAMS] & 0x3f, KIND.get(r[R_KIND], "type %d" % r[R_KIND]),
                                 " in %d groups" % groups if groups else "",
                                 ", the %s" % ROLE[r[R_ROLE] >> 4] if ROLE.get(r[R_ROLE] >> 4) else ""))

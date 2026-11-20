@@ -8,7 +8,7 @@ block Switch on writes in Entrance.lua run in Lua (lupa) as Sider runs the modul
 competition's matches and final get the world's trophy folder and entry 16, every other
 tournament id gets exactly what it got before; a world gone (no trophies.json) changes nothing;
 Switch on of a world with no trophies gives the file back byte for byte; twice is one block.
-FL26's own Entrance.lua as well when it is in E:\instalacija or %FL26_DIR%.
+FL26's own Entrance.lua as well when it is in E:\FL\FL26\game or %FL26_DIR%.
 With the game's tables: Build copies the folders into the world with every regulation id of the
 competition (the group rows too), and Switch on writes them.
 """
@@ -146,6 +146,58 @@ def trophy(folder, *subs):
     return folder
 
 
+def kept(tmp):
+    """B481: a zip's world made editable keeps the trophies it came with through a Build"""
+    prev, new = os.path.join(tmp, "prev"), os.path.join(tmp, "new")
+    trophy(os.path.join(prev, T.FOLDER, "40"), "Eliminatorias", "Final")        # a paired one
+    trophy(os.path.join(prev, T.FOLDER, "41"), "Final")                         # its competition is gone
+    trophy(os.path.join(prev, T.FOLDER, "42"), "")                              # paired again by this Build
+    trophy(os.path.join(prev, T.FOLDER, T.BASES, "0"), "")                      # a base of the variants
+    os.makedirs(os.path.join(prev, T.FOLDER, "50"))                             # a variant: its own textures
+    open(os.path.join(prev, T.FOLDER, "50", "own.ftex"), "wb").write(b"v")
+    old = {"40": {"rids": [40], "match": "Eliminatorias", "final": "Final", "from": "C:/maker/a"},
+           "41": {"rids": [41], "match": "Final", "final": "Final", "from": "C:/maker/b"},
+           "42": {"rids": [42], "match": "", "final": "", "from": "C:/maker/c"},
+           "50": {"rids": [50], "match": "", "final": "", "from": "C:/maker/base", "base": "bases\\0",
+                  "look": {"metal": "gold"}, "own": ["own.ftex"], "auto": True},
+           "51": {"rids": [51], "match": "", "final": "", "from": "C:/maker/base", "base": "bases\\0",
+                  "look": {"metal": "silver"}, "own": [], "auto": True}}       # a variant with no file of its own
+    with open(os.path.join(prev, T.FOLDER, T.INDEX), "w", encoding="utf-8") as f:
+        json.dump(old, f)
+    regs = {40: [40, 1064], 42: [42], 50: [50, 1074], 51: [51]}
+    said = []
+    index = {"42": {"rids": [42], "match": "", "final": "", "from": "D:/mine"}}
+    ok("not asked for (a world of this PC): nothing is carried",
+       T.carry({}, new, dict(index), regs, prev, said.append) == 0 and not os.path.exists(new))
+    n = T.carry({T.KEPT: True}, new, index, regs, prev, said.append)
+    ok("kept: the paired trophy and both variants (%s)" % said[-1], n == 3 and set(index) == {"40", "42", "50", "51"})
+    ok("kept: with the competition's regulation ids as they are now", index["40"]["rids"] == [40, 1064]
+       and index["50"]["rids"] == [50, 1074] and index["40"]["match"] == "Eliminatorias")
+    ok("kept: the files of the trophy and of the variant",
+       os.path.isfile(os.path.join(new, T.FOLDER, "40", "Final", "common", "demo", "prop", "cup_afc_cl_hi",
+                                   "cup_afc_cl_hi.fmdl"))
+       and os.path.isfile(os.path.join(new, T.FOLDER, "50", "own.ftex")))
+    ok("kept: the base the variants are served from, once",
+       os.path.isfile(os.path.join(new, T.FOLDER, T.BASES, "0", "common", "demo", "prop", "cup_afc_cl_hi",
+                                   "cup_afc_cl_hi.fmdl")) and index["51"]["base"] == "bases\\0")
+    ok("kept: a competition gone from the world is left out", "41" not in index
+       and not os.path.exists(os.path.join(new, T.FOLDER, "41")))
+    ok("kept: one paired by this Build is this Build's", index["42"]["from"] == "D:/mine"
+       and not os.path.exists(os.path.join(new, T.FOLDER, "42")))
+    new2, index2 = os.path.join(tmp, "new2"), {}
+    T.carry({T.KEPT: True, T.VARIANTS: {"bases": [os.path.join(prev, T.FOLDER, T.BASES, "0")]}}, new2, index2,
+            regs, prev, said.append)
+    ok("kept: bases of the recipe's own -- the variants are left to this Build", set(index2) == {"40", "42"}
+       and not os.path.exists(os.path.join(new2, T.FOLDER, T.BASES)))
+    ok("kept: no world before (a first Build elsewhere): nothing, no error",
+       T.carry({T.KEPT: True}, os.path.join(tmp, "new3"), {}, regs, os.path.join(tmp, "nowhere"), said.append) == 0
+       and T.carry({T.KEPT: True}, os.path.join(tmp, "new3"), {}, regs, None, said.append) == 0)
+    import leaguebuilder as B
+    src = open(B.__file__, encoding="utf-8").read()
+    ok("recipe_from_plan marks a world whose trophy folders are not on this PC, and the plan carries the mark",
+       'rec["trophies_kept"] = True' in src and '"trophies_kept": bool(recipe.get("trophies_kept"))' in src)
+
+
 def offline():
     tmp = tempfile.mkdtemp(prefix="trophies-")
     try:
@@ -172,15 +224,34 @@ def offline():
         ok("module_path finds FL26's Entrance.lua", os.path.normcase(T.module_path(sider) or "") == os.path.normcase(path))
         check_module(sider, path, SAMPLE, a)
         real = [os.path.join(r, "SiderAddons", "modules", "Entrance.lua")
-                for r in (os.environ.get("FL26_DIR", ""), r"E:\instalacija", r"C:\Football Life 2026") if r]
+                for r in (os.environ.get("FL26_DIR", ""), r"E:\FL\FL26\game", r"C:\Football Life 2026") if r]
         real = next((p for p in real if os.path.exists(p)), None)
         if real:
-            text = open(real, encoding="latin-1", newline="").read()
+            # a PC whose world is switched on has our block in it already: the module as shipped is without
+            text = "".join(T.strip(open(real, encoding="latin-1", newline="").read().splitlines(True)))
             open(path, "w", encoding="latin-1", newline="").write(text)
             print("   FL26's own: %s" % real)
             check_module(sider, path, text, a)
         else:
             print("skip - FL26's own Entrance.lua (not on this PC)")
+        # FL 2027: no Entrance.lua, its SmokePatch common\cinematics.lua takes the same block (mato 07.11.)
+        real27 = [os.path.join(r, "SiderAddons", "modules", "common", "cinematics.lua")
+                  for r in (os.environ.get("FL27_DIR", ""), r"E:\FL\FL27\game") if r]
+        real27 = next((p for p in real27 if os.path.exists(p)), None)
+        if real27:
+            s27 = os.path.join(tmp, "fl27", "SiderAddons")
+            os.makedirs(os.path.join(s27, "modules", "common"))
+            os.makedirs(os.path.join(s27, "content", "cinematics"))
+            p27 = os.path.join(s27, "modules", "common", "cinematics.lua")
+            text27 = "".join(T.strip(open(real27, encoding="latin-1", newline="").read().splitlines(True)))
+            open(p27, "w", encoding="latin-1", newline="").write(text27)
+            print("   FL 2027's own: %s" % real27)
+            ok("module_path finds FL 2027's common\\cinematics.lua", os.path.normcase(T.module_path(s27) or "")
+               == os.path.normcase(p27))
+            check_module(s27, p27, text27, a)
+        else:
+            print("skip - FL 2027's own cinematics.lua (not on this PC)")
+        kept(tmp)
         open(path, "w", encoding="latin-1", newline="").write("-- another Entrance.lua\nfunction init(ctx) end\n")
         ok("a module of another shape is left alone", T.module_path(sider) is None
            and not T.switch_on(sider, "_FL26T", os.path.join(sider, "livecpk", "_FL26T"), log=lambda t: None))
@@ -250,10 +321,16 @@ def built(tables):
                                                        "legs": 2}]}
         cups = {c: rids for c, _n, rids in B.game_competitions(base)}
         cid = next(c for c, rids in sorted(cups.items()) if 59 in rids)
-        pl = B.plan(dict(recipe, trophies={str(cid): a, "999": a}), base)
-        ok("the plan carries the trophies", pl["trophies"] == {str(cid): a, "999": a})
+        import test_trophyvariants as TV          # FL 2027's variants: FL26's Build makes none
+        vb = TV.make_base(os.path.join(game, "vbase"))
+        pl = B.plan(dict(recipe, trophies={str(cid): a, "999": a}, trophy_variants={"bases": [vb]}), base)
+        ok("the plan carries the trophies", pl["trophies"] == {str(cid): a, "999": a}
+           and pl["trophy_variants"] == {"bases": [vb]})
         said = []
         B.build(pl, base, game, False, log=lambda t: said.append(str(t)))
+        ok("FL26's Build: no trophy variant, a note why (FL 2027 only)", not B.FL27
+           and any("FL 2027 only" in t for t in said)
+           and not os.path.exists(os.path.join(sider, "livecpk", "_FL26Trophy", T.FOLDER, T.BASES)))
         root = os.path.join(sider, "livecpk", "_FL26Trophy")
         index = json.load(open(os.path.join(root, T.FOLDER, T.INDEX), encoding="utf-8"))
         ok("Build: the trophy of competition %d with all its regulation ids %s" % (cid, index[str(cid)]["rids"]),
@@ -269,6 +346,29 @@ def built(tables):
         text = open(os.path.join(sider, "modules", "Entrance.lua"), encoding="latin-1", newline="").read()
         ok("Switch on writes the world's trophies in Entrance.lua",
            T.BEGIN in text and "_FL26Trophy" in text and "[59] =" in text)
+        # B481: the world as a zip's made editable on another PC -- the folder it was built from is
+        # not there, the recipe read back from the plan has no trophies, and Build keeps the world's
+        plan = json.load(open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8"))
+        plan["trophies"] = {str(cid): os.path.join(game, "the makers folder")}
+        plan["trophy_variants"] = {}
+        rec = B.recipe_from_plan(plan, base)
+        ok("made editable: the recipe names no trophy folder and is marked to keep the world's",
+           not rec.get("trophies") and rec.get("trophies_kept") is True)
+        shutil.rmtree(a)
+        pl2 = B.plan(rec, base)
+        said2 = []
+        B.build(pl2, base, game, True, log=lambda t: said2.append(str(t)))
+        index2 = json.load(open(os.path.join(root, T.FOLDER, T.INDEX), encoding="utf-8"))
+        ok("Build of it: the trophy is still there (%s)" % next((t.strip() for t in said2 if "keep the trophy" in t), "-"),
+           index2[str(cid)]["rids"] == index[str(cid)]["rids"]
+           and os.path.isfile(os.path.join(root, T.FOLDER, str(cid), "Final", "common", "demo", "prop",
+                                           "cup_afc_cl_hi", "cup_afc_cl_hi.fmdl")))
+        B.build(B.plan(B.recipe_from_plan(json.load(open(os.path.join(root, "leaguebuilder-plan.json"),
+                                                         encoding="utf-8")), base), base),
+                base, game, True, log=lambda t: None)
+        ok("and after the next Build of it", os.path.isfile(os.path.join(root, T.FOLDER, str(cid), "Final", "common",
+                                                                         "demo", "prop", "cup_afc_cl_hi",
+                                                                         "cup_afc_cl_hi.fmdl")))
     finally:
         shutil.rmtree(game, ignore_errors=True)
 

@@ -19,7 +19,10 @@ SEEN = ["replaced by FL26 Modpack NL15B r2", "Your world: switch on _FL26MyWorld
         "merge from FL26-Modpack-NL15B7-r12", "removing FL26-Modpack-Europe-eu1", "Install the modules",
         "Install the modules: replaced by Mod Studio's", "profile As found", "installed FL26-Modpack-Europe-eu4",
         "Mod Studio's modules switched on", "Install the modules: livecpk" + B + "_FL26X loaded",
-        "world _FL26Gone deleted: its lines taken out", "world _FL26Gone deleted"]
+        "world _FL26Gone deleted: its lines taken out", "world _FL26Gone deleted",
+        # 09.11. (UI test in Spanish): the reasons since, from the keep_before calls of 0.3.0
+        "Switch on _FL26Megapack: its trophies in Entrance.lua", "Install the modules: fl26nullguard9 now ships bundled",
+        "Switch on _FL26Megapack: another world's modules switched off", "Install the modules: the world's own"]
 
 
 def ok(name, cond):
@@ -47,6 +50,10 @@ def main():
            0 <= said["world _FL26Old renamed to _FL26New"].index("_FL26Old")
            < said["world _FL26Old renamed to _FL26New"].index("_FL26New"))
     i18n.set_language("en")
+    # Home's Last changes says them the same way (09.11.: "Switch on: scoreboards map" there in Spanish)
+    home = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modstudio", "pages", "overview.py"),
+                encoding="utf-8").read()
+    ok("Home's Last changes goes through reason_text", "reason_text(h.get(\"reason\"))" in home)
     print("1..%d" % N)
 
 

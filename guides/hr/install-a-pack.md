@@ -6,7 +6,7 @@
 
 | Imaš | Što kliknuti |
 |---|---|
-| `.zip` svijeta (Modpack, Europack, svijet od prijatelja) | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Dodaj** → **Instaliraj svijet**. Nema Builda: svijet je u igri kad piše **Spremno za igru**. Onda pokreni NOVU Master Ligu. [Način A](#način-a-gotov-svijet-jedan-zip) |
+| `.zip` svijeta (Modpack, Europack, svijet od prijatelja) | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Instaliraj svijet**. Nema Builda: svijet je u igri kad piše **Spremno za igru**. Onda pokreni NOVU Master Ligu. [Način A](#način-a-gotov-svijet-jedan-zip) |
 | `.fl26pack` paket liga | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Dodaj** → kartica **Gradnja** → **Izgradi i instaliraj**. Onda pokreni NOVU Master Ligu. [Način C](#način-c-paket-liga-fl26pack) |
 | ništa, želim sam izabrati lige | [Napravi svoje lige i pakete](make-your-own-leagues.md) |
 
@@ -106,19 +106,22 @@ Modpack, korak po korak**.
 **A2.** Klikni **2. Moj svijet**, pa **+ Dodaj...** (desno, pored kartica).
 
 **A3.** Klikni **Odaberi datoteku...** i izaberi zip. (Ili ga povuci mišem na taj prozor.)
-Zeleni red počinje s `Pronađeno: zip svijeta`. Klikni **Dodaj**: otvori se stranica **Uvezi
-svijet** s tim zipom.
+Zeleni red počinje s `Pronađeno: zip svijeta`. Klikni **Instaliraj svijet**: otvori se stranica
+**Uvezi svijet** s tim zipom, pogleda što je unutra (veliki Modpack traje minutu-dvije) i odmah ga
+instalira sa svim dijelovima. Na toj stranici ništa ne klikaš: nastavi s pitanjima iz **A5**.
 
 (Još dva puta do iste stranice: **1. Početna → Uvezi zip svijeta**, ili **2. Moj svijet → Više ▾ →
-Uvezi zip svijeta**, pa izaberi zip.)
+Uvezi zip svijeta**, pa izaberi zip. Ta dva ne instaliraju odmah: prvo vidiš **A4**, a **Instaliraj
+svijet** klikneš sam. Njima instaliraš svijet bez njegovih dresova.)
 
-**A4. Trebaš vidjeti:** jedan red koji kaže što je to, npr. `gotov svijet za igru
+**A4. Trebaš vidjeti** (samo na ta dva druga puta): jedan red koji kaže što je to, npr. `gotov svijet za igru
 (_FL26Modpack)`, ili `novija verzija svijeta _FL26Modpack koji imaš` kad imaš stariju verziju,
 a ispod koliko je liga unutra. Dijelovi (svijet, dresovi, semafori ...) su pod **Više opcija:
 koji dijelovi, ime, redoslijed mapa sadržaja, linije u map datotekama**, svi označeni
 kvačicom. Tako i ostavi. (Da ga instaliraš bez dresova, tamo makni kvačicu dresovima.)
 
-**A5.** Klikni **Instaliraj svijet**. Ako je starija verzija istog svijeta već instalirana
+**A5.** Na ta dva druga puta klikni **Instaliraj svijet** (preko **+ Dodaj...** krene sam).
+Ako je starija verzija istog svijeta već instalirana
 (raniji Modpack), pita da je zamijeni: **Da**. Stara se prvo makne, pa ništa od nje ne ostaje;
 tvoja spremanja se ne diraju. Pričekaj dok ne kaže da je gotovo. Mod Studio instalira svoje
 module (ove verzije), kopira svijet, stavi njegovu datoteku svijeta gdje je moduli čitaju i

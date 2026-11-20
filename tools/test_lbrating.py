@@ -2,10 +2,11 @@ r"""python tools/test_lbrating.py
 
 B53 (LaraCroft, 15.10. and 19.10.2026): the Rating box said 70 for a goalkeeper the game shows as
 64, and a forward was off too: Mod Studio showed the mean of a few abilities, the game rates a
-player with weights of its own per registered position.  lbrating.rating is fitted to the game's
-ratings; these are players of the game (PES 2021's last data pack, pesmaster.com), the lower and
-the upper quarter of each position, and the game's rating of each.
-  - rating() is the game's number, or one off (the fit is not exact: about six in ten exact);
+player with weights of its own per registered position.  lbrating.rating is the game's formula
+(TEditor's, 07.11.); these are players of the game (PES 2021's last data pack, pesmaster.com), the
+lower and the upper quarter of each position, and the game's rating of each.
+  - rating() is the game's number, every one of them;
+  - at another position: what an A, a B and a C there add;
   - a goalkeeper of five GK abilities at 70 is well under 70, as in the game;
   - shift_to lands on the rating asked for exactly (or the closest one: abilities stop at 40
     and 99), for one player (the Rating box) and a squad's mean (Squad level), moving every
@@ -72,9 +73,15 @@ def row(pos, vals):
 def main():
     for name, pos, want, vals in GAME:
         got = R.rating(row(pos, vals))
-        ok("%s (%s): the game says %d, rating() %d" % (name, pos, want, got), abs(got - want) <= 1)
-    exact = sum(R.rating(row(pos, vals)) == want for _n, pos, want, vals in GAME)
-    ok("most of them exactly (%d of %d)" % (exact, len(GAME)), exact * 2 > len(GAME))
+        ok("%s (%s): the game says %d, rating() %d" % (name, pos, want, got), got == want)
+    # the game's ratings at every position (pesmaster) of a winger with A, B and C positions
+    ars = row("RWF", [87, 89, 93, 90, 84, 79, 85, 66, 72, 80, 87, 91, 85, 72, 72, 93, 84, 56, 53, 62,
+                      40, 40, 40, 40, 40, 3, 2, 4, 1])
+    for pos, prof, want in (("RWF", None, 90), ("AMF", "A", 88), ("LWF", "A", 86), ("SS", "A", 88),
+                            ("LMF", "B", 84), ("CF", "B", 85), ("CMF", "C", 79), ("CB", "C", 54),
+                            ("LB", "C", 75), ("GK", "C", 40)):
+        ok("a-arshavin at %s (%s): the game says %d" % (pos, prof or "registered", want),
+           R.rating(ars, None if prof is None else pos, prof) == want)
 
     gk = {"Registered Position": "GK", "GK Awareness": "70", "GK Catching": "70", "GK Clearing": "70",
           "GK Reflexes": "70", "GK Reach": "70", "Jump": "65", "Physical Contact": "60"}
@@ -104,6 +111,22 @@ def main():
     ok("no position: a CF", R.rating({k: v for k, v in squad[-1].items() if k != "Registered Position"})
        == R.rating(dict(squad[-1], **{"Registered Position": "CF"})))
     ok("an empty row is the least there is", R.rating({}) == 40)
+
+    # Build's yardstick (mato 07.11.2026): the rough overall in FL26, the game's rating in FL 2027
+    was = P.EXACT
+    try:
+        P.EXACT = False
+        ok("FL26: Build measures with the rough overall", all(P.level(x) == P.overall(x) for x in squad))
+        ok("FL26: at_level moves every ability by one amount, to the rough overall",
+           P.overall(dict(squad[2], **P.at_level(squad[2], 70))) == 70)
+        P.EXACT = True
+        ok("FL 2027: Build measures with the game's rating", all(P.level(x) == R.rating(x) for x in squad))
+        for x in squad[:6]:
+            for want in (60, 66, 72):
+                ok("FL 2027: at_level brings %s to %d as the game shows it" % (x["Registered Position"], want),
+                   R.rating(dict(x, **P.at_level(x, want))) == want)
+    finally:
+        P.EXACT = was
     print("all %d passed" % N)
 
 

@@ -69,7 +69,7 @@ def main(base):
         g0 = game_folder()
         games.append(g0)
         log, pl = build(base, g0, recipe(True))
-        ok("plain world, no Kit Server kits: no warning", "WARNING" not in log and "kits: plain" in log)
+        ok("plain world, no Kit Server kits: no warning", "Kit Server kits" not in log and "kits: plain" in log)
         tid = pl["leagues"][0]["teams"][3]
         g1 = game_folder(["%d, \"Imported/Club\"" % tid])
         games.append(g1)

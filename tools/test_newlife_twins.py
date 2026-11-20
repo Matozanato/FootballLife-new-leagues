@@ -36,6 +36,7 @@ TWINS = {"98493": (2452, "Avaí Futebol Clube"), "98499": (2468, "Vila Nova Fute
          "104649": (5142, "Cuiabá Esporte Clube SAF"), "104652": (2460, "Criciúma Esporte Clube"),
          "104676": (1936, "Sport Club do Recife")}
 BR, SPORT, ATHLETICO = "146", 1936, 1930
+SERIE_A, SERIE_B = 21, 90
 A_NAME, B_NAME = "Brazilian National First Division", "Brazilian National Second Division"
 
 
@@ -46,17 +47,30 @@ def ok(cond, what):
     print("ok %d - %s" % (N, what))
 
 
+def series(base):
+    """the game's Série A (21) and Série B (90), team ids"""
+    gl = {c: ts for _r, c, _n, ts in B.game_leagues(base)}
+    return gl[SERIE_A], gl[SERIE_B]
+
+
+def moves(base):
+    """(the club going down, the club going up) between the game's Série A and B in the release:
+    Sport and Athletico swap, whichever way round the tables have them (15.10. the game had Sport
+    in Série A; FL26 2.2 and FL 2027 have Athletico there, Sport in Série B)"""
+    sa, _sb = series(base)
+    return (SPORT, ATHLETICO) if SPORT in sa else (ATHLETICO, SPORT)
+
+
 def release(folder, base, with_column=True, renum=None):
     """the game's Série A and B as the release's season has them, the seven under NewLife ids;
     renum {team id: id in another game}: clubs of the game with game_id (a game that numbers them
     differently)"""
     db = P.Squads(base)
-    gl = {n: ts for _r, _c, n, ts in B.game_leagues(base)}
-    sa = next(ts for n, ts in gl.items() if SPORT in ts)
-    sb = next(ts for n, ts in gl.items() if 2452 in ts)
-    league = {t: A_NAME for t in sa if t != SPORT}
-    league.update({t: B_NAME for t in sb if t != ATHLETICO})
-    league[ATHLETICO], league[SPORT] = A_NAME, B_NAME
+    down, up = moves(base)
+    sa, sb = series(base)
+    league = {t: A_NAME for t in sa if t != down}
+    league.update({t: B_NAME for t in sb if t != up})
+    league[up], league[down] = A_NAME, B_NAME
     nl = {g: n for n, (g, _nm) in TWINS.items()}
     os.makedirs(folder)
     cols = ["newlife_id", "in_game", "name", "country", "league", "home_kit", "away_kit"] + \
@@ -95,15 +109,18 @@ def main(base):
                for n, (g, _nm) in TWINS.items()), "each is a club of the game under the game's id")
         ok(len(rel.squads["2452"]) > 10 and "98493" not in rel.squads, "its squad goes with it")
         rows = {L["name"]: L for L in rel.leagues(str, info)}
-        ok(not rows[B_NAME]["clubs"] and {str(g) for g, _n in TWINS.values()} <= set(rows[B_NAME]["in_game"]),
-           "Série B of the release: all 20 clubs of the game, none new")
+        ok(not rows[B_NAME]["clubs"] and not rows[A_NAME]["clubs"] and {str(g) for g, _n in TWINS.values()}
+           <= set(rows[B_NAME]["in_game"]) | set(rows[A_NAME]["in_game"]),
+           "Série A and B of the release: all 40 clubs of the game, none new")
 
         plan = {p["release"]: p for p in NL.game_league_plan({"leagues": []}, rel, info)}
         pb, pa = plan[B_NAME], plan[A_NAME]
         ok(pb["replace"] == [] and pa["replace"] == [], "Bring gives no place of the game away (%s)" % pb["replace"])
-        ok((ATHLETICO, SPORT) in pb["swaps"] and (SPORT, ATHLETICO) in pa["swaps"],
-           "Sport (down) and Athletico (up) swap leagues")
-        ok({g for g, _n in TWINS.values() if g != SPORT} <= set(pb["clubs"]) and SPORT in pb["clubs"],
+        down, up = moves(base)
+        ok((up, down) in pb["swaps"] and (down, up) in pa["swaps"],
+           "%d (down) and %d (up) swap leagues" % (down, up))
+        ok({g for g, _n in TWINS.values()} <= set(pb["clubs"]) | set(pa["clubs"])
+           and (SPORT in pb["clubs"]) == (down == SPORT),
            "the seven get the release's squad in their own place")
         r = {"leagues": []}
         n = NL.refresh_game_leagues(r, rel, info, [pb["cid"], pa["cid"]])
@@ -115,9 +132,9 @@ def main(base):
         orel = NL.Release(old)
         ok(orel.twins == {} and all(n in orel.clubs for n in TWINS), "without game_id: the seven are new clubs")
         oplan = {p["release"]: p for p in NL.game_league_plan({"leagues": []}, orel, info)}
-        ok(len(oplan[B_NAME]["replace"]) == 7 and not oplan[B_NAME]["swaps"],
-           "without game_id: seven places of Série B given away and no swap, as before (%d)"
-           % len(oplan[B_NAME]["replace"]))
+        gone = len(oplan[B_NAME]["replace"]) + len(oplan[A_NAME]["replace"])
+        ok(gone == 7 and not oplan[B_NAME]["swaps"] and not oplan[A_NAME]["swaps"],
+           "without game_id: seven places of Série A and B given away and no swap, as before (%d)" % gone)
 
         # a world with Avaí as a new club already (added from 1.5b4 into a league of its own)
         world = {"leagues": [{"name": "Mine", "clubs": 12, "newlife": {"version": "1.5b4", "clubs": [98493]}}]}
@@ -132,23 +149,26 @@ def main(base):
         # a world that added Série B from a release without the column as a new league: Update my
         # leagues to the new release keeps the seven as its new clubs, under their NewLife ids
         w2 = {"leagues": []}
-        L = next(x for x in orel.leagues(str, info) if x["name"] == B_NAME)
-        NL.add_league(w2, orel, L, info=info)
-        x2 = w2["leagues"][0]
-        ok(set(TWINS) <= {str(i) for i in x2["newlife"]["clubs"]}, "added from the old release: seven new clubs")
+        # the leagues of the old release the seven are in (Série B; Série A too when Sport goes up)
+        TW = [n for n in (B_NAME, A_NAME) if set(TWINS) & {str(i) for x in orel.leagues(str, info) if x["name"] == n
+                                                             for i in x.get("clubs") or []}]
+        for nm in TW:
+            NL.add_league(w2, orel, next(x for x in orel.leagues(str, info) if x["name"] == nm), info=info)
+        nl_of = lambda w: {str(i) for x in w["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []}
+        gc_of = lambda w: {int(e["id"]) for x in w["leagues"] for e in x.get("game_clubs") or []}
+        ok(set(TWINS) <= nl_of(w2), "added from the old release (%s): seven new clubs" % ", ".join(TW))
         rel.use_recipe(w2)
         rows2 = rel.leagues(str, info)
-        NL.update_league(w2, rel, x2, rows2, info=info, keep=False)
-        x2 = w2["leagues"][0]
-        ok(set(TWINS) <= {str(i) for i in x2["newlife"]["clubs"]} and
-           not {g for g, _n in TWINS.values()} & {int(e["id"]) for e in x2.get("game_clubs") or []},
+        for k in range(len(TW)):
+            NL.update_league(w2, rel, w2["leagues"][k], rows2, info=info, keep=False)
+        ok(set(TWINS) <= nl_of(w2) and not {g for g, _n in TWINS.values()} & gc_of(w2),
            "Update my leagues: the seven keep their NewLife ids, the game's clubs are not brought in beside them")
-        stale = next(L for L in rows2 if L["name"] == B_NAME)      # picked while the seven were new clubs
+        stale = [L for L in rows2 if L["name"] in TW]      # picked while the seven were new clubs
         rel.use_recipe({"leagues": []})
         w3 = {"leagues": []}
-        NL.add_league(w3, rel, stale, info=info)
-        ok({g for g, _n in TWINS.values()} <= {int(e["id"]) for e in w3["leagues"][0].get("game_clubs") or []}
-           and not set(TWINS) & {str(i) for i in w3["leagues"][0]["newlife"]["clubs"]},
+        for L in stale:
+            NL.add_league(w3, rel, L, info=info)
+        ok({g for g, _n in TWINS.values()} <= gc_of(w3) and not set(TWINS) & nl_of(w3),
            "a league picked before the world changed: each twin by the id it goes by now")
 
         # tables without the game's club (a database mod gave 2452 to nobody)

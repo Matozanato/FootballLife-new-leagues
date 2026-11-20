@@ -6,7 +6,7 @@
 
 | Tienes | Qué pulsar |
 |---|---|
-| un mundo en `.zip` (Modpack, Europack, el mundo de un amigo) | **2. Mi mundo** → **+ Añadir...** → **Elegir un archivo...** → **Añadir** → **Instalar el mundo**. No hay Build: está en el juego cuando dice **Listo para jugar**. Luego empieza una Master League NUEVA. [Camino A](#camino-a-un-mundo-listo-un-zip) |
+| un mundo en `.zip` (Modpack, Europack, el mundo de un amigo) | **2. Mi mundo** → **+ Añadir...** → **Elegir un archivo...** → **Instalar el mundo**. No hay Build: está en el juego cuando dice **Listo para jugar**. Luego empieza una Master League NUEVA. [Camino A](#camino-a-un-mundo-listo-un-zip) |
 | un paquete de ligas `.fl26pack` | **2. Mi mundo** → **+ Añadir...** → **Elegir un archivo...** → **Añadir** → pestaña **Construcción** → **Construir e instalar**. Luego empieza una Master League NUEVA. [Camino C](#camino-c-un-paquete-de-ligas-fl26pack) |
 | nada, quiero elegir las ligas yo mismo | [Crear tus propias ligas y paquetes](make-your-own-leagues.md) |
 
@@ -113,19 +113,22 @@ Para cambiar un Modpack después (quitar o poner una liga, clubes, jugadores, eq
 **A2.** Pulsa **2. Mi mundo** y luego **+ Añadir...** (a la derecha, junto a las pestañas).
 
 **A3.** Pulsa **Elegir un archivo...** y elige el zip. (O arrastra el zip a esa ventana.)
-Una línea verde empieza por `Encontrado: un zip de mundo`. Pulsa **Añadir**: se abre la página
-**Importa tu mundo** con el zip.
+Una línea verde empieza por `Encontrado: un zip de mundo`. Pulsa **Instalar el mundo**: se abre la
+página **Importa tu mundo** con el zip, mira dentro (un Modpack grande tarda un minuto o dos) y lo
+instala con todas sus partes de una vez. En esa página no pulsas nada: sigue con las preguntas de **A5**.
 
 (Otros dos caminos a la misma página: **1. Inicio → Importar un zip de mundo**, o **2. Mi mundo →
-Más ▾ → Importar un zip de mundo**, y luego elige el zip.)
+Más ▾ → Importar un zip de mundo**, y luego elige el zip. Estos dos no instalan enseguida: primero
+ves **A4** y pulsas tú **Instalar el mundo**. Usa uno de ellos para instalar un mundo sin sus equipaciones.)
 
-**A4. Deberías ver:** una línea que dice qué es, por ejemplo `un mundo listo para jugar
+**A4. Deberías ver** (solo por los otros dos caminos): una línea que dice qué es, por ejemplo `un mundo listo para jugar
 (_FL26Modpack)`, o `una versión más nueva del mundo _FL26Modpack que tienes` si tienes una
 anterior, y debajo cuántas ligas trae. Las partes (el mundo, equipaciones, marcadores ...) están
 bajo **Más opciones: qué partes, nombre, orden de las carpetas de contenido, líneas de los map**,
 todas marcadas. Déjalas así. (Para instalarlo sin las equipaciones, desmárcalas ahí.)
 
-**A5.** Pulsa **Instalar el mundo**. Si ya hay instalada una versión anterior del mismo mundo (un
+**A5.** Por los otros dos caminos, pulsa **Instalar el mundo** (desde **+ Añadir...** empieza solo).
+Si ya hay instalada una versión anterior del mismo mundo (un
 Modpack anterior), pregunta si la reemplaza: di **Sí**. La anterior se quita primero, así no
 queda nada de ella; tus partidas guardadas no se tocan. Espera hasta que diga que ha terminado.
 Mod Studio instala sus módulos (los de esta versión), copia el mundo, pone su archivo de mundo

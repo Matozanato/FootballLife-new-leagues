@@ -59,10 +59,10 @@ def tid_of(b):
 def league_of(regs, ents):
     """{team id: regulation id} of the clubs in a league: the type-4 (and split-total)
     regulations of <regs>, joined to <ents> by competition id"""
-    cid_league = {g[M.R_CID]: reg_id(g) for g in rows(regs, M.REG) if g[M.R_TYPE] in (4, SPLIT_TOTAL)}
+    cid_league = {M.reg_cid(g): reg_id(g) for g in rows(regs, M.REG) if g[M.R_TYPE] in (4, SPLIT_TOTAL)}
     out = {}
     for e in rows(ents, M.ENT):
-        rid = cid_league.get(e[M.E_CID])
+        rid = cid_league.get(M.ent_cid(e))
         if rid is not None:
             out.setdefault(tid_of(e[M.E_TEAM:M.E_TEAM + 4]), rid)
     return out
@@ -73,12 +73,12 @@ def league_places(regs, ents):
     leaguebuilder.game_leagues counts leagues (no split phase), the pre-season tournaments
     (leaguebuilder.friendly_cids) left out"""
     W = LB.fl26world
-    cids = {g[M.R_CID] for g in rows(regs, M.REG)
+    cids = {M.reg_cid(g) for g in rows(regs, M.REG)
             if g[M.R_TYPE] in (4, SPLIT_TOTAL) and W.fmt(g) not in (W.F_REGULAR,) + W.F_GROUPS}
     teams = {}
     for e in rows(ents, M.ENT):
-        if e[M.E_CID] in cids:
-            teams.setdefault(e[M.E_CID], []).append(tid_of(e[M.E_TEAM:M.E_TEAM + 4]))
+        if M.ent_cid(e) in cids:
+            teams.setdefault(M.ent_cid(e), []).append(tid_of(e[M.E_TEAM:M.E_TEAM + 4]))
     friendly = LB.friendly_cids([(None, c, None, ts) for c, ts in teams.items()])
     return {t: c for c, ts in sorted(teams.items()) if c not in friendly for t in ts}
 
@@ -227,6 +227,39 @@ def main():
     if shipped:
         print("INFO check 4: %d club(s) with a league place and an \"Other\" nibble, as the base"
               " ships them: %s" % (len(shipped), shipped[:40]))
+
+    # ---- check 6: competition ids past 255 (the caps set's cidwide step, tools/cidwide.py) ----
+    # The id's high byte is Competition +7, Regulation +0x910 (byte 0x53 of name slot 19) and Entry
+    # +0xb; the exe packs an entry's key as cid<<6 | order-1. So: every id below 1024, every order
+    # below 64, slot 19's name ends before the high byte, and the three tables agree on the ids.
+    comp = M.load(world, "Competition.bin") if os.path.exists(os.path.join(world, "Competition.bin")) \
+        else bytearray()
+    ccids = {M.comp_cid(r) for r in rows(comp, M.COMP)}
+    rcids = {M.reg_cid(g) for g in world_rows}
+    ecids = {M.ent_cid(e) for e in rows(ents, M.ENT)}
+    bad = ["competition id %d is past %d" % (c, M.CID_LIMIT - 1)
+           for c in sorted(ccids | rcids | ecids) if c >= M.CID_LIMIT]
+    bad += ["entry of club %d in competition %d: order %d, the most is %d"
+            % (tid_of(e[M.E_TEAM:M.E_TEAM + 4]), M.ent_cid(e), e[M.E_ORDER], M.ORDER_LIMIT - 1)
+            for e in rows(ents, M.ENT) if e[M.E_ORDER] >= M.ORDER_LIMIT]
+    slot19 = M.name_at(M.NAME_SLOTS - 1)
+    bad += ["reg %d: the name in slot 19 runs into the competition id's high byte (+0x%x)"
+            % (reg_id(g), M.R_CID_HI) for g in world_rows
+            if M.reg_cid(g) > 255 and g[slot19:M.R_CID_HI].find(b"\0") < 0]
+    bad += ["regulation of competition %d, which Competition.bin does not have" % c
+            for c in sorted(rcids - ccids) if c > 255]
+    bad += ["entries of competition %d, which Competition.bin does not have" % c
+            for c in sorted(ecids - ccids) if c > 255]
+    wide = sorted(c for c in ccids if c > 255)
+    if bad:
+        fails += 1
+        print("FAIL check 6 (competition ids): %d problem(s)" % len(bad))
+        for b in bad[:40]:
+            print("     " + b)
+    else:
+        print("PASS check 6: %d competition id(s), %s" % (
+            len(ccids), "%d past 255 (%d..%d: the game needs the cidwide caps set)" % (len(wide), wide[0], wide[-1])
+            if wide else "all below 256"))
 
     # ---- check 5: record counts (information) ----
     print("INFO check 5 (record counts, base vs world):")

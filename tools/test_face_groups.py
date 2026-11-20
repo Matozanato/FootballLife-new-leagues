@@ -47,6 +47,43 @@ def main():
     ok("every face of before is still there, in its place", faces2[:len(faces)] == faces)
     ok("done twice: the same", F.nordic(nat2, faces2) == (nat2, faces2))
     os.remove(path)
+    regions()
+
+
+def regions():
+    """17.11. (mato: "obvious region errors + a new region"): sea for South-East Asia, the nations
+    the 30.09. map put in the wrong part of the world moved; everything else as it was"""
+    g = {name: i for i, name in enumerate(F.GROUPS)}
+    ok("sea is group 10, after the ten of before", F.SEA == 10 and F.GROUPS[:10] == [
+        "nweu", "seu", "eeu", "afr", "mena", "lat", "bra", "eas", "sas", "nord"])
+    old = bytearray(b"\xff" * 512)
+    for n in (3, 4, 5, 6, 9, 10, 18, 21, 22, 24, 25, 29, 32, 33, 36, 38, 43) + tuple(range(161, 185)):
+        old[n] = g["sas"]
+    for n in (162, 166, 204, 135):              # Australia, New Zealand, England, USA
+        old[n] = g["nweu"]
+    for n in (1, 27, 11, 76):                   # Afghanistan, Pakistan, Iran, Morocco
+        old[n] = g["mena"]
+    for n in (216, 40, 240, 41, 42, 230, 200):  # Central Asia, Russia, Croatia
+        old[n] = g["eeu"]
+    for n in (108, 80, 120):                    # Belize, Nigeria, Haiti
+        old[n] = g["afr"]
+    old[13] = g["eas"]
+    new = F.regroup(old)
+    want = {9: "sas", 3: "sas", 25: "sas", 33: "sas", 22: "sas", 4: "sas", 27: "sas",
+            10: "sea", 36: "sea", 38: "sea", 21: "sea", 29: "sea", 5: "sea", 6: "sea", 18: "sea",
+            24: "sea", 32: "sea", 43: "sea", 161: "sea", 163: "sea", 168: "sea", 170: "sea",
+            171: "sea", 176: "sea", 184: "sea",
+            164: "afr", 165: "afr", 167: "afr", 169: "afr", 172: "afr", 118: "afr",
+            216: "eas", 40: "eas", 240: "mena", 41: "mena", 42: "mena", 108: "lat",
+            1: "mena", 162: "nweu", 166: "nweu", 13: "eas"}
+    ok("the map: South Asia (Pakistan with it) on sas, South-East Asia and Polynesia on sea, Melanesia "
+       "on afr, Kazakhstan/Kyrgyzstan on eas, Uzbekistan/Tajikistan/Turkmenistan on mena, Belize on lat",
+       all(new[n] == g[w] for n, w in want.items()))
+    ok("no nation of the old map is left on sas but South Asia's",
+       sorted(n for n in range(512) if new[n] == g["sas"]) == [3, 4, 9, 22, 25, 27, 33])
+    ok("every other nation keeps its group",
+       all(new[n] == old[n] for n in range(512) if n not in F.REGIONS_1711))
+    ok("done twice: the same", F.regroup(new) == new)
     print("test_face_groups: ok (%d)" % N)
 
 

@@ -41,6 +41,9 @@ def b299():
         third = {"name": "Polish Third Division Group 4", "rid": "c", "above": "b", "newlife": {"clubs": [1, 2, 3]}}
         second = {"name": "Polish Second Division", "rid": "b", "above": "a"}
         fourth = {"name": "Polish Fourth Division", "rid": "d", "above": "c", "newlife": {"clubs": [1, 2]}}
+        # B433: a league with a club of the game at its second place (the plan's form: by place)
+        mixed = {"name": "A League", "rid": "e", "newlife": {"clubs": [1, None, 3]},
+                 "game_clubs": {"1": {"id": 67114, "keep": True}}}
         rated = {"Registered Position": "CB"}
         rated.update({n: "60" for n, _b in E.ABILITIES})
         players = {
@@ -52,7 +55,7 @@ def b299():
             "Polish Third Division Group 4/2": {"join": ["y/0/0"]},
             # no entry at all (a league whose squads never came from the release)
         }
-        pl = {"leagues": [top, second, third, fourth], "players": players}
+        pl = {"leagues": [top, second, third, fourth, mixed], "players": players}
         said = []
         out = N.fill_newlife(pl, "nowhere", said.append)
         assert pl["players"] is players and players["Polish Third Division Group 4/0"] == {"edits": {}},             "the plan is left as it was"
@@ -68,6 +71,11 @@ def b299():
         c = out["Polish First Division/0"]["edits"]
         assert all(P.overall(dict(Proto(0).proto()[0], **e)) == 60 for k, e in c.items() if k != "0"),             "a club with a rated player: its own level, as before"
         assert any("division's level" in s for s in said) and any("club's level" in s for s in said), said
+        assert "A League/1" not in out, "B433: the game's own club in a league gets no squad of prototypes"
+        assert len(out["A League/0"]["edits"]) == N.SQUAD and len(out["A League/2"]["edits"]) == N.SQUAD,             "... the league's new clubs next to it do"
+        pl["players"] = dict(players, **{"A League/1": {"edits": {"0": dict(rated)}}})
+        out = N.fill_newlife(pl, "nowhere", [].append)
+        assert len(out["A League/1"]["edits"]) == N.SQUAD, "... a place the recipe itself gives players is filled as before"
     finally:
         N.Squads = was
 

@@ -104,8 +104,14 @@ def main(base):
         except (Exception, SystemExit):
             have_exe = False
         if have_exe:
-            assert chile.get("day") and chile["day"] != 30, chile
-            print("B198: Chile's super cup on day %d, clear of Copa Chile" % chile["day"])
+            # clear of Copa Chile's days in the exe at hand: FL26's second round is on days 30-31,
+            # FL27's Copa Chile starts on day 48 (07.11.), so there day 30 is the right one
+            img = caltab.Image()
+            cs, idc = caltab.cases(img), caltab.id_case(img)
+            c = idc.get(chile["cup"])
+            cup = cs[c][2] if c in cs else []
+            assert chile.get("day") and all(abs(chile["day"] - d) >= B.CALENDAR_SUPER_GAP for d in cup), (chile, cup)
+            print("B198: Chile's super cup on day %d, clear of Copa Chile (days %s)" % (chile["day"], cup))
         else:
             print("B198: no game exe here, the super cup day check skipped")
         print("dates:", [d for d in dates])
@@ -184,6 +190,7 @@ def run_scups(swiss, leagues):
     lua = lj.LuaRuntime()
     f = lua.execute("local function world_seasons(ctx) return {} end\n"
                     "local function world_gsupers(ctx) return {} end\n"
+                    "local function world_gzones(ctx) return {} end\n"   # B458: the group sets' zones, not this test's
                     "return function(ctx, world)\n" + blk + "\nreturn scups end")
     world = lua.table_from([lua.table_from(L) for L in leagues])
     out = f(lua.table_from({}), world)

@@ -117,7 +117,7 @@ inverter a ordem.
 **Por que algumas ligas estão cinza.** Uma liga cinza não pode ser adicionada, e a última coluna
 diz por quê:
 
-- `um campeonato tem de 10 a 24 clubes`: uma liga no jogo tem de 10 a 24 clubes, os novos e os
+- `um campeonato tem de 10 a 32 clubes`: uma liga no jogo tem de 10 a 32 clubes, os novos e os
   do jogo juntos. Esta tem menos ou mais. Você ainda pode corrigir isso no Passo 4 (adicionar ou
   deixar clubes de fora) até ela caber.
 - `campeonato do próprio jogo: Levar os campeonatos do jogo para esta temporada`: o jogo já tem
@@ -168,7 +168,7 @@ com `no jogo` no lugar de um número.
   **Você deve ver:** o clube no fim da lista, com `de: <a liga dele>` ao lado.
 
 **Você deve ver:** a linha da liga na lista agora tem um `*`, e o número em **Clubes** mudou. Uma
-liga cinza que agora tem de 10 a 24 clubes volta ao normal.
+liga cinza que agora tem de 10 a 32 clubes volta ao normal.
 
 Um clube só pode jogar numa liga. Se você adicionar ele a duas, o Mod Studio te para no Passo 5.
 
@@ -222,7 +222,7 @@ obrigatório: os valores padrão funcionam, e **Cancelar** não muda nada.
 |---|---|
 | **Nome** | O nome da liga no jogo. Duas ligas não podem ter o mesmo nome. Deixe ele abaixo de uns 38 caracteres: um nome mais longo aparece como uma linha vazia na lista de ligas do Kick Off. |
 | **País** | Digite algumas letras e escolha na lista (`korea` acha as duas Coreias). Ele dá a bandeira e onde a liga aparece no jogo. |
-| **Clubes** | De 10 a 24. Para uma liga do NewLife, deixe como está: um número menor tira os últimos clubes, um maior adiciona clubes inventados no fim. |
+| **Clubes** | De 10 a 32. Para uma liga do NewLife, deixe como está: um número menor tira os últimos clubes, um maior adiciona clubes inventados no fim. |
 | **Clubes sem campeonato** | Deixe em `(não -- um campeonato)`. As outras opções (*Other European teams* ...) são para um clube, ou alguns, sem liga em volta; eles vão para os grupos "Other ..." do jogo, e a maioria dos campos abaixo fica cinza. [Mais](mod-studio-guide.md#8-league-builder-novas-ligas-clubes-e-jogadores). |
 | **Formato** | Escolha um: **todos contra todos, turnos:** e o número (1 a 4; 2 é turno e returno); **divide-se em dois (estilo escocês)**, com `primeiro` *n* `x, depois grupos` *6/6* *n* `x` (os grupos têm que somar o número de clubes); ou **Apertura e Clausura, depois playoffs com:** *8 clubes*, *4 clubes* ou *sem playoffs* (dois torneios curtos por temporada, no máximo 18 clubes). A divisão em dois e Apertura e Clausura são **experimentais**: funcionam, mas ainda têm mais bugs do que todos contra todos, o formato totalmente testado. A janela diz isso embaixo dos formatos. Para um primeiro mundo, escolha todos contra todos. |
 | **Divisão** | `(primeira divisão)` = a melhor liga do país. Para uma segunda divisão, escolha a liga um nível acima: as suas ligas novas estão no topo da lista, depois as ligas do jogo com um número entre parênteses. `= divisão 2` ao lado mostra o nível. Uma liga que já tem uma liga embaixo dela fica cinza (`-- abaixo dele: ...`): uma liga pode ter uma liga abaixo dela. Veja o [Passo 7](#passo-7-exemplo-um-país-com-duas-divisões). |
@@ -429,7 +429,7 @@ Tudo nesta página está em [Jogadores no guia completo](mod-studio-guide.md#jog
 | Limite | Onde você vê |
 |---|---|
 | Clubes novos ao todo (cerca de 1.500): o número na linha `Clubes novos no seu mundo: X dos Y que o jogo aceita.` | Página NewLife Database: **Adicionar ao seu mundo** fica cinza. Construção: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
-| De 10 a 24 clubes numa liga | NewLife Database: liga cinza, `um campeonato tem de 10 a 24 clubes`. Aba Clubes: `Um campeonato tem de 10 a 24 clubes.` |
+| De 10 a 32 clubes numa liga | NewLife Database: liga cinza, `um campeonato tem de 10 a 32 clubes`. Aba Clubes: `Um campeonato tem de 10 a 32 clubes.` |
 | Ligas novas por mundo: sem número fixo. Cada liga e cada copa ocupa uma das 255 competições do jogo; **2. Meu mundo** mostra quantas estão em uso (**Competições**). O nosso mundo de teste joga 86 ligas novas. | Construção: `error: <n> leagues, but the game has room for <m> ...` |
 | Uma liga abaixo de uma liga | Lista **Divisão**: cinza. Construção: `... are all under ...; the game follows one link down from a league ...` |
 | Divisões até a 7.ª | Construção: `error: <league>: division 8 -- the rank field stops at 7`. |
@@ -458,9 +458,9 @@ O Mod Studio abre o seu mundo de novo quando inicia, então o que você fez nunc
 1. **2. Meu mundo**, aba **Construção** (a primeira aba).
 
 **Você deve ver:** um aviso de que a construção é para modders, depois o botão grande **Construir
-e instalar** e duas partes que abrem embaixo dele: **Opções do mundo: copas europeias, copas
-nacionais, uniformes e rostos dos clubes novos** (dois cartões, **Copas europeias** e **Clubes
-novos**, com opções) e **Passo a passo, e Exportar o mundo** (a linha **0. Instalar os módulos**,
+e instalar** e duas partes que abrem embaixo dele: **Opções do mundo: copas europeias, uniformes
+e rostos dos clubes novos** (dois cartões, **Copas europeias** e **Clubes novos**, com opções) e
+**Passo a passo, e Exportar o mundo** (a linha **0. Instalar os módulos**,
 **1. Conferir o plano**, **2. Construir o mundo**, **3. Ativar**, **4. Depois de iniciar:
 conferir** e **Exportar o mundo...**). Depois uma linha como
 `Mundo _FL26MyWorld: ainda não construído · módulos do Mod Studio: instalados`, e uma caixa para o
@@ -521,8 +521,8 @@ mundo**):
 | `livecpk: _FL26MyWorld (... files), sider.ini loads it` | O mundo está no jogo. |
 | `error: ...` | A construção parou e nada mudou no jogo. Corrija o que ele diz (tabela no fim) e construa de novo. |
 
-As opções em **Opções do mundo** (**Incluir a Conference League**, **Sorteio da copa nacional**,
-**Uniformes nas cores dos clubes** ...) estão explicadas em
+As opções em **Opções do mundo** (**Uniformes nas cores dos clubes** ...) e na aba **Copas**
+(**Incluir a Conference League**, **Sorteio da copa nacional** ...) estão explicadas em
 [8.2](mod-studio-guide.md#82-construir-ativar-jogar). Os valores padrão estão bons.
 
 ## Passo 13. Jogue: uma Master League NOVA, depois a conferência
@@ -645,7 +645,7 @@ página, ou no log da construção depois de `error:`. `<...>` quer dizer um nom
 | `no NewLife Database here: put the NewLife-....zip parts you downloaded in one folder (no need to unpack them) and open that folder` | Você escolheu a pasta errada, ou descompactou as partes. Abra a pasta que tem os próprios arquivos `NewLife-...zip`. |
 | `the parts in this folder are of different versions (...): keep one version's parts only` | Duas versões do NewLife estão misturadas. Deixe na pasta só as partes de uma versão. |
 | `<file> is not a NewLife part (...) -- download it again` | O download quebrou. Baixe essa parte de novo. |
-| Uma liga cinza, `um campeonato tem de 10 a 24 clubes` | Adicione ou deixe clubes de fora (Passo 4) até ela ter de 10 a 24. |
+| Uma liga cinza, `um campeonato tem de 10 a 32 clubes` | Adicione ou deixe clubes de fora (Passo 4) até ela ter de 10 a 32. |
 | Uma liga cinza, `campeonato do próprio jogo: Levar os campeonatos do jogo para esta temporada` | O jogo já tem ela. Use **Levar os campeonatos do jogo para esta temporada...**. |
 | **Adicionar ao seu mundo** fica cinza | Nada que pode ser adicionado está selecionado, ou a seleção passaria do limite de clubes novos (a linha embaixo). |
 | `<clube> jogaria em dois campeonatos (<liga> e <liga>).` | Desmarque o clube numa delas. |
@@ -660,7 +660,7 @@ página, ou no log da construção depois de `error:`. `<...>` quer dizer um nom
 | `Esta divisão joga de fevereiro a dezembro com o campeonato de cima, e um campeonato que joga de fevereiro a dezembro ainda não tem divisão em grupos nem Apertura/Clausura.` | Dê a esta divisão **todos contra todos**. |
 | `Clubes sem campeonato são todos clubes novos: tire antes os clubes do jogo (Editar clube).` | A liga tem clubes do jogo. Na aba **Clubes** selecione cada um e use **Mais ▾ → Clube novo aqui**, depois configure **Clubes sem campeonato** de novo. |
 | `<liga> fica abaixo deste campeonato; clubes sem campeonato não têm nada abaixo.` (ou `um campeonato de amistosos não tem nenhum.`) | Outra liga tem esta como **Divisão**. Mude aquela liga primeiro. |
-| `Um campeonato tem de 10 a 24 clubes.` (aba Clubes) | Inserir clube / Remover clube deixaria a liga fora de 10 a 24. |
+| `Um campeonato tem de 10 a 32 clubes.` (aba Clubes) | Inserir clube / Remover clube deixaria a liga fora de 10 a 32. |
 | `Abra antes a NewLife Database na página NewLife.` | **Clube NewLife...** precisa da pasta do NewLife: abra ela em **NewLife Database** uma vez. |
 | `Escolha o clube que fica com o lugar dele.` / `Dê um nome ao clube novo.` / `Um clube não pode ficar com o próprio lugar.` | Em **Clube do jogo**, escolha um clube substituto, ou digite um nome para o novo. |
 | `error: não há tabelas do jogo -- Configurações > Extrair as tabelas do jogo` | **5. Configurações → Extrair as tabelas do jogo**. |

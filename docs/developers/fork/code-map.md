@@ -114,7 +114,8 @@ The bar itself is `NAV` in `app.py` (0.2.4: Home, My world, Game content, Tools,
    - `M.write_tables`; squads (`mkplayers`); players (`lbplayers.fill_newlife`,
      `fill_tiers`, `apply`), faces (`lbfaces`), portraits;
    - the new clubs' transfer budget base in Team.bin and their `fans` lines
-     (`club_money`, by squad strength and division);
+     (`club_money`, by squad strength and division), and a `fansx` line for a club whose recipe
+     entry has a `share` (FL 2027: finer followers, the season's income by it);
    - every club short of goalkeepers (fewer than 2) or players (fewer than 18) signs free
      agents (`lbplayers.sign_keepers`), and every team whose first eleven does not fit its
      formation -- a goalkeeper outfield, a starter with no rating for his place -- gets a best

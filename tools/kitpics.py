@@ -114,9 +114,9 @@ def dds_bytes(path):
     return b.getvalue()
 
 
-def dds_to_ftex(dds):
-    """an .ftex of a 2048x2048 DXT5 DDS (Xxspedd's dds_to_ftex): a 0x40 header, one mip
-    entry, a table of 256 chunk entries and the zlib chunks, offsets counted from the entry"""
+def dds_to_ftex(dds, w=SIZE, h=SIZE):
+    """an .ftex of a w x h (2048x2048) DXT5 DDS (Xxspedd's dds_to_ftex): a 0x40 header, one mip
+    entry, a table of chunk entries (256 of a kit) and the zlib chunks, offsets counted from the entry"""
     if dds[:4] != b"DDS ":
         raise ValueError("not a DDS file")
     data = dds[128:]
@@ -127,8 +127,8 @@ def dds_to_ftex(dds):
     head[0:4] = b"FTEX"
     head[4:8] = bytes.fromhex("85EB0140")      # version 2.03
     head[8:10] = (4).to_bytes(2, "little")     # DXT5
-    head[10:12] = SIZE.to_bytes(2, "little")
-    head[12:14] = SIZE.to_bytes(2, "little")
+    head[10:12] = w.to_bytes(2, "little")
+    head[12:14] = h.to_bytes(2, "little")
     head[14:16] = (1).to_bytes(2, "little")
     head[16:20] = bytes.fromhex("01021100")
     head[28:32] = (3).to_bytes(4, "little")
@@ -251,7 +251,26 @@ def numbers_source(kit, var):
     return None
 
 
-def config_text(src_dir, name, cols, numbers):
+CONFIG_LINE = r"^(\s*)([A-Za-z0-9_]+)(\s*=\s*)([^;]*?)(\s*;.*)?$"     # Key=value ; comment of a config.txt
+
+
+def config_colours(kit):
+    """the shirt of the Kit Server kit folder `kit` in words ("plain #body #second #body"), from
+    its p1\\config.txt: ShirtColor1/2, else UniColor_Color1/2; None without a config or a colour"""
+    d = numbers_source(kit, "p1")
+    try:
+        txt = open(os.path.join(d, "config.txt"), encoding="utf-8-sig", errors="replace").read() if d else ""
+    except OSError:
+        txt = ""
+    val = {m.group(2): m.group(4) for m in (re.match(CONFIG_LINE, l) for l in txt.splitlines()) if m}
+    c1 = val.get("ShirtColor1") or val.get("UniColor_Color1")
+    c2 = val.get("ShirtColor2") or val.get("UniColor_Color2") or c1
+    if not all(c and re.fullmatch(r"#[0-9A-Fa-f]{6}", c) for c in (c1, c2)):
+        return None
+    return "plain %s %s %s" % (c1, c2, c1)
+
+
+def config_text(src_dir, name, cols, numbers, more=None):
     """config.txt for kit `name`: the source kit's config, or the default one, with the texture
     names ours and the colours the picture's"""
     txt = DEFAULT_CONFIG
@@ -266,17 +285,21 @@ def config_text(src_dir, name, cols, numbers):
            "LegNumbersFile": name + "_leg" if numbers else "",
            "NameFontFile": name + "_name" if numbers else "",
            "ShirtColor1": c1, "ShirtColor2": c2, "UndershirtColor": c1,
-           "ShortsColor": c1, "SocksColor": c1, "UniColor_Color1": c1, "UniColor_Color2": c2}
+           "ShortsColor": c1, "SocksColor": c1, "UniColor_Color1": c1, "UniColor_Color2": c2,
+           # a numbers kit with TightKit=1 made every player of ours wear the shirt tucked in
+           # (mato 07.11.: the Kick Off walkout); a picture is a plain shirt, worn out
+           "TightKit": "0"}
+    val.update(more or {})                             # kitnumbers.CONFIG: where our own numbers stand
     out, seen = [], set()
     for line in txt.splitlines():
-        m = re.match(r"^(\s*)([A-Za-z0-9_]+)(\s*=\s*)([^;]*?)(\s*;.*)?$", line)
+        m = re.match(CONFIG_LINE, line)
         if m and m.group(2) in val:
             seen.add(m.group(2))
             line = "%s%s%s%s%s" % (m.group(1), m.group(2), m.group(3), val[m.group(2)], m.group(5) or "")
         if m and m.group(2) in ("KitFile_srm", "NameFontFile_ex"):
             continue                                   # kserv adds these back from ours
         out.append(line)
-    for k in ("KitFile", "BackNumbersFile", "LegNumbersFile", "NameFontFile"):
+    for k in ["KitFile", "BackNumbersFile", "LegNumbersFile", "NameFontFile", "TightKit"] + sorted(more or {}):
         if k not in seen:
             out.append("%s=%s" % (k, val[k]))
     return "\n".join(out) + "\n"
@@ -305,8 +328,14 @@ def make_kit(pics, team_id, dst, numbers_kit=None):
                 if f:
                     shutil.copy2(os.path.join(src, f), os.path.join(vdir, name + suf + ".ftex"))
                     have.append(suf)
+        more = None
+        if not src:
+            # no kit of the library lends numbers (a fresh game): our own, in the ink that stands
+            # out from this shirt (kitnumbers; Reddit 13.11.: drawn kits had no number and no name)
+            import kitnumbers
+            have, more = kitnumbers.write(vdir, name, cols[0]), kitnumbers.CONFIG
         open(os.path.join(vdir, "config.txt"), "w", encoding="utf-8", newline="\r\n").write(
-            config_text(src, name, cols, len(have) == len(NUMBER_FILES)))
+            config_text(src, name, cols, len(have) == len(NUMBER_FILES), more))
         done.append(var)
     shirts = [v for v in done if v.startswith("p")]
     gks = [v for v in done if v.startswith("g")]

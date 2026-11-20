@@ -12,9 +12,9 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 | match records per season | 13,000 | **65,000** (46,000 in 0.2.0/0.2.1) | our 39-league season of 20-club leagues used 21,010; raised on 2026-09-24 so that an old season still being freed and the new one being built both fit at the rollover |
 | fixtures list | 2,000 | **8,000** | one record is one round of one competition, stride 0x208. Records are handed back as rounds finish, so a four-season world peaks under 2,700 |
 | calendar | 365 days, 280 match ids per day | **792 per day** (0.2.0) | overflow is dropped silently. The wider day moves the whole calendar unit to the top of the edit block, so a career saved before 0.2.0 does not load. Beware the obvious measurement: walking the calendar counts what the scheduler *accepted*, so a full day reads as exactly its cap and hides the matches it turned away. The match records carry their own dates and show the real demand — measured once at 280 on the calendar and 351 in the records for the same day |
-| menu regions | 24 in use of 29 slots | **128** with `fl26reg128.lua` | 0.2.2; replaces `fl26reg64.lua` (64). Without either module new leagues go into an existing slot |
-| Select Team slots | 124 | **250** with `fl26slots250.lua` | 0.2.2, with `fl26slot7.lua` making a club's league slot a whole byte. Leagues past the game's free regulation ids take ids 255 downward with a slot of their own (124 …), so they are selectable |
-| league size | 10–30 clubs | — | 10 is the shipped game's own smallest league, not a floor of ours. The round list holds 58 entries, which is a double round robin of 30 exactly; above that the extra rounds are dropped without an error |
+| menu regions | 24 in use of 29 slots | **128** with `fl26reg128.lua`; **256** in FL 2027 with the caps step `regions` | 0.2.2; replaces `fl26reg64.lua` (64). Without either module new leagues go into an existing slot. The `regions` step (`tools/regions.py`, FL 2027 only) reads the Competition.bin +3 byte as `ror8(b, 3)`, so bit 2 becomes the region's bit 7: regions 0..127 keep their bytes, 128..255 become reachable (227 new countries, 29..255). The league builder hands them out only when the pack's `fl26caps.fl27.lua` carries the step; competition ids (130..255, 126) bind first |
+| Select Team slots | 124 | **250** with `fl26slots250.lua` | 0.2.2, with `fl26slot7.lua` making a club's league slot a whole byte. Leagues past the game's free regulation ids take ids 255 downward with a slot of their own (124 …), so they are selectable. **362** since B346 (the band 320..499 on 182..361); FL 2027 **465** (`mkslots.py 465`, the top band 920..1022 on 362..464, every league of a 380-league world selectable but 183..185). The real ceiling is the fixed club-list region, not the engine: each slot added takes room from the others, 143 clubs per ordinary slot at 465, 64 at 1000 (`MIN_PER`) |
+| league size | 10–28 clubs meeting up to 4 times (54 rounds), 29–32 meeting once | — | 10 is the shipped game's own smallest league, not a floor of ours. The round list holds 58 entries (addRoundIndex `0x1414c9db0`, `cmp 0x3a`; the club list follows at regulation `+0x170`), a double round robin of 30 on paper, but 30 clubs lost their 55th round (25.10.), so the builder stops at 54 rounds, the most a played league had. 32 is a second wall: one round of a fixture record holds 16 matches (stride `0x208`, count at `+0x204`; the scheduler at `0x1413509d0` clamps to `0x10`, the emitter at `0x1413f4430` drops the 17th silently), the reason the Swiss league phase splits each round of 36 clubs into two matchdays. 40 clubs need both walls moved in the exe: a bigger fixture record (every function that indexes it, and the save) and a round list moved out of the regulation record. Ratings stay 40 and up: a player stores each ability as value − 40 in 6 bits ([player-record.md](player-record.md)) |
 | edit block (all tables together) | 0x1877068 bytes | 0x4a2b568 bytes | 0.2.2 (3,504 patches); 0x3d9cbe8 in 0.2.0 and 0.2.1 (3,519 patches), 0x3cd4ae8 before 0.2.0, when the wider calendar added 0xc8100 |
 | second copy of the tables (used for save/load) | 0x15b6d94 bytes | 0x3f71da4 bytes | grown by the `mlcopy` part of the set |
 | competitions a season can hold at once | 100 | **255** with `fl26hdr255.lua` | 0.2.2; replaces `fl26hdr127.lua` (127) and `fl26hdr192.lua` (192). Entries are never released, so the count only rises — see known-issues.md |
@@ -117,7 +117,8 @@ Work on this branch only; nothing here is in a Mod Studio release yet.
 club, coach, player and region numbers in the table at the top, and so did the 65,000 match
 records (the match table in the shipped set is 596 x 65,000 bytes). The 7-bit league slot is no longer a wall either: `fl26slot7.lua`
 makes a club's league slot a whole byte, and leagues past the game's free regulation ids sit
-on slots from 124 up.
+on slots from 124 up. Since B391 (10.11.2026) the slot is 9 bits (the high bit in +0x41b), so
+a league on 256..464 no longer shows its clubs under the league on slot - 256 (Team Info).
 
 - **Matches in the season table, 46,000 -> 65,000** (`patches/layout.json`, `cap_new` of
   `rec596` and `matchflags`). The record index is a u16 with 0xffff as "free", so 65,534 is
@@ -198,8 +199,15 @@ the caps set nor the Swiss module had anything to do with it (both were A/B-test
 Mod Studio's Build (`tools/lbplayers.py`) therefore gives a new player the first free id above
 the game's own (179672) instead of max + 1 -- a world that is rebuilt over and over would
 otherwise drift upwards with every Build, as this one did (220246 -> 245820 -> 262868 -> 288301)
--- and refuses to build past 262143. The game's own 27,927 players leave room for some 234,000
-new ones below the line. The team id has the same 18-bit handle; our clubs stay far below it.
+-- and refuses to build past 262143. Until the limits branch that was the whole of it: only the
+ids above the game's top were ever handed out, 82,471 in FL26 (top 179672) and 75,609 in FL27
+(top 186534) -- not the ~234,000 the game's ~28,000 players would leave, since the gaps between
+the game's ids below its top were never used. Since the limits branch, once the ids above the top
+are gone, mkplayers and lbplayers.FreeIds go on with those gaps, lowest first (FL27: 160,139
+more, so 235,748 in all), and Player.bin is then written in id order as a whole (the game looks a
+player up by a binary search by id, 0x1414b80f0). A world that fits above the top gets exactly
+the ids it got before, and a rebuild keeps every id the last Build gave, in a gap or above
+(tools/test_player_id_gaps.py). The team id has the same 18-bit handle; our clubs stay far below it.
 
 ## Rulebook ids above 175
 

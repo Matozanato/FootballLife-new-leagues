@@ -1,0 +1,612 @@
+[
+{
+"va": "0x1414c9038",
+"func": "0x1414c8fd0",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x1414c903f",
+"func": "0x1414c8fd0",
+"text": "movzx eax, word ptr [rdi + rbx*2]"
+},
+{
+"va": "0x141fdf668",
+"func": "0x141fdf530",
+"text": "movzx edi, word ptr [r14]"
+},
+{
+"va": "0x141fdf66e",
+"func": "0x141fdf530",
+"text": "movzx edi, word ptr [r14 + rsi*2]"
+},
+{
+"va": "0x141fc6dee",
+"func": "0x141fc69a0",
+"text": "movzx r15d, word ptr [r13]"
+},
+{
+"va": "0x141fc6df5",
+"func": "0x141fc69a0",
+"text": "movzx r15d, word ptr [r13 + r12*2]"
+},
+{
+"va": "0x141fc71b9",
+"func": "0x141fc69a0",
+"text": "movzx r15d, word ptr [rax]"
+},
+{
+"va": "0x141fc71bf",
+"func": "0x141fc69a0",
+"text": "movzx r15d, word ptr [rax + r13*2]"
+},
+{
+"va": "0x141586e1d",
+"func": "0x141586bc0",
+"text": "movzx edx, word ptr [r15]"
+},
+{
+"va": "0x141586e23",
+"func": "0x141586bc0",
+"text": "movzx edx, word ptr [r15 + rbp*2]"
+},
+{
+"va": "0x141585fcd",
+"func": "0x141585dd0",
+"text": "movzx edx, word ptr [r12]"
+},
+{
+"va": "0x141585fd4",
+"func": "0x141585dd0",
+"text": "movzx edx, word ptr [r15]"
+},
+{
+"va": "0x141585cfe",
+"func": "0x141585c70",
+"text": "movzx esi, word ptr [r12]"
+},
+{
+"va": "0x141585d05",
+"func": "0x141585c70",
+"text": "movzx esi, word ptr [r14]"
+},
+{
+"va": "0x14157f4a0",
+"func": "0x14157f320",
+"text": "movzx ebp, word ptr [r12]"
+},
+{
+"va": "0x14157f4a7",
+"func": "0x14157f320",
+"text": "movzx ebp, word ptr [r15]"
+},
+{
+"va": "0x14157f228",
+"func": "0x14157f1a0",
+"text": "movzx edx, word ptr [r14]"
+},
+{
+"va": "0x14157f230",
+"func": "0x14157f1a0",
+"text": "movzx edx, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x14157eebd",
+"func": "0x14157ede0",
+"text": "movzx edx, word ptr [r12]"
+},
+{
+"va": "0x14157eec4",
+"func": "0x14157ede0",
+"text": "movzx edx, word ptr [r15]"
+},
+{
+"va": "0x14157eac9",
+"func": "0x14157ea10",
+"text": "movzx edx, word ptr [r13]"
+},
+{
+"va": "0x14157ead0",
+"func": "0x14157ea10",
+"text": "movzx edx, word ptr [r12]"
+},
+{
+"va": "0x14157bbcc",
+"func": "0x14157b590",
+"text": "movzx eax, word ptr [r15]"
+},
+{
+"va": "0x14157bbd4",
+"func": "0x14157b590",
+"text": "movzx eax, word ptr [r15 + rax*2]"
+},
+{
+"va": "0x141578d58",
+"func": "0x1415789c0",
+"text": "movzx eax, word ptr [rax]"
+},
+{
+"va": "0x141578d63",
+"func": "0x1415789c0",
+"text": "movzx eax, word ptr [rcx + rax*2]"
+},
+{
+"va": "0x14154ff69",
+"func": "0x14154fef0",
+"text": "movzx ebx, word ptr [r15]"
+},
+{
+"va": "0x14154ff6f",
+"func": "0x14154fef0",
+"text": "movzx ebx, word ptr [r14]"
+},
+{
+"va": "0x14154823c",
+"func": "0x1415481b0",
+"text": "movzx eax, word ptr [rsi]"
+},
+{
+"va": "0x141548243",
+"func": "0x1415481b0",
+"text": "movzx eax, word ptr [rsi + rax*2]"
+},
+{
+"va": "0x141542a28",
+"func": "0x1415429b0",
+"text": "movzx edx, word ptr [r14]"
+},
+{
+"va": "0x141542a2e",
+"func": "0x1415429b0",
+"text": "movzx edx, word ptr [r14 + rsi*2]"
+},
+{
+"va": "0x1415252a8",
+"func": "0x1415251e0",
+"text": "movzx eax, word ptr [rdx]"
+},
+{
+"va": "0x1415252af",
+"func": "0x1415251e0",
+"text": "movzx eax, word ptr [rdx + rax*2]"
+},
+{
+"va": "0x14151e9e8",
+"func": "0x14151e980",
+"text": "movzx r14d, word ptr [r15]"
+},
+{
+"va": "0x14151e9f0",
+"func": "0x14151e980",
+"text": "movzx r14d, word ptr [r15 + rax*2]"
+},
+{
+"va": "0x14151cd1f",
+"func": "0x14151cc70",
+"text": "movzx eax, word ptr [r13]"
+},
+{
+"va": "0x14151cd29",
+"func": "0x14151cc70",
+"text": "movzx eax, word ptr [r13 + rax*2]"
+},
+{
+"va": "0x14151c4f9",
+"func": "0x14151c470",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x14151c500",
+"func": "0x14151c470",
+"text": "movzx eax, word ptr [rdi + rbx*2]"
+},
+{
+"va": "0x14151ae68",
+"func": "0x14151adc0",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x14151ae70",
+"func": "0x14151adc0",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x1415174dd",
+"func": "0x141516c90",
+"text": "movzx eax, word ptr [rsi]"
+},
+{
+"va": "0x1415174e5",
+"func": "0x141516c90",
+"text": "movzx eax, word ptr [rsi + rax*2]"
+},
+{
+"va": "0x141510d78",
+"func": "0x141510d10",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x141510d80",
+"func": "0x141510d10",
+"text": "movzx eax, word ptr [r14 + rdi*2]"
+},
+{
+"va": "0x141510c48",
+"func": "0x141510bd0",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x141510c50",
+"func": "0x141510bd0",
+"text": "movzx eax, word ptr [r14 + rdi*2]"
+},
+{
+"va": "0x1415109d8",
+"func": "0x141510960",
+"text": "movzx edi, word ptr [r14]"
+},
+{
+"va": "0x1415109de",
+"func": "0x141510960",
+"text": "movzx edi, word ptr [r14 + rsi*2]"
+},
+{
+"va": "0x141510088",
+"func": "0x141510000",
+"text": "movzx edx, word ptr [rsi]"
+},
+{
+"va": "0x14151008f",
+"func": "0x141510000",
+"text": "movzx edx, word ptr [rsi + rax*2]"
+},
+{
+"va": "0x14150ff28",
+"func": "0x14150fe90",
+"text": "movzx edx, word ptr [rsi]"
+},
+{
+"va": "0x14150ff2f",
+"func": "0x14150fe90",
+"text": "movzx edx, word ptr [rsi + rax*2]"
+},
+{
+"va": "0x14150c2b8",
+"func": "0x14150c230",
+"text": "movzx edx, word ptr [rsi]"
+},
+{
+"va": "0x14150c2bf",
+"func": "0x14150c230",
+"text": "movzx edx, word ptr [rsi + rax*2]"
+},
+{
+"va": "0x140af206e",
+"func": "0x140af2050",
+"text": "rep stosw word ptr [rdi], ax"
+},
+{
+"va": "0x141350330",
+"func": "0x141350290",
+"text": "cmp word ptr [rcx], dx"
+},
+{
+"va": "0x141350347",
+"func": "0x141350290",
+"text": "mov word ptr [rbx + rax*2], r12w"
+},
+{
+"va": "0x141350379",
+"func": "0x141350290",
+"text": "movzx eax, word ptr [rbx]"
+},
+{
+"va": "0x141350380",
+"func": "0x141350290",
+"text": "movzx eax, word ptr [rbx + rax*2]"
+},
+{
+"va": "0x1413503bc",
+"func": "0x141350290",
+"text": "mov word ptr [rbx + rax*2], r12w"
+},
+{
+"va": "0x1413503d0",
+"func": "0x141350290",
+"text": "cmp word ptr [rcx], dx"
+},
+{
+"va": "0x1413503e4",
+"func": "0x141350290",
+"text": "mov word ptr [rbx + rax*2], si"
+},
+{
+"va": "0x14134bd30",
+"func": "0x14134bc70",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x14134bd38",
+"func": "0x14134bc70",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x141333b79",
+"func": "0x141333ad0",
+"text": "movzx eax, word ptr [r12]"
+},
+{
+"va": "0x141333b83",
+"func": "0x141333ad0",
+"text": "movzx eax, word ptr [r12 + rax*2]"
+},
+{
+"va": "0x141330379",
+"func": "0x141330140",
+"text": "movzx edx, word ptr [rsi]"
+},
+{
+"va": "0x141330380",
+"func": "0x141330140",
+"text": "movzx edx, word ptr [rsi + rax*2]"
+},
+{
+"va": "0x1413212ba",
+"func": "0x141321110",
+"text": "movzx eax, word ptr [r12]"
+},
+{
+"va": "0x1413212c4",
+"func": "0x141321110",
+"text": "movzx eax, word ptr [r12 + rax*2]"
+},
+{
+"va": "0x1413160ac",
+"func": "0x141315fd0",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x1413160b3",
+"func": "0x141315fd0",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x141314439",
+"func": "0x141314350",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x141314442",
+"func": "0x141314350",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x1413145d9",
+"func": "0x141314350",
+"text": "mov word ptr [r14 + rax*2], di"
+},
+{
+"va": "0x14131460a",
+"func": "0x141314350",
+"text": "rep stosw word ptr [rdi], ax"
+},
+{
+"va": "0x141314640",
+"func": "0x141314350",
+"text": "cmp word ptr [rcx], r12w"
+},
+{
+"va": "0x141314655",
+"func": "0x141314350",
+"text": "mov word ptr [r14 + rax*2], di"
+},
+{
+"va": "0x14130e39c",
+"func": "0x14130dcc0",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x14130e3a4",
+"func": "0x14130dcc0",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x14130e5f9",
+"func": "0x14130dcc0",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x14130e601",
+"func": "0x14130dcc0",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x14130e7dc",
+"func": "0x14130dcc0",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x14130e7e4",
+"func": "0x14130dcc0",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x1413057ff",
+"func": "0x141304810",
+"text": "movzx edx, word ptr [rcx]"
+},
+{
+"va": "0x141305806",
+"func": "0x141304810",
+"text": "movzx edx, word ptr [rcx + rax*2]"
+},
+{
+"va": "0x1412f9121",
+"func": "0x1412f8e60",
+"text": "movzx eax, word ptr [r12]"
+},
+{
+"va": "0x1412f912b",
+"func": "0x1412f8e60",
+"text": "movzx eax, word ptr [r12 + rax*2]"
+},
+{
+"va": "0x1412e0688",
+"func": "0x1412e0540",
+"text": "movzx eax, word ptr [r15]"
+},
+{
+"va": "0x1412e0690",
+"func": "0x1412e0540",
+"text": "movzx eax, word ptr [r15 + rax*2]"
+},
+{
+"va": "0x1412adc1e",
+"func": "0x1412ad730",
+"text": "movzx eax, word ptr [r15]"
+},
+{
+"va": "0x1412adc26",
+"func": "0x1412ad730",
+"text": "movzx eax, word ptr [r15 + rax*2]"
+},
+{
+"va": "0x1412a06fe",
+"func": "0x14129f5c0",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x1412a0705",
+"func": "0x14129f5c0",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x14129d5db",
+"func": "0x14129d450",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x14129d5e2",
+"func": "0x14129d450",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x14128050b",
+"func": "0x14127f970",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x141280513",
+"func": "0x14127f970",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x141275898",
+"func": "0x141275690",
+"text": "movzx edx, word ptr [r14]"
+},
+{
+"va": "0x1412758a0",
+"func": "0x141275690",
+"text": "movzx edx, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x1412735f8",
+"func": "0x141273400",
+"text": "movzx edx, word ptr [r14]"
+},
+{
+"va": "0x141273600",
+"func": "0x141273400",
+"text": "movzx edx, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x1414c91b8",
+"func": "0x1414c9130",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x1414c91c0",
+"func": "0x1414c9130",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x140fc7f8d",
+"func": "0x140fc7ee0",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x140fc7f94",
+"func": "0x140fc7ee0",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x140fc2f39",
+"func": "0x140fc2db0",
+"text": "movzx eax, word ptr [r13]"
+},
+{
+"va": "0x140fc2f43",
+"func": "0x140fc2db0",
+"text": "movzx eax, word ptr [r13 + rax*2]"
+},
+{
+"va": "0x140fc2a58",
+"func": "0x140fc2980",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x140fc2a5f",
+"func": "0x140fc2980",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x140fc2548",
+"func": "0x140fc2430",
+"text": "movzx eax, word ptr [r15]"
+},
+{
+"va": "0x140fc2550",
+"func": "0x140fc2430",
+"text": "movzx eax, word ptr [r15 + rax*2]"
+},
+{
+"va": "0x140fc22ed",
+"func": "0x140fc21d0",
+"text": "movzx eax, word ptr [r14]"
+},
+{
+"va": "0x140fc22f5",
+"func": "0x140fc21d0",
+"text": "movzx eax, word ptr [r14 + rax*2]"
+},
+{
+"va": "0x140caea38",
+"func": "0x140cae960",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x140caea3f",
+"func": "0x140cae960",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x140caea5a",
+"func": "0x140cae960",
+"text": "movzx edx, word ptr [rdi]"
+},
+{
+"va": "0x140caea61",
+"func": "0x140cae960",
+"text": "movzx edx, word ptr [rdi + rax*2]"
+},
+{
+"va": "0x140caea79",
+"func": "0x140cae960",
+"text": "movzx eax, word ptr [rdi]"
+},
+{
+"va": "0x140caea80",
+"func": "0x140cae960",
+"text": "movzx eax, word ptr [rdi + rax*2]"
+}
+]

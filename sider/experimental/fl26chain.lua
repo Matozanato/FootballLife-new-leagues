@@ -23,7 +23,9 @@ The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 M
 League Builder), CHAINS and PROTECT below are ignored and both are built from the file:
 every league in it is protected, and a chain pair is made for every league on division 3, 5,
 6 or 7 that names the league above it -- exactly the pairs the game's mover skips -- with the
-league's promote count (3 if it gives none) both ways. Without the file the built-in lists
+league's promote count (3 if it gives none) both ways. Below a half of a season of two
+tournaments of the game (a seasonsum line: Colombia's 168 of 119) the divisions are counted
+from our league under it, one lower (B494). Without the file the built-in lists
 below are used, as before.
 
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Sider's sandbox has no pcall/require.
@@ -56,19 +58,79 @@ local PROTECT = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111
 -- carry=0 splits (Apertura/Clausura): {regular phase, second phase}, for the standings the
 -- total never gets (GitHub #106)
 local APCLAU = {}
+-- every split of ours: {total, regular phase}, the phase brought to the total's clubs after the
+-- season end's moves (fl26_chain_splits)
+local SPLITREG = {}
+-- the groups of every split not Apertura/Clausura: {total, g1, g2, g3}, its table when the game
+-- gives the total none (groups of two sizes, or three groups; fl26_chain_split_groups)
+local SPLITGROUPS = {}
+-- GitHub #98: groups of one division. gset: {ups = {{id, n}...}, lows = {{id, n, pref id}...}};
+-- ghome: {team id, league} pairs; poff: {cup, up, low, hold id, hold place, {{id, place}...}}
+local GSETS, GHOMES, POFFS = {}, {}, {}
+-- 16.11.2026: gborder: {group, team id, neighbour group} in the recipe's order (zone_border): a
+-- club that may make room in a full group for a relegated club of the group's region
+local GBORDERS = {}
+-- B418: {league, slot} of every league line, for fl26_chain_gslots (a league of a set keeps the
+-- slot the world file gives it, not the one a club happens to carry)
+local GSLOTS = {}
+local function pairs_of(v)
+  local out = {}
+  for e in (v or ""):gmatch("[^,]+") do
+    local t = {}
+    for x in e:gmatch("%d+") do t[#t + 1] = tonumber(x) end
+    out[#out + 1] = t
+  end
+  return out
+end
+local function group_line(line)
+  if line:match("^%s*gset%s") then
+    local ups, lows = pairs_of(line:match("%sup=(%S+)")), pairs_of(line:match("%slow=(%S+)"))
+    if #ups > 0 and #lows > 0 then GSETS[#GSETS + 1] = { ups = ups, lows = lows } end
+  elseif line:match("^%s*ghome%s") then
+    local lid, tids = line:match("^%s*ghome%s+(%d+)%s+(%S+)")
+    if lid then for t in tids:gmatch("%d+") do GHOMES[#GHOMES + 1] = { tonumber(t), tonumber(lid) } end end
+  elseif line:match("^%s*gborder%s") then
+    local lid, rest = line:match("^%s*gborder%s+(%d+)%s+(%S+)")
+    if lid then
+      for t, to in rest:gmatch("(%d+):(%d+)") do GBORDERS[#GBORDERS + 1] = { tonumber(lid), tonumber(t), tonumber(to) } end
+    end
+  elseif line:match("^%s*poff%s") then
+    local cup = tonumber(line:match("^%s*poff%s+(%d+)"))
+    local up, low = tonumber(line:match("%sup=(%d+)")), tonumber(line:match("%slow=(%d+)"))
+    local hr, hp = line:match("%shold=(%d+):(%d+)")
+    local entry = pairs_of(line:match("%sentry=(%S+)"))
+    if cup and up and low and #entry >= 2 then
+      POFFS[#POFFS + 1] = { cup, up, low, tonumber(hr) or 0, tonumber(hp) or 0, entry }
+    end
+  end
+end
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, splits = {}, {}
+  local leagues, splits, halves = {}, {}, {}
   for line in f:lines() do
+    group_line(line)
+    -- B494: seasonsum <total> parts=<half>,<half> -- a season of two tournaments of the game
+    -- (Colombia 119 = 168 + 169); from_world counts the pairs below a half from the league under it
+    local st, sparts = line:match("^%s*seasonsum%s+(%d+)%s+parts=([%d,]+)")
+    if st then for x in sparts:gmatch("%d+") do halves[tonumber(x)] = tonumber(st) end end
+    local head = line:gsub("%sname=.*$", "")             -- a name cannot pass for a key
+    local lid, lslot = head:match("^%s*league%s+(%d+)"), head:match("%sslot=(%d+)")
+    if lid and lslot then GSLOTS[#GSLOTS + 1] = { tonumber(lid), tonumber(lslot) } end
     local sid = line:match("^%s*split%s+(%d+)")
     if sid then
       splits[tonumber(sid)] = tonumber(line:match("regular=(%d+)")) or 0
       local g = tonumber(line:match("groups=(%d+)"))
       if line:match("carry=0") and g and splits[tonumber(sid)] > 0 then
         APCLAU[#APCLAU + 1] = { splits[tonumber(sid)], g }
+      end
+      if splits[tonumber(sid)] > 0 then SPLITREG[#SPLITREG + 1] = { tonumber(sid), splits[tonumber(sid)] } end
+      if splits[tonumber(sid)] > 0 and not line:match("carry=0") then
+        local gs = {}
+        for x in (line:match("groups=([%d,]+)") or ""):gmatch("%d+") do gs[#gs + 1] = tonumber(x) end
+        if #gs > 0 then SPLITGROUPS[#SPLITGROUPS + 1] = { tonumber(sid), gs[1] or 0, gs[2] or 0, gs[3] or 0 } end
       end
     end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
@@ -82,6 +144,25 @@ local function read_world(ctx)
   end
   f:close()
   for _, L in ipairs(leagues) do L.splitabove = L.above ~= nil and splits[L.above] or nil end
+  for _, L in ipairs(leagues) do L.halfabove = L.above ~= nil and halves[L.above] or nil end
+  -- B425 (11.11.2026): a play-off place named on the regular phase of a SHIPPED split season (the
+  -- Scottish Premiership's 11th, `134:11`) is the final table's -- the total's standings, the ones
+  -- the pair's move goes by. Read off the regular phase it was the 11th after 33 rounds: a club that
+  -- finished 10th played the play-off and the real 11th went down without a match. fl26swiss fills
+  -- the cup from the same table (its groups' final ones).
+  for _, L in ipairs(leagues) do
+    if L.above and L.splittotal and not splits[L.above] then
+      for _, p in ipairs(POFFS) do
+        for _, e in ipairs(p[6]) do
+          if e[1] == L.above then
+            e[1] = L.splittotal
+            log(string.format("fl26chain: play-off %d -- its place %d of %d is the final table's (reg %d, the split season's total)",
+                              p[1], e[2] or 0, L.above, L.splittotal))
+          end
+        end
+      end
+    end
+  end
   return leagues
 end
 
@@ -112,14 +193,26 @@ end
 -- cupall=1 on its top league's line.
 local function from_world(world)
   local chains, protect, cups, scups, lcups = {}, {}, {}, {}, {}
+  local byid = {}
+  for _, L in ipairs(world) do byid[L.id] = L end
   for _, L in ipairs(world) do
     protect[#protect + 1] = L.id
+    -- B494 (antonimus 17.11.2026, Colombia): under a half of a season of two tournaments of the
+    -- game (halfabove, read_world's seasonsum: 340 under 168 of 119) the game exchanges nobody
+    -- (B330), so its every-other-pair starts one tier lower -- at 340<->428 -- and the pair it
+    -- skips is 428<->960, not 340<->428. The tier is counted from the top of our chain then.
+    local tier, top, hops = L.tier, L, 0
+    while top.above and byid[top.above] and byid[top.above] ~= top and hops < 32 do top = byid[top.above]; hops = hops + 1 end
+    if tier and top.halfabove then tier = tier - 1 end
     -- A league below a split one (GitHub #79/#81, Egypt 2026-10-06): the game's mover writes
     -- nothing between a split league's total and the league below, so no club moved at all.
     -- The pair goes to the DLL like a skipped one; the total's season table is the standings.
     -- B256 (jibibi 2026-10-27): a sixth tier too -- the pass writes the fifth as the low end of
     -- the pair above it and never as the top of the one below, so nobody moved between them
-    if L.above and L.tier and ((L.tier >= 3 and (L.tier % 2 == 1 or L.tier >= 6)) or L.splitabove) then
+    -- a group of a division (group=, GitHub #98) moves with its whole set (gset lines), not as a pair
+    if L.group then
+      -- nothing here: fl26_chain_gsets
+    elseif L.above and tier and ((tier >= 3 and (tier % 2 == 1 or tier >= 6)) or L.splitabove) then
       local n = L.promote or 3
       -- the split's regular phase rides along: it plays the season the total's list decides
       chains[#chains + 1] = { L.above, L.id, n, n, L.splitabove or 0 }
@@ -148,25 +241,37 @@ local function from_world(world)
     -- below a shipped second division the clubs put back come from the top flight (cuptop=)
     if L.scup and L.above then scups[#scups + 1] = { L.scup, L.cuptop or L.above, L.id } end
   end
-  -- the league cups after every national cup: fl26chain.dll keeps MAX_CUPS (128) and drops the
+  -- the league cups after every national cup: fl26chain.dll keeps MAX_CUPS (512) and drops the
   -- rest, so a world with more keeps the national cups it kept before the league cups came
   for _, c in ipairs(lcups) do cups[#cups + 1] = c end
   return chains, protect, cups, scups
 end
 
-local MAX_CUPS = 128                                 -- fl26chain.c MAX_CUPS (16 before B178)
-local MAX_CHAINS = 32                               -- fl26chain.c MAX_CHAINS (8 before B186)
+local MAX_CUPS = 512                                 -- fl26chain.c MAX_CUPS (16 before B178, 128 before the league band)
+local MAX_CHAINS = 256                              -- fl26chain.c MAX_CHAINS (8 before B186, 32 before the league band)
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
 local PAGE_EXECUTE_READWRITE = 0x40
 
 local dll_log, dll_stats, logbuf, statbuf, cfg
+local wm_audit, wm_said
 local ticks = 0
 
 local function drain(reason)
   if not dll_log then return end
-  local n = tonumber(dll_log(logbuf, 4096))
-  if n > 0 then
+  -- FL 2027: the second module's display check of fl26swiss (fl26_chain_wm_audit). 0 = fine or
+  -- not a FL 2027 build; nonzero = a problem (reported once here, enforcement is in the DLLs).
+  if wm_audit then
+    local a = tonumber(wm_audit())
+    if a ~= 0 and not wm_said then
+      wm_said = true
+      log("fl26chain: display check " .. a)
+    end
+  end
+  -- until the log is empty: one season pass of a big world leaves far more than one buffer
+  for _ = 1, 256 do
+    local n = tonumber(dll_log(logbuf, 4096))
+    if n <= 0 then break end
     for line in ffi.string(logbuf, n):gmatch("[^\n]+") do log("fl26chain: " .. line) end
   end
   if reason then
@@ -220,6 +325,11 @@ function m.init(ctx)
     typedef int  (*fl26_chain_cupsize_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_cupthird_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_apclau_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_splits_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_ghomes_t)(const uint32_t*, int);
+    typedef int  (*fl26_chain_gsets_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_playoffs_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_wm_audit_t)(void);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -240,10 +350,18 @@ function m.init(ctx)
   dll_log   = ffi.cast("fl26_chain_log_t", pl)
   dll_stats = ffi.cast("fl26_chain_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[4]")
+  local pwa = ffi.C.GetProcAddress(h, "fl26_chain_wm_audit")   -- FL 2027 watermark cross-check (see drain)
+  if pwa ~= nil then wm_audit = ffi.cast("fl26_chain_wm_audit_t", pwa) end
 
   local world, CUPS, SCUPS = read_world(ctx), {}, {}
   if world then
     CHAINS, PROTECT, CUPS, SCUPS = from_world(world)
+    for _, L in ipairs(world) do
+      if L.halfabove then
+        log(string.format("fl26chain: league %d is under %d, a half of the game's season %d -- the pairs below it counted from %d (B494)",
+                          L.id, L.above, L.halfabove, L.id))
+      end
+    end
     for i = #CUPS, MAX_CUPS + 1, -1 do
       log(string.format("fl26chain: cup %d -- more than %d cups in the world, left to the game", CUPS[i][1], MAX_CUPS))
       CUPS[i] = nil
@@ -333,6 +451,24 @@ function m.init(ctx)
         log("fl26chain: this fl26chain.dll cannot count an Apertura/Clausura table (no fl26_chain_apclau) -- rebuild it")
       end
     end
+    if #SPLITREG > 0 then
+      local pz = ffi.C.GetProcAddress(h, "fl26_chain_splits")
+      if pz ~= nil then
+        local t = ffi.new("uint16_t[?]", 2 * #SPLITREG)
+        for i, a in ipairs(SPLITREG) do t[2 * i - 2], t[2 * i - 1] = a[1], a[2] end
+        ffi.cast("fl26_chain_splits_t", pz)(t, #SPLITREG)
+        local pg = ffi.C.GetProcAddress(h, "fl26_chain_split_groups")
+        if pg ~= nil and #SPLITGROUPS > 0 then
+          local tg = ffi.new("uint16_t[?]", 4 * #SPLITGROUPS)
+          for i, a in ipairs(SPLITGROUPS) do for k = 1, 4 do tg[4 * i - 5 + k] = a[k] end end
+          ffi.cast("fl26_chain_splits_t", pg)(tg, #SPLITGROUPS)
+        elseif #SPLITGROUPS > 0 then
+          log("fl26chain: this fl26chain.dll cannot take a split's table from its groups (no fl26_chain_split_groups) -- rebuild it")
+        end
+      else
+        log("fl26chain: this fl26chain.dll does not bring a split's regular phase along (no fl26_chain_splits) -- rebuild it")
+      end
+    end
     if #SCUPS > 0 then
       local ps2 = ffi.C.GetProcAddress(h, "fl26_chain_supercups")
       if ps2 ~= nil then
@@ -344,6 +480,75 @@ function m.init(ctx)
         ffi.cast("fl26_chain_cups_t", ps2)(t, #SCUPS)
       else
         log("fl26chain: this fl26chain.dll cannot keep a super cup free of a new league (no fl26_chain_supercups) -- rebuild it")
+      end
+    end
+    if #GSETS > 0 or #POFFS > 0 then
+      local pg, ph, pp2 = ffi.C.GetProcAddress(h, "fl26_chain_gsets"), ffi.C.GetProcAddress(h, "fl26_chain_ghomes"),
+                          ffi.C.GetProcAddress(h, "fl26_chain_playoffs")
+      if pg == nil or ph == nil or pp2 == nil then
+        log("fl26chain: this fl26chain.dll has no group sets or play-offs (no fl26_chain_gsets) -- rebuild it; the groups do not move")
+      else
+        -- the sets first (they reset the DLL's league table), then the play-offs
+        local w = {}
+        for _, g in ipairs(GSETS) do
+          w[#w + 1] = #g.ups; w[#w + 1] = #g.lows
+          local idx = {}
+          for i, u in ipairs(g.ups) do w[#w + 1] = u[1]; w[#w + 1] = u[2] or 0; idx[u[1]] = i - 1 end
+          for _, l in ipairs(g.lows) do w[#w + 1] = l[1]; w[#w + 1] = l[2] or 0; w[#w + 1] = idx[l[3] or 0] or 0xffff end
+        end
+        local t = ffi.new("uint16_t[?]", math.max(#w, 1))
+        for i, v in ipairs(w) do t[i - 1] = v end
+        local got = tonumber(ffi.cast("fl26_chain_gsets_t", pg)(t, #w))
+        if got < 0 then log("fl26chain: the world's gset lines do not read -- the groups do not move") end
+        for k, g in ipairs(GSETS) do
+          local up, low = {}, {}
+          for _, u in ipairs(g.ups) do up[#up + 1] = string.format("%d:%d", u[1], u[2] or 0) end
+          for _, l in ipairs(g.lows) do low[#low + 1] = string.format("%d:%d", l[1], l[2] or 0) end
+          log(string.format("fl26chain: live -- group set %d: %s down, %s up, as one move", k - 1,
+                            table.concat(up, " "), table.concat(low, " ")))
+        end
+        if #GHOMES > 0 then
+          local hb = ffi.new("uint32_t[?]", 2 * #GHOMES)
+          for i, e in ipairs(GHOMES) do hb[2 * i - 2], hb[2 * i - 1] = e[1], e[2] end
+          ffi.cast("fl26_chain_ghomes_t", ph)(hb, #GHOMES)
+        end
+        -- 16.11.2026: the border clubs (zone_border); a world without gborder lines has none
+        if #GBORDERS > 0 then
+          local pbd = ffi.C.GetProcAddress(h, "fl26_chain_gborders")
+          if pbd == nil then
+            log("fl26chain: this fl26chain.dll has no border clubs (no fl26_chain_gborders) -- rebuild it; the groups move without them")
+          else
+            local bb = ffi.new("uint32_t[?]", 3 * #GBORDERS)
+            for i, e in ipairs(GBORDERS) do bb[3 * i - 3], bb[3 * i - 2], bb[3 * i - 1] = e[1], e[2], e[3] end
+            ffi.cast("fl26_chain_ghomes_t", pbd)(bb, #GBORDERS)
+            log(string.format("fl26chain: live -- %d border club(s) of the groups (gborder lines)", #GBORDERS))
+          end
+        end
+        if #POFFS > 0 then
+          local pw = {}
+          for _, p in ipairs(POFFS) do
+            for i = 1, 5 do pw[#pw + 1] = p[i] end
+            pw[#pw + 1] = #p[6]
+            for _, e in ipairs(p[6]) do pw[#pw + 1] = e[1]; pw[#pw + 1] = e[2] or 0 end
+          end
+          local pb = ffi.new("uint16_t[?]", #pw)
+          for i, v in ipairs(pw) do pb[i - 1] = v end
+          local np = tonumber(ffi.cast("fl26_chain_playoffs_t", pp2)(pb, #pw))
+          if np < 0 then log("fl26chain: the world's poff lines do not read -- no play-off decides a place") end
+          for _, p in ipairs(POFFS) do
+            log(string.format("fl26chain: live -- play-off %d: its winner ends in %d, %s in %d", p[1], p[2],
+                              p[4] > 0 and string.format("%d's %d. club", p[4], p[5]) or "the club it beat", p[3]))
+          end
+        end
+        -- B418: the leagues' own slots, after the sets and the play-offs made the DLL's league table
+        local pslot = ffi.C.GetProcAddress(h, "fl26_chain_gslots")
+        if pslot == nil then
+          log("fl26chain: this fl26chain.dll takes a group league's slot from its clubs (no fl26_chain_gslots) -- rebuild it")
+        elseif #GSLOTS > 0 then
+          local sb = ffi.new("uint16_t[?]", 2 * #GSLOTS)
+          for i, e in ipairs(GSLOTS) do sb[2 * i - 2], sb[2 * i - 1] = e[1], e[2] end
+          ffi.cast("fl26_chain_gsets_t", pslot)(sb, #GSLOTS)
+        end
       end
     end
     for _, c in ipairs(CHAINS) do

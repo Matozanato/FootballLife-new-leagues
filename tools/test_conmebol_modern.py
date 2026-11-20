@@ -156,22 +156,26 @@ def classic_world(base, game):
     codes = [c.get("code") for c in pl["ccups"]]
     ok("classic: no Recopa Sudamericana (it is a modern competition)", "FL_SAMRC" not in codes)
     sud = next(c for c in pl["ccups"] if c["number"] == B.SUDAM)
-    ok("classic: the Copa Sudamericana is the classic cup (8 groups of 4, no February-December dates)",
-       sud["groups"] == 8 and not (sud.get("opts") or {}).get("cal"))
-    # the World Modpack (mato 23.10.): sudamericana_calendar puts the classic cup on February-December
-    pc = B.plan(dict(classic(), sudamericana_calendar=True), base)
+    # mato 07.11.2026 (Vicentico): the classic cup plays February-December in every world now
+    ok("classic: the Copa Sudamericana is the classic cup (8 groups of 4), filled in February on the Libertadores' days",
+       sud["groups"] == 8 and sud.get("opts") == {"fill": B.SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
+       and not pl["suda_first"] and "FL_SAMRC" not in codes)
+    ok("  ... the same with sudamericana_calendar true (the World Modpack, mato 23.10.)",
+       next(c for c in B.plan(dict(classic(), sudamericana_calendar=True), base)["ccups"]
+            if c["number"] == B.SUDAM).get("opts") == sud["opts"])
+    pc = B.plan(dict(classic(), sudamericana_calendar=False), base)
     sc = next(c for c in pc["ccups"] if c["number"] == B.SUDAM)
-    ok("classic with sudamericana_calendar: the same cup, filled in February on the Libertadores' days",
-       sc["groups"] == 8 and sc["entry"] == sud["entry"]
-       and sc.get("opts") == {"fill": B.SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
-       and not pc["suda_first"] and "FL_SAMRC" not in [c.get("code") for c in pc["ccups"]])
+    ok("sudamericana_calendar false: the same cup on August to May (no February-December dates)",
+       sc["groups"] == 8 and sc["entry"] == sud["entry"] and not (sc.get("opts") or {}).get("cal"))
     ok("and read back from the plan it keeps the setting",
-       B.recipe_from_plan(pc, base).get("sudamericana_calendar") is True)
+       B.recipe_from_plan(pc, base).get("sudamericana_calendar") is False)
     built, text = build(base, game, r)
     ok("classic: Build makes the world (the Modpack r7 was refused)", True)
     ok("classic: no helper competition ids", not any(k.startswith("conmebol:") for k in built["cup_ids"]))
-    ok("classic: the world file has no first stage, play-off or phase lines, no cal=1",
-       not re.search(r"^lpre .*(single=1|poko=1|feed=)", text, re.M) and " cal=1" not in text)
+    cal = [l for l in text.splitlines() if " cal=1" in l]
+    ok("classic: the world file has no first stage, play-off or phase lines; cal=1 only on the Copa Sudamericana",
+       not re.search(r"^lpre .*(single=1|poko=1|feed=)", text, re.M) and len(cal) == 1
+       and cal[0].startswith("ccup ") and cal[0].endswith("name=Copa Sudamericana"))
     ok("classic: and no Recopa", "Recopa" not in text)
     lib = [w for reg, cid, w in rules(game, r["world"]) if cid == 5 and reg & 0x3ff in (8, 10)]
     # the game's own rows: FL26 plays them with away goals, FL27 (1.00) without

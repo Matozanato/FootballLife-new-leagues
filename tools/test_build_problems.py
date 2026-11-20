@@ -52,12 +52,25 @@ class FakeApp(Noop):
         self.__dict__.update(kw)
 
 
+def settle(qa, secs=60):
+    """the loop turned until Check the plan's worker is over and what it left for later has run (B480
+    review 18.11.: Check the plan works in a worker now; its list fills when the worker is done)"""
+    import time
+    from modstudio import ui
+    t0 = time.time()
+    while (ui._JOBS or ui._OWED) and time.time() - t0 < secs:
+        qa.processEvents()
+        time.sleep(0.01)
+    qa.processEvents()
+    assert not ui._JOBS, "Check the plan did not finish in %d s" % secs
+
+
 def league(name, **kw):
     return dict({"name": name, "country": "Colombia", "clubs": 16, "legs": 2}, **kw)
 
 
 def main(tables):
-    QApplication.instance() or QApplication([])
+    qa = QApplication.instance() or QApplication([])
     import leaguebuilder as B
     from modstudio.project import Project
     from modstudio.pages import builder as PB, leagues as PL
@@ -100,6 +113,7 @@ def main(tables):
     pages["Build"] = bp
     bp.ready_blocks = lambda asks=True: False
     bp.do_plan()
+    settle(qa)
     rows = [(bp.problems.topLevelItem(i).text(0), bp.problems.topLevelItem(i).text(1),
              bp.problems.topLevelItem(i).data(0, Qt.UserRole)) for i in range(bp.problems.topLevelItemCount())]
     print("   " + "\n   ".join("%s | %s" % (w, t) for w, t, _d in rows))
@@ -132,6 +146,7 @@ def main(tables):
     p.recipe["leagues"] = [league("Liga Uno"), league("Liga Cuatro")]
     p.recipe["edits"] = {}
     bp.do_plan()
+    settle(qa)
     ok("a plan with no problem hides the list", bp.prob_box.isHidden() and "error" not in bp.out.toPlainText())
     print("test_build_problems: ok (%d)" % N)
 

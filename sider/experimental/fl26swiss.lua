@@ -127,15 +127,23 @@ end
 -- options a league cup or a pre-season cup adds: fill=<day> national=1 days=<d>,<d>,...
 -- clubs=<team id>,... (c.opts, fl26_swiss_ccup_opts). Sixth: the qualifying rounds in front of
 -- the August play-offs, { competition, round, regulation } from `qround <competition> <round>
--- <regulation>` (10 / 11 / 12, round 3 or 2; fl26_swiss_qrounds). Seventh: the league cups'
+-- <regulation>` (10 / 11 / 12, round 3 or 2, FL 2027 also 1 in July, and 0 for Prijedlog C's Europa /
+-- Conference League play-off of 32; fl26_swiss_qrounds). Seventh: the league cups'
 -- pre-rounds, { reg, cup knockout, fill day, {day, day}, {{reg, position}...} } from
 -- `lpre <reg> cup=<ko> fill=<day> days=<d>,<d> entry=<reg>:<position>,...` (fl26_swiss_lpre).
 -- A single-match league cup (0.2.0) adds like=<shipped cup> (its knockout is a copy of that
 -- domestic cup, dated by it: fl26_swiss_ccup_like, called before fl26_swiss_ccup) and
 -- draw=byes|random|seeded|off (its cup draw, fl26_swiss_cupdraw; byes when not given).
 local confed = {}               -- read_world: the confed line, { flag, code } pairs
+local seasonsum = {}            -- read_world: the seasonsum lines, { total, half, half } (fl26_swiss_seasonsum)
+local gsplits = {}              -- read_world: the gsplit lines, { total, regular, top group, bottom group } (fl26_swiss_gsplits)
 local CUPDRAW = { all = 1 }     -- read_world: the cupdraw lines, a mode per cup and one for all (0 off, 1 seeded, 2 random, 3 byes)
 local DRAWMODE = { off = 0, seeded = 1, random = 2, byes = 3 }
+-- the continental cups' default names (tools/fl26world.py CCUPS): a ccup line without comp=
+local CCUP_COMP = { ["CAF Champions League"] = 6, ["CAF Confederation Cup"] = 7,
+                    ["AFC Champions League Two"] = 8, ["Copa Sudamericana"] = 9,
+                    ["CONCACAF Champions Cup"] = 13, ["OFC Champions League"] = 14,
+                    ["AFC Challenge League"] = 15 }
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
@@ -143,6 +151,8 @@ local function read_world(ctx)
   if not f then return nil end
   local leagues, splits, uefa, ccups, dlike, qrounds, lpres = {}, {}, {}, {}, {}, {}, {}
   confed = {}
+  seasonsum = {}
+  gsplits = {}
   CUPDRAW = { all = 1 }
   for line in f:lines() do
     local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
@@ -227,6 +237,11 @@ local function read_world(ctx)
       for t in ((crest:gsub("%sname=.*$", "")):match("%sfirst=([%d,]+)") or ""):gmatch("%d+") do
         c.first[#c.first + 1] = tonumber(t)
       end
+      -- comp=<n>: the League Builder's competition (6..9, 13..15) of a continental cup, for the
+      -- standings' zone strip (fl26_swiss_ccup_zone). A world built before it has none: a cup
+      -- that still has its default name is known by that
+      c.comp = tonumber((crest:gsub("%sname=.*$", "")):match("%scomp=(%d+)") or "")
+                 or CCUP_COMP[crest:match("%sname=(.-)%s*$") or ""]
       if c[2] > 0 then ccups[#ccups + 1] = c end   -- groups=0: a straight knockout
     end
     -- confed <flag>:<code>,...: each country's confederation, so a continental champion of
@@ -235,8 +250,26 @@ local function read_world(ctx)
     if cf then
       for f, c in cf:gmatch("(%d+):(%d+)") do confed[#confed + 1] = { tonumber(f), tonumber(c) } end
     end
+    -- seasonsum <total> parts=<half>,<half>: a season of two tournaments of the game (Colombia,
+    -- the MLS) whose places go by both halves added together
+    local st, srest2 = line:match("^%s*seasonsum%s+(%d+)(.*)$")
+    if st then
+      local e = { tonumber(st) }
+      for v in (srest2:match("parts=([%d,]+)") or ""):gmatch("%d+") do
+        if #e < 4 then e[#e + 1] = tonumber(v) end
+      end
+      if #e > 1 then seasonsum[#seasonsum + 1] = e end
+    end
     local ur, up, uc, ua = line:match("^%s*uefa%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)")
     if ur then uefa[#uefa + 1] = { tonumber(ur), tonumber(up), tonumber(uc), tonumber(ua) } end
+    -- gsplit <total> regular=<id> groups=<top>,<bottom>: a split season of the game's own that a
+    -- league of the world stands under (B425: a play-off's place of it is the final table's)
+    local gt, grest = line:match("^%s*gsplit%s+(%d+)(.*)$")
+    if gt then
+      local a, b = (grest:match("groups=([%d,]+)") or ""):match("^(%d+),(%d+)")
+      local g = { tonumber(gt), tonumber(grest:match("regular=(%d+)") or 0), tonumber(a or 0), tonumber(b or 0) }
+      if g[2] > 0 and g[3] > 0 and g[4] > 0 then gsplits[#gsplits + 1] = g end
+    end
     local sid, srest = line:match("^%s*split%s+(%d+)(.*)$")
     if sid then
       local s = { tonumber(sid), tonumber(srest:match("regular=(%d+)") or 0), 0, 0, 0 }
@@ -320,8 +353,9 @@ local function world_july(ctx)
 end
 
 -- `first <competition> <team id> ...` lines of the world file (0 Champions League, 1 Europa
--- League, 2 Conference League): the clubs Mod Studio's "First-season European clubs" put in
--- the league phases of a new career's first season; { {competition, team id}, ... } or nil
+-- League, 2 Conference League, 3 AFC Champions League): the clubs Mod Studio's "First-season
+-- European clubs" put in the league phases (the AFC field) of a new career's first season;
+-- { {competition, team id}, ... } or nil
 local function world_first(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
@@ -330,7 +364,7 @@ local function world_first(ctx)
   local out = {}
   for line in f:lines() do
     local c, ids = line:match("^%s*first%s+(%d)%s+([%d%s]+)$")
-    if c and tonumber(c) <= 2 then
+    if c and tonumber(c) <= 3 then
       for t in ids:gmatch("%d+") do out[#out + 1] = { tonumber(c), tonumber(t) } end
     end
   end
@@ -369,6 +403,31 @@ local function world_gsupers(ctx)
       local G = { id = tonumber(id) }
       for k, v in rest:gmatch("(%a+)=(%-?%d+)") do G[k] = tonumber(v) end
       out[#out + 1] = G
+    end
+  end
+  f:close()
+  return out
+end
+
+-- `gset <k> up=<id>:<n>,... low=<id>:<n>:<pref>,...` lines of the world file (a set of groups,
+-- moved by fl26chain): { league, clubs up, clubs down } for the standings' zone strip
+-- (fl26_swiss_gzone, B458) -- an upper league's n go down, a lower group's n go up. The game
+-- links one league to one league, so without this only the first group of a set has its colours.
+local function world_gzones(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local rest = line:match("^%s*gset%s+%d+(.*)$")
+    if rest then
+      for id, n in (rest:match("%sup=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
+        out[#out + 1] = { tonumber(id), 0, tonumber(n) }
+      end
+      for id, n in (rest:match("%slow=([%d:,]+)") or ""):gmatch("(%d+):(%d+):?%d*") do
+        out[#out + 1] = { tonumber(id), tonumber(n), 0 }
+      end
     end
   end
   f:close()
@@ -432,6 +491,7 @@ function m.init(ctx)
     typedef void (*fl26_swiss_ko_tick_t)(void);
     typedef int  (*fl26_swiss_access_t)(const uint16_t*, int);
     typedef int  (*fl26_swiss_first_t)(const uint32_t*, int);
+    typedef void (*fl26_swiss_wm_report_t)(uint32_t*);
   ]])
 
   local sep = string.char(92)
@@ -498,6 +558,27 @@ function m.init(ctx)
             ffi.cast("fl26_swiss_access_t", pn)(nbuf, #nc)
             log(string.format("fl26swiss: world file -- %d Apertura/Clausura season(s), no points carried", #nc))
           end
+        end
+      end
+      if #gsplits > 0 then
+        local pg = ffi.C.GetProcAddress(h, "fl26_swiss_gsplits")
+        if pg == nil then
+          log("fl26swiss: this fl26swiss.dll does not know the game's own split seasons (no fl26_swiss_gsplits) -- rebuild it; a play-off under one takes the regular phase's table")
+        else
+          local gbuf = ffi.new("uint16_t[?]", #gsplits * 4)
+          for i, g in ipairs(gsplits) do for j = 1, 4 do gbuf[(i - 1) * 4 + j - 1] = g[j] end end
+          ffi.cast("fl26_swiss_access_t", pg)(gbuf, #gsplits)
+        end
+      end
+      if #seasonsum > 0 then
+        local pw = ffi.C.GetProcAddress(h, "fl26_swiss_seasonsum")
+        if pw == nil then
+          log("fl26swiss: this fl26swiss.dll counts no whole season (fl26_swiss_seasonsum); those places read the first half")
+        else
+          local wbuf = ffi.new("uint16_t[?]", 4 * #seasonsum)
+          for i, e in ipairs(seasonsum) do for j = 1, 4 do wbuf[4 * (i - 1) + j - 1] = e[j] or 0 end end
+          local k = tonumber(ffi.cast("fl26_swiss_access_t", pw)(wbuf, #seasonsum))
+          log(string.format("fl26swiss: world file -- %d whole season(s) of two tournaments, %d taken", #seasonsum, k))
         end
       end
       local function load_lpres()
@@ -617,6 +698,20 @@ function m.init(ctx)
           end
           local k = tonumber(ffi.cast("fl26_swiss_access_t", pc)(cbuf, #ccups))
           log(string.format("fl26swiss: world file -- %d continental cup(s), %d accepted", #ccups, k))
+          -- each continental cup's competition, for the standings' zone strip
+          local zone = {}
+          for _, c in ipairs(ccups) do if c.comp then zone[#zone + 1] = { c[2], c.comp } end end
+          if #zone > 0 then
+            local pz = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_zone")
+            if pz == nil then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_ccup_zone -- the standings colour no place of our continental cups")
+            else
+              local zbuf = ffi.new("uint16_t[?]", 2 * #zone)
+              for i, z in ipairs(zone) do zbuf[2 * i - 2], zbuf[2 * i - 1] = z[1], z[2] end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pz)(zbuf, #zone))
+              log(string.format("fl26swiss: world file -- %d continental cup(s) for the zone strip, %d taken", #zone, m))
+            end
+          end
           local olen, nopt = 0, 0
           for _, c in ipairs(ccups) do
             if c.opts then olen = olen + 5 + #c.opts.days + #c.opts.clubs; nopt = nopt + 1 end
@@ -901,6 +996,19 @@ function m.init(ctx)
           scseen[G.id] = true
         end
       end
+      -- the group sets' promotion and relegation places, for the same strip (B458)
+      local gz = world_gzones(ctx)
+      if #gz > 0 then
+        local pg = ffi.C.GetProcAddress(h, "fl26_swiss_gzone")
+        if pg == nil then
+          log("fl26swiss: this fl26swiss.dll has no fl26_swiss_gzone -- of a set of groups only the first shows promotion and relegation")
+        else
+          local gbuf = ffi.new("uint16_t[?]", 3 * #gz)
+          for i, z in ipairs(gz) do gbuf[3 * i - 3], gbuf[3 * i - 2], gbuf[3 * i - 1] = z[1], z[2], z[3] end
+          local m = tonumber(ffi.cast("fl26_swiss_access_t", pg)(gbuf, #gz))
+          log(string.format("fl26swiss: world file -- %d group place line(s) for the zone strip, %d league(s) taken", #gz, m))
+        end
+      end
       local pc = ffi.C.GetProcAddress(h, "fl26_swiss_calendar_year")
       if #cal > 0 and pc ~= nil then
         local cbuf = ffi.new("uint16_t[?]", #cal)
@@ -1009,17 +1117,31 @@ function m.init(ctx)
         log("fl26swiss: this fl26swiss.dll takes no first-season list; " .. FIRST_FILE .. " is not used")
       else
         local fbuf = ffi.new("uint32_t[?]", 2 * #first)
-        local per = { 0, 0, 0 }
+        local per = { 0, 0, 0, 0 }
         for i, e in ipairs(first) do
           fbuf[2 * i - 2] = e[1]; fbuf[2 * i - 1] = e[2]; per[e[1] + 1] = per[e[1] + 1] + 1
         end
         local k = tonumber(ffi.cast("fl26_swiss_first_t", pf)(fbuf, #first))
-        log(string.format("fl26swiss: first-season list from %s: %d / %d / %d team ids (%d taken)",
-                          from, per[1], per[2], per[3], k))
+        log(string.format("fl26swiss: first-season list from %s: %d / %d / %d team ids, %d AFC (%d taken)",
+                          from, per[1], per[2], per[3], per[4], k))
       end
     end
     local pk = ffi.C.GetProcAddress(h, "fl26_swiss_ko_tick")
     if pk ~= nil then dll_ko_tick = ffi.cast("fl26_swiss_ko_tick_t", pk) end
+    -- FL 2027 display check: the DLL enforces it itself (status 31 above, fl26_swiss_ko_tick,
+    -- fl26chain.dll); this is only a line in the log.
+    local pwr = ffi.C.GetProcAddress(h, "fl26_swiss_wm_report")
+    if pwr ~= nil then
+      local wr = ffi.new("uint32_t[8]")
+      ffi.cast("fl26_swiss_wm_report_t", pwr)(wr)
+      if wr[0] == 0x4d575346 and wr[2] ~= 0 then        -- 'FSWM', FL 2027 build
+        if wr[1] ~= 0 and wr[3] == 0 then
+          log("fl26swiss: display check ok")
+        else
+          log("fl26swiss: display check " .. tonumber(wr[1]) .. "/" .. tonumber(wr[3]))
+        end
+      end
+    end
     local ids = {}
     for _, r in ipairs(REGS) do ids[#ids + 1] = tostring(r) end
     log("fl26swiss: live -- 36-club league phase for regulation " .. table.concat(ids, ", ")
@@ -1032,8 +1154,10 @@ function m.init(ctx)
                    [12] = "signature mismatch at 0x14157f810 -- wrong game build",
                    [22] = "signature mismatch at 0x1413f3c30 -- wrong game build",
                    [3] = "VirtualAlloc failed", [4] = "VirtualProtect failed",
+                   [31] = "display check",
                    [9] = "bad config (REGS empty or more than 8)" })[status] or "unknown"
     log("fl26swiss: install FAILED (status " .. status .. ") -- " .. msg .. ". The game is unmodified.")
+    drain(nil)                                    -- the DLL's own lines say why
   end
 end
 

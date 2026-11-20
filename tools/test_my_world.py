@@ -7,7 +7,7 @@ Import your world and NewLife Database.
   - My world shows a card for each world on disk: the one in the game green (IN THE GAME NOW)
     with Export / Rename / Delete, Delete refused for it; another world has Put in the game, and
     pressing it switches that world on in sider.ini and turns its card green;
-  - Cups does not stay lit after one of its windows (B70);
+  - Cups is a real My world page; the previous tools remain accessible;
   - a card says "1 league · 1 new club", not "1 leagues" (B70);
   - + Add... tells a league package (.fl26pack, with its leagues to tick), a world zip and the
     NewLife Database folder apart.
@@ -59,7 +59,8 @@ def run():
     qa = QApplication.instance() or QApplication([])
     from modstudio import app as A, theme, worlds as WL
     from modstudio.pages import myworld as M, builder as PB, install as PI
-    PI.error = lambda *a, **k: None          # Import your world: "choose the game folder first"
+    pi_errors = []                           # Import your world: "choose the game folder first" ...
+    PI.error = lambda parent, title, text, *a, **k: pi_errors.append(text)
     PB.ask = lambda *a, **k: False           # "unpack the game's tables?" (NewLife, no tables here): no
     from modstudio import saves as SV, ui as U
     SV.game_running = lambda: False          # the fake save folder: whatever runs on this PC
@@ -107,25 +108,35 @@ def run():
     w.open_page("Leagues")
     qa.processEvents()
     ok("Leagues is the lit tab of My world", w.my_world.tab_btn["Leagues"].isChecked())
-    ok("the tabs: Build (B82), Leagues, Clubs, Players, Kits, Stadiums and Cups",
-       [b.text() for b in w.my_world.tab_btn.values()] + [w.my_world.cups.text()]
+    ok("the tabs include a real Cups page",
+       [b.text() for b in w.my_world.tab_btn.values()]
        == ["Build", "Leagues", "Clubs", "Players", "Kits", "Stadiums", "Cups"])
-    # ---- B70: Cups stayed lit on the page opened after one of its windows (Build details)
-    from PySide6.QtCore import Qt, QPoint
-    from PySide6.QtGui import QCursor
-    cups = w.my_world.cups
-    QCursor.setPos(w.mapToGlobal(QPoint(w.width() - 2, w.height() - 2)))   # the mouse is not on Cups
-    opened = []
-    w.page("NewLeagues").preseason = lambda: opened.append("preseason")
-    cups.setAttribute(Qt.WA_UnderMouse, True)          # what the window left behind
-    cups.menu().actions()[0].trigger()
-    ok("B70: Cups > Pre-season cups opens its window and Cups lets go of its lit look",
-       opened == ["preseason"] and not cups.underMouse())
-    cups.setAttribute(Qt.WA_UnderMouse, True)
+    w.my_world.tab_btn["Cups"].click()
+    qa.processEvents()
+    ok("Cups opens as the lit page in My world",
+       w.my_world.tabs.currentWidget() is w.holder_of["Cups"]
+       and w.my_world.tab_btn["Cups"].isChecked())
+    ok("Cups has domestic editors and Continental",
+       [w.page("Cups").tabs.tabText(i) for i in range(3)]
+       == ["Game Countries", "Our Countries", "Continental"])
+    continental = w.page("Cups").continental_section["editor"]
+    ok("Continental has Competitions and integrated Qualification",
+       [continental.tabs.tabText(i) for i in range(2)] == ["Competitions", "Qualification"]
+       and continental.confederation.count() == 6)
+    # All previous tools remain reachable, with Pre-season outside the new Cups page.
+    tools = []
+    w.page("NewLeagues").preseason = lambda: tools.append("preseason")
+    from PySide6.QtWidgets import QToolButton
+    more = next(b for b in w.page("Leagues").findChildren(QToolButton)
+                if b.menu() and any(a.text() == "Pre-season cups" for a in b.menu().actions()))
+    more.menu().actions()[0].trigger()
+    ok("Pre-season cups remains accessible from Leagues > More", tools == ["preseason"])
+    ok("Competition names remains in More and Trophies has its own Game content page",
+       "Competition names" in {a.text() for a in more.menu().actions()} and "Trophies" in w.pages
+       and w.section_of["Trophies"] == "Trophies")
     w.open_page("Build")
     qa.processEvents()
-    ok("B70: the Build tab: Cups is not lit", not cups.underMouse()
-       and [n for n, b in w.my_world.tab_btn.items() if b.isChecked()] == ["Build"])
+    ok("opening Build unchecks Cups", not w.my_world.tab_btn["Cups"].isChecked())
     w.open_page("Leagues")
     settle(qa, 1.0)
 
@@ -148,8 +159,18 @@ def run():
     ok("the live card has Active (off) / Export / Rename / Delete: %s" % btns,
        all(t in btns for t in ("⇪ Export...", "Rename", "Delete")) and live.go.text().endswith("Active")
        and not live.go.isEnabled())
-    ok("Delete is refused for the world in the game", not live.delete.isEnabled()
-       and "in the game now" in live.delete.toolTip())
+    # a press says why (a grey button told a tester nothing, 12.11.2026) and deletes nothing
+    said, keep = [], M.info
+    M.info = lambda parent, title, text: said.append((title, text))
+    try:
+        live.delete.click()
+    finally:
+        M.info = keep
+    ok("Delete is refused for the world in the game: a press says why, the world stays (%s)" % said,
+       live.delete.isEnabled() and "in the game now" in live.delete.toolTip() and len(said) == 1
+       and said[0][0] == "Delete world" and live.world in said[0][1] and "in the game now" in said[0][1]
+       and live.world in WL.live(sec.app.game)
+       and os.path.isdir(os.path.join(sec.app.game.sider_dir, "livecpk", live.world)))
     old = cards["_FL26Old"]
     ok("the other world: worldcard, NOT IN THE GAME, Activate",
        old.objectName() == "worldcard" and old.eyebrow.text() == "NOT IN THE GAME"
@@ -314,10 +335,24 @@ def run():
     d.pick(other)
     ok("anything else: Import your world looks inside", d.kind == "mod" and d.add.isEnabled())
     d.pick(wz)
+    ip = w.page("Install")
+    installed, real_check = [], ip.final_check
+    ip.final_check = lambda world: installed.append(world)
     d.go()
     qa.processEvents()
     ok("Add with a world zip opens Import your world inside My world",
        w.stack.currentWidget() is sec and sec.tabs.currentWidget() is w.holder_of["Install"])
+    # 07.11. (mato): the one button installs the world zip too, nothing more to press
+    t0 = time.time()
+    while not installed and time.time() - t0 < 120:
+        qa.processEvents()
+        time.sleep(0.02)
+    settle(qa, 0.5)
+    ip.final_check = real_check
+    # 10.11.2026: the switch stopped on "the module pack is missing" (no out/lbpack) and the error box
+    # went nowhere -- the box's text is in the line now
+    ok("and installs it, to its end check: %s %s" % (installed, pi_errors[-1:] if not installed else ""),
+       len(installed) == 1 and WL.live(game) == installed)
     # jibibi 17.10.: the NewLife Database took him twenty minutes to find under More
     ok("NewLife Database has its own button by + Add...: %r" % sec.newlife_btn.text(),
        sec.newlife_btn.isVisible() and sec.newlife_btn.text() == "NewLife Database")
@@ -340,26 +375,54 @@ def run():
 
     # ---- B123 (Vicentico, 17.10.): after Import your world switched a zip's world on, Leagues and the
     # other tabs still showed the world in the game before it until Mod Studio started again
+    # (since 07.11. the world zip above is in the game now, + Add... installed it; it brings no recipe,
+    # so the open one is still the world before it)
     live_now = WL.live(game)[0]
-    other = next(c.world for c in sec.cards if c.world != live_now)
-    ok("B123: before, the open recipe is the world in the game (%s)" % live_now, w.project.recipe.get("world") == live_now)
-    ip = w.page("Install")
+    was = w.project.recipe.get("world")
+    other = next(c.world for c in sec.cards if c.world not in (live_now, was))
+    ok("B123: before, the open recipe is not %s (%s, %s in the game)" % (other, was, live_now), was != other)
     checked = []
     ip.final_check = lambda world: checked.append(world)
-    ip.world_on({"world": other})
-    t0 = time.time()
-    while not checked and time.time() - t0 < 60:
-        qa.processEvents()
-        time.sleep(0.02)
-    settle(qa, 0.3)
-    ok("B123: the switch ran to its end check", checked == [other])
+    # This fake-game test checks the UI recipe refresh, not the distribution pack.
+    # A source checkout need not have out/lbpack (install_modules otherwise fails first).
+    from unittest.mock import patch
+    import threading
+    from modstudio import checks as CK
+    read_on, real_ready = [], CK.ready_check
+
+    def ready(g, world):
+        read_on.append(threading.current_thread() is threading.main_thread())
+        return real_ready(g, world)
+    with patch("leaguebuilder.install_modules"), patch.object(CK, "ready_check", ready):
+        ip.world_on({"world": other})
+        t0 = time.time()
+        while not checked and time.time() - t0 < 60:
+            qa.processEvents()
+            time.sleep(0.02)
+        settle(qa, 0.3)
+        ok("B123: the switch ran to its end check", checked == [other])
+        # B419 (12.11.2026): the end check read the plan of a big world on the GUI thread, 3 s of a
+        # window standing still. Its rows are read in the worker that reads the recipe
+        ok("B419: what the end check shows was read in the worker, once (%s)" % read_on,
+           read_on == [False] and ip.ready_rows and ip.ready_rows[0] == other)
+        ip.final_check = real_check
+        with patch.object(ip, "say", lambda *a, **k: None), patch.object(ip, "show_fix", lambda *a, **k: None),                 patch("modstudio.pages.install.info", lambda *a, **k: None), patch.object(ip, "edit_check", lambda *a: None):
+            ip.final_check(other)
+        ok("B419: ... and the end check takes those rows, it reads nothing itself (%s)" % read_on,
+           read_on == [False] and ip.ready_rows is None)
+        ip.final_check = lambda world: checked.append(world)
     ok("B123: %s is in the game" % other, WL.live(game) == [other])
     ok("B123: its recipe is the open one now, not %s's (the tabs show its leagues)" % live_now,
        w.project.recipe.get("world") == other)
     bp = w.page("Build")
     bp.refresh()
     ok("B123: the Build page says %s: %r" % (other, bp.state.text()),
-       ("World %s:" % other) in bp.state.text() and live_now not in bp.what.text() + bp.state.text())
+       ("World %s:" % other) in bp.state.text() and live_now not in bp.what.text() + bp.state.text()
+       and (not was or was == other or was not in bp.what.text() + bp.state.text()))
+    from PySide6.QtWidgets import QMessageBox
+    with patch.object(w.page("Cups"), "has_drafts", return_value=True), \
+            patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel):
+        ok("closing warns about unapplied cup drafts and Cancel keeps the window open", not w.close() and w.isVisible())
     w.close()
     qa.processEvents()
 

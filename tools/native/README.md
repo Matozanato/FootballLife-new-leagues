@@ -25,7 +25,11 @@ all six is in [docs/developers/fork/modules.md](../../docs/developers/fork/modul
   and relegation, and completes a chain of three or more divisions, which the game on its
   own only exchanges one joint of. Around 400 lines. Up to 8 chains. It also decides which
   clubs a country's cup takes when a world adds a second division under a shipped top flight:
-  the top flight's alone, or both divisions with `cupall=1` (issue #32).
+  the top flight's alone, or both divisions with `cupall=1` (issue #32). Since GitHub #98 it
+  moves groups of one division as one set (`fl26_chain_gsets`, `fl26_chain_ghomes`: three
+  Serie C groups under Serie B, nine Serie D groups under them, up to 64 sets of 32 leagues a
+  side) and decides promotion play-offs from the match table (`fl26_chain_playoffs`, up to
+  64); `test_chain_groups.c` checks both on a fake game image.
 - **`fl26swiss.dll`** (experimental) replaces the league schedule builder for the listed
   regulations only: the 36-club league phase of the Champions League, Europa League and
   Conference League (the draw tables are generated and checked by `tools/mkswiss.py` into

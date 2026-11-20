@@ -6,7 +6,7 @@ Build drew. modstudio/gamecrest.crest() finds the game's:
   - a folder sider.ini switches on (a crest pack) comes first, the licensed _r picture before _f;
   - else a copy already in the cache;
   - no game folder or no team id: None.
-With a game folder (default E:\instalacija when it is there) also from its .cpk files, read only:
+With a game folder (default E:\FL\FL26\game when it is there) also from its .cpk files, read only:
 Zamora (899, the game's own _f crest) and Deportivo Tachira (2218, _r), into a temp cache.
 """
 import os, sys, tempfile, types
@@ -52,7 +52,7 @@ def main():
     ok("a copy in the cache is used", (G.crest(g, 500, cache) or "").endswith("e_000500_r.png"))
     ok("no team id: None", G.crest(g, None, cache) is None)
     ok("no game folder: None", G.crest(types.SimpleNamespace(folder="", sider_dir=""), 899, cache) is None)
-    real = sys.argv[1] if len(sys.argv) > 1 else "E:/instalacija"
+    real = sys.argv[1] if len(sys.argv) > 1 else "E:/FL/FL26/game"
     if os.path.isdir(os.path.join(real, "Data")):
         rg = types.SimpleNamespace(folder=real, sider_dir="")       # the game's .cpk only
         c2 = os.path.join(T, "cache2")

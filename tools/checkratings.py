@@ -34,22 +34,12 @@ and the 15 best of each by overall, with name and club.
 
 Exit code 0: pass. 1: fail, with the list of offenders (the first 50; --all lists every one).
 
-The overall: the game's own formula is not known, and lbplayers.overall (the builder's rough one,
-the plain mean of six abilities) puts Sessegnon at 70 in the good world and 83 in the bad one --
-a 90 line never sees him. So this is an estimate of the number the game shows:
-
-    m       = the mean of the abilities his registered position leans on (GROUPS below: GK, CB,
-              full back, DMF, CMF, wide, AMF/SS, CF)
-    overall = 80 + 1.5 * (m - TOP[group])
-
-TOP[group] is the m of the shipped game's top 1% at that kind of position (its 99th percentile,
-measured on C:\work\fl26base\ex_merged, the 19,420 players with a team), so the game's top 1%
-at every position is 80 and up -- a keeper's or a centre back's abilities run higher than a full
-back's, and the same m is a different player there. 1.5 overall points to an ability point is
-the slope that matches what testers saw in the game: Ryan Sessegnon (LB) ~75 in Modpack r10
-(m 76.8 -> 76) and ~100 in eu1, where every ability of his was 14 higher (m 90.1 -> 96). On the
-shipped tables it gives Rodri 87, Van Dijk 86, Vinicius 86, Messi 84, Haaland 83, Alisson 81,
-Mbappe 80. It may go past 99 (the game stops at 99) and is only meant for the top of the scale.
+The overall is the number the game shows (lbrating.rating, the game's own formula -- TEditor's,
+exact on 535 players of PES 2021, mato 07.11.2026), so rule A's 90 is a 90 in the game.  Until
+then this was an estimate from the mean of a few abilities that put the game's stars about seven
+under (Mbappe 80, Haaland 83, Messi 84; the game: 89, 88, 87), so the line only caught a real
+95 or so.  Ryan Sessegnon (LB, B64): 79 in Modpack r10, 98 in eu1, where every ability of his
+was 14 higher.
 """
 import os
 import sys
@@ -58,6 +48,7 @@ import json
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import pesdb
+import lbrating as R
 import playeredit as E
 
 # the shipped tables' last ids (C:\work\fl26base\ex_merged, 27,927 players, 743 clubs, 2026-10-17):
@@ -70,33 +61,9 @@ MAX_OVR, MAX_RISE = 90, 8
 STARS = os.path.join(HERE, "checkratings_stars.txt")
 SHOW = 50
 
-GROUPS = {
-    "GK": ["GK Awareness", "GK Catching", "GK Clearing", "GK Reflexes", "GK Reach"],
-    "CB": ["Defensive Awareness", "Ball Winning", "Aggression", "Physical Contact", "Heading",
-           "Jump", "Speed"],
-    "FB": ["Speed", "Acceleration", "Stamina", "Defensive Awareness", "Ball Winning", "Low Pass",
-           "Lofted Pass", "Ball Control", "Dribbling", "Physical Contact"],
-    "DMF": ["Defensive Awareness", "Ball Winning", "Low Pass", "Lofted Pass", "Stamina",
-            "Physical Contact", "Ball Control", "Aggression"],
-    "CMF": ["Low Pass", "Lofted Pass", "Ball Control", "Dribbling", "Tight Possession", "Stamina",
-            "Offensive Awareness", "Ball Winning"],
-    "WIDE": ["Speed", "Acceleration", "Dribbling", "Ball Control", "Tight Possession", "Low Pass",
-             "Lofted Pass", "Curl", "Offensive Awareness", "Finishing"],
-    "AMF": ["Offensive Awareness", "Ball Control", "Dribbling", "Tight Possession", "Low Pass",
-            "Finishing", "Curl", "Acceleration"],
-    "CF": ["Offensive Awareness", "Finishing", "Ball Control", "Dribbling", "Speed", "Acceleration",
-           "Kicking Power", "Heading", "Physical Contact"],
-}
-GROUP_OF = {"GK": "GK", "CB": "CB", "LB": "FB", "RB": "FB", "DMF": "DMF", "CMF": "CMF",
-            "LMF": "WIDE", "RMF": "WIDE", "LWF": "WIDE", "RWF": "WIDE", "AMF": "AMF", "SS": "AMF",
-            "CF": "CF"}
-# the m of the shipped game's top 1% (99th percentile) at each kind of position, and its overall
-TOP = {"GK": 90.6, "CB": 85.7, "FB": 79.5, "DMF": 83.4, "CMF": 82.0, "WIDE": 82.9, "AMF": 86.5,
-       "CF": 84.8}
-TOP_OVR, SLOPE = 80, 1.5
-
 _BIT = {n: b for n, b in E.ABILITIES}
 _POS_BIT, _POS_W = E.FIELDS["Registered Position"][:2]
+_WFA_BIT, _WFA_W = E.FIELDS[R.WFA][:2]
 
 
 def position(v):
@@ -110,12 +77,12 @@ def ability(v, name):
 
 
 def overall(v, pos=None):
-    """the estimated overall of a player record (int.from_bytes of the 312 bytes), at pos
-    (default: his registered position)"""
-    pos = pos or position(v)
-    g = GROUP_OF.get(pos, "CF")
-    m = sum(ability(v, n) for n in GROUPS[g]) / float(len(GROUPS[g]))
-    return int(round(TOP_OVR + SLOPE * (m - TOP[g])))
+    """the overall the game shows for a player record (int.from_bytes of the 312 bytes), at pos
+    as if it were his registered position (default: his registered position)"""
+    row = {n: str(ability(v, n)) for n, _b in E.ABILITIES}
+    row[R.WFA] = str(v >> _WFA_BIT & ((1 << _WFA_W) - 1))
+    row["Registered Position"] = pos or position(v)
+    return R.rating(row)
 
 
 def rise(v, ov):

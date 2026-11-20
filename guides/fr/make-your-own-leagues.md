@@ -115,7 +115,7 @@ pour inverser l'ordre.
 **Pourquoi certaines ligues sont grises.** Une ligue grise ne peut pas être ajoutée, et la
 dernière colonne dit pourquoi :
 
-- `une ligue a de 10 à 24 clubs` : une ligue du jeu a de 10 à 24 clubs, les nouveaux et ceux du
+- `une ligue a de 10 à 32 clubs` : une ligue du jeu a de 10 à 32 clubs, les nouveaux et ceux du
   jeu ensemble. Celle-ci en a moins ou plus. Vous pouvez encore la corriger à l'étape 4 (ajouter
   ou laisser de côté des clubs) jusqu'à ce qu'elle convienne.
 - `ligue propre au jeu : Amener les ligues du jeu à cette saison` : le jeu a déjà cette ligue (la
@@ -167,7 +167,7 @@ Sélectionnez **une** ligue (une seule). La liste de droite montre ses clubs : *
   **Vous devez voir :** le club à la fin de la liste, avec `de : <sa ligue>` à côté.
 
 **Vous devez voir :** la ligne de la ligue dans la liste a maintenant un `*`, et son nombre de
-**Clubs** a changé. Une ligue grise qui a maintenant de 10 à 24 clubs redevient normale.
+**Clubs** a changé. Une ligue grise qui a maintenant de 10 à 32 clubs redevient normale.
 
 Un club ne peut jouer que dans une ligue. Si vous l'ajoutez à deux, Mod Studio vous arrête à
 l'étape 5.
@@ -222,7 +222,7 @@ les valeurs par défaut marchent, et **Annuler** ne change rien.
 |---|---|
 | **Nom** | Le nom de la ligue dans le jeu. Deux ligues ne peuvent pas avoir le même nom. Restez sous environ 38 caractères : un nom plus long s'affiche comme une ligne vide dans la liste des ligues de Kick Off. |
 | **Pays** | Tapez quelques lettres et choisissez dans la liste (`korea` trouve les deux Corées). Il donne le drapeau et l'endroit où la ligue apparaît dans le jeu. |
-| **Clubs** | De 10 à 24. Pour une ligue NewLife, laissez tel quel : un nombre plus petit retire les derniers clubs, un plus grand ajoute des clubs inventés à la fin. |
+| **Clubs** | De 10 à 32. Pour une ligue NewLife, laissez tel quel : un nombre plus petit retire les derniers clubs, un plus grand ajoute des clubs inventés à la fin. |
 | **Clubs sans championnat** | Laissez sur `(non -- un championnat)`. Les autres choix (*Other European teams* ...) sont pour un club, ou quelques-uns, sans championnat autour ; ils vont dans les groupes « Other ... » du jeu, et la plupart des champs en dessous deviennent gris. [Plus de détails](mod-studio-guide.md#8-league-builder--nouvelles-ligues-nouveaux-clubs-et-joueurs). |
 | **Format** | Choisissez-en un : **tous contre tous, nombre de fois :** et le nombre (1 à 4 ; 2, c'est aller et retour) ; **se divise en deux (à l'écossaise)**, avec `d'abord` *n* `x, puis groupes` *6/6* *n* `x` (la somme des groupes doit faire le nombre de clubs) ; ou **Apertura et Clausura, puis play-offs de :** *8 clubs*, *4 clubs* ou *pas de play-offs* (deux courts tournois par saison, 18 clubs au maximum). La division en deux et Apertura et Clausura sont **expérimentales** : elles marchent, mais ont encore plus de bugs que tous contre tous, le format entièrement testé. La fenêtre le dit sous les formats. Pour un premier monde, prenez tous contre tous. |
 | **Division** | `(première division)` = la meilleure ligue de son pays. Pour une deuxième division, choisissez la ligue un niveau au-dessus : vos nouvelles ligues sont en haut de la liste, puis les ligues du jeu avec un nombre entre parenthèses. `= division 2` à côté montre le niveau. Une ligue qui a déjà une ligue en dessous est grise (`-- en dessous : ...`) : une ligue peut avoir une seule ligue en dessous. Voir l'[étape 7](#étape-7-exemple--un-pays-avec-deux-divisions). |
@@ -428,7 +428,7 @@ Tout ce qui concerne cette page est dans [Joueurs dans le guide complet](mod-stu
 | Limite | Où vous la voyez |
 |---|---|
 | Nouveaux clubs en tout (environ 1 500) : le nombre sur la ligne `Nouveaux clubs dans votre monde : X sur les Y que le jeu accepte.` | Page NewLife Database : **Ajouter à votre monde** reste grisé. Build : `erreur : <n> new clubs, but the game has room for <m> more (a full squad each)`. |
-| De 10 à 24 clubs dans une ligue | NewLife Database : ligue grise, `une ligue a de 10 à 24 clubs`. Onglet Clubs : `Une ligue a de 10 à 24 clubs.` |
+| De 10 à 32 clubs dans une ligue | NewLife Database : ligue grise, `une ligue a de 10 à 32 clubs`. Onglet Clubs : `Une ligue a de 10 à 32 clubs.` |
 | Nouvelles ligues par monde : pas de nombre fixe. Chaque ligue et chaque coupe prend une des 255 compétitions du jeu ; **2. Mon monde** montre combien sont utilisées (**COMPÉTITIONS**). Notre monde de test joue 86 nouvelles ligues. | Build : `erreur : <n> leagues, but the game has room for <m> ...` |
 | Une ligue sous une ligue | Liste **Division** : grise. Build : `... are all under ...; the game follows one link down from a league ...` |
 | Divisions jusqu'à la 7e | Build : `erreur : <league>: division 8 -- the rank field stops at 7`. |
@@ -457,9 +457,9 @@ Mod Studio rouvre votre monde au démarrage, donc ce que vous avez fait n'est ja
 1. **2. Mon monde**, onglet **Construction** (le premier onglet).
 
 **Vous devez voir :** une note qui dit que Build est pour les moddeurs, puis le grand bouton
-**Construire et installer** et deux plis en dessous : **Options du monde : coupes d'Europe, coupes
-nationales, maillots et visages des nouveaux clubs** (deux cartes, **Coupes d'Europe** et
-**Nouveaux clubs**, avec des options) et **Étape par étape, et Exporter le monde** (la rangée
+**Construire et installer** et deux plis en dessous : **Options du monde : coupes d'Europe,
+maillots et visages des nouveaux clubs** (deux cartes, **Coupes d'Europe** et **Nouveaux clubs**,
+avec des options) et **Étape par étape, et Exporter le monde** (la rangée
 **0. Installer les modules**, **1. Vérifier le plan**, **2. Construire le monde**, **3. L'activer**,
 **4. Après un lancement : vérifier** et **Exporter le monde...**). Puis une ligne comme
 `Monde _FL26MyWorld : pas encore construite · modules de Mod Studio : installés`, et une case pour
@@ -520,9 +520,9 @@ Exporter le monde**) :
 | `livecpk: _FL26MyWorld (... files), sider.ini loads it` | Le monde est dans le jeu. |
 | `erreur : ...` | Build s'est arrêté et rien n'a changé dans le jeu. Corrigez ce qu'il dit (tableau à la fin) et reconstruisez. |
 
-Les options sous **Options du monde** (**Inclure la Ligue Europa Conférence**, **Tirage de la
-coupe nationale**, **Maillots aux couleurs des clubs** ...) sont expliquées en
-[8.2](mod-studio-guide.md#82-construire-activer-jouer). Les valeurs par défaut conviennent.
+Les options sous **Options du monde** (**Maillots aux couleurs des clubs** ...) et sous l'onglet
+**Coupes** (**Inclure la Ligue Europa Conférence**, **Tirage de la coupe nationale** ...) sont
+expliquées en [8.2](mod-studio-guide.md#82-construire-activer-jouer). Les valeurs par défaut conviennent.
 
 ## Étape 13. Jouer : une NOUVELLE Master League, puis la vérification
 
@@ -645,7 +645,7 @@ d'une page, ou dans le journal du Build après `erreur :`. `<...>` remplace un n
 | `no NewLife Database here: put the NewLife-....zip parts you downloaded in one folder (no need to unpack them) and open that folder` | Vous avez choisi le mauvais dossier, ou décompressé les parties. Ouvrez le dossier qui contient les fichiers `NewLife-...zip` eux-mêmes. |
 | `the parts in this folder are of different versions (...): keep one version's parts only` | Deux versions de NewLife sont mélangées. Ne gardez dans le dossier que les parties d'une version. |
 | `<file> is not a NewLife part (...) -- download it again` | Le téléchargement s'est mal passé. Téléchargez de nouveau cette partie. |
-| Une ligue grise, `une ligue a de 10 à 24 clubs` | Ajoutez ou laissez de côté des clubs (étape 4) jusqu'à en avoir de 10 à 24. |
+| Une ligue grise, `une ligue a de 10 à 32 clubs` | Ajoutez ou laissez de côté des clubs (étape 4) jusqu'à en avoir de 10 à 32. |
 | Une ligue grise, `ligue propre au jeu : Amener les ligues du jeu à cette saison` | Le jeu l'a déjà. Utilisez **Amener les ligues du jeu à cette saison...**. |
 | **Ajouter à votre monde** reste grisé | Rien d'ajoutable n'est sélectionné, ou la sélection dépasserait la limite de nouveaux clubs (la ligne en bas). |
 | `<club> jouerait dans deux ligues (<ligue> et <ligue>).` | Décochez le club dans l'une des deux. |
@@ -660,7 +660,7 @@ d'une page, ou dans le journal du Build après `erreur :`. `<...>` remplace un n
 | `Cette division joue de février à décembre avec la ligue au-dessus, et une ligue qui joue de février à décembre n'a pas encore de scission ni d'Apertura/Clausura.` | Donnez à cette division **tous contre tous**. |
 | `Les clubs sans championnat sont tous de nouveaux clubs : retirez d'abord les clubs du jeu (Modifier le club).` | La ligue contient des clubs du jeu. Dans l'onglet **Clubs**, sélectionnez chacun et utilisez **Plus ▾ → Nouveau club ici**, puis réglez de nouveau **Clubs sans championnat**. |
 | `<ligue> est sous ce championnat ; les clubs sans championnat n'ont rien en dessous.` (ou `<ligue> est sous cette ligue ; une ligue d'exhibition n'en a aucune.`) | Une autre ligue a celle-ci comme **Division**. Changez d'abord cette ligue-là. |
-| `Une ligue a de 10 à 24 clubs.` (onglet Clubs) | Insérer un club / Retirer le club mettrait la ligue hors de 10 à 24. |
+| `Une ligue a de 10 à 32 clubs.` (onglet Clubs) | Insérer un club / Retirer le club mettrait la ligue hors de 10 à 32. |
 | `Ouvrez d'abord la NewLife Database sur la page NewLife.` | **Club NewLife...** a besoin du dossier NewLife : ouvrez-le une fois sur **NewLife Database**. |
 | `Choisissez le club qui prend sa place.` / `Donnez un nom au nouveau club.` / `Un club ne peut pas prendre sa propre place.` | Dans **Club du jeu**, choisissez un club de remplacement, ou tapez un nom pour le nouveau. |
 | `erreur : pas de tables du jeu -- Réglages > Extraire les tables du jeu` | **5. Réglages → Extraire les tables du jeu**. |

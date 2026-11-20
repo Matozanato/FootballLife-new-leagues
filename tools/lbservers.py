@@ -38,6 +38,7 @@ SPFL_KITS = os.path.join("content", "kits")       # SPFL26's own Kit Server, com
 BOARDS = os.path.join("content", "scoreboard-server")
 SPFL_BOARDS = os.path.join("content", "scoreboards")   # and its common\scoreboards.lua
 MENUS = os.path.join("content", "menu-server")       # Menu Server: no Build writes it, world zips bring lines
+SLEEVES = os.path.join("content", "SleeveBadge")     # SmokePatch's common\SleeveBadge.lua (FL 2026 and 2027)
 TAG = lbstadiums.TAG
 OFF = lbstadiums.OFF
 LINE = re.compile(r"^\s*(#\s*)?(\d+)\s*,\s*\"?([^\"#]*)")
@@ -156,12 +157,14 @@ def replaced_clubs(pl):
 
 
 def to_make(pl, root):
-    """[(team id, league, place, home words, away words, crest picture)] of the new clubs that get a
-    kit made (kitmaker): no Kit Server folder of their own, a shirt in words or a crest picture of
-    their own.  A club of the game keeps its kits -- unless the world gave its place to another
-    club (replaced_clubs): that club's kit is made under GAME, its place the team id.
-    "make_kits": false makes none."""
-    import kitmaker
+    """[(team id, league, place, home words, away words, crest picture, seed)] of the new clubs that
+    get a kit made (kitmaker): no Kit Server folder of their own, and a crest drawn by the Build.
+    Their shirt in words, or their crest picture's colours; a club with neither (a numbered badge)
+    gets colours picked by its name (kitpatterns.generated_home) and no crest on the kit. seed:
+    the club's name, which picks its patterns and the colours of its other kits. A club of the game
+    keeps its kits -- unless the world gave its place to another club (replaced_clubs): that
+    club's kit is made under GAME, its place the team id. "make_kits": false makes none."""
+    import kitmaker, kitpatterns
     if pl.get("make_kits") is False:
         return []
     out = []
@@ -169,23 +172,30 @@ def to_make(pl, root):
         teams, folders = p.get("teams") or [], p.get("kit_folders") or []
         game = {int(k) for k in (p.get("game_clubs") or {})}
         home, away = p.get("club_kits") or [], p.get("club_away_kits") or []
+        third = p.get("club_third_kits") or []
         crests = p.get("club_crests") or []
+        names = p.get("club_names") or []
+        league = p.get("name") or "Other clubs"
         for k, tid in enumerate(teams):
             if tid is None or k in game or (k < len(folders) and folders[k]):
                 continue
             crest = os.path.join(root, "common", "render", "symbol", "flag", "e_%06d_r_ll.png" % int(tid))
+            if not os.path.isfile(crest):
+                continue                      # no crest drawn: not a club of this Build's
+            seed = (names[k] if k < len(names) and names[k] else "%s/%d" % (league, k)).strip()
             words = kitmaker.words(home[k] if k < len(home) else "")
             own = k < len(crests) and crests[k]
-            if not os.path.isfile(crest) or not (words or own):
-                continue                      # a numbered placeholder badge: the lent kit stays
-            if not words:
+            if not words and own:
                 words = kitmaker.crest_kit(crest)
-                if not words:
-                    continue
-            out.append((int(tid), p.get("name") or "Other clubs", k, words,
-                        kitmaker.words(away[k] if k < len(away) else ""), crest))
+            if not words:
+                # a numbered placeholder badge (every new club gets its kits, asked for 06.11.):
+                # colours picked by its name, and the badge is not put on the shirt
+                words, crest = kitpatterns.generated_home(seed), None
+            out.append((int(tid), league, k, words,
+                        kitmaker.words(away[k] if k < len(away) else ""), crest, seed,
+                        kitmaker.words(third[k] if k < len(third) else "")))
     have = {x[0] for x in out}
-    for tid, (_name, kit, own) in sorted(replaced_clubs(pl).items()):
+    for tid, (name, kit, own) in sorted(replaced_clubs(pl).items()):
         crest = os.path.join(root, "common", "render", "symbol", "flag", "e_%06d_r_ll.png" % tid)
         words = kitmaker.words(kit)
         if tid in have or not os.path.isfile(crest) or not (words or own):
@@ -194,7 +204,7 @@ def to_make(pl, root):
             words = kitmaker.crest_kit(crest)
             if not words:
                 continue
-        out.append((tid, GAME, tid, words, None, crest))
+        out.append((tid, GAME, tid, words, None, crest, (name or "club %d" % tid).strip(), None))
     return out
 
 
@@ -216,11 +226,15 @@ def numbers_kit(lib, ours):
 LIGHT, DARK, LOOK = 0.6, 0.05, 40      # B214: numbers this light / this dark; kits looked at at most
 
 
-def numbers_kits(lib, ours):
+def numbers_kits(lib, ours, made=False):
     """B214: the kits of the library to lend numbers from, [] when none has them: numbers_kit's
     first, then the first by name whose numbers are light and the first whose are dark (when the
     first's are not already), so every drawn kit finds numbers that stand out from its shirt.
-    One walk of the library, as numbers_kit's (a Switch on is timed, B104)"""
+    One walk of the library, as numbers_kit's (a Switch on is timed, B104).
+    A kit Mod Studio drew (kitmaker.txt) lends none, its numbers are lent ones: another world's
+    made kits sort before ours at times, and the lending kits changed with every world built or
+    installed after ours (our test 06.11.: _FL26Comb150 built, then the Switch on of _FL26Lim120k
+    drew its 779 made kits again, 597 s). made: those too, as before (the stamps written so)"""
     import kitpics
     out, want, seen = [], {"light", "dark"}, 0
     for d, subs, files in sorted(os.walk(lib)):
@@ -229,6 +243,8 @@ def numbers_kits(lib, ours):
             subs[:] = []
             continue
         if os.path.basename(d).lower() != "p1":
+            continue
+        if not made and os.path.isfile(os.path.join(os.path.dirname(d), "kitmaker.txt")):
             continue
         names = [f.lower() for f in files]
         if not all(any(n.endswith(s + ".ftex") for n in names) for s in ("_back", "_leg", "_name")):
@@ -254,10 +270,12 @@ def numbers_kits(lib, ours):
 # stamp now; a Build draws a kit of an older drawing again, a Switch on keeps it (B104: every kit
 # of a world drawn at a Switch on is minutes with the window not answering).
 # 3 (B214): the numbers picked for each kit from a few numbers kits (numbers_kits)
-DRAWING = 3
+# 4: the kits of the pattern library (kitpatterns): what is drawn -- the four kits in words -- is in
+#    the stamp, so a club whose kits the library picks differently is drawn again
+DRAWING = 4
 
 
-def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING):
+def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING, seed=None, third=None):
     """the kitmaker.txt stamps that count as "made from these": the first is the one written now,
     with the numbers kit by its folder inside the kit library. B104: the stamp had the numbers
     kit's whole path, so on every other PC (and on this one with the other slash) every made kit
@@ -266,6 +284,26 @@ def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING):
     drawing 1: the stamps of the drawing before B213, which did not name it. numbers: a folder,
     or numbers_kits' list -- drawing 3 names them all, the drawings before it the first (B214)."""
     import hashlib, kitmaker
+    names, drawn = _drawing(words, away, numbers, lib, drawing, seed, third)
+    pic = open(crest, "rb").read() if crest else b""
+    if drawing >= 4:
+        drawn += (("crest",) if crest else ("no crest",))
+    out = []
+    for n in names:
+        h = hashlib.md5()
+        for x in (words, away or "", n or "", os.path.getsize(kitmaker.MASK)) + \
+                 (("drawing %d" % drawing,) if drawing > 1 else ()) + drawn + \
+                 (("third %s" % third,) if third else ()):         # only a recipe's own third kit
+            h.update(str(x).encode("utf-8") + b"\0")
+        h.update(pic)
+        if h.hexdigest() not in out:
+            out.append(h.hexdigest())
+    return out
+
+
+def _drawing(words, away, numbers, lib=None, drawing=DRAWING, seed=None, third=None):
+    """(the numbers kit's names, the kits planned in words) of _stamps"""
+    import kitmaker
 
     def inside(k):
         if k and lib:
@@ -281,36 +319,76 @@ def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING):
             numbers = numbers[0] if numbers else None
         names = [inside(numbers)] + ([numbers, numbers.replace("/", os.sep), numbers.replace(os.sep, "/")]
                                      if numbers else [""])
-    pic = open(crest, "rb").read()
-    out = []
-    for n in names:
-        h = hashlib.md5()
-        for x in (words, away or "", n or "", os.path.getsize(kitmaker.MASK)) + \
-                 (("drawing %d" % drawing,) if drawing > 1 else ()):
-            h.update(str(x).encode("utf-8") + b"\0")
-        h.update(pic)
-        if h.hexdigest() not in out:
-            out.append(h.hexdigest())
-    return out
+    if not numbers:
+        # no kit lends numbers: the kit gets our own (kitnumbers), and a kit stamped before them,
+        # which has none, is drawn again at the next Build
+        import kitnumbers
+        names = [kitnumbers.NAME]
+    drawn = ()
+    if drawing >= 4:
+        try:
+            kits = kitmaker.plan(words, away, seed, third)
+        except Exception:                    # a shirt the library cannot read: the words alone
+            kits = {}
+        drawn = tuple("%s=%s" % (v, kits[v]) for v in sorted(kits))
+    return names, drawn
 
 
-def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False, redraw=False):
+def _env(words, away, numbers, lib=None, seed=None, third=None):
+    """the fourth line of kitmaker.txt: what the stamp is made of besides what the second line
+    says (the numbers kit, the mask, the drawing, the kits planned). With both lines as they
+    were when the kit was drawn, its stamp is the same: the crest is not read again for it"""
+    import hashlib, kitmaker
+    names, drawn = _drawing(words, away, numbers, lib, DRAWING, seed, third)
+    h = hashlib.md5()
+    for x in (names[0] or "", os.path.getsize(kitmaker.MASK), "drawing %d" % DRAWING) + drawn:
+        h.update(str(x).encode("utf-8") + b"\0")
+    return h.hexdigest()
+
+
+def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False, redraw=False,
+          seed=None, third=None):
     """the kit folder dst made from words and crest, unless it was made from the same ones.
     ready: the world came ready from a zip (Install mods) with its made kits in it -- a kit
     folder with a stamp is kept as it came, whatever PC drew it (B104). redraw (a Build): a kit
-    of an older drawing is drawn again; at a Switch on it is kept (B213)"""
+    whose stamp is not that of these colours, crest, numbers and drawing is drawn again; at a
+    Switch on any kit Mod Studio drew is kept (B213, B374).
+    seed: the club's name (kitpatterns.plan); crest None: no crest on the kit. numbers: a folder,
+    numbers_kits' list, or a function giving it (write: the library is walked only when a kit
+    needs it)"""
     import kitmaker, kitpics, tempfile
-    stamps = _stamps(words, away, crest, numbers, lib)
     stamp = os.path.join(dst, "kitmaker.txt")
+    had, had_given, had_crest, had_env = _read_stamp(stamp)
+    # B374: a Switch on draws a kit Mod Studio drew again only when what it is drawn from
+    # changed (a crest put in the world's folder) -- not for another drawing (B213; B360 drew
+    # the third kits anew on 09.11.: _FL26MegaNP's first Switch on drew one kit in three
+    # again, minutes with the window busy) or other kits lending numbers (06.11.: a world built
+    # since, 779 kits, 597 s); those are drawn at the next Build. A stamp from before 09.11.
+    # does not say what the kit was drawn from: kept too. B376: asked before the stamps are
+    # worked out (their drawing plan was 66 s of the 75 s Switch on of _FL26Megapack's 4345
+    # kits) and the crest is read only when its file changed (its 4345 crests are 683 MB)
+    if had and (ready or (not redraw and not had_given)):
+        return False
+    crest_md5, crest_line = _crest_md5(crest, had_crest)
+    given = _given(words, away, crest, third, crest_md5)
+    if had and not redraw and had_given == given:
+        return False
+    if callable(numbers):
+        numbers = numbers()
+    # mato 09.11. (jibibi: 27 minutes for a Build): a Build worked out every kit's stamp, reading
+    # each crest whole -- 4345 just written ones for _FL26Megapack, a minute -- while the kit had
+    # been drawn from the same of everything; the fourth line says so without the crest
+    env = _env(words, away, numbers, lib, seed=seed, third=third)
+    if had and had_given == given and had_env == env:
+        _restamp(stamp, [had, given, crest_line, env], [had, had_given, had_crest, had_env])
+        return False
+    stamps = _stamps(words, away, crest, numbers, lib, seed=seed, third=third)
+    if had in stamps:
+        _restamp(stamp, [had, given, crest_line, env], [had, had_given, had_crest, had_env])
+        return False
+    # B166: a made kit whose files were changed after it was drawn (a kit put in its folder by
+    # hand) is the player's: never drawn over
     try:
-        had = open(stamp, encoding="utf-8").read().strip()
-        if had in stamps or (ready and had):
-            return False
-        if had and not redraw and any(had in _stamps(words, away, crest, numbers, lib, drawing=d)
-                                      for d in range(1, DRAWING)):
-            return False
-        # B166: a made kit whose files were changed after it was drawn (a kit put in its folder by
-        # hand) is the player's: never drawn over
         made = int(os.path.getmtime(stamp))
         if had and any(t > made + SLACK for _s, t in _files(dst).values()):
             log("  kit of %s: its files were changed by you, kept (delete the folder to have it drawn "
@@ -320,15 +398,124 @@ def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False, red
         pass
     tmp = tempfile.mkdtemp(prefix="fl26kit")
     try:
-        pics = kitmaker.pictures(tmp, words, away, crest)
+        pics = kitmaker.pictures(tmp, words, away, crest, seed=seed, **({"third": third} if third else {}))
         if os.path.isdir(dst):
             shutil.rmtree(dst)
         kitpics.make_kit(pics, tid, dst, numbers)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     with open(stamp, "w", encoding="utf-8") as f:
-        f.write(stamps[0] + "\n")
+        f.write(stamps[0] + "\n" + given + "\n" + crest_line + "\n" + env + "\n")
+    _note_stamp(stamp, [stamps[0], given, crest_line, env])
     return True
+
+
+# mato 09.11.: a Build opened all 4345 kitmaker.txt of _FL26Megapack, each one read by the virus
+# scan (6 ms an open, 29 s): what they hold is kept in one file of the world's kits,
+# kitmaker-index.json, and a stamp's lines are used while its file has the size and time they
+# were read at
+STAMPS = {}                  # {normcase(path): [mtime_ns, size, lines]}
+INDEX = "kitmaker-index.json"
+
+
+def _read_stamp(stamp):
+    """the four lines of a kitmaker.txt ("" for those it has not), through STAMPS"""
+    try:
+        st = os.stat(stamp)
+    except OSError:
+        return [""] * 4
+    k = os.path.normcase(stamp)
+    c = STAMPS.get(k)
+    if c and c[0] == st.st_mtime_ns and c[1] == st.st_size:
+        return list(c[2])
+    try:
+        lines = (open(stamp, encoding="utf-8").read().split() + [""] * 4)[:4]
+    except OSError:
+        return [""] * 4
+    STAMPS[k] = [st.st_mtime_ns, st.st_size, lines]
+    return list(lines)
+
+
+def _note_stamp(stamp, lines):
+    """STAMPS after a kitmaker.txt was written"""
+    try:
+        st = os.stat(stamp)
+        STAMPS[os.path.normcase(stamp)] = [st.st_mtime_ns, st.st_size, (list(lines) + [""] * 4)[:4]]
+    except OSError:
+        STAMPS.pop(os.path.normcase(stamp), None)
+
+
+def _load_index(path):
+    import json
+    STAMPS.clear()
+    try:
+        with open(path, encoding="utf-8") as f:
+            for k, v in json.load(f).items():
+                if isinstance(v, list) and len(v) == 3 and isinstance(v[2], list):
+                    STAMPS[os.path.normcase(os.path.join(os.path.dirname(path), k))] = v
+    except (OSError, ValueError, AttributeError):
+        pass
+
+
+def _save_index(path):
+    import json
+    base = os.path.normcase(os.path.dirname(path)) + os.sep
+    out = {k[len(base):]: v for k, v in STAMPS.items() if k.startswith(base)}
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(out, f)
+    except OSError:
+        pass
+
+
+def _restamp(stamp, lines, had):
+    """kitmaker.txt of a kit kept, brought up to date (the crest's file times, the fourth line)
+    with its time left as it was: B166 and coldstart tell by it when the kit was drawn"""
+    if lines == had:
+        return
+    try:
+        st = os.stat(stamp)
+        with open(stamp, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        os.utime(stamp, ns=(st.st_atime_ns, st.st_mtime_ns))
+    except OSError:
+        pass
+    _note_stamp(stamp, lines)
+
+
+def _given(words, away, crest, third=None, crest_md5=None):
+    """the second line of kitmaker.txt (B374): what the kit is drawn from -- the colours, the
+    crest picture, a third kit of the recipe's own -- without the drawing and the numbers kit"""
+    import hashlib
+    h = hashlib.md5()
+    for x in (words, away or "", third or ""):
+        h.update(str(x).encode("utf-8") + b"\0")
+    h.update((crest_md5 if crest_md5 is not None else _crest_md5(crest)[0]).encode("ascii"))
+    return h.hexdigest()
+
+
+# {crest path: (size, mtime_ns, md5)} of the crests a Build just wrote (leaguebuilder.write_manifest
+# hashed them), so the kits' check after it does not read 4345 new files again
+CREST_MD5 = {}
+
+
+def _crest_md5(crest, had=""):
+    """(the crest picture's md5, the third line of kitmaker.txt): the line holds the picture's
+    size and times with its md5, so a Switch on reads a crest only when its file changed (B376).
+    had: that line as the kit's stamp has it"""
+    if not crest:
+        return "", "-"
+    import hashlib
+    st = os.stat(crest)
+    sig = "%d.%d.%d" % (st.st_size, st.st_mtime_ns, getattr(st, "st_birthtime_ns", 0) or 0)
+    old_sig, _c, old = had.partition(":")
+    if old_sig == sig and len(old) == 32:
+        return old, had
+    known = CREST_MD5.get(os.path.normcase(os.path.abspath(crest)))
+    if known and known[:2] == (st.st_size, st.st_mtime_ns):
+        return known[2], sig + ":" + known[2]
+    md5 = hashlib.md5(open(crest, "rb").read()).hexdigest()
+    return md5, sig + ":" + md5
 
 
 COPIED = "modstudio-copy.txt"       # in a copied kit folder: what Mod Studio put there, file by file
@@ -355,6 +542,21 @@ def _changed(have, was):
         have[r][0] != was[r][0] or abs(have[r][1] - was[r][1]) > SLACK for r in have)
 
 
+def _unpacked(d, have, was):
+    """True when the files have of d are what Mod Studio copied there (was, COPIED), only with
+    other times: a world zip brings COPIED along with the times of the PC that built it, and
+    Install gives its files the time they came out of the zip (GigaPack beta 4, 18.11.2026: HNL's
+    scoreboard of Thunder105 never went in, its copy from beta 1's zip 29 days "newer" than its
+    note). Untouched: the same files, each of the note's size and none newer than the note itself,
+    which came out of the zip with them. A file changed by hand after that is newer than the note"""
+    try:
+        noted = int(os.path.getmtime(os.path.join(d, COPIED)))
+    except OSError:
+        return False
+    return set(have) == set(was) and all(
+        have[r][0] == was[r][0] and have[r][1] <= noted + SLACK for r in have)
+
+
 def _copy(src, dst, log=None):
     """src's files into dst: dst made again only when they differ (a size), and only when dst is
     still what Mod Studio copied there. B166 (LaraCroft 19.10.): SV Ried's kit, changed by hand in
@@ -379,7 +581,13 @@ def _copy(src, dst, log=None):
         except OSError:
             pass
         if was is not None:
-            mine = _changed(have, was)
+            mine = _changed(have, was) and not _unpacked(dst, have, was)
+        elif os.path.isfile(os.path.join(dst, "kitmaker.txt")):
+            # B367 (09.11.): a kit Mod Studio drew there, the club's stand-in until a package
+            # brings its kit, was kept as the player's (its files newer than the package's)
+            mine = False
+            if log:
+                log("  kit folder %s: the kit drawn from colours gives way to the package's" % dst)
         else:
             mine = any(r not in want or have[r][1] > want[r][1] + SLACK for r in have)
         if mine:
@@ -396,6 +604,63 @@ def _copy(src, dst, log=None):
     except OSError:
         pass
     return "copied"
+
+
+def prune(root, world, file="map.txt", log=print):
+    """B452 (13.11.2026): a club renamed in the recipe got a kit folder under its new name at the
+    next Build, and the one under its old name stayed -- 209 renamed clubs of the GigaPack left
+    342 MB of kits no map line names, and Export packed them into the zip. A Build now takes out
+    the club folders under <world> that no line of the map names (on or off), and only those
+    Mod Studio put there itself: a copy whose files are still the ones it copied (COPIED), or a
+    kit it drew (kitmaker.txt). A folder changed by hand, or one with neither note, stays.
+    -> the folders taken out"""
+    base = os.path.join(root, world)
+    if not os.path.isdir(base):
+        return 0
+    named = set()
+    for l in lbstadiums.read(os.path.join(root, file))[0]:
+        m = LINE.match(l)
+        if m:
+            named.add(m.group(3).strip().replace("/", "\\").rstrip("\\").lower())
+    if not any(n.startswith(world.lower() + "\\") for n in named):
+        return 0                                   # a map with no line of this world: nothing is judged
+    out = 0
+    for league in sorted(os.listdir(base)):
+        ld = os.path.join(base, league)
+        if not os.path.isdir(ld):
+            continue
+        for club in sorted(os.listdir(ld)):
+            d = os.path.join(ld, club)
+            rel = ("%s\\%s\\%s" % (world, league, club)).lower()
+            if not os.path.isdir(d) or rel in named or any(n.startswith(rel + "\\") for n in named):
+                continue
+            ours = os.path.isfile(os.path.join(d, "kitmaker.txt"))
+            if not ours:
+                try:
+                    was = {}
+                    with open(os.path.join(d, COPIED), encoding="utf-8") as f:
+                        for x in f:
+                            r, _t, rest = x.rstrip("\n").partition("\t")
+                            size, _t, t = rest.partition("\t")
+                            if r and size.isdigit() and t.lstrip("-").isdigit():
+                                was[r] = (int(size), int(t))
+                    # a world zip brings the note along with the times of the PC that built it, and
+                    # Install gives the files today's (_unpacked)
+                    have = _files(d)
+                    ours = not _changed(have, was) or _unpacked(d, have, was)
+                except OSError:
+                    ours = False
+            if ours:
+                shutil.rmtree(d, ignore_errors=True)
+                out += not os.path.isdir(d)
+        try:
+            if not os.listdir(ld):
+                os.rmdir(ld)
+        except OSError:
+            pass
+    if out:
+        log("kits: %d kit folder(s) of %s that no map line names any more taken out (renamed or removed clubs)" % (out, world))
+    return out
 
 
 def carried(l, world):
@@ -571,13 +836,13 @@ def restamp(pl, sider, root, log=print):
     world = safe(pl.get("world") or "FL26 world")
     numbers = numbers_kits(lib, world)
     n = 0
-    for tid, league, k, words, away, crest in to_make(pl, root):
+    for tid, league, k, words, away, crest, seed, third in to_make(pl, root):
         stamp = os.path.join(lib, made_rel(pl, world, league, k), "kitmaker.txt")
         try:
             had = open(stamp, encoding="utf-8").read().strip()
         except OSError:
             continue
-        mine = _stamps(words, away, crest, numbers, lib)[0]
+        mine = _stamps(words, away, crest, numbers, lib, seed=seed, third=third)[0]
         if had and had != mine:
             with open(stamp, "w", encoding="utf-8") as f:
                 f.write(mine + "\n")
@@ -744,6 +1009,7 @@ def write(pl, sider, log=print, root=None, redraw=False):
     (kits, scoreboards) written. redraw: a Build's, kits of an older drawing drawn again (B213)"""
     kits, boards = wanted(pl)
     world = safe(pl.get("world") or "FL26 world")
+    wroot = root                         # the loop below takes the name `root` for a library's folder
     teams, comps = world_ids(pl, root)
     klib, blib = libs(sider)
     # B130: kserv.lua, when sider.ini loads it, stops at its start when content\kit-server has no
@@ -816,13 +1082,28 @@ def write(pl, sider, log=print, root=None, redraw=False):
             # the copy under <world>: the line stays (Install mods, whose Switch on dropped it)
             mine.append((key, text))
         if what == "kits" and make:
-            numbers = numbers_kits(root, world)
-            new = 0
-            for tid, league, k, words, away, crest in make:
+            # walked once, and only when a kit is worked out: a Switch on that keeps every kit
+            # does not walk the library (9 s of _FL26Megapack's, B374)
+            walked = []
+
+            def numbers(lib=root):
+                if not walked:
+                    walked.append(numbers_kits(lib, world))
+                return walked[0]
+            new = later = 0
+            index = os.path.join(root, world, INDEX)
+            _load_index(index)
+            for tid, league, k, words, away, crest, seed, third in make:
                 rel = made_rel(pl, world, league, k)
+                if crest is None and not redraw and not os.path.isdir(os.path.join(root, rel)):
+                    # a club with no colours of its own, its kit never drawn (a world from before
+                    # the pattern library, or a zip's): drawn at the next Build, not at a Switch on,
+                    # which must stay quick (B104); till then it wears the kit Build lent it
+                    later += 1
+                    continue
                 try:
                     drawn = _made(tid, words, away, crest, os.path.join(root, rel), numbers, log,
-                                  lib=root, ready=ready, redraw=redraw)
+                                  lib=root, ready=ready, redraw=redraw, seed=seed, third=third)
                 except Exception as e:               # one bad crest picture must not stop the Build
                     log("  kit of %s: not made (%s)" % (rel, e))
                     continue
@@ -830,12 +1111,18 @@ def write(pl, sider, log=print, root=None, redraw=False):
                 if drawn and new % 50 == 0:          # B104: a long drawing says how far it is
                     log("kits drawn from colours and crests: %d so far (of at most %d)" % (new, len(make)))
                 mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
+            if os.path.isdir(os.path.dirname(index)):
+                _save_index(index)
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
-                len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
+                len(make) - later, new, "" if not walked or walked[0] else "; no kit in the library lends back numbers, so Mod Studio's own are on them"))
+            if later:
+                log("kits: %d club(s) without colours of their own get kits at the next Build" % later)
         if what == "scoreboards":
             mine += helper_boards(pl, os.path.join(root, file), {k for k, _t in mine})
         done.append(_map(os.path.join(root, file), mine, log, what, world, sider,
                          teams if what == "kits" else comps))
+        if what == "kits" and redraw:              # a Build's, not a Switch on's (which stays quick)
+            prune(root, world, file, log)
     # B129: the other folder's map too (content\kits or content\kit-server, the one not picked
     # above): Install mods may have merged a world zip's lines there (servers.Server.pick decides
     # its folder its own way), and those lines of ours stayed on for the next world's clubs
@@ -850,7 +1137,93 @@ def write(pl, sider, log=print, root=None, redraw=False):
                      what + " (" + o + ")", world, sider, teams if what == "kits" else comps)
     menus(sider, world, log)
     helper_servers(pl, sider, world, log)
+    sleeves(pl, sider, world, wroot, log)
     return tuple(done)
+
+
+# A knockout's or a group stage's match carries its regulation id plus 1024 for each tie, round or
+# group after the first (SmokePatch's own map: Champions League 2 with 1026, 2050, 3074, 4098; the
+# Libertadores groups up to 9 + 8 x 1024). 11.11.2026, Build 4 of the GigaPack: the first match of
+# a career at AF Elbasani, the Conference League's first qualifying round (qround ... 536), came
+# as tournament id 2584 = 536 + 2 x 1024 -- no line, SleeveBadge.lua's error again.
+# 11.11., Build 5: the same match came as 24088 = 536 + 23 x 1024 -- the number is the tie's, not
+# the round's, and a u16 id leaves six bits for it: every one of the 63 gets a line.
+SLEEVE_STEP, SLEEVE_STEPS = 1024, 63
+SLEEVE_KINDS = {"poff": "promotion play-off", "lpre": "preliminary round", "gsuper": "super cup"}
+
+
+def sleeve_ids(pl, root=None):
+    """[(tournament id, name)] of the world's own competitions a match is played in: its leagues
+    (the regulation id, as the scoreboards' lines), and with the built world in root the cups, super
+    cups, continental cups, European qualifying rounds, play-offs, preliminary rounds and split
+    groups its world file names. A cup's id comes with the ids of its later ties, rounds and groups
+    too (SLEEVE_STEP)"""
+    out, seen = [], set()
+
+    def add(i, name, rounds=False):
+        if i not in seen:
+            seen.add(i)
+            out.append((i, name))
+        for k in range(1, SLEEVE_STEPS + 1) if rounds else ():
+            j = i + SLEEVE_STEP * k
+            if j not in seen and j <= 65535:
+                seen.add(j)
+                out.append((j, "%s, +%d" % (name, k)))
+    for q in pl.get("leagues") or []:
+        if q.get("rid") is not None:
+            add(int(q["rid"]), q.get("name") or "league")
+    if root:
+        try:
+            with open(os.path.join(root, "fl26world.txt"), encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    w = line.split()
+                    kind = w[0] if w else ""
+                    if kind == "qround" and len(w) == 4 and w[3].isdigit():
+                        add(int(w[3]), "European qualifying round", True)
+                        continue
+                    if kind == "split" and len(w) > 1 and w[1].isdigit():
+                        for t in w[2:]:
+                            k, _s, v = t.partition("=")
+                            for x in v.split(",") if k in ("regular", "groups") else ():
+                                if x.isdigit():
+                                    add(int(x), "league %s (split)" % w[1])
+                        continue
+                    if kind in SLEEVE_KINDS and len(w) > 1 and w[1].isdigit():
+                        add(int(w[1]), SLEEVE_KINDS[kind], True)
+                        continue
+                    if kind not in ("league", "ccup") or len(w) < 2 or not w[1].isdigit():
+                        continue
+                    name = line.partition(" name=")[2].strip() or "competition %s" % w[1]
+                    add(int(w[1]), name, kind == "ccup")
+                    for t in w[2:]:
+                        k, _s, v = t.partition("=")
+                        if k == "name":
+                            break
+                        if k in ("cup", "scup", "ko") and v.isdigit():
+                            add(int(v), "%s (%s)" % (name, {"cup": "cup", "scup": "super cup", "ko": "knockout"}[k]), True)
+        except OSError:
+            pass
+    return out
+
+
+def sleeves(pl, sider, world, root=None, log=print):
+    """B396 (10.11.2026): SmokePatch's common\\SleeveBadge.lua stops with a Lua error ("attempt to
+    concatenate local 'folder' (a nil value)", line 367) at every match of a competition its
+    content\\SleeveBadge\\map.txt has no line for -- every league and cup a world adds. Each of the
+    world's competitions with no line there gets one of ours, to the folder <world> (no badge in
+    it: the match is played with no sleeve badge, as before, and with no error; a badge put in
+    content\\SleeveBadge\\<world>\\badge is worn). A line of SmokePatch's or of yours is never
+    switched off for one of ours. Returns how many lines were written."""
+    path = os.path.join(sider, SLEEVES, "map.txt")
+    if not os.path.isfile(path):
+        return 0
+    theirs = set()
+    for l in lbstadiums.read(path)[0]:
+        m = LINE.match(l)
+        if m and not m.group(1) and TAG not in l and not l.endswith(OFF):
+            theirs.add(int(m.group(2)))
+    mine = [(i, '%d, "%s"   %s %s' % (i, world, TAG, name)) for i, name in sleeve_ids(pl, root) if i not in theirs]
+    return _map(path, mine, log, "sleeve badges", world, sider)
 
 
 def menus(sider, world, log=print):

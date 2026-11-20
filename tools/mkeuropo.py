@@ -31,7 +31,11 @@ The same copy of reg 2 makes the qualifying rounds in front of the August play-o
 league builder asks qualifying(pesdb, out, rounds, ids) for the third and second qualifying rounds
 it picked (fl26world.pick_rounds), under free ids of its own, and writes them to the world file as
 `qround <competition> <round> <regulation>` lines -- fl26swiss.dll fills, dates and plays them in
-August like 188 and 189.
+August like 188 and 189. FL 2027's first qualifying round (stage 3, round 1, played in July) and
+the second qualifying round after it hold 32 clubs: their copies have sixteen replicas,
+reg 2's first replica copied for each tie (fl26world.q_size). FL 2027's Prijedlog C
+(fl26world.C_CONFIG) adds the Europa League's and the Conference League's August play-offs of 32
+the same way, stage 0 rounds (`qround 11 0` / `qround 12 0`): 188 and 189 stay February's.
 
 And a league cup's pre-round (0.1.7): prerounds(pesdb, out, rounds) copies reg 2 under the cup's
 competition id, one tie row per pair of clubs past the cup's 16, 8 or 4 (the master holds
@@ -42,6 +46,7 @@ import contextlib, io, os, shutil, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import mkleague as M
+import fl26world as W
 
 PESDB = os.path.join("common", "etc", "pesdb")
 R_BACK, R_GROUP = 0x06, 0x0a
@@ -70,11 +75,11 @@ def playoffs(regs, where="the world", uecl=True):
         if not phase:
             raise SystemExit("no regulation %d (the Conference League's league phase) in %s -- run "
                              "mkuecl.py first" % (UECL_REG, where))
-        targets.append((phase[0][M.R_CID], PLAYOFFS[1]))
+        targets.append((M.reg_cid(phase[0]), PLAYOFFS[1]))
 
     added, said = bytearray(), []
     for cid, new in targets:
-        own = [r for r in rows if r[M.R_CID] == cid]
+        own = [r for r in rows if M.reg_cid(r) == cid]
         if not own:
             raise SystemExit("no competition %d in %s" % (cid, where))
         if any(r[M.R_TYPE] == tpl[0][M.R_TYPE] and r[0x0d] >> 4 == tpl[0][0x0d] >> 4 for r in own):
@@ -95,7 +100,7 @@ def playoffs(regs, where="the world", uecl=True):
 
 def _template(rows):
     tpl = [r for r in rows if rid(r) & 0x3ff == TEMPLATE and rid(r) <= TEMPLATE + TIES * STEP
-           and r[M.R_CID] == 2]
+           and M.reg_cid(r) == 2]
     if len(tpl) != 1 + TIES:
         raise SystemExit("reg 2 should have one master and %d replicas, found %d rows" % (TIES, len(tpl)))
     return tpl
@@ -110,47 +115,82 @@ def _copy(tpl, new, cid, name):
         g[M.R_ID:M.R_ID + 2] = (new if grp == 255 else new + (grp + 1) * STEP).to_bytes(2, "little")
         if grp != 255:
             g[R_BACK:R_BACK + 2] = new.to_bytes(2, "little")
-        g[M.R_CID] = cid
+        M.set_reg_cid(g, cid)
         g[M.R_NAME:M.R_NAME + len(name)] = name
         out += g
     return out
 
 
-def qualifying(base, out, rounds, ids, log=print):
-    """add the qualifying rounds rounds -- (competition 0..2, stage 1 the third qualifying round
-    or 2 the second) -- to the tables in <base>, each a copy of reg 2 and its eight replicas under
-    the next of ids (free regulation ids), and write the competition tables to <out> as build()
-    does. Returns the world file's (competition code 10..12, round 3 or 2, regulation) triples."""
+def _copy_ties(tpl, new, cid, name, ties):
+    """_copy with `ties` replicas (8 < ties <= 31, fl26world.QROUND_MAX: the master's club count is
+    six bits, byte 0x0c): reg 2's master and its first replica for the rest, groups 0..ties-1, the
+    master holding 2 x ties clubs and every row naming ties ties (byte 0x10, as the Sudamericana's
+    16-tie rounds of prerounds_single)"""
+    if not 8 < ties <= W.QROUND_MAX // 2:
+        raise SystemExit("a qualifying round of %d ties -- 9 to %d" % (ties, W.QROUND_MAX // 2))
+    rep0 = [t for t in tpl if t[R_GROUP] == 0][0]
+    rows = [bytearray(t) for t in tpl if t[R_GROUP] == 255] + [bytearray(rep0) for _g in range(ties)]
+    for g, r in enumerate(rows[1:]):
+        r[R_GROUP] = g
+    out = _copy(rows, new, cid, name)
+    for i in range(0, len(out), M.REG):
+        out[i + M.R_TEAMS] = (out[i + M.R_TEAMS] & ~0x3f) | 2 * ties
+        out[i + LEGS_OFF] = ties
+    return out
+
+
+def qualifying(base, out, rounds, ids, log=print, avoid=()):
+    """add the qualifying rounds rounds -- (competition 0..2, stage 1 the third qualifying round,
+    2 the second or 3 the first; stage 0 the Europa League's or Conference League's play-off of 32,
+    fl26world.C_CONFIG) -- to the tables in <base>, each a copy of reg 2 and its eight replicas
+    under the next of ids (free regulation ids), sixteen for a round of 32 (fl26world.q_size), and
+    write the competition tables to <out> as build() does. Returns the world file's (competition
+    code 10..12, round 3, 2, 1 or 0, regulation) triples.
+    fl26world.CW_CONFIG's own round (the Conference League's first, July) comes after C_CONFIG's,
+    so C's keep the ids a world built with C has, and takes none of avoid (the last Build's cups'
+    regulation ids, which those cups keep)."""
     comp, regs, ents = (M.load(base, n) for n in
                         ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
     rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
     used = {rid(r) for r in rows}
     tpl = _template(rows)
     phase = [r for r in rows if rid(r) == UECL_REG]
-    cids = {0: 2, 1: UEL_CID, 2: phase[0][M.R_CID] if phase else None}
+    cids = {0: 2, 1: UEL_CID, 2: M.reg_cid(phase[0]) if phase else None}
     added, lines, ids = bytearray(), [], list(ids)
-    for c, stage in sorted(rounds, key=lambda r: (r[0], -r[1])):
-        if stage not in (1, 2):
+    late = set(rounds) - set(W.C_CONFIG) if W.cw_world(rounds) else set()
+    avoid = set(avoid)
+    for c, stage in sorted(rounds, key=lambda r: (r in late, r[0], -r[1])):
+        if stage not in (1, 2, 3) and not (stage == 0 and c and W.q_size(rounds, (c, 0)) > W.PLAYOFF):
             continue
         if cids[c] is None:
             raise SystemExit("no regulation %d (the Conference League's league phase): no Conference "
                              "League qualifying" % UECL_REG)
-        own = [r for r in rows if r[M.R_CID] == cids[c]]
+        own = [r for r in rows if M.reg_cid(r) == cids[c]]
         if not own:
             raise SystemExit("no competition %d" % cids[c])
+        if (c, stage) in late:
+            ids = [i for i in ids if i not in avoid] + [i for i in ids if i in avoid]
         if not ids:
             raise SystemExit("no free regulation id left for the qualifying rounds")
         new = ids.pop(0)
-        taken = used & {new + g * STEP for g in range(TIES + 1)}
+        ties = W.q_size(rounds, (c, stage)) // 2
+        taken = used & {new + g * STEP for g in range(ties + 1)}
         if taken:
             raise SystemExit("ids %s are taken" % sorted(taken))
-        added += _copy(tpl, new, cids[c], own[0][M.R_NAME:M.NAME_END])
-        lines.append((10 + c, 3 if stage == 1 else 2, new))
+        name = own[0][M.R_NAME:M.NAME_END]
+        added += _copy(tpl, new, cids[c], name) if ties == TIES else _copy_ties(tpl, new, cids[c], name, ties)
+        used |= {new + g * STEP for g in range(ties + 1)}
+        lines.append((10 + c, W.QROUND_NUMBER[stage], new))
     if added:
         with contextlib.redirect_stdout(io.StringIO()):
             M.write_tables(out, comp, regs + added, ents)
-        log("  qualifying rounds: %s" % ", ".join("%d (%s %s)" % (r, ("Champions League", "Europa League",
-            "Conference League")[q - 10], "third" if n == 3 else "second") for q, n, r in lines))
+        stage = {v: k for k, v in W.QROUND_NUMBER.items()}
+        log("  qualifying rounds: %s" % ", ".join("%d (%s %s%s)" % (r, ("Champions League", "Europa League",
+            "Conference League")[q - 10], {3: "third", 2: "second", 1: "first, July", 0: "play-off of %d"
+                                          % W.q_size(rounds, (q - 10, 0))}[n],
+            "" if W.q_size(rounds, (q - 10, stage[n])) <= 2 * TIES or not W.cw_world(rounds)
+            else ", %d clubs" % W.q_size(rounds, (q - 10, stage[n])))
+            for q, n, r in lines))
     return lines
 
 
@@ -229,14 +269,14 @@ def prerounds_single(base, out, cid, code, name, rounds, log=print,
         )
 
     crows = [comp[i:i + M.COMP] for i in range(0, len(comp), M.COMP)]
-    lib = [c for c in crows if c[M.CID_OFF] == LIB_CID]
+    lib = [c for c in crows if M.comp_cid(c) == LIB_CID]
 
     if len(lib) != 1:
         raise SystemExit(
             "no Copa Libertadores competition (%d) to copy" % LIB_CID
         )
 
-    if cid in {c[M.CID_OFF] for c in crows}:
+    if cid in {M.comp_cid(c) for c in crows}:
         raise SystemExit("competition %d is taken" % cid)
 
     table_count = sum(1 + ties for _reg, ties in rounds)
@@ -250,7 +290,7 @@ def prerounds_single(base, out, cid, code, name, rounds, log=print,
         raise SystemExit("%r: a name of 24 bytes at most" % name)
 
     c = bytearray(lib[0])
-    c[M.CID_OFF] = cid
+    M.set_comp_cid(c, cid)
     M.put(c, M.CODE_OFF, code, M.COMP - M.CODE_OFF)
 
     if region is not None:
@@ -292,7 +332,7 @@ def prerounds_single(base, out, cid, code, name, rounds, log=print,
                 r[R_BACK:R_BACK + 2] = new.to_bytes(2, "little")
                 r[R_GROUP] = g
 
-            r[M.R_CID] = cid
+            M.set_reg_cid(r, cid)
 
             M.put_names(r, 0, name)
 

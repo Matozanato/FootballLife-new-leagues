@@ -65,12 +65,12 @@ def main():
     if not 175 < ko < REPLICA_STEP:
         raise SystemExit("--ko wants a free id between 176 and 1023")
 
-    cwc = [r for r in R if r[M.R_CID] == CWC_CID]
+    cwc = [r for r in R if M.reg_cid(r) == CWC_CID]
     if len(cwc) != 1 or rid(cwc[0]) != CWC_REG:
         raise SystemExit("competition 1 is not the shipped one-row Club World Cup here "
                          "(%d rows: %s) -- already reshaped?" % (len(cwc), [rid(r) for r in cwc]))
     old = cwc[0]
-    src = [r for r in R if rid(r) & 0x3ff == GROUPS_FROM and r[M.R_CID] == 5]
+    src = [r for r in R if rid(r) & 0x3ff == GROUPS_FROM and M.reg_cid(r) == 5]
     master = [r for r in src if r[R_GROUP] == NO_GROUP]
     reps = sorted((r for r in src if r[R_GROUP] != NO_GROUP), key=lambda r: r[R_GROUP])
     if len(master) != 1 or len(reps) != GROUPS or (master[0][M.R_TEAMS] & 0x3f) != CLUBS:
@@ -81,7 +81,7 @@ def main():
     for r in master + reps:
         g = bytearray(r)
         g[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
-        g[M.R_CID] = CWC_CID
+        M.set_reg_cid(g, CWC_CID)
         grp = g[R_GROUP]
         g[M.R_ID:M.R_ID + 2] = (CWC_REG if grp == NO_GROUP
                                 else CWC_REG + (grp + 1) * REPLICA_STEP).to_bytes(2, "little")
@@ -119,7 +119,7 @@ def main():
     # the shipped row's place in the table is where the group stage goes; the rest follows it
     out_regs = bytearray()
     for r in R:
-        if r[M.R_CID] == CWC_CID:
+        if M.reg_cid(r) == CWC_CID:
             for g in new:
                 out_regs += g
         else:

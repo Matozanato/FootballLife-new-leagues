@@ -9,7 +9,8 @@ Always, no game data needed:
     every id below 32 is rid * 8, as the stock game wrote it;
   * every byte a world can hold decodes to what the module's parser computes from the dword
     (the 18 bytes at 0x1414f8390, emulated here);
-  * 128 and -1 are refused.
+  * 256 and -1 are refused; 128..255 are mkleague.REGION_WIDE's (FL 2027 with the caps set's
+    regions step, tools/test_regions_wide.py) and set bit 2.
 
 With a base folder ($FL26_PESDB, or the argument): the league builder's region allocation for
 a recipe with more new countries than fit below 64 -- every league gets a region of its own,
@@ -68,16 +69,19 @@ def encoding():
     ok("the module's parser reads every region 0..127 back from the dword", True)
     ok("a byte with bit 1 clear reads the same under fl26reg64 and fl26reg128",
        all(parser64(b << 24) == parser128(b << 24) for b in range(256) if not b & 2))
-    ok("every byte decodes as the module's parser does",
-       all(M.dec_region(b) == parser128(b << 24) for b in range(256)))
-    for bad in (128, -1, 255):
+    ok("every byte with bit 2 clear decodes as the module's parser does",
+       all(M.dec_region(b) == parser128(b << 24) for b in range(256) if not b & 4))
+    for bad in (256, -1, 1000):
         try:
             M.enc_region(bad)
             ok("region %d refused" % bad, False)
         except ValueError:
             pass
-    ok("128, 255 and -1 refused", True)
-    ok("127 is the top", M.REGION_MAX == 127)
+    ok("256, 1000 and -1 refused", True)
+    ok("127 is the top under fl26reg128, 255 with the regions step",
+       M.REGION_MAX == 127 and M.REGION_WIDE == 255)
+    ok("128..255 set bit 2, which fl26reg128's parser drops (reads region - 128)",
+       all(M.enc_region(r) & 4 and parser128(M.enc_region(r) << 24) == r - 128 for r in range(128, 256)))
 
 
 def allocation(base):

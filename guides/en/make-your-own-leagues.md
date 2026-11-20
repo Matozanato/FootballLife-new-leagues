@@ -109,7 +109,7 @@ name or country has what you type. Type `brazil` or `liga`, say. Empty the box t
 
 **Why some leagues are grey.** A grey league cannot be added, and the last column says why:
 
-- `a league takes 10 to 24 clubs`: a league in the game has 10 to 24 clubs, new ones and the
+- `a league takes 10 to 32 clubs`: a league in the game has 10 to 32 clubs, new ones and the
   game's together. This one has fewer or more. You can still fix it in Step 4 (add or leave out
   clubs) until it fits.
 - `the game's own league: Bring the game's leagues to this season`: the game already has this
@@ -158,7 +158,7 @@ Select **one** league (just one). The list on the right shows its clubs: **Club*
   **You should see:** the club at the end of the list, with `from <its league>` next to it.
 
 **You should see:** the league's row in the list now has a `*`, and its **Clubs** number
-changed. A grey league that now has 10 to 24 clubs turns normal.
+changed. A grey league that now has 10 to 32 clubs turns normal.
 
 A club can play in one league only. If you add it to two, Mod Studio stops you in Step 5.
 
@@ -210,7 +210,7 @@ and **Cancel** changes nothing.
 |---|---|
 | **Name** | The league's name in the game. Two leagues cannot have the same name. Keep it under about 38 characters: a longer name shows as an empty row in Kick Off's league list. |
 | **Country** | Type a few letters and pick from the list (`korea` finds both Koreas). It gives the flag and where the league is listed in the game. |
-| **Clubs** | 10 to 24. For a NewLife league, leave it as it is: a smaller number takes the last clubs out, a bigger one adds made-up clubs at the end. |
+| **Clubs** | 10 to 32. For a NewLife league, leave it as it is: a smaller number takes the last clubs out, a bigger one adds made-up clubs at the end. |
 | **Clubs in no league** | Leave it at `(no -- a league)`. The other choices (*Other European teams* ...) are for one club, or a few, with no league around them; they go into the game's "Other ..." groups, and most fields below go grey. [More](mod-studio-guide.md#8-league-builder-new-leagues-clubs-and-players). |
 | **Format** | Pick one: **everyone plays everyone, times:** and the number (1 to 4; 2 is home and away); **splits in two (Scottish style)**, with `first` *n* `x, then groups` *6/6* *n* `x` (the groups must add up to the clubs); or **Apertura and Clausura, then playoffs of:** *8 clubs*, *4 clubs* or *no playoffs* (two short tournaments a season, 18 clubs at most). The split and Apertura and Clausura are **experimental**: they work, but still have more bugs than everyone plays everyone, the fully tested format. The window says so under the formats. For a first world, take everyone plays everyone. |
 | **Division** | `(top division)` = the best league of its country. For a second division, pick the league one level up: your new leagues are at the top of the list, then the game's leagues with a number in brackets. `= division 2` next to it shows the level. A league that already has a league under it is grey (`-- under it: ...`): one league can have one league below it. See [Step 7](#step-7-example-a-country-with-two-divisions). |
@@ -408,7 +408,7 @@ Everything on this page is in [Players in the full guide](mod-studio-guide.md#pl
 | Limit | Where you see it |
 |---|---|
 | New clubs in all (about 1,500): the number on the line `New clubs in your world: X of the Y the game takes.` | NewLife Database page: **Add to your world** stays grey. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
-| 10 to 24 clubs in a league | NewLife Database: grey league, `a league takes 10 to 24 clubs`. Clubs tab: `A league has 10 to 24 clubs.` |
+| 10 to 32 clubs in a league | NewLife Database: grey league, `a league takes 10 to 32 clubs`. Clubs tab: `A league has 10 to 32 clubs.` |
 | New leagues per world: no fixed number. Each league and cup takes one of the game's 255 competitions; **2. My world** shows how many are used (**COMPETITIONS**). Our test world plays 86 new leagues. | Build: `error: <n> leagues, but the game has room for <m> ...` |
 | One league under one league | **Division** list: grey. Build: `... are all under ...; the game follows one link down from a league ...` |
 | Divisions down to the 7th | Build: `error: <league>: division 8 -- the rank field stops at 7`. |
@@ -435,8 +435,8 @@ Mod Studio opens your world again when it starts, so what you made is never lost
 1. **2. My world**, tab **Build** (the first tab).
 
 **You should see:** a note that Build is for modders, then the big **Build and install** button
-and two folds under it: **World options: European cups, country cups, kits and faces of the new
-clubs** (two cards, **European cups** and **New clubs**, with options) and **Step by step, and
+and two folds under it: **World options: European cups, kits and faces of the new clubs** (two
+cards, **European cups** and **New clubs**, with options) and **Step by step, and
 Export the world** (the row **0. Install the modules**, **1. Check the plan**, **2. Build the
 world**, **3. Switch it on**, **4. After a start: check** and **Export the world...**). Then a
 line like `World _FL26MyWorld: not built yet · Mod Studio's modules: installed`, and a box for
@@ -495,8 +495,8 @@ the world**):
 | `livecpk: _FL26MyWorld (... files), sider.ini loads it` | The world is in the game. |
 | `error: ...` | Build stopped and nothing changed in the game. Fix what it says (table at the end) and build again. |
 
-The options under **World options** (**Include the Conference League**, **Country cup draw**,
-**Kits made in the clubs' colours** ...) are explained in [8.2](mod-studio-guide.md#82-build-switch-on-play). The
+The options under **World options** (**Kits made in the clubs' colours** ...) and on the **Cups**
+tab (**Include the Conference League**, **Country cup draw** ...) are explained in [8.2](mod-studio-guide.md#82-build-switch-on-play). The
 defaults are fine.
 
 ## Step 13. Play: a NEW Master League, then the check
@@ -615,7 +615,7 @@ the Build log after `error:`. `<...>` stands for a name or number.
 | `no NewLife Database here: put the NewLife-....zip parts you downloaded in one folder (no need to unpack them) and open that folder` | You picked the wrong folder, or unzipped the parts. Open the folder that holds the `NewLife-...zip` files themselves. |
 | `the parts in this folder are of different versions (...): keep one version's parts only` | Two NewLife versions are mixed. Keep one version's parts in the folder. |
 | `<file> is not a NewLife part (...) -- download it again` | The download broke. Download that part again. |
-| A grey league, `a league takes 10 to 24 clubs` | Add or leave out clubs (Step 4) until it has 10 to 24. |
+| A grey league, `a league takes 10 to 32 clubs` | Add or leave out clubs (Step 4) until it has 10 to 32. |
 | A grey league, `the game's own league: Bring the game's leagues to this season` | The game has it already. Use **Bring the game's leagues to this season...**. |
 | **Add to your world** stays grey | Nothing addable is selected, or the selection would pass the new-club limit (the line at the bottom). |
 | `<club> would play in two leagues (<league> and <league>).` | Untick the club in one of them. |
@@ -630,7 +630,7 @@ the Build log after `error:`. `<...>` stands for a name or number.
 | `This division plays February to December with the league above it, and a league playing February to December has no split or Apertura/Clausura yet.` | Give this division **everyone plays everyone**. |
 | `Clubs in no league are all new clubs: take the clubs of the game out first (Edit club).` | The league holds clubs of the game. On the **Clubs** tab select each and use **More ▾ → New club here**, then set **Clubs in no league** again. |
 | `<league> is below this league; clubs in no league have none.` (or `an exhibition league has none.`) | Another league has this one as its **Division**. Change that league first. |
-| `A league has 10 to 24 clubs.` (Clubs tab) | Insert club / Remove club would leave the league outside 10 to 24. |
+| `A league has 10 to 32 clubs.` (Clubs tab) | Insert club / Remove club would leave the league outside 10 to 32. |
 | `Open the NewLife Database on the NewLife page first.` | **NewLife club...** needs the NewLife folder: open it on **NewLife Database** once. |
 | `Pick the club that takes its place.` / `Give the new club a name.` / `A club cannot take its own place.` | In **Club of the game**, pick a replacement club, or type a name for the new one. |
 | `error: no game tables -- Settings > Unpack the game's tables` | **5. Settings → Unpack the game's tables**. |

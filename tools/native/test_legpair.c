@@ -16,6 +16,8 @@
 int rcal_test_today(void) { return 0; }
 int rcal_test_invites(int k, uint16_t id) { (void)k; (void)id; return 0; }
 int rcal_test_recday(uint16_t id) { (void)id; return -1; }
+int rcal_test_dayload(int d) { (void)d; return 0; }      /* B329: no day load, no league rounds */
+int rcal_test_round(uint16_t id) { (void)id; return 0; }
 
 static int fails = 0;
 static void expect(int ok, const char* what)

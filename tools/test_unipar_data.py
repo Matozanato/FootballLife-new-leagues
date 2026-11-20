@@ -91,6 +91,15 @@ def main():
         i18n.set_language("en")
         ok("Build says why in every language: %s" % said["hr"], all(t != why for t in said.values()))
 
+        # B328: no record at all (0.1.7 or older), no data_extra: FL26 1.3's tables after the 2.2 update
+        game, out = os.path.join(root, "g22"), os.path.join(root, "t22")
+        os.remove(os.path.join(out, B.UNPACKED))
+        why = B.tables_stale(game, out)
+        ok("an unpack with no record is stale even without data_extra: %s" % why,
+           why == "unpacked by an older Mod Studio, before the game's update archives were read")
+        B.unpack_tables(game, out, log=lambda *a: None)
+        ok("and not stale after the next unpack", B.tables_stale(game, out) is None)
+
         # a game with no kits file anywhere: one unpack, then never asked again
         game, out = os.path.join(root, "gnone"), os.path.join(root, "tnone")
         fake(game, {"download/data_s2526.cpk": {TEAM: b"team"}, "Data/dt30_g4.cpk": {"a/b.bin": b"-"}})

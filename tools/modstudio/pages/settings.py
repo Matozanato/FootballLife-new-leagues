@@ -79,6 +79,9 @@ class Settings(Page):
         self.log.hide()
         form.addRow("", self.log)
         form.addRow(section("Program"), QLabel(""))
+        self.anim_box = QCheckBox(_("Animations (pages, buttons and dialogs come in softly)"))
+        self.anim_box.toggled.connect(self.set_animations)
+        form.addRow("", self.anim_box)
         from ..app import APPDIR
         op = QPushButton(_("Open the program's settings folder"))
         op.clicked.connect(lambda: os.startfile(APPDIR) if os.path.isdir(APPDIR) else None)
@@ -131,6 +134,9 @@ class Settings(Page):
         self.per_world.blockSignals(True)
         self.per_world.setChecked(saves.enabled(self.app.settings))
         self.per_world.blockSignals(False)
+        self.anim_box.blockSignals(True)
+        self.anim_box.setChecked(bool(self.app.settings.get("animations", True)))
+        self.anim_box.blockSignals(False)
         p = getattr(self.app, "project", None)
         if p is not None and p.base:
             n = len(p.game_cl)
@@ -168,6 +174,12 @@ class Settings(Page):
         if code and code != self.app.settings.get("lang", "en"):
             self.app.set_language(code)
 
+    def set_animations(self, on):
+        from .. import anim
+        self.app.settings["animations"] = bool(on)
+        anim.set_on(on)
+        self.app.save_settings()
+
     def set_per_world(self, on):
         from .. import saves
         self.app.settings[saves.SETTING] = bool(on)
@@ -186,6 +198,7 @@ class Settings(Page):
         self.log.clear()
         self.log.show()
         self.app.busy(True, _("Unpacking the game's tables"))
+        say = getattr(self.app, "status", None) or (lambda _t: None)
 
         def job(progress):
             return p.unpack(log=lambda t: progress(t))
@@ -198,10 +211,13 @@ class Settings(Page):
             p.load_tables()
             self.refresh()
             self.log.appendPlainText(_("Done."))
+            # (the status bar kept "First start: Mod Studio unpacks..." long after it was done, 11.11.)
+            say(_("The game's tables are unpacked."))
 
         def failed(tb):
             self.app.busy(False)
             self.unpack_btn.setEnabled(True)
+            say("")
             if denied(self, tb):
                 self.log.appendPlainText(tb.strip().splitlines()[-1])
                 return

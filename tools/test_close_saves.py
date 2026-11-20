@@ -52,6 +52,7 @@ def main():
             def __init__(self, project):              # the window without the rest of Main
                 QMainWindow.__init__(self)
                 self.project, self.settings = project, {}
+                self.pages = {}
 
             def save_settings(self):
                 pass

@@ -30,15 +30,76 @@ entries exist, nothing changes.
 
 The trampoline sits at 0x14252ee20, after fl26augseason's (0x14252ee00, 0x15 bytes).
 
+B470 (FL Testovi, GigaPack beta 3, season 2, 17.11.): the Super Cup was never played after the
+first summer, and the log could not say whether this exit was the reason -- it was silent. Now
+the exit goes through a counter stub before the epilogue, and the module logs when a counter
+moves (checked on livecpk_make_key, as fl26joindll's ring is):
+
+    14252ee38  out: jmp 0x14252eed0
+    14252eed0  cmp  r8d, -1            ; Champions League entry missing
+    14252eed4  jne  +6
+    14252eed6  inc  dword [0x14252eef4]
+    14252eedc  cmp  ebx, -1            ; Europa League entry missing
+    14252eedf  jne  +6
+    14252eee1  inc  dword [0x14252eef8]
+    14252eee7  jmp  0x141360b0a        ; the function's epilogue, as before
+
+Both counters moving at once means the entry vector was empty. The stub sits after
+fl26seasonend's guard (..0x14252eece), the counters after its flag byte (0x14252eef0), all before
+fl26ctlguard (0x14252ef00). The game's code writes the counters, so the page is made
+PAGE_EXECUTE_READWRITE here (fl26joindll does the same for its ring); with no ffi, or if that
+fails, the exit stays the plain jmp to the epilogue and nothing is counted. fl26swiss.dll fills
+the Super Cup itself when the game leaves it empty (uefa_scup_fill_days).
+
 Same apply rule as every fl26 module: verify all sites first, write only if all match.
 --]]
 
 local m = {}
 
+local TRAMP_PLAIN = "4183f8ff741283fbff740d4b8d044048c1e004e96a17e3fee9cd1ce3fe"    -- out: jmp 0x141360b0a
+local TRAMP_COUNT = "4183f8ff741283fbff740d4b8d044048c1e004e96a17e3fee993000000"    -- out: jmp 0x14252eed0
+local STUB_VA     = 0x14252eed0
+local STUB        = "4183f8ff7506ff051800000083fbff7506ff0511000000e91e1ce3fe"
+local CNT_VA      = 0x14252eef4      -- u32 Champions League entry missing, u32 Europa League entry missing
+local CAVE_PAGE   = 0x14252e000
+
 local patches = {
-  {va=0x14252ee20, old="0000000000000000000000000000000000000000000000000000000000", new="4183f8ff741283fbff740d4b8d044048c1e004e96a17e3fee9cd1ce3fe", why="Super Cup trampoline: leave 0x1413604a0 through its epilogue when the UCL (4) or UEL (6) entry is missing, else lea/shl and resume at 0x1413605a2"},
+  {va=0x14252ee20, old="0000000000000000000000000000000000000000000000000000000000", new=TRAMP_PLAIN, why="Super Cup trampoline: leave 0x1413604a0 through its epilogue when the UCL (4) or UEL (6) entry is missing, else lea/shl and resume at 0x1413605a2"},
   {va=0x14136059a, old="4b8d044048c1e004", new="e981e81c01909090", why="jmp from the unchecked index into the trampoline at 0x14252ee20"},
 }
+local counted = {
+  {va=STUB_VA, old=string.rep("00", #STUB / 2), new=STUB, why="B470: count which entry was missing (UCL at 0x14252eef4, UEL at 0x14252eef8), then the epilogue"},
+  {va=CNT_VA, old=string.rep("00", 8), new=string.rep("00", 8), why="B470: the two skip counters, zero"},
+}
+
+-- the page the counters are on, writable by the game's code; false without ffi or if it fails
+local function page_rwx()
+  if ffi == nil then return false end
+  ffi.cdef([[ int fl26superguard_VirtualProtect(void*, size_t, uint32_t, uint32_t*) __asm__("VirtualProtect"); ]])
+  local old = ffi.new("uint32_t[1]")
+  return ffi.C.fl26superguard_VirtualProtect(ffi.cast("void*", CAVE_PAGE), 0x1000, 0x40, old) ~= 0
+end
+
+local seen = { 0, 0 }
+local ticks = 0
+local function poll()
+  local s = memory.read(CNT_VA, 8)
+  if s == nil or #s ~= 8 then return end
+  local c = { memory.unpack("u32", s:sub(1, 4)), memory.unpack("u32", s:sub(5, 8)) }
+  if c[1] ~= seen[1] or c[2] ~= seen[2] then
+    local what = (c[1] ~= seen[1] and c[2] ~= seen[2]) and "both entries missing (the entry vector is empty)"
+              or (c[1] ~= seen[1]) and "the Champions League entry (4) missing"
+              or "the Europa League entry (6) missing"
+    log(string.format("fl26superguard: Super Cup setup skipped -- %s (UCL missing %d, UEL missing %d time(s) in all)",
+                      what, c[1], c[2]))
+    seen[1], seen[2] = c[1], c[2]
+  end
+end
+function m.make_key(ctx, filename)
+  ticks = ticks + 1
+  if ticks % 64 == 0 then poll() end
+  return nil
+end
 
 local function unhex(s)
   local out = {}
@@ -58,6 +119,23 @@ local function tohex(s)
 end
 
 function m.init(ctx)
+  local count = page_rwx()
+  if count then
+    local ok = true
+    for _, p in ipairs(counted) do
+      if memory.read(p.va, #p.old / 2) ~= unhex(p.old) then
+        ok = false
+        log(string.format("fl26superguard: 0x%x is not free (%s) -- the skips are not counted", p.va, p.why))
+      end
+    end
+    count = ok
+  else
+    log("fl26superguard: no ffi or the cave page stayed read-only -- the skips are not counted")
+  end
+  if count then
+    patches[1].new = TRAMP_COUNT
+    for _, p in ipairs(counted) do patches[#patches + 1] = p end
+  end
   local n = #patches
   log(string.format("fl26superguard: set '%s', %d patches, verifying", "superguard", n))
 
@@ -111,7 +189,9 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26superguard: applied all %d patches -- %s", written, "a missing Champions League or Europa League entry skips the Super Cup setup instead of crashing"))
+    log(string.format("fl26superguard: applied all %d patches -- %s%s", written, "a missing Champions League or Europa League entry skips the Super Cup setup instead of crashing",
+                      count and "; each skip is logged" or ""))
+    if count then ctx.register("livecpk_make_key", m.make_key) end
   else
     log(string.format("fl26superguard: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",
