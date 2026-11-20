@@ -10,11 +10,13 @@ The page in this process (QT_QPA_PLATFORM=offscreen), a Project with no tables, 
 No game.
 """
 import os, shutil, sys, tempfile, time, types
+from unittest.mock import patch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
+from PySide6.QtTest import QTest
 
 N = 0
 
@@ -113,6 +115,108 @@ def main():
         page.game.show_league = lambda: (shown.append(1), real_show())
         page.game.fill()
         ok("B480: the game's leagues panel shows its league once per fill (%d)" % len(shown), len(shown) == 1)
+
+        p.recipe["leagues"] += [
+            dict(p.recipe["leagues"][0], name="Torneo Federal", country="Argentina"),
+            dict(p.recipe["leagues"][0], name="Élite", country="México"),
+            dict(p.recipe["leagues"][0], name="National League", country="United States"),
+        ]
+        p.confeds = {"Spain": 2, "Argentina": 4, "México": 6, "United States": 6}
+        p.base = tmp
+        p.game_lgs = [(11, 101, "Primera División", []), (12, 102, "Former Name", []),
+                      (13, 103, "MLS First Round", [])]
+        p.game_confeds = {101: 4, 102: 4, 103: 6}
+        p.edits("leagues")["12"] = {"name": "Liga Profesional"}
+        p.recipe["league_order"] = ["oTorneo Federal", "oPrimera Dos", "g102", "g101"]
+        p.game_other = [1]
+
+        def groups():
+            return {page.tree.topLevelItem(i).data(0, PL.CONTINENT_ROLE): page.tree.topLevelItem(i)
+                    for i in range(page.tree.topLevelItemCount())}
+
+        def click_indicator(item):
+            point = page.tree.visualItemRect(item).center()
+            point.setX(page.tree.visualItemRect(item).left() - page.tree.indentation() // 2)
+            QTest.mouseClick(page.tree.viewport(), PL.Qt.LeftButton, pos=point)
+
+        def search(query):
+            page.search.setText(query)
+            settle(qa, 0.35)
+
+        game_countries = {11: "Argentina", 12: "Argentina", 13: "Usa"}
+        with patch("leaguebuilder.game_info", return_value={}), patch(
+                "leaguebuilder.game_league_countries", return_value=game_countries) as countries:
+            page.filter.button(0).click()
+            ok("all continent groups start expanded", all(h.isExpanded() for h in groups().values()))
+            page.show_key("oPrimera Dos")
+            click_indicator(groups()[2])
+            click_indicator(groups()[4])
+            ok("the indicators collapse continents independently",
+               not groups()[2].isExpanded() and not groups()[4].isExpanded() and groups()[6].isExpanded())
+            page.refresh()
+            ok("refresh keeps collapsed continents and the selected league",
+               not groups()[2].isExpanded() and not groups()[4].isExpanded() and page.current()[0] == "oPrimera Dos")
+            click_indicator(groups()[4])
+            ok("the indicator expands its own continent", groups()[4].isExpanded() and not groups()[2].isExpanded())
+            click_indicator(groups()[4])
+            ok("an unfiltered list with saved order does not read country metadata", countries.call_count == 0)
+
+            search("  ArGeNtInA  ")
+            ok("a country search finds custom, renamed and original leagues in saved order",
+               names() == ["Torneo Federal", "Liga Profesional", "Primera División"])
+            ok("search expands a matching continent", set(groups()) == {4} and groups()[4].isExpanded())
+            page.filter.button(2).click()
+            ok("Changed filter works with country search", names() == ["Liga Profesional"])
+            page.filter.button(1).click()
+            ok("Ours filter works with country search", names() == ["Torneo Federal"])
+            page.filter.button(0).click()
+            search("primera")
+            ok("all matching continents expand during search",
+               set(groups()) == {2, 4} and all(h.isExpanded() for h in groups().values()))
+            search("PRIMERA DIVISION")
+            ok("league-name search ignores case and accents", names() == ["Primera División"])
+            search("mexico")
+            ok("country search ignores accents", names() == ["Élite"])
+            groups()[6].setExpanded(False)
+            search("")
+            ok("clearing search restores the previous expansion states",
+               not groups()[2].isExpanded() and not groups()[4].isExpanded() and groups()[6].isExpanded())
+            search("nothing matches this")
+            ok("a search with no results clears the selection", page.current() is None)
+            search("")
+            ok("clearing a search with no matches selects a visible league",
+               page.tree.currentItem().parent() is groups()[6] and not groups()[2].isExpanded()
+               and not groups()[4].isExpanded())
+            for query in ("United States", "USA"):
+                search(query)
+                ok("country alias %s finds game metadata and a legacy custom name" % query,
+                   set(names()) == {"MLS First Round", "National League"})
+
+            search("Argentina")
+            full = [e[0] for e in page.entries()]
+            reordered = list(full)
+            first, second = full.index("oTorneo Federal"), full.index("g102")
+            reordered[first], reordered[second] = reordered[second], reordered[first]
+            page.search.clear()
+            ok("results still displayed while clear-search debounce is pending",
+               names() == ["Torneo Federal", "Liga Profesional", "Primera División"])
+            # The drop handler reorders the children before invoking save_order.
+            argentina = groups()[4]
+            argentina.insertChild(0, argentina.takeChild(1))
+            with patch.object(p, "touch"):
+                page.save_order()
+            ok("saving a move with clear pending preserves hidden keys in their positions",
+               p.recipe["league_order"] == reordered)
+            settle(qa, 0.35)
+            ok("the reordered leagues are displayed after clearing search",
+               groups()[4].child(0).data(0, PL.ROLE)[0] == "g102")
+            for group in groups().values():
+                group.setExpanded(False)
+            search("nothing matches this")
+            search("")
+            ok("there is no fallback selection when all groups are collapsed",
+               page.current() is None and not any(h.isExpanded() for h in groups().values()))
+            ok("the country map is reused between searches and filters", countries.call_count == 1)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("test_b410_league_search: ok (%d)" % N)
