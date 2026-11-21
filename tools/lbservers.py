@@ -581,6 +581,11 @@ def _copy(src, dst, log=None):
         except OSError:
             pass
         if was is not None:
+            # GigaPack 1.1 (21.11.2026): the 1.0 zip's note on Serie C's boards named _chk.png and
+            # _tmp_score.bin, scoreboard maker's leftovers the zip no longer carried, so the folder
+            # read as "changed by you, kept" and Thunder105's new board never went in. A file the note
+            # names that is gone and that the package does not bring either is no work of the player's
+            was = {r: v for r, v in was.items() if r in have or r in want}
             mine = _changed(have, was) and not _unpacked(dst, have, was)
         elif os.path.isfile(os.path.join(dst, "kitmaker.txt")):
             # B367 (09.11.): a kit Mod Studio drew there, the club's stand-in until a package
