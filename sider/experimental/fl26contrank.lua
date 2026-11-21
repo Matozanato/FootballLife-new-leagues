@@ -55,7 +55,9 @@ What this does
 
   6. Clubs past the world ranking (2026-11-17). The world ranking is built once by 0x141324d00:
      it walks the team array and takes the first 750 clubs that pass its checks (id not the
-     empty one, no 0x1c000000 flag at +0x420, slot byte +0x41c & 0x7f not 0x7b); with fl26caps
+     empty one, no 0x1c000000 flag at +0x420, slot not 0x7b: +0x41c & 0x7f, or with fl26slot7
+     9 bits, +0x41c | +0x41b << 8 -- the stub reads 0x141324ded at init and tests it the same
+     way, 21.11.2026); with fl26caps
      the array holds up to 2400 clubs, so every club past the 750th (Liga MX, Honduras, Jamaica,
      the new leagues) is in no ranking at all. With a filter set, right after the copy loop
      (0x140b10ac2) a stub walks the team array the same way, skips the first <world count>
@@ -193,18 +195,29 @@ local BTN_RETEXT = { [86] = { 0x2ac, 0x1a } }   -- the game's 86 in the copy: "U
 local PAGE_SIZE = 0x3000   -- 0x2000 until step 9 (the League Mode tree copy at +0x2000)
 local EXTRA = 0x1000
 local EXTRA_HEX = table.concat({
-  "833df9efffff000f844c0100005356575541544155415641574883ec404d89fc488b05d90100004d8d2c04488b05d6",
-  "010000458b3404488b05d3010000418b2c04488b05d00100008b3031ff4531ff4439f70f83c200000089f84869c09006",
-  "0000498d5405008b0239f00f84a3000000f782200400000000001c0f85930000008a821c040000247f3c7b0f84830000",
-  "0041ffc74139ef0f86770000000fb782180400003d000200000f8365000000488d0d4bf0ffff0fb604013b0541efffff",
-  "0f854e000000488954243031c948b8d025324101000000ffd0488b5424308b0a894c2420c7442424000000006689442428",
-  "668944242a488d8b98000000488d54242048b8c015b14001000000ffd0ff05f5eeffffffc7e935ffffff488b8398000000",
-  "488b8ba00000004839c80f83180000000fb7500af7da81c2000001008950044883c010e9dfffffff4883c440415f415e",
-  "415d415c5d5f5e5b488b93a0000000ff2500000000c90ab14001000000",
+  "833df9efffff000f84770100005356575541544155415641574883ec404d89fc488b05d90100004d8d2c04488b05d601",
+  "0000458b3404488b05d3010000418b2c04488b05d00100008b3031ff4531ff4439f70f83ed00000089f84869c0900600",
+  "00498d5405008b0239f00f84ce000000f782200400000000001c0f85be000000833d99010000000f841e0000000fb782",
+  "1b04000066c1c00825ff01000083f87b0f8498000000e9100000008a821c040000247f3c7b0f848300000041ffc74139",
+  "ef0f86770000000fb782180400003d000200000f8365000000488d0d20f0ffff0fb604013b0516efffff0f854e000000",
+  "488954243031c948b8d025324101000000ffd0488b5424308b0a894c2420c7442424000000006689442428668944242a",
+  "488d8b98000000488d54242048b8c015b14001000000ffd0ff05caeeffffffc7e90affffff488b8398000000488b8ba0",
+  "0000004839c80f83180000000fb7500af7da81c2000001008950044883c010e9dfffffff4883c440415f415e415d415c",
+  "5d5f5e5b488b93a0000000ff2500000000c90ab14001000000",
 })
 local ADDED = 0x008   -- dword: clubs the stub added, last time a filtered list was filled
 -- page+1200 team array offset, +1208 team count offset, +1210 world count offset, +1218 &empty id
 local D_TEAMS, D_COUNT, D_RCOUNT, D_SENT = 0x1200, 0x1208, 0x1210, 0x1218
+-- page+1220 dword: 1 = the slot is 9 bits (fl26slot7: +0x41c | +0x41b << 8), 0 = the game's 7 bits.
+-- The stub must test the slot as the world ranking build does, or it skips the wrong clubs
+-- (21.11.2026: with the 7-bit test a club on slot 251 or 379 was in no list at all).
+-- (one table: m.init is near LuaJIT's 60 upvalues)
+local SLOT = {
+  flag  = 0x1220,
+  site  = 0x141324ded,                   -- the world ranking build's slot test
+  old   = "0fb6861c040000247f3c7b",       -- the game's: movzx eax,byte [rsi+0x41c]; and al,0x7f; cmp al,0x7b
+  stub9 = "0fb7861b04000066c1c00825ff01000083f87b",   -- fl26slot7's (0x163c00108)
+}
 -- the offsets, read from code at init: {va, opcode bytes before the disp32}
 local DISP_SITES = {
   { va = 0x141324da5, op = "488db5", why = "world ranking build: lea rsi,[rbp+team array]" },
@@ -368,6 +381,24 @@ function m.init(ctx)
     disp[#disp + 1] = v
   end
   local d_sent = 0x141324d7a + 6 + disp[4]   -- rip-relative: the address of the empty id
+  -- the slot test as it is now: the game's 7 bits, or a jmp to fl26slot7's 9-bit stub
+  -- (fl26slot7 loads before this module)
+  local slot9
+  local got = memory.read(SLOT.site, #SLOT.old / 2)
+  if got == unhex(SLOT.old) then
+    slot9 = 0
+  elseif got ~= nil and got:byte(1) == 0xe9 then
+    local b1, b2, b3, b4 = got:byte(2, 5)
+    local v = b1 + 256 * b2 + 65536 * b3 + 16777216 * b4
+    if v >= 0x80000000 then v = v - 0x100000000 end
+    local stub = memory.read(SLOT.site + 5 + v, #SLOT.stub9 / 2)
+    if stub == unhex(SLOT.stub9) then slot9 = 1 end
+  end
+  if not slot9 then
+    log(string.format("fl26contrank: %x is %s, expected %s or a jmp to fl26slot7's stub (world ranking: slot test) -- nothing written",
+                      SLOT.site, tohex(got), SLOT.old))
+    return
+  end
   local cave = alloc()
   if not cave then log("fl26contrank: no page for the stubs -- nothing written"); return end
   local j_filter = rel32(0x140b10ab3 + 5, cave + FILTER)
@@ -410,6 +441,7 @@ function m.init(ctx)
   ffi.copy(page + TITLE, title, #title)
   for k, id in pairs(TITLE_IDS) do ffi.copy(page + TITLE_TAB + 4 * k, u32(id), 4) end
   ffi.copy(page + D_TEAMS, u64(disp[1]) .. u64(disp[2]) .. u64(disp[3]) .. u64(d_sent), 32)
+  ffi.copy(page + SLOT.flag, u32(slot9), 4)
   -- the button table: the game's 52 entries as they are now, then ours
   local btns = memory.read(BTN_TABLE, BTN_COUNT * 16)
   ffi.copy(page + BTN_COPY, btns, #btns)
@@ -475,9 +507,9 @@ function m.init(ctx)
     log("fl26contrank: screens registered late (the game's registration had already run)")
   end
   log(string.format("fl26contrank: stubs at 0x%x; %d countries (UEFA %d, CONMEBOL %d, CONCACAF %d, AFC %d, CAF %d, OFC %d); "
-                    .. "ML Data page 60 61 30 90 88 89 + Ranking (91): 86 87 92 96 94 97 -> EU/SA/NA/AS/AF/OC (%s, %s, ...); titles 'Ranking <confed>'; League Mode Data + Ranking (vtable 0x14271bc90 -> 0x%x); National resets filter; clubs past the world ranking added (teams +0x%x, count +0x%x, world count +0x%x, empty id at 0x%x)", cave, n,
+                    .. "ML Data page 60 61 30 90 88 89 + Ranking (91): 86 87 92 96 94 97 -> EU/SA/NA/AS/AF/OC (%s, %s, ...); titles 'Ranking <confed>'; League Mode Data + Ranking (vtable 0x14271bc90 -> 0x%x); National resets filter; clubs past the world ranking added (teams +0x%x, count +0x%x, world count +0x%x, empty id at 0x%x, slot %d bits)", cave, n,
                     per[2] or 0, per[4] or 0, per[6] or 0, per[3] or 0, per[5] or 0, per[7] or 0, UNITS[1].path, UNITS[2].path, cave + LG_WRAP,
-                    disp[1], disp[2], disp[3], d_sent))
+                    disp[1], disp[2], disp[3], d_sent, slot9 == 1 and 9 or 7))
   m.cave = cave
 end
 

@@ -55,7 +55,7 @@
  * mov rdx,[rbx+0xa0]; jmp [rip] -> 0x140b10ac9. That jump's target becomes cwc_list_stub, which
  * gives the filled vector (RankingTeam +0x98/+0xa0: 16-byte entries {u32 club, u32 sort key, u16
  * points, u16 points}) to cwc_rewrite when a filter is set: the points become ours, the clubs with
- * none are dropped (all kept, at 0, while nobody has any: the screen never had an empty list), and
+ * none are dropped (also while nobody has any: the list is then empty, 21.11.2026), and
  * the sort key orders by points. fl26contrank renumbers 1..N after the game's sort. The row has no
  * points column, so the club's name gets them ("Flamengo  25 pts", see hook_text).
  *
@@ -84,7 +84,10 @@ static uint64_t g_base = 0x140000000ull;   /* fl26_cwc_install refuses any other
 #define LIST_SITE       0x140b10ac2ull     /* fl26contrank: jmp cave+0x1000 */
 #define LIST_BACK       0x140b10ac9ull
 #define EXTRA_OFF       0x1000
-#define EXTRA_TAIL      0x159              /* mov rdx,[rbx+0xa0]; jmp [rip]; dq 0x140b10ac9 */
+/* the stub's tail, mov rdx,[rbx+0xa0]; jmp [rip]; dq 0x140b10ac9, is looked for in its first
+   EXTRA_SCAN bytes: it was at +0x159 until fl26contrank's 9-bit slot test (21.11.2026) moved it
+   to +0x184, and the fixed offset turned the whole hook down */
+#define EXTRA_SCAN      0x400
 
 /* ---------------------------------------------------------------- log */
 static CRITICAL_SECTION g_cs, g_lk;      /* g_cs: the log; g_lk: everything else */
@@ -495,8 +498,9 @@ void cwc_rewrite(unsigned char* self)
       for (; s < w; s += 16) if ((*(uint32_t*)s >> 14) == (c >> 14)) break;
     if (s < w) { if (!dup++) { dup_a = *(uint32_t*)s; dup_b = c; } continue; }
     int q = pts_of(c);
-    if (any && q <= 0) continue;
-    if (q < 0) q = 0;
+    /* only clubs with points (the user, 2026-11-21): also while nobody has any -- the list is
+       then empty (fl26contrank's count and first-rows fixes keep a short list in range) */
+    if (q <= 0) continue;
     int shown = q / 4; if (shown > 0xffff) shown = 0xffff;
     if (w != e) memcpy(w, e, 16);
     *(uint32_t*)(w + 4) = 0x01000000u - (uint32_t)q;
@@ -515,7 +519,7 @@ void cwc_rewrite(unsigned char* self)
   if (told < 8) {
     told++;
     plog("list (confederation %u): %d of %d club(s) shown%s; first entry %08x", *(uint32_t*)g_cave, n,
-         (int)((end - beg) / 16), any ? "" : " (nobody has points yet: all, at 0)", n ? *(uint32_t*)beg : 0);
+         (int)((end - beg) / 16), any ? "" : " (nobody has points yet: empty)", n ? *(uint32_t*)beg : 0);
   }
 }
 void cwc_list_stub(void);
@@ -528,14 +532,15 @@ __asm__(
 
 /* The row never shows points (0x140b110a0 draws +4, the position, and the club's name only), so
    the name gets them: the two club paths of the row's name text set it with 0x140e48bf0(widget,
-   std::string*, 0, 0) at 0x140b113a9 and 0x140b1141d. Those calls go to cave+0x1300 (a jmp to
+   std::string*, 0, 0) at 0x140b113a9 and 0x140b1141d. Those calls go to cave+0x1480 (a jmp to
    cwc_text_stub), which appends "  25 pts" to the string with the game's own assign 0x140402370
    when a filter is set, then goes on into 0x140e48bf0. The club: the row copies its team record
    ([rsp+0x38] = the entry's club, id << 14 | row, stored at the row's start). National Ranking's path (0x140b1134b) is
    left alone. */
 #define TEXT_SET   0x140e48bf0ull
 #define STR_ASSIGN 0x140402370ull
-#define TRAMP_OFF  0x1300
+/* 0x1300 until 21.11.2026, when fl26contrank's six-unit reg2 stub took 0x1300..0x1387 */
+#define TRAMP_OFF  0x1480
 uint64_t cwc_text_set = TEXT_SET;
 static ULONGLONG g_pts_tick;
 void cwc_text(unsigned char* str, unsigned char* crsp) __attribute__((used));
@@ -582,7 +587,7 @@ static int hook_text(unsigned char* cave)
     const unsigned char* c = (const unsigned char*)(uintptr_t)sites[i];
     if (c[0] != 0xe8 || sites[i] + 5 + *(const int32_t*)(c + 1) != TEXT_SET) { plog("names: %llx is not the expected call -- no points in the names", (unsigned long long)sites[i]); return 0; }
   }
-  for (int i = 0; i < 16; i++) if (t[i]) { plog("names: cave+0x1300 is in use -- no points in the names"); return 0; }
+  for (int i = 0; i < 16; i++) if (t[i]) { plog("names: cave+0x1480 is in use -- no points in the names"); return 0; }
   t[0] = 0xff; t[1] = 0x25; memset(t + 2, 0, 4); *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)cwc_text_stub;
   for (int i = 0; i < 2; i++) {
     unsigned char* c = (unsigned char*)(uintptr_t)sites[i];
@@ -600,12 +605,12 @@ static int hook_text(unsigned char* cave)
 
 /* The league column's header: the fill 0x140b108c0 sets title_group with 0x140e48fc0(widget,
    text id) at 0x140b10978, edx = 0x1901fb ("Liga"; 0x26003f "Area" on National Ranking). That
-   call goes to cave+0x1310 (a jmp to cwc_head_stub), which puts 0x190143 ("Pontos", the same text
+   call goes to cave+0x1490 (a jmp to cwc_head_stub), which puts 0x190143 ("Pontos", the same text
    category) in edx when a filter is set. The world Club Ranking and National Ranking (filter 0)
    keep theirs. */
 #define HEAD_CALL 0x140b10978ull
 #define HEAD_SET  0x140e48fc0ull
-#define HEAD_OFF  0x1310
+#define HEAD_OFF  0x1490
 uint64_t cwc_head_set = HEAD_SET;
 unsigned char* cwc_cave;
 void cwc_head_stub(void);
@@ -620,7 +625,7 @@ static int hook_head(unsigned char* cave)
   if (c[0] != 0xe8 || HEAD_CALL + 5 + *(const int32_t*)(c + 1) != HEAD_SET || c[-8] != 0xba || *(const uint32_t*)(c - 7) != 0x1901fb)   /* mov edx,0x1901fb; mov rcx,rbp; call */
     { plog("header: %llx is not the expected call -- the header keeps \"Liga\"", (unsigned long long)HEAD_CALL); return 0; }
   unsigned char* t = cave + HEAD_OFF;
-  for (int i = 0; i < 16; i++) if (t[i]) { plog("header: cave+0x1310 is in use -- the header keeps \"Liga\""); return 0; }
+  for (int i = 0; i < 16; i++) if (t[i]) { plog("header: cave+0x1490 is in use -- the header keeps \"Liga\""); return 0; }
   int64_t d = (int64_t)(uintptr_t)t - (int64_t)(HEAD_CALL + 5);
   if (d < -0x7fffffffll || d > 0x7fffffffll) { plog("header: cave out of reach"); return 0; }
   cwc_cave = cave;
@@ -643,16 +648,20 @@ static int hook_list(void)
   unsigned char* cave = x - EXTRA_OFF;
   static const unsigned char tail[13] = { 0x48, 0x8b, 0x93, 0xa0, 0, 0, 0, 0xff, 0x25, 0, 0, 0, 0 };
   MEMORY_BASIC_INFORMATION mb;
-  if (!VirtualQuery(cave, &mb, sizeof mb) || mb.State != MEM_COMMIT || memcmp(x + EXTRA_TAIL, tail, 13) ||
-      *(uint64_t*)(x + EXTRA_TAIL + 13) != LIST_BACK) {
+  int at = -1;
+  if (VirtualQuery(cave, &mb, sizeof mb) && mb.State == MEM_COMMIT &&
+      (unsigned char*)mb.BaseAddress + mb.RegionSize >= x + EXTRA_SCAN + 21)
+    for (int i = 0; i < EXTRA_SCAN; i++)
+      if (!memcmp(x + i, tail, 13) && *(uint64_t*)(x + i + 13) == LIST_BACK) { at = i; break; }
+  if (at < 0) {
     plog("lists: fl26contrank's stub is not the one expected -- the screens keep the squad points");
     return 0;
   }
   g_cave = cave;
   DWORD old;
-  if (!VirtualProtect(x + EXTRA_TAIL + 13, 8, PAGE_EXECUTE_READWRITE, &old)) { plog("lists: VirtualProtect failed"); return 0; }
-  InterlockedExchange64((volatile LONG64*)(x + EXTRA_TAIL + 13), (LONG64)(uintptr_t)cwc_list_stub);
-  VirtualProtect(x + EXTRA_TAIL + 13, 8, old, &old);
+  if (!VirtualProtect(x + at + 13, 8, PAGE_EXECUTE_READWRITE, &old)) { plog("lists: VirtualProtect failed"); return 0; }
+  InterlockedExchange64((volatile LONG64*)(x + at + 13), (LONG64)(uintptr_t)cwc_list_stub);
+  VirtualProtect(x + at + 13, 8, old, &old);
   plog("lists: the confederation screens are ordered by the CWC points (fl26contrank page %p)", (void*)cave);
   hook_text(cave);
   hook_head(cave);

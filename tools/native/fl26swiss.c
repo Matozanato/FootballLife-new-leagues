@@ -4511,38 +4511,37 @@ static int cwc_quota_field(int play_year, u32vec* offered)
              g_cwrk_q[i] / 4, g_cwrk_q[i] % 4 * 25);
       }
     }
-    /* nobody of it in the ranking yet (a first season): the game's own entrants of it, then the old list */
-    for (size_t k = 0; offered && k < (size_t)(offered->e - offered->b) && np[q] < want; k++) {
-      uint32_t c = offered->b[k];
-      if (cwc_confed_of(blk, c) == conf && cwc_add(&n, c)) {
-        part[q][np[q]++] = c;
-        logf("fl26swiss:   %s %2d: the game's entrant -> %08x", CWC_QUOTA[q].name, np[q], c);
-      }
-    }
-    for (size_t k = 0; k < sizeof CWC_ACCESS / sizeof CWC_ACCESS[0] && np[q] < want; k++) {
-      const char* how = "";
-      for (int r = CWC_ACCESS[k].rank; r <= FINAL_MAX && np[q] < want; r++) {
-        uint32_t c = cwc_club(CWC_ACCESS[k].reg, r, &how);
-        if (!c) break;
-        if (cwc_confed_of(blk, c) != conf) break;
-        if (cwc_add(&n, c)) {
-          part[q][np[q]++] = c;
-          logf("fl26swiss:   %s %2d: reg %u position %d -> %08x (%s, short of ranked clubs)", CWC_QUOTA[q].name,
-               np[q], (unsigned)CWC_ACCESS[k].reg, r, c, how);
-          break;
-        }
-      }
-    }
     if (np[q] < want && conf == CWC_OFC) {
       to_afc = want - np[q];
       logf("fl26swiss: Club World Cup -- OFC: no club of it in the ranking for %d place(s): they go to the AFC", to_afc);
     } else if (np[q] < want)
-      logf("fl26swiss: Club World Cup -- %s: %d of %d places filled", CWC_QUOTA[q].name, np[q], want);
+      logf("fl26swiss: Club World Cup -- %s: %d of %d places filled (no cup or no ranked club of it in this world); "
+           "the rest go to the best of the ranking", CWC_QUOTA[q].name, np[q], want);
   }
-  /* still short: the best of the ranking, whatever the confederation */
+  /* places a confederation could not fill (the user's rule, 2026-11-21: a world without that
+     continent's cups or clubs): the best club of the whole ranking not yet in, whatever its
+     confederation. Before, the game's entrants and the old access list (fixed regulation ids,
+     no CAF or OFC club) came first. */
   for (int i = 0; i < nrk && n < CWC_N; i++) {
     uint32_t c = canon_club(g_cwrk_id[i] << 14);
     if (cwc_add(&n, c)) logf("fl26swiss:   extra: ranking %d -> %08x (a confederation short of clubs)", i + 1, c);
+  }
+  /* the ranking itself short of 32 clubs (a first season with few continental matches): the
+     game's own entrants, then the old access list, whatever the confederation */
+  for (size_t k = 0; offered && k < (size_t)(offered->e - offered->b) && n < CWC_N; k++)
+    if (cwc_add(&n, offered->b[k]))
+      logf("fl26swiss:   extra: the game's entrant -> %08x (the ranking short of clubs)", offered->b[k]);
+  for (size_t k = 0; k < sizeof CWC_ACCESS / sizeof CWC_ACCESS[0] && n < CWC_N; k++) {
+    const char* how = "";
+    for (int r = CWC_ACCESS[k].rank; r <= FINAL_MAX; r++) {
+      uint32_t c = cwc_club(CWC_ACCESS[k].reg, r, &how);
+      if (!c) break;
+      if (cwc_add(&n, c)) {
+        logf("fl26swiss:   extra: reg %u position %d -> %08x (%s, the ranking short of clubs)",
+             (unsigned)CWC_ACCESS[k].reg, r, c, how);
+        break;
+      }
+    }
   }
   if (n != CWC_N) {
     logf("fl26swiss: Club World Cup -- %u of %u clubs by confederation; the old access list picks the field", n, CWC_N);

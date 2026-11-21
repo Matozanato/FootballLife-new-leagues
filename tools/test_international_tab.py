@@ -139,6 +139,44 @@ def run():
     ok("and keeps the name", c["old_name"] == "Copa Intercontinental FIFA")
     ok("the modules are asked for once only", app.installs == 1)
 
+    # the logos: the cup of 32's in club_world_cup, the Intercontinental's the game's competition 1's
+    ed = page.current_section()["editor"]
+    ok("both have a logo field, empty", ed.ic_logo.path is None and ed.cwc_logo.path is None)
+    ed.cwc_logo.path = "cwc32.png"
+    ed.cwc_logo.changed()
+    ed.ic_logo.path = "intercontinental.png"
+    ed.ic_logo.changed()
+    ok("a logo is a change", {"logo", I.IC_LOGO} <= ed.dirty_keys())
+    page.apply_section(page.current_section())
+    r = project.recipe
+    ok("Apply writes the cup of 32's logo", r["club_world_cup"].get("logo") == "cwc32.png"
+       and LB.cwc_config(r)["logo"] == "cwc32.png")
+    ok("and the Intercontinental's as competition 1's", r["edits"]["competitions"]["1"] == {"logo": "intercontinental.png"})
+    ed = page.current_section()["editor"]
+    ok("a new editor shows them", ed.cwc_logo.path == "cwc32.png" and ed.ic_logo.path == "intercontinental.png"
+       and not ed.dirty_keys())
+    ed.ic_logo.path = None
+    ed.ic_logo.changed()
+    page.apply_section(page.current_section())
+    ok("Clear takes the entry out", "1" not in (r.get("edits") or {}).get("competitions", {}))
+    # Build: competition 1 gets the cup of 32's logo, the Intercontinental's id the game's cup's logo
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        a, b = os.path.join(d, "a.png"), os.path.join(d, "b.png")
+        for f in (a, b):
+            open(f, "wb").close()
+        pl = {"leagues": [], "edits": {"competitions": {"1": {"logo": b}}},
+              "club_world_cup": {"keep_old": True, "old_name": "Intercontinental Cup", "logo": a},
+              "cup_ids": {LB.CWC_KEY_IC: {"cid": 77, "reg": 300}}}
+        jobs = LB.picture_jobs(pl, None, log=lambda *x: None)[0]
+        got = {(j[0], j[1][0]): j[1][-1] for j in jobs}
+        ok("Build: competition 1 the cup of 32's logo, 77 the Intercontinental's",
+           got.get(("league_logo", 1)) == a and got.get(("league_logo", 77)) == b)
+        pl["edits"] = {}
+        jobs = LB.picture_jobs(pl, None, log=lambda *x: None)[0]
+        ok("Build: no Intercontinental logo -- the game's own emblem of competition 1",
+           [j[1] for j in jobs if j[0] == "game_emblem"] == [(77, "Intercontinental Cup", 1)])
+
     project._snap_at = 0  # Remove is a user action of its own for Undo
     ed = page.current_section()["editor"]
     ed.list.setCurrentRow(1)

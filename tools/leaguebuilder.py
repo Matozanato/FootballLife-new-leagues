@@ -1630,7 +1630,12 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
 # ---- the Club World Cup of 32 (Leagues > More > Club World Cup) ----
 # recipe "club_world_cup": {"on": true, "every": 4, "first": 2029, "keep_old": true,
 #   "old_name": "Intercontinental Cup", "replace": "super:<league>" | "cup:<league>" |
-#   "gsuper:<code>" | "glcup:<code>" | null}
+#   "gsuper:<code>" | "glcup:<code>" | null, "logo": <picture> | null}
+# logo: the Club World Cup of 32's emblem (competition 1); none keeps the game's. The
+# Intercontinental's is the game's Club World Cup's, edits.competitions["1"].logo (Cups >
+# International and Competition Names): with the cup of 32 on it goes to the Intercontinental's
+# id (picture_jobs), and with none the Intercontinental wears the game's own emblem of
+# competition 1 from the person's install.
 # on: competition 1 becomes the 2025 format (mkcwc.reshape: eight groups of four, a knockout of
 # sixteen on a free regulation id), played in June of every <every>-th year from <first>
 # (fl26swiss.dll, the world file's cwc32 line). keep_old: the shipped four-club cup is copied
@@ -1688,7 +1693,7 @@ def cwc_config(recipe):
     keep = bool(c.get("keep_old", True))
     name = (c.get("old_name") or "").strip() or CWC_OLD_NAME
     return {"every": every, "first": first, "keep_old": keep, "old_name": name,
-            "replace": (c.get("replace") or None) if keep else None}
+            "replace": (c.get("replace") or None) if keep else None, "logo": c.get("logo") or None}
 
 
 def cwc_last_key(replace):
@@ -1776,6 +1781,32 @@ def cwc_untick(recipe, key):
     return False
 
 
+# The Club World Cup's confederations whose continental cups only Build makes (fl26world.CCUPS
+# numbers): the UEFA's, CONMEBOL's and the AFC's are the game's and in every world. A world
+# without them has no titles and no ranking points for that confederation (fl26swiss
+# cwc_quota_field): its places go to the best clubs of the whole ranking not yet in, the OFC's
+# to the AFC first (the user's rule, 2026-11-21).
+CWC_BUILT_CONFEDS = (("CAF", 4, (6, 7)), ("CONCACAF", 4, (13,)), ("OFC", 1, (14,)))
+
+
+def cwc_short_confeds(pl):
+    """[(confederation, places)] the Club World Cup gives that this plan has no continental cup
+    for (pl: a plan, its ccups)"""
+    have = {c.get("number") for c in pl.get("ccups") or []}
+    return [(name, n) for name, n, cups in CWC_BUILT_CONFEDS if not have & set(cups)]
+
+
+def cwc_short_text(short):
+    """the warning of cwc_short_confeds, one sentence per confederation ("" when none)"""
+    out = []
+    for name, n in short:
+        where = ("the AFC" if name == "OFC"
+                 else "the best clubs of the whole ranking not yet in, whatever their confederation")
+        out.append("No %s continental cup in this world: %s to %s."
+                   % (name, "its %d places go" % n if n > 1 else "its place goes", where))
+    return " ".join(out)
+
+
 def club_world_cup(pl, root, db, log=print):
     """the Club World Cup of 32 (and the old one kept as the Intercontinental) into the world's
     tables in <db>; returns the world file's cwc32 line"""
@@ -1819,6 +1850,9 @@ def club_world_cup(pl, root, db, log=print):
     if ic_reg:
         log("  %s (the old Club World Cup, every December): competition %d, regulation %d"
             % (cfg["old_name"], ic_cid, ic_reg))
+    short = cwc_short_text(cwc_short_confeds(pl))
+    if short:
+        log("  warning: Club World Cup of 32 -- " + short)
     return ["cwc32 ko=%d every=%d first=%d ic=%d iccid=%d" % (ko, cfg["every"], cfg["first"], ic_reg, ic_cid)]
 
 
@@ -9868,11 +9902,32 @@ def picture_jobs(pl, base, log=print, gone=None):
                 job("league_logo", logo_files(cid_of[int(rid)]), cid_of[int(rid)], v.get("name") or "",
                     have_picture(v["logo"], v.get("name") or "league %s" % rid, log,
                                  "logo", "drawn emblem", gone, logo_files(cid_of[int(rid)])))
+    # the Club World Cup of 32 (club_world_cup) is competition 1 now: the game's Club World Cup's
+    # logo (edits.competitions["1"]) is the Intercontinental's, on the id it was copied to
+    cwc = pl.get("club_world_cup")
+    ic = ((pl.get("cup_ids") or {}).get(CWC_KEY_IC) or {}) if cwc and cwc.get("keep_old") else {}
+    ic_cid = ic.get("cid") if isinstance(ic.get("cid"), int) else None
+    ic_logo = None
     for cid, v in (e.get("competitions") or {}).items():
         if v.get("logo"):
-            job("league_logo", logo_files(int(cid)), int(cid), v.get("name") or "",
+            to = int(cid)
+            if cwc and to == CLUB_WORLD_CUP_CID:
+                ic_logo = v["logo"]
+                continue
+            job("league_logo", logo_files(to), to, v.get("name") or "",
                 have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
-                             "logo", "drawn emblem", gone, logo_files(int(cid))))
+                             "logo", "drawn emblem", gone, logo_files(to)))
+    pic = have_picture(cwc["logo"], "the Club World Cup", log, "logo", "game's emblem", gone,
+                       logo_files(CLUB_WORLD_CUP_CID)) if cwc and cwc.get("logo") else None
+    if pic:                      # (none: the game's own emblem stays, not a drawn one)
+        job("league_logo", logo_files(CLUB_WORLD_CUP_CID), CLUB_WORLD_CUP_CID, "Club World Cup", pic)
+    if ic_cid:
+        name = cwc.get("old_name") or CWC_OLD_NAME
+        pic = have_picture(ic_logo, name, log, "logo", "game's emblem", gone, logo_files(ic_cid)) if ic_logo else None
+        if pic:
+            job("league_logo", logo_files(ic_cid), ic_cid, name, pic)
+        else:                    # the game's own Club World Cup emblem, as the cup had before
+            job("game_emblem", logo_files(ic_cid), ic_cid, name, CLUB_WORLD_CUP_CID)
     for tid, v in (e.get("clubs") or {}).items():
         # "kit": a place of the game's NewLife gave another club (refresh_game_leagues, B57); with
         # no crest picture it gets that club's shield (or badge), as a new club does, never the

@@ -54,6 +54,14 @@ cup of 32 and Apply writes the recipe's
   competition and regulation of its own (cup_ids `cwc:intercontinental`). A world with no free
   competition id gives it the ids of a cup it no longer builds: the dialog unticks that cup
   (`cwc_untick`) and `replace` names it, so the first Build pins its old ids (`cwc_pins`);
+- the logos (2026-11-21, a Logo field on each of the tab's two cups): the cup of 32's is
+  `club_world_cup.logo`, written on competition 1 (none keeps the game's emblem). The
+  Intercontinental's is the game's Club World Cup's, `edits.competitions["1"].logo`, the key
+  Competition Names keeps it under, so it is the same whether the cup of 32 is on or not; with the
+  cup of 32 on, `picture_jobs` writes it on the Intercontinental's id instead of 1, and with none
+  the Intercontinental gets the game's own emblem of competition 1 from the install (`game_emblem`,
+  as the Pre-Libertadores gets the Libertadores'). Until then the Intercontinental's new id had no
+  emblem of its own;
 - the world file gets `cwc32 ko=<reg> every=<n> first=<year> ic=<reg> iccid=<cid>`;
   fl26swiss.lua hands it to `fl26_swiss_cwc`. Without the line the DLL behaves as before
   (knockout 200, every season).
@@ -80,8 +88,26 @@ The titles and the ranking are fl26cwc.dll's (tools/cwcrank, now in the pack: bu
 sider/experimental/fl26cwc.lua): fl26swiss tells it every winner at the teardowns and at the
 draw (`fl26_cwc_champion`), it keeps them in each save's ledger (`K_CHAMP`, six years whatever
 the window) and hands them back with the ranking (`fl26_cwc_champions`, `fl26_cwc_ranking`).
-Its cycle comes from the same cwc32 line (`fl26_cwc_every`). Without fl26cwc.dll, or with a
-confederation it cannot fill, the old access list stands in.
+Its cycle comes from the same cwc32 line (`fl26_cwc_every`). Without fl26cwc.dll the old access
+list stands in.
+
+**A confederation that cannot fill its places (the user's rule, 2026-11-21).** A world without a
+continent's continental cup (removed, or never made) has no titles and no ranking points for it
+(points come only from continental matches), and a world without its clubs has nobody at all. Each
+place left after the titles and the confederation's ranking goes to the best club of the whole
+ranking not yet in, whatever its confederation (the OFC's place still goes to the AFC first). Only
+when the whole ranking has fewer than 32 clubs (a first season with few continental matches) do the
+game's four entrants and then the old access list fill the rest, whatever the confederation; still
+short, the old access list picks the whole field. Until 21.11. the game's entrants and the access
+list came first for each confederation: with fixed regulation ids (another league in a Mod Studio
+world) and no CAF or OFC club in the list, a world without the CAF's cup gave its four places to
+the ranking anyway, and one without the AFC's could take a wrong club.
+
+The Build says so (`leaguebuilder.cwc_short_confeds` / `cwc_short_text`, a `warning:` line after
+the Club World Cup's): the UEFA's, CONMEBOL's and the AFC's cups are the game's and always there;
+a plan with no CAF cup (6 or 7), no CONCACAF cup (13) or no OFC cup (14) in its `ccups` is named
+with where its places go. Cups > International shows the same, in red under the field, from the
+last Build's plan.
 
 **Which matches give points (2026-11-18).** The DLL knows the ids that are the same in every
 world: the game's Champions League (2-4), Europa League (5, 6), Libertadores (8-10) and AFC
@@ -197,7 +223,21 @@ installed by hand any more.
 - **mkcwc on FL27's tables**: competition 1 is the shipped one-row cup (reg 1, four clubs) and the
   Libertadores group stage is at reg 8 as in FL26: reshape and the Intercontinental copy work.
 
-Known, not done: fl26contrank's stub for the clubs past the world ranking still tests the slot with
-`+0x41c & 0x7f != 0x7b` (fl26slot7 makes it 9 bits): a club on slot 251 or 379 is left out of the
-confederation lists. Copy B's match table fix (League Mode) is in the FL26 caps set only; FL27's
+fl26contrank's stub for the clubs past the world ranking tests the slot the way the world ranking
+build (0x141324ded) does now: at init it reads that site, and when fl26slot7 has made it a jmp to
+its 9-bit stub, the page's flag at +0x1220 is 1 and the stub reads `+0x41c | +0x41b << 8` (else
+the game's `+0x41c & 0x7f`). Until 21.11.2026 it always tested 7 bits, so a club on slot 251 or
+379 was in no confederation list, and one such club inside the world's 750 also pushed the
+stub's skip count one club too far (tools/contrank/gen3.py makes the stub).
+
+**The points column again (fl26cwc, 21.11.2026).** On the confederation screens the league column
+shows the club's CWC points (header "Pontos") and only clubs with more than 0 points are listed --
+also while nobody has any (the list is then empty; until 21.11. everyone was shown at 0). After
+the two fl26contrank changes of 21.11. it showed the league names: the 9-bit slot test moved the
+extra stub's tail from +0x159 to +0x184, so fl26cwc turned down the whole hook ("lists:
+fl26contrank's stub is not the one expected"), and its trampolines at cave+0x1300/0x1310 were under
+the new six-unit reg2 stub (0x1300..0x1387). fl26cwc now looks for the tail in the stub's first
+0x400 bytes, and its trampolines are at cave+0x1480 (the column) and +0x1490 (the header).
+
+Known, not done: Copy B's match table fix (League Mode) is in the FL26 caps set only; FL27's
 sets (patches/*.fl27*.json) have not been made again with it.

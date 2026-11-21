@@ -21,11 +21,36 @@ import leaguebuilder as B
 from .. import filecache
 from ..i18n import _
 from ..ui import hint, row, ask, helped
+from .builder import PictureField
 from .continental import CompetitionList
 from .cup_editors import CupConflict
 
 IC, CWC = "intercontinental", "club_world_cup"
-DEFAULTS = {"on": False, "every": 4, "first": 2029, "keep_old": True, "old_name": B.CWC_OLD_NAME, "replace": None}
+DEFAULTS = {"on": False, "every": 4, "first": 2029, "keep_old": True, "old_name": B.CWC_OLD_NAME, "replace": None,
+            "logo": None}
+# the Intercontinental's logo is the game's Club World Cup's (competition 1): edits.competitions,
+# as Competition Names keeps it, whether the cup of 32 is on or not (leaguebuilder.picture_jobs)
+IC_LOGO = "ic_logo"
+IC_CID = str(B.CLUB_WORLD_CUP_CID)
+
+
+def ic_logo(recipe):
+    return (((recipe.get("edits") or {}).get("competitions") or {}).get(IC_CID) or {}).get("logo") or None
+
+
+def put_ic_logo(recipe, path):
+    """edits.competitions["1"].logo = path (an entry with neither name nor logo goes); True when changed"""
+    if ic_logo(recipe) == (path or None):
+        return False
+    comps = recipe.setdefault("edits", {}).setdefault("competitions", {})
+    entry = comps.setdefault(IC_CID, {})
+    if path:
+        entry["logo"] = path
+    else:
+        entry.pop("logo", None)
+        if not (entry.get("name") or "").strip():
+            comps.pop(IC_CID, None)
+    return True
 
 CWC_INFO = ("32 clubs, the 2025 format: eight groups of four played once, then a single-match knockout "
             "of sixteen, in June after the Champions League final. The draw is in late November of the "
@@ -34,7 +59,9 @@ CWC_FIELD = ("12 UEFA, 6 CONMEBOL, 5 AFC, 4 CAF, 4 CONCACAF and 1 OFC. Each conf
              "champions of its continental cup of the four seasons before the cup (a club with two titles "
              "counts once); the places left go to its best clubs in the confederation ranking (the points of "
              "the four seasons). The OFC place is the best OFC club of the OFC ranking; a world with no OFC "
-             "club in the ranking gives it to the AFC. Any number of clubs of one country.")
+             "club in the ranking gives it to the AFC. A place a confederation cannot fill (a world without its "
+             "continental cup or its clubs) goes to the best club of the whole ranking not yet in, whatever its "
+             "confederation. Any number of clubs of one country.")
 CWC_NOTE = ("Build and install puts it in the game, with Mod Studio's modules. Start a new career "
             "afterwards: a career saved before keeps the old cup. Master League and League Mode get the "
             "confederation rankings (UEFA, CONMEBOL, CONCACAF, AFC, CAF and OFC) in Data > Ranking CWC.")
@@ -79,7 +106,9 @@ def config(recipe):
         c["every"], c["first"] = 4, 2029
     if not c.get("old_name") or c["old_name"] in B.CWC_OLD_NAMES:
         c["old_name"] = B.CWC_OLD_NAME
-    return {k: c.get(k) for k in DEFAULTS}
+    out = {k: c.get(k) for k in DEFAULTS}
+    out[IC_LOGO] = ic_logo(recipe)
+    return out
 
 
 class InternationalEditor(QWidget):
@@ -89,7 +118,7 @@ class InternationalEditor(QWidget):
     @staticmethod
     def refresh_inputs(project):
         recipe = project.recipe
-        return (json.dumps(recipe.get(CWC), sort_keys=True),
+        return (json.dumps(recipe.get(CWC), sort_keys=True), ic_logo(recipe),
                 [((L.get("name") or ""), bool(L.get("cup")), bool(L.get("supercup")))
                  for L in recipe.get("leagues") or []],
                 [(g.get("league"), bool(g.get("super_cup")), bool(g.get("league_cup")))
@@ -148,6 +177,9 @@ class InternationalEditor(QWidget):
         self.name.setMaxLength(60)
         self.name.textChanged.connect(lambda s: self.set("old_name", s.strip() or B.CWC_OLD_NAME))
         form.addRow(_("Name"), self.name)
+        self.ic_logo = PictureField(None, 64, empty="(the game's own)")
+        self.ic_logo.changed = lambda: self.set(IC_LOGO, self.ic_logo.path)
+        form.addRow(_("Logo"), self.ic_logo)
         icv.addLayout(form)
         self.ic_state = QLabel("")
         self.ic_state.setWordWrap(True)
@@ -168,6 +200,10 @@ class InternationalEditor(QWidget):
             label = QLabel(_(text))
             label.setWordWrap(True)
             cv.addWidget(label)
+        self.cwc_short = QLabel("")         # the confederations the last Build has no cup for
+        self.cwc_short.setWordWrap(True)
+        self.cwc_short.setStyleSheet("color: #c0392b;")
+        cv.addWidget(self.cwc_short)
         f2 = QFormLayout()
         f2.setRowWrapPolicy(QFormLayout.WrapLongRows)
         self.every = QSpinBox()
@@ -177,6 +213,9 @@ class InternationalEditor(QWidget):
         self.first.setRange(2000, 2200)
         self.first.valueChanged.connect(lambda v: self.set("first", v))
         f2.addRow(_("Every"), row(self.every, QLabel(_("years, first in")), self.first, "stretch"))
+        self.cwc_logo = PictureField(None, 64, empty="(the game's own)")
+        self.cwc_logo.changed = lambda: self.set("logo", self.cwc_logo.path)
+        f2.addRow(_("Logo"), self.cwc_logo)
         cv.addLayout(f2)
         cv.addWidget(hint(_("4 and 2029 as FIFA plays it; 1 plays it every season.")))
         cv.addWidget(hint(_(CWC_NOTE)))
@@ -205,9 +244,10 @@ class InternationalEditor(QWidget):
 
     def dirty_keys(self):
         v, i = self._values, self._initial
+        logo = {IC_LOGO} if v.get(IC_LOGO) != i.get(IC_LOGO) else set()   # written on or off
         if not v["on"] and not i["on"]:
-            return set()                              # nothing of it is written while it is off
-        return {k for k in DEFAULTS if v.get(k) != i.get(k)}
+            return logo                               # nothing else of it is written while it is off
+        return {k for k in DEFAULTS if v.get(k) != i.get(k)} | logo
 
     def draft(self):
         return {"values": deepcopy(self._values), "initial": deepcopy(self._initial), "view": self.view_state()}
@@ -256,6 +296,9 @@ class InternationalEditor(QWidget):
         self.name.setText(v["old_name"] if v["old_name"] not in B.CWC_OLD_NAMES else _(B.CWC_OLD_NAME))
         self.every.setValue(int(v["every"]))
         self.first.setValue(int(v["first"]))
+        for field, key in ((self.ic_logo, IC_LOGO), (self.cwc_logo, "logo")):
+            field.path = v.get(key) or None
+            field.show_it()
         self._loading = False
         self.restore_view({"selected": keep_sel if v["on"] or keep_sel == IC else IC})
         if self.list.currentRow() < 0:
@@ -369,6 +412,10 @@ class InternationalEditor(QWidget):
         for w in (self.name, self.tree):
             w.setEnabled(on and keep)
         self.ic_info.setText(_(IC_INFO))
+        short = B.cwc_short_confeds(self.plan) if self.plan else []
+        self.cwc_short.setText(_("Last Build: %s") % " ".join(
+            _(B.cwc_short_text([s])) for s in short) if short else "")
+        self.cwc_short.setVisible(bool(short))
         if not on:
             text = _(IC_ALONE)
         elif not keep:
@@ -412,11 +459,14 @@ class InternationalEditor(QWidget):
         if v["on"]:
             recipe[CWC] = {"on": True, "every": int(v["every"]), "first": int(v["first"]),
                            "keep_old": bool(v["keep_old"]), "old_name": v["old_name"] or B.CWC_OLD_NAME,
-                           "replace": key}
+                           "replace": key, "logo": v.get("logo") or None}
+            if not recipe[CWC]["logo"]:
+                recipe[CWC].pop("logo")
         else:
             recipe.pop(CWC, None)
         after = json.dumps(recipe.get(CWC), sort_keys=True)
         changed = changed or after != before
+        changed = put_ic_logo(recipe, v.get(IC_LOGO)) or changed
         if v["on"] and not self._initial["on"]:
             # the 32-club draw is fl26swiss.dll's and the rankings fl26contrank's / fl26cwc's: Mod
             # Studio's modules of this version must be in the game (Build and install puts them too)
