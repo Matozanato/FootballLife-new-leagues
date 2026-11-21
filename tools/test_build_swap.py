@@ -6,7 +6,7 @@ import os, shutil, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import leaguebuilder as B
-from modstudio import worlds
+from modstudio import access, worlds
 
 N = 0
 
@@ -25,6 +25,7 @@ def put(path, data):
 
 def main():
     root = tempfile.mkdtemp(prefix="fl26swap-")
+    B.RENAME_WAIT = 0                         # a rename refused for good fails at once
     try:
         out = os.path.join(root, "livecpk", "_FL26Swap")
         put(os.path.join(out, B.MARK), "old")
@@ -49,9 +50,29 @@ def main():
             said = str(e)
         finally:
             os.rename = real
-        ok("a failed swap says what to do: %s" % said, said and "close what has a file of it open" in said)
+        ok("a failed swap says what to do: %s" % said, said and "another program has a file of it open -- close it" in said
+           and not access.is_denied(B.BuildError(said)))
         ok("and the old world is still there", open(os.path.join(out, B.MARK)).read() == "new"
            and not os.path.exists(out + ".old"))
+
+        # B377: Windows refuses the rename for a moment (a virus scan reading the new files): tried
+        # again, the Build goes through
+        put(os.path.join(out + ".building", B.MARK), "newest")
+        refused = []
+
+        def rename(a, b):
+            if len(refused) < 3:
+                refused.append(a)
+                raise PermissionError(13, "Access is denied")
+            return real(a, b)
+        os.rename = rename
+        try:
+            B.swap_in(out + ".building", out)
+        finally:
+            os.rename = real
+        ok("refused 3 times, then let through: the new world is in",
+           open(os.path.join(out, B.MARK)).read() == "newest" and len(refused) == 3
+           and not os.path.exists(out + ".building") and not os.path.exists(out + ".old"))
 
         # a world that was never built before
         fresh = os.path.join(root, "livecpk", "_FL26Fresh")

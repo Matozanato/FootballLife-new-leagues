@@ -65,7 +65,10 @@ without it the game never sees a region above 28 in the first place.
 
 The row count is an 8-bit compare (`cmp ecx, imm8`, sign-extended), so the table holds at most
 127 rows. The 24 shipped rows plus one per region that has none still fits for every region
-1..127 a world can use: at most 24 + 103 = 127.
+1..127 a world can use: at most 24 + 103 = 127. A world with regions 128..255 (FL 2027, the caps
+set's regions step, tools/regions.py) can need more: past 127 rows the count becomes
+`cmp cl, n` (80 f9 n, the same three bytes; unsigned, the loop counts ecx up from 0 with jb),
+which holds 255 -- 24 + 227 = 251 at most. Up to 127 rows the bytes are what they always were.
 
 Nothing here has been run in a game.
 """
@@ -89,6 +92,16 @@ DEFAULT_MAP = "11=PEU,13=PLA,14=PAS,20=event"
 GENERIC = ["PEU", "PLA", "PAS", "event"]       # the four headings that name no country
 NEUTRAL = "interNational"                      # the plain flag: a country with no picture of its own
 PACKAGE = os.path.join("common", "menu", "general", "compeCategorySelect.bin")
+
+
+def count_bytes(total):
+    """the loop's compare for `total` rows: cmp ecx, imm8 (sign-extended) up to 127, then
+    cmp cl, imm8 (unsigned) up to 255"""
+    if total <= 0x7f:
+        return COUNT[1][:COUNT[2] * 2] + "%02x" % total
+    if total <= 0xff:
+        return "80f9%02x" % total
+    raise ValueError("%d rows" % total)
 
 
 def cstr(img, va):
@@ -195,7 +208,7 @@ def main(argv):
         if ptr is None and nm not in extra:     # a name of ours: its string goes after the rows
             extra[nm] = len(strings)
             strings += nm.encode("latin1") + b"\0"
-    if total > 0x7f:
+    if total > 0xff:
         raise SystemExit("%d rows does not fit the 8-bit compare at 0x%x" % (total, COUNT[0]))
 
     def patches_at(cave):
@@ -213,7 +226,7 @@ def main(argv):
             (LEA_NM[0], LEA_NM[1],
              LEA_NM[1][:LEA_NM[2] * 2] + struct.pack("<I", rel32(LEA_NM[0], 7, cave)).hex(),
              "the name column -> the copy"),
-            (COUNT[0], COUNT[1], COUNT[1][:COUNT[2] * 2] + "%02x" % total,
+            (COUNT[0], COUNT[1], count_bytes(total),
              "how many rows the loop walks: %d -> %d" % (NROWS, total)),
         ]
 

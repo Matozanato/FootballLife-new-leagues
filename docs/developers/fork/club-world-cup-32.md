@@ -41,7 +41,10 @@ knockout matches played, and the July teardown was clean.
 
 ## In Mod Studio (branch feature/cwc32)
 
-Leagues > More > **Club World Cup** (`ClubWorldCupDialog` in `pages/builder.py`) writes the recipe's
+Since the merge of 0.4.0 (2026-11-21, branch feature/cwc32-fl27): **Cups > International**
+(`InternationalEditor` in `pages/international.py`, the fourth tab of the Cups page). It always
+lists the Intercontinental Cup (the game's four-club Club World Cup); **Add Club World Cup** adds the
+cup of 32 and Apply writes the recipe's
 `club_world_cup`: `on`, `every` (years), `first` (the first year it is played), `keep_old`,
 `old_name` and `replace`. Build (`leaguebuilder.club_world_cup`, after the super cups):
 
@@ -63,8 +66,9 @@ keeps the old cup. Not yet played in the game.
 
 ### The field (cwc_quota_field, the user's rule of 2026-11-17)
 
-12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF, 4 CONCACAF (FIFA's shares; the OFC place, with no OFC clubs in
-the game, goes to the AFC and the CAF). Each confederation first takes the champions of its
+12 UEFA, 6 CONMEBOL, 5 AFC, 4 CAF, 4 CONCACAF and 1 OFC (since 2026-11-21; FIFA's shares, the host's
+place to the AFC). The OFC place is the best OFC club of the ranking, no title first; with no OFC club
+in the ranking it goes to the AFC. Until 21.11.: 5 AFC, 5 CAF and no OFC place. Each confederation first takes the champions of its
 continental cup of the four seasons before the cup (titles of T-4 .. T-1 for a cup played in June
 of T; the confederation is the club's country's, from the world file's confed line): the game's
 Champions League (4), Libertadores (10) and AFC Champions League (16) knockouts and every cup of
@@ -169,3 +173,31 @@ installed by hand any more.
 - **The world file** always gets the `confed` line when the cup is on (fl26contrank reads it).
 - Old by-hand copies in `livecpk\root` (flows, bra/eng all.str) are covered by the world's and
   can go.
+
+### FL27 and 0.4.0 (2026-11-21, feature/cwc32-fl27)
+
+- **Merged onto FL Mod Studio 0.4.0.** The Club World Cup moved from Leagues > More to Cups >
+  International (Leagues > More > Club World Cup, where a page still calls it, opens that tab).
+- **The OFC ranking.** fl26contrank has a sixth screen, Common/CmnLeagueRankingOC (confederation 7),
+  button 97 "OFC" (text 0x2b7) on the Ranking page of ML and League Mode, title "Ranking OFC"
+  (0x2b8). 97 was checked on FL_2027.exe: the default case of the three id switches, not in the button
+  table, not a category (95 is not: the availability switch has a case for it). Its reg2 stub of six
+  units moved from 0x6a0 to 0x1300 (the five-unit one ran into the button names at 0x720 with a
+  sixth). lbcwcmenu writes the OC flow and the two texts.
+- **The same exe sites.** Every site fl26contrank patches is the same in FL_2027.exe (read from the
+  file); fl26cwctitle's trophy pair at 0x141e54979 too.
+- **Offsets of FL27's caps set.** fl26cwc read the day at a fixed block+0x19115e4 and 600 regulation
+  rows; it now reads both from the caps set installed (tools/native/fl26layout.h, lay_today,
+  lay_regcap), and logs them ("layout: ...").
+- **16-bit competition ids.** mkcwc and cwc_localize read the competition id with M.reg_cid /
+  M.comp_cid (FL27's big worlds have ids past 255).
+- **fl26confgroups (FL27).** The Intercontinental is on every confederation's side of Competition
+  Info next to the Club World Cup, and out of League Info as the Club World Cup is (B402): the
+  world line's `fifa=<cid>:1`, fl26_confgroups_fifa.
+- **mkcwc on FL27's tables**: competition 1 is the shipped one-row cup (reg 1, four clubs) and the
+  Libertadores group stage is at reg 8 as in FL26: reshape and the Intercontinental copy work.
+
+Known, not done: fl26contrank's stub for the clubs past the world ranking still tests the slot with
+`+0x41c & 0x7f != 0x7b` (fl26slot7 makes it 9 bits): a club on slot 251 or 379 is left out of the
+confederation lists. Copy B's match table fix (League Mode) is in the FL26 caps set only; FL27's
+sets (patches/*.fl27*.json) have not been made again with it.

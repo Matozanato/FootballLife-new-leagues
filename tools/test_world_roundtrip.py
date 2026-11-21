@@ -103,7 +103,7 @@ def synthetic(B, base):
             "uefa_rank": ["g%d" % eng, "RT Armenia"], "league_order": ["RT Armenia", "RT Egypt", "RT Egypt 2"],
             "preseason_cups": [{"name": "RT Summer", "clubs": ["RT Egypt/0", "RT Egypt/1", "RT Armenia/0", "RT Armenia/1"],
                                 "logo": "x:/nowhere/summer.png"}],
-            "europe_first": {"uel": ["RT Armenia/3"], "uecl": ["RT Egypt/4"]},
+            "europe_first": {"uel": ["RT Armenia/3"], "uecl": ["RT Egypt/4"], "afc": ["RT Egypt/5"]},
             "ccup_names": {"6": "RT African League"}, "ccup_logos": {"7": "x:/nowhere/cafcc.png"},
             "caf_super_cup": False, "cup_draw": "random", "country_order": "az",
             "game_cups": [{"league": B.fl26world._BRA, "league_cup": False, "super_cup": True, "super_name": "RT Brazil Super"},

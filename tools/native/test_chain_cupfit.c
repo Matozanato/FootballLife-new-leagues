@@ -44,36 +44,37 @@ int main(void)
   cup_t c = { 59, 30, 98, 0, 0, 0 };
   for (n = 0; n < 20; n++) list[n] = (uint32_t)(1 + n) << 14;
   for (; n < 24; n++) list[n] = (uint32_t)(100 + n - 20) << 14;
-  n_given = -1; cup_fix(&c, list, n, 0, "test");
+  n_given = -1; cup_fix(&c, list, n, 0, "test", 0);
   check("24 with 98's clubs -> 30's first 24", n_given, 24);
   check("  and the first club is 30's", n_given > 0 ? (int)(given[0] >> 14) : 0, 1);
   /* the game itself gives the cup 30's 26: not a field the screen draws either */
   for (n = 0; n < 26; n++) list[n] = (uint32_t)(1 + n) << 14;
-  n_given = -1; cup_fix(&c, list, n, 0, "test");
+  n_given = -1; cup_fix(&c, list, n, 0, "test", 0);
   check("30's own 26 -> 24", n_given, 24);
   /* 24 of 30's: left alone */
-  n_given = -1; cup_fix(&c, list, 24, 0, "test");
+  n_given = -1; cup_fix(&c, list, 24, 0, "test", 0);
   check("24 of 30's left alone", n_given, -1);
   /* a field above 32 is the League Builder's (cupn, its raised bracket) and is not cut */
   reg(0, 30, 1, 36);
   for (n = 0; n < 34; n++) list[n] = (uint32_t)(1 + n) << 14;
   list[33] = 100u << 14;
-  n_given = -1; cup_fix(&c, list, n, 0, "test");
+  n_given = -1; cup_fix(&c, list, n, 0, "test", 0);
   check("36 above 32 not cut", n_given, 36);
   /* cupall: 14 + 8 = 22 under a cupn of 28 -> 20 */
   reg(0, 30, 1, 14); reg(1, 98, 100, 8);
   cup_t a = { 59, 30, 98, 1, 28, 0 };
   for (n = 0; n < 22; n++) list[n] = (uint32_t)(1 + n) << 14;
-  n_given = -1; cup_fix(&a, list, n, 0, "test");
+  n_given = -1; cup_fix(&a, list, n, 0, "test", 0);
   check("cupall 22 -> 20", n_given, 20);
   /* cupall 16 + 12 = 28: left as it is */
   reg(0, 30, 1, 16); reg(1, 98, 100, 12);
-  n_given = -1; cup_fix(&a, list, 22, 0, "test");
+  n_given = -1; cup_fix(&a, list, 22, 0, "test", 0);
   check("cupall 28 kept", n_given, 28);
   for (int k = 2; k <= 48; k++) {
     int f = bracket_fit(k);
     if (f > k || (k <= 32 && k > 16 && f != 18 && f != 20 && f != 24 && f != 28 && f != 30 && f != 32 && f != 16) ||
-        (k <= 16 && f != k) || (k > 32 && f != k)) { printf("FAIL: bracket_fit(%d) = %d\n", k, f); fails++; }
+        (k <= 16 && f != k) || (k >= 44 && f != k) ||
+        (k > 32 && k < 44 && f != (k >= 40 ? 40 : k >= 36 ? 36 : 32))) { printf("FAIL: bracket_fit(%d) = %d\n", k, f); fails++; }
   }
   if (fails) return 1;
   printf("all checks passed\n%.*s", g_log_len, g_log);

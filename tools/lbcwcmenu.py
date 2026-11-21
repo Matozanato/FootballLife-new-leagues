@@ -4,14 +4,19 @@ The ranking screens and buttons are fl26contrank's (in the pack, on with the wor
 line). What they need from the game's files goes into the world built with the Club World Cup
 (leaguebuilder.build -> write), so it comes and goes with that world:
 
-  common/script/flow/ML/MLMainManu.json        the ML menu flow + events leaguerankna/as/af
+  common/script/flow/ML/MLMainManu.json        the ML menu flow + events leaguerankna/as/af/oc
   common/script/flow/League/LeagueMainMenu.json the League Mode menu flow, the same events
-  common/script/flow/Common/CmnLeagueRanking{NA,AS,AF}.json
+  common/script/flow/Common/CmnLeagueRanking{NA,AS,AF,OC}.json
                                                copies of the game's CmnLeagueRankingEU.json
   <lang>/string/all.str                        every language's texts + ours in category 0x1a:
                                                0x2ac..0x2b0 UEFA .. CAF (buttons),
                                                0x2b1..0x2b5 "Ranking <confed>" (screen titles),
-                                               0x2b6 the submenu ("Ranking CWC")
+                                               0x2b6 the submenu ("Ranking CWC"),
+                                               0x2b7 OFC (button), 0x2b8 "Ranking OFC" (21.11.)
+
+FL27 (21.11.): its menu flows are in Data\dt16_all.cpk and its texts in data_s26271.cpk and
+Data\dt20_<lang>_x64.cpk, which Sources reads as it reads FL26's; the category 0x1a ids from
+0x2ac on are free there too (it ends at 0x2ab, as FL26's).
 
 Each file is made from the one the game shows now: the first livecpk root of sider.ini that has
 it (a Mod Studio world left out: they are ours), else the newest of the game's .cpk files. So a
@@ -24,10 +29,11 @@ FLOW = "common/script/flow/"
 # event short name -> unit; the button names fl26contrank gives (86/87 are the game's own events)
 EVENTS = [("leaguerankeu", "Common/CmnLeagueRankingEU"), ("leagueranksa", "Common/CmnLeagueRankingSA"),
           ("leaguerankna", "Common/CmnLeagueRankingNA"), ("leaguerankas", "Common/CmnLeagueRankingAS"),
-          ("leaguerankaf", "Common/CmnLeagueRankingAF")]
+          ("leaguerankaf", "Common/CmnLeagueRankingAF"), ("leaguerankoc", "Common/CmnLeagueRankingOC")]
 MENUS = ["ML/MLMainManu.json", "League/LeagueMainMenu.json"]
 UNIT_SRC = "Common/CmnLeagueRankingEU.json"
-UNITS = ["Common/CmnLeagueRankingNA.json", "Common/CmnLeagueRankingAS.json", "Common/CmnLeagueRankingAF.json"]
+UNITS = ["Common/CmnLeagueRankingNA.json", "Common/CmnLeagueRankingAS.json", "Common/CmnLeagueRankingAF.json",
+         "Common/CmnLeagueRankingOC.json"]
 
 CAT = 0x1a
 CONF = ["UEFA", "CONMEBOL", "CONCACAF", "AFC", "CAF"]
@@ -43,6 +49,7 @@ def texts(lang):
     t = {0x2ac + k: c for k, c in enumerate(CONF)}
     t.update({0x2b1 + k: "Ranking " + c for k, c in enumerate(CONF)})
     t[0x2b6] = SUBMENU.get(lang, SUBMENU_DEFAULT)
+    t[0x2b7], t[0x2b8] = "OFC", "Ranking OFC"          # fl26contrank's OFC button and screen title
     return t
 
 
@@ -253,7 +260,7 @@ def write(root, game, sider, log=print):
         log("  Club World Cup menus: %s from %s%s" % (rel, where, (", + " + ", ".join(names)) if names else ""))
     raw, where = src.read(FLOW + UNIT_SRC)
     if raw is None:
-        log("  WARNING: Club World Cup menus: the game has no %s -- the CONCACAF, AFC and CAF screens "
+        log("  WARNING: Club World Cup menus: the game has no %s -- the CONCACAF, AFC, CAF and OFC screens "
             "will not open" % UNIT_SRC)
     else:
         for rel in UNITS:

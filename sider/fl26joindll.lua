@@ -86,6 +86,7 @@ local TD_EXTRA = {}
 local BUILDER_EXTRA = {}
 local JULY_EXTRA = {}
 local BUILDER_CONF = {}
+local CAL_CUPS = {}       -- B333: {calendar cup, its league}
 
 -- Competition.bin confederation code -> regulation runtime code (+0x300 bits 25..28).
 -- 2 UEFA, 3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC.
@@ -230,6 +231,7 @@ function m.init(ctx)
     typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
     typedef int  (*fl26_join_cal_pairs_t)(const uint16_t*, int);
     typedef int  (*fl26_join_builder_extra_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_cal_cups_t)(const uint16_t*, int);
     typedef int  (*fl26_join_builder_conf_t)(const uint16_t*, int);
     typedef int  (*fl26_join_july_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_season_types_t)(const uint8_t*, int);
@@ -265,6 +267,7 @@ function m.init(ctx)
 
   BUILDER_EXTRA = {}
   BUILDER_CONF = {}
+  CAL_CUPS = {}
   JULY_EXTRA = {}
   if world then
     local seen = {}
@@ -284,12 +287,24 @@ function m.init(ctx)
         jseen[G.id] = true
       end
     end
+    -- B365: an added league in a region the exe holds to the calendar year and the world file
+    -- to August (J3 under J2, the Saudi Second Division under the First) is off the July
+    -- builder's list as well: it played its first season only. A shipped one (cid up to 175)
+    -- is on the exe's own list.
+    for _, L in ipairs(world) do
+      if (L.exhibition or 0) == 0 and CAL_REGIONS[L.region] and not cal_region(L.region)
+          and L.cid and L.cid > 175 and not jseen[L.id] then
+        JULY_EXTRA[#JULY_EXTRA + 1] = { L.id, RUNTIME_CONF[L.conf] or 15 }
+        jseen[L.id] = true
+      end
+    end
     for _, L in ipairs(world) do
       -- Added national and super cups are absent from the EXE's compiled calendar-year
       -- include list; shipped cups are already there.
       if (L.exhibition or 0) == 0 and cal_region(L.region)
           and L.cup and L.cup > 175 and not seen[L.cup] then
         BUILDER_EXTRA[#BUILDER_EXTRA + 1] = L.cup
+        CAL_CUPS[#CAL_CUPS + 1] = { L.cup, L.id }   -- B333: the league it takes its clubs from
         local rc = RUNTIME_CONF[L.conf]
         if rc ~= nil then BUILDER_CONF[#BUILDER_CONF + 1] = { L.cup, rc } end
         seen[L.cup] = true
@@ -365,6 +380,18 @@ function m.init(ctx)
         log(string.format("fl26joindll: %d calendar-year cup(s) added to the season builder", k))
       end
     end
+    -- B333: nothing else gives those cups clubs (no season pass in a region of ours)
+    if #CAL_CUPS > 0 then
+      local pcc = ffi.C.GetProcAddress(h, "fl26_join_cal_cups")
+      if pcc == nil then
+        log("fl26joindll: this fl26join.dll has no fl26_join_cal_cups -- calendar-year cups of ours get no clubs (B333)")
+      else
+        local cb = ffi.new("uint16_t[?]", 2 * #CAL_CUPS)
+        for i, e in ipairs(CAL_CUPS) do cb[2 * i - 2] = e[1]; cb[2 * i - 1] = e[2] end
+        local k = tonumber(ffi.cast("fl26_join_cal_cups_t", pcc)(cb, #CAL_CUPS))
+        log(string.format("fl26joindll: %d calendar-year cup(s) get their league's clubs when they join a season", k))
+      end
+    end
     if #BUILDER_CONF > 0 then
       local pc = ffi.C.GetProcAddress(h, "fl26_join_builder_conf")
       if pc == nil then
@@ -408,7 +435,7 @@ function m.init(ctx)
       if cal_region(L.region) and (L.exhibition or 0) == 0 then CAL[#CAL + 1] = L.id end
     end
     local SP = {}
-    for r, t in pairs(SEASONS) do if r >= 0 and r < 128 and t >= 0 and t <= 3 then SP[#SP + 1] = { r, t } end end
+    for r, t in pairs(SEASONS) do if r >= 0 and r < 256 and t >= 0 and t <= 3 then SP[#SP + 1] = { r, t } end end
     if #SP > 0 then
       local pst = ffi.C.GetProcAddress(h, "fl26_join_season_types")
       if pst == nil then log("fl26joindll: this fl26join.dll has no fl26_join_season_types -- the world's season lines are ignored")
@@ -442,7 +469,8 @@ function m.init(ctx)
       local PAIRS = {}
       for _, L in ipairs(world or {}) do
         local U = L.above and byid[L.above]
-        if U and incal[L.id] and incal[U.id] and U.region == L.region and not (regular or {})[L.id] and not (regular or {})[U.id] then
+        -- (groups of one division, GitHub #98, are fl26chain's and never January-December)
+        if U and not L.group and incal[L.id] and incal[U.id] and U.region == L.region and not (regular or {})[L.id] and not (regular or {})[U.id] then
           local n = math.min(U.demote or 0, L.promote or 0)
           if n > 0 then PAIRS[#PAIRS + 1] = { U.id, L.id, n, depth(U) } end
         end

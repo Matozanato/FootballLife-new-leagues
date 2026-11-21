@@ -3,6 +3,7 @@
  "text": {
   "everyone %dx": "svi sa svima %dx",
   "%dx, then %s %dx": "%dx, zatim %s %dx",
+  "%dx, then %s": "%dx, zatim %s",
   "League": "Liga",
   "Name": "Ime",
   "Country": "Država",
@@ -124,6 +125,8 @@
   ["^  no kits: the game's UniformParameter.bin was not unpacked \\(Unpack from game\\)$", "  bez dresova: UniformParameter.bin igre nije raspakiran (Raspakiraj iz igre)"],
   ["^  changed (\\d+) of the game's clubs and (\\d+) of its leagues$", "  promijenjeno postojećih klubova: \\1, postojećih liga: \\2"],
   ["^built (.+): (\\d+) leagues, (\\d+) clubs$", "izgrađeno \\1: liga \\2, klubova \\3"],
+  ["^kits drawn from colours and crests: (\\d+) so far \\(of at most (\\d+)\\)$", "dresovi nacrtani iz boja i grbova: dosad \\1 (najviše \\2)"],
+  ["^kits made from colours and crests: (\\d+) \\((\\d+) new or changed\\)", "dresovi napravljeni iz boja i grbova: \\1 (\\2 novih ili promijenjenih)"],
   ["^world file -> ", "datoteka svijeta -> "],
   ["^NOTE: sider.ini does not load (.+) -- those parts of the world will not work$", "PAZI: sider.ini ne učitava \\1 -- ti dijelovi svijeta neće raditi"],
   ["not loaded$", "nije učitan"],
@@ -158,7 +161,8 @@
   ["^players of (.+?): no free player id left below (\\d+) \\(the game packs a player id into 18 bits\\)", "igrači kluba \\1: nema više slobodnog ID-a igrača ispod \\2 (igra sprema ID igrača u 18 bitova)"],
   ["^no free player id left below (\\d+) \\(the game packs a player id into 18 bits\\)", "nema više slobodnog ID-a igrača ispod \\1 (igra sprema ID igrača u 18 bitova)"],
   [" -- the world has too many players\\. Take out a league or two \\(Leagues > Remove\\), then Build again$", " -- svijet ima previše igrača. Makni ligu ili dvije (Lige > Ukloni), pa ponovno Izgradi"],
-  ["no free competition or regulation ids left for (.+) -- the world has all the competitions the game takes \\(255\\)\\. Untick the national or super cups of countries you don't play \\(My world > Cups > Cups of our countries / of the game's countries\\) or take out a league, then Build again$", "nema slobodnih ID-eva natjecanja za \\1 -- svijet ima sva natjecanja koja igra prima (255). Odznači nacionalne ili super kupove država koje ne igraš (Moj svijet > Kupovi > Kupovi naših država / Kupovi država iz igre) ili makni jednu ligu, pa opet Build"],
+  ["no free competition or regulation ids left for (.+) -- the world has all the competitions the game takes \\((\\d+)\\)\\. Untick the national or super cups of countries you don't play \\(My world > Cups > Cups of our countries / of the game's countries\\) or take out a league, then Build again$", "nema slobodnih ID-eva natjecanja za \\1 -- svijet ima sva natjecanja koja igra prima (\\2). Odznači nacionalne ili super kupove država koje ne igraš (Moj svijet > Kupovi > Kupovi naših država / Kupovi država iz igre) ili makni jednu ligu, pa opet Build"],
+  ["^(.+?) has competition ids up to (\\d+), and the game's caps set reads only 255 \\(it has no cidwide step\\) -- Home > Install now, then switch it on again$", "\\1 ima ID-eve natjecanja do \\2, a caps set igre čita samo do 255 (nema korak cidwide) -- Početna > Instaliraj sada, pa ga opet uključi"],
   ["^the game was updated since \\((.+)\\)$", "igra je od tada ažurirana (\\1)"],
   [" \\(or tick 'It keeps its places in continental competitions' in Club of the game\\)$", " (ili označi 'Zadržava mjesta u kontinentalnim natjecanjima' u Klubu igre)"],
   [", not all (\\d+) of the two divisions: the cup screens draw only some field sizes$", ", ne svih \\1 iz oba ranga: ekrani kupa crtaju samo neke veličine"],
@@ -176,6 +180,11 @@
   ["^  region headings for (\\d+) leagues$", "  naslovi regija za \\1 liga"],
   ["^  no region headings: (.+)$", "  bez naslova regija: \\1"],
   ["^(fl26\\S+\\.lua) -> (.+)$", "\\1 -> \\2"],
-  ["^(\\d+) new clubs, but the game has room for (\\d+) more \\(a full squad each\\)$", "novih klubova \\1, a u igri ima mjesta za još \\2 (svaki s punom momčadi)"]
+  ["^(\\d+) new clubs, but the game has room for (\\d+) more \\(a full squad each\\)$", "novih klubova \\1, a u igri ima mjesta za još \\2 (svaki s punom momčadi)"],
+  ["^(\\d+) new clubs, but FL26 has room for (\\d+) more \\(a full squad each\\) -- a world this big is for FL 2027: choose FL 2027's game folder \\(Game\\) and Build there$", "novih klubova \\1, a FL26 ima mjesta za još \\2 (svaki s punom momčadi) -- ovako velik svijet je za FL 2027: odaberi mapu igre FL 2027 (Igra) i napravi Build tamo"],
+  ["^(\\S+) is a recipe for (FL26|FL 2027) -- choose (FL26|FL 2027)'s game folder \\(Game\\) and Build there$", "\\1 je recept za \\2 -- odaberi mapu igre \\3 (Igra) i napravi Build tamo"],
+  ["^(\\S+) is a world for FL 2027 \\((\\S+) clubs, (\\S+) players; FL26 takes (\\d+) clubs and (\\d+) players\\) -- it would break FL26: install it in FL 2027, or get the FL26 version of the pack$", "\\1 je svijet za FL 2027 (klubova \\2, igrača \\3; FL26 prima \\4 klubova i \\5 igrača) -- pokvario bi FL26: instaliraj ga u FL 2027 ili uzmi FL26 verziju paketa"],
+  ["^(\\S+) is a world for FL26 -- FL 2027 has tables of its own: install it in FL26, get the FL 2027 version of the pack, or Build it again with FL 2027 as the game$", "\\1 je svijet za FL26 -- FL 2027 ima svoje tablice: instaliraj ga u FL26, uzmi FL 2027 verziju paketa ili ga ponovno izgradi (Build) s FL 2027 kao igrom"],
+  ["^(.+) could not be replaced: another program has a file of it open -- close it \\(the game, a folder window\\) and Build again$", "\\1 nije moguće zamijeniti: drugi program ima otvorenu njegovu datoteku; zatvori ga (igru, prozor mape) i ponovi Build"]
  ]
 }

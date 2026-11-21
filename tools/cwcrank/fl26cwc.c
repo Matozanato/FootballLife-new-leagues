@@ -75,7 +75,12 @@
 #define MATCH_BASE_SITE 0x1413146e8ull     /* lea rcx,[rax + base] */
 #define MATCH_CAP_SITE  0x14131471bull     /* cmp edi, cap */
 #define MATCH_STRIDE    0x254
-#define TODAY_OFF       0x19115e4          /* u16 day of the year (0-based); u16 year at +8 */
+/* the day of the year (u16, 0-based; u16 year at +8) and the regulation table's rows: where the
+   installed caps set puts them (fl26layout.h, 0.4.0). FL26 0.3.0: today at +0x19115e4, 600 rows;
+   FL27's limits set moves today up and has 1200 or 2000 rows (until 21.11. both were fixed here) */
+static uint64_t g_base = 0x140000000ull;   /* fl26_cwc_install refuses any other base */
+#include "../native/fl26layout.h"
+#define TODAY_OFF       lay_today()
 #define LIST_SITE       0x140b10ac2ull     /* fl26contrank: jmp cave+0x1000 */
 #define LIST_BACK       0x140b10ac9ull
 #define EXTRA_OFF       0x1000
@@ -911,7 +916,7 @@ static DWORD WINAPI watch_thread(LPVOID unused)
  * u32 'REGS', u32 count field, u32 reg offset, i32 day, i32 year, then 600 x 0x314 bytes. */
 #define RP_CNT_SITE 0x1415435daull   /* mov r9d,[r10+COUNT] (fl26swiss rix: left as shipped) */
 #define RP_REG_SITE 0x1415435a9ull   /* cmp word [rdx+r13+REGS], bx */
-#define RP_ROWS 600
+#define RP_ROWS ((int)lay_regcap())   /* 600 in FL26 0.3.0, 1200/2000 in FL27 (fl26layout.h) */
 #define RP_STRIDE 0x314
 static uint32_t g_rp_cnt, g_rp_off; static int g_rp_ok = -1, g_rp_n;
 static uint64_t g_rp_sig;
@@ -968,7 +973,7 @@ static void rp_check(void)
     if (f != INVALID_HANDLE_VALUE) {
       int32_t hd[5] = { 0x53474552, (int32_t)cnt, (int32_t)g_rp_off, dd, yy };
       DWORD w; WriteFile(f, hd, sizeof hd, &w, 0);
-      WriteFile(f, a, RP_ROWS * RP_STRIDE, &w, 0);
+      WriteFile(f, a, (DWORD)RP_ROWS * RP_STRIDE, &w, 0);
       CloseHandle(f);
     }
   }
@@ -1005,7 +1010,7 @@ static unsigned char mg_season_mask(int k)
 }
 static int mg_find(const unsigned char* a, uint32_t cnt, uint16_t id)
 {
-  for (uint32_t i = 0; i < cnt && i < RP_ROWS; i++) if (*(const uint16_t*)(a + (size_t)i * RP_STRIDE) == id) return (int)i;
+  for (uint32_t i = 0; i < cnt && i < (uint32_t)RP_ROWS; i++) if (*(const uint16_t*)(a + (size_t)i * RP_STRIDE) == id) return (int)i;
   return -1;
 }
 static int mg_matches_left(unsigned char* b, uint16_t reg)
@@ -1033,7 +1038,7 @@ static void mg_check(void)
   if (!b) { g_mg_streak = 0; return; }
   unsigned char* a = b + g_rp_off;
   uint32_t cnt = *(volatile uint32_t*)(b + g_rp_cnt);
-  if (cnt == 0 || cnt > RP_ROWS) return;
+  if (cnt == 0 || cnt > (uint32_t)RP_ROWS) return;
   int yy = 0, dd = today(b, &yy);
   if (dd < 0) {                                   /* the menu: the world's own table */
     g_mg_streak = 0; g_mg_done_tries = 0;
@@ -1062,7 +1067,7 @@ static void mg_check(void)
     uint16_t id = *(const uint16_t*)g_mg_rows[k];
     if (mg_find(a, cnt, id) < 0) need++;
   }
-  if (cnt + need > RP_ROWS) { plog("old career (day %d of %d): no room for %d rows (count %u) -- left as it is", dd, yy, need, cnt); return; }
+  if (cnt + need > (uint32_t)RP_ROWS) { plog("old career (day %d of %d): no room for %d rows (count %u) -- left as it is", dd, yy, need, cnt); return; }
   for (int k = 0; k < need; k++)
     if (*(const uint16_t*)(a + (size_t)(cnt + k) * RP_STRIDE) != 0xffff) {
       plog("old career (day %d of %d): row %u is not free -- left as it is", dd, yy, cnt + k); return;
@@ -1190,6 +1195,8 @@ __declspec(dllexport) int fl26_cwc_install(int first_year, int reset_day)
   if (t2) CloseHandle(t2);
   plog("installed: match table +0x%x x %u, save folder %s, main thread %lu; resets on day %d of %d + 4k",
        g_mbase, g_mcap, g_save_dir, g_main_tid, g_reset_day, g_first_year);
+  plog("layout: today at block+0x%x, %u regulation rows%s", lay_today(), lay_regcap(),
+       lay_ok() ? "" : " (some sites not as expected: the 0.3.0 values stand in)");
   return 1 + 2 * lists + 4 * saves;
 }
 /* the Club World Cup's cycle in years (the world file's cwc32 every=, Mod Studio's option); 4 before */

@@ -45,6 +45,8 @@ def count(path):
 
 def build(base, game, world, cap):
     B.PLAYER_CAP = cap
+    # Build takes the caps of the game folder again (use_game): this one's caps set is the cap
+    B.installed_caps = lambda _game: (B.GAME_CAPS["fl26"][0], cap)
     said = []
     pl = B.plan(recipe(world, free_agents(base, 10)), base)
     B.build(pl, base, game, False, log=said.append)

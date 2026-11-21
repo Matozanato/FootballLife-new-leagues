@@ -72,6 +72,9 @@ BLOCK_TAIL = 0x44                  # the copier's fixed tail; the stride is k*0x
 # It belongs to that table and patchset.py already moves it with it. Moving it here as well
 # would move it twice.
 NOT_OURS = {0x1414bc5a8: "the match table's end pointer, moved with the match table",
+            # 06.11. audit A: an EH unwind funclet's `__ehvec_dtor(arr, 0x118, 0x2d0, dtor 0x140ae8820)`
+            # -- 0x118 is the element size of 720 objects (ctor 0x1414d06be), not the 280 ids of a day
+            0x142496066: "element size 0x118 of an __ehvec_dtor in an unwind funclet, not the day's id cap",
             # 08.10.: rax there is the MenuUtilityDemoPlayer singleton (call 0x140e9e2b0), not a
             # day; +0x6b0 is past the 0x620-byte object and crashed Master League creation
             0x1412f9043: "MenuUtilityDemoPlayer+0x2b0, a vector of 0x230-byte entries, not an event slot",
@@ -211,9 +214,16 @@ class Exe:
         return struct.unpack_from("<i", self.read(va, 4))[0]
 
 
+# bytes per match id in a day: 2 as shipped, 4 once the ids are 32-bit (u32 match ids, M2:
+# calelem.py rewrites the element accesses, patchset.py --calendar-elem4 asks for it)
+ELEM = 2
+# match ids past 65535 (M4, patchset.py --match-cap): matchid32.py stops the cuts to 16 bits
+MATCH32 = False
+
+
 def shape(ids):
     """-> (k, stride, id bytes, count offset, events offset) for a day of `ids` match ids"""
-    want = ids * 2 + 4 + EVENTS_LEN
+    want = ids * ELEM + 4 + EVENTS_LEN
     k = (want - BLOCK_TAIL + 0x7f) // 0x80
     stride = k * 0x80 + BLOCK_TAIL
     id_bytes = stride - 4 - EVENTS_LEN
@@ -242,7 +252,7 @@ def dword(exe, va, at, old, new, why):
 def build(ids, new_base):
     exe = Exe()
     k, stride, id_bytes, count_off, events_off = shape(ids)
-    real_ids = id_bytes // 2
+    real_ids = id_bytes // ELEM
     D = new_base - OLD_BASE
     growth = DAYS * (stride - OLD_STRIDE)      # how much longer the calendar part of the unit is
     ev_shift = events_off - OLD_EVENTS
@@ -418,7 +428,15 @@ def build(ids, new_base):
                      "%s's GS handler data, the cookie offset: 0x%x -> 0x%x (flag bits kept)"
                      % (f, gs_old & ~0xf, (gs_old + g) & ~0xf)))
 
+    if ELEM == 4:
+        import calelem
+        el = calelem.patches(exe)
+        out.extend(el)
+    if MATCH32:
+        import matchid32
+        out.extend(matchid32.patches(exe))
     info = {
+        "elem_bytes": ELEM,
         "ids_per_day": real_ids, "blocks_of_0x80": k, "stride": "0x%x" % stride,
         "count_off": "0x%x" % count_off, "events_off": "0x%x" % events_off,
         "base_new": "0x%x" % new_base, "moved_by": "0x%x" % D,

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFileDialog
                                QScrollArea, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import lbpackage as K
+from .. import installer as I
 from ..i18n import _
 from ..ui import hint, row, ask, error, info, section, run_job, denied
 from .builder import BuilderPage
@@ -205,6 +206,8 @@ class Packages(BuilderPage):
             "your world. Added leagues show up on every tab of My world; Build and install puts them "
             "in the game.")
 
+    zip_notice = True       # B487c: Make it editable... does not carry these changes (ui.Page)
+
     def __init__(self, app):
         super().__init__(app)
         self.action("Add a package...", self.add_pack, "primary")
@@ -295,6 +298,9 @@ class Packages(BuilderPage):
             error(self, "League packages", str(e))
             return
         text = [_("%s %s by %s") % (man.get("name"), man.get("version"), man.get("author") or "?"), ""]
+        other = I.pack_wrong_game(self.app.game.folder if self.app.game else None, path, man)
+        if other:
+            text = [other, ""] + text
         if len(man.get("leagues", [])) < 2:
             text += ["  %s  (%s, %d %s)" % (L["name"], L.get("country", ""), int(L.get("clubs") or 0), _("clubs"))
                      for L in man.get("leagues", [])]
@@ -392,6 +398,9 @@ class Packages(BuilderPage):
         self.app.settings["pack_dir"] = os.path.dirname(out)
         from .. import VERSION
         meta["made_with"] = "FL Mod Studio %s" % VERSION
+        if self.app.game and self.app.game.folder:     # mato 07.11.: which game it is for
+            import worldgame as WG
+            meta["game"] = WG.game_of(self.app.game.folder)
         leagues, edits = d.picked(), d.edits.isChecked()
         parts = [k for k, b in d.parts.items() if b.isChecked() and b.isEnabled()]
         sider = getattr(self.app.game, "sider_dir", None) if self.app.game else None

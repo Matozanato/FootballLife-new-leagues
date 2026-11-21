@@ -144,8 +144,12 @@ def regulations(root):
 def set_offsets(name):
     """{regulation id: day shift} out of the date-stub patch's own note in a set json."""
     p = os.path.join(os.path.dirname(HERE), "patches", name + ".json")
+    d = json.load(open(p))
+    if d.get("date_offsets"):
+        # the set records its shifts itself; the stub's note now says "league+1" and the like
+        return {int(k): int(v) for k, v in d["date_offsets"].items()}
     note = ""
-    for patch in json.load(open(p))["patches"]:
+    for patch in d["patches"]:
         m = re.search(r"date-spread stub and its table \(([^)]*)\)", patch.get("why", ""))
         if m:
             note = m.group(1)

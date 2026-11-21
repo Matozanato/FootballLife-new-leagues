@@ -95,15 +95,15 @@ def main():
     for code in drops:
         i, cid = P.find_cid(comp, code)
         drop_cids.add(cid)
-        mine = [r for r in range(len(reg_rows)) if reg_rows[r][M.R_CID] == cid]
+        mine = [r for r in range(len(reg_rows)) if M.reg_cid(reg_rows[r]) == cid]
         drop_reg_rows.update(mine)
-        n_ent = sum(1 for e in range(len(ents) // M.ENT) if ents[e * M.ENT + M.E_CID] == cid)
+        n_ent = sum(1 for e in range(len(ents) // M.ENT) if M.ent_cid(ents, e * M.ENT) == cid)
         print("drop %s: competition %d, regulation(s) %s, %d entries"
               % (code, cid, ", ".join(str(P.rid_of(reg_rows[r])) for r in mine), n_ent))
 
-    new_comp = bytearray(b"".join(r for r in rows_of(comp, M.COMP) if r[M.CID_OFF] not in drop_cids))
+    new_comp = bytearray(b"".join(r for r in rows_of(comp, M.COMP) if M.comp_cid(r) not in drop_cids))
     new_regs = bytearray(b"".join(r for k, r in enumerate(reg_rows) if k not in drop_reg_rows))
-    new_ents = bytearray(b"".join(r for r in rows_of(ents, M.ENT) if r[M.E_CID] not in drop_cids))
+    new_ents = bytearray(b"".join(r for r in rows_of(ents, M.ENT) if M.ent_cid(r) not in drop_cids))
     print("out: %d competitions, %d regulations, %d entries"
           % (len(new_comp) // M.COMP, len(new_regs) // M.REG, len(new_ents) // M.ENT))
 

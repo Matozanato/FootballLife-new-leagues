@@ -5,13 +5,14 @@ Build and edit your world, Import your world and NewLife Database.
              game's limits; Build and install (the Build page's own button)
     cards    every world on disk (livecpk\\_FL26...): the one in the game green, Put in the game on
              the others; Export / Rename / Delete on each; + New world
-    tabs     the pages that change the open world (Leagues, Clubs, Players, Kits, Stadiums), Cups
-             (the cup windows of Leagues > More); + Add... and More on the right
+    tabs     the pages that change the open world (Leagues, Clubs, Players, Kits, Stadiums, Cups);
+             Cups embeds domestic and continental editors; + Add... and More on the right
 
 Nothing here builds, switches, exports, renames, deletes or installs by itself: the buttons call
 what the pages already do (Build: build_all, do_on, do_export, new_world; Content folders:
 rename_world, delete_world; League packages: add_pack; Import your world: look; NewLife: load).
 """
+import bigjson
 import fnmatch, json, os, time, zipfile
 
 from PySide6.QtCore import Qt, QTimer
@@ -20,15 +21,22 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLay
                                QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 
 import leaguebuilder as B
-from .. import filecache, installer as I, theme, worlds as WL
+from .. import filecache, installer as I, letgo, procstat, theme, worlds as WL
 from ..i18n import _
-from ..ui import ask, can_write, denied, error, info, run_job
+from ..ui import ask, can_write, denied, error, info, next_turn, run_job
 
 PLAN = "leaguebuilder-plan.json"
-CID_MAX = B.W.CID_MAX                                  # competitions the game has room for (255)
+# competitions the game has room for: B.W.CID_MAX, read when it is needed -- 255, or 1023 once the
+# game's caps set has the cidwide step (leaguebuilder.use_game)
 NEW_COUNTRIES = B.REGION_LAST - B.REGION_FIRST + 1      # regions for new countries (29..127: 99)
 CARD_W, CARD_H, NEW_W = 420, 120, 140
 KINDS = "world zip (Modpack) · .fl26pack (league package) · NewLife Database (folder or zips)"
+
+
+def new_countries():
+    """regions for new countries in the game chosen now: 99 (29..127), 227 (29..255) with an FL
+    2027 caps set that has the regions step (leaguebuilder.use_regions)"""
+    return B.REGION_LAST - B.REGION_FIRST + 1
 
 
 # ---- what the cards and the header say -------------------------------------------------------
@@ -66,7 +74,7 @@ def world_rows(app):
              "open": w == open_w, "when": when,
              "exportable": built and os.path.isfile(os.path.join(d, I.WORLD_FILE))}
         if r["open"]:                    # Home's numbers of the open world
-            # a group of clubs in no league is no league: plan_summary counts it apart too (B141:
+            # a group of clubs in no league is no league: apart.plan_numbers counts it apart too (B141:
             # the card said 81 while the world was open, 80 once it was not)
             r["leagues"] = sum(1 for L in P.recipe.get("leagues") or [] if not L.get("others"))
             r["clubs"] = sum(B.new_club_count(L) for L in P.recipe.get("leagues") or [])
@@ -74,25 +82,41 @@ def world_rows(app):
     return rows
 
 
-def plan_summary(game, world):
-    """leagues, new clubs and new countries of a built world, from its leaguebuilder-plan.json
-    (worked out again only when the file changes); None without one. A big world's plan takes a
-    second to read: called from a worker thread"""
-    path = os.path.join(game.livecpk_dir, world, PLAN)
-
-    def make():
-        try:
-            pl = filecache.json_file(path)      # the one Leagues reads too (B66: not a second 128 MB copy)
-        except (OSError, ValueError):
-            return None
-        leagues = pl.get("leagues") or []
-        # the plan keeps a league's clubs of the game by place; new_club_count reads them as a list
-        clubs = sum(B.new_club_count(dict(p, game_clubs=list(B.game_places(p).values())))
-                    for p in leagues + (pl.get("others") or []))
-        regions = {p.get("region") for p in leagues
-                   if isinstance(p.get("region"), int) and p["region"] >= B.REGION_FIRST}
-        return {"leagues": len(leagues), "clubs": clubs, "regions": len(regions)}
-    return filecache.by_files("myworld-plan", [path], make)
+def plan_summaries(game, worlds):
+    """{world: leagues, new clubs and new countries of the built world, from its
+    leaguebuilder-plan.json} (None without one), worked out again only when a file changes. A big
+    world's plan takes seconds to read, and reading it holds the window too (10.11.): read in a
+    process of its own (apart.numbers), called from a worker thread"""
+    from .. import apart
+    out, far = {}, []
+    for w in worlds:
+        path = os.path.join(game.livecpk_dir, w, PLAN)
+        key = filecache.stamps([path])
+        have = filecache.kept("myworld-plan", [path], key)
+        if have:
+            out[w] = have[0]
+            continue
+        # B480 round 3 (17.11.2026): a plan this process holds already (Make it editable and Build
+        # read the world's plan for the pages) is counted here, in a moment. The plan process reads
+        # it again from the disk: the GigaPack's is 2 GB in memory, and two of them at once (two
+        # refreshes after Make it editable) with 2 GB free stood the whole PC still for seconds --
+        # the window 3.5 s, the exe test of beta4r
+        held = filecache.json_kept(path)
+        if held is not None:
+            try:
+                got = apart.plan_numbers(held[0])
+            except (AttributeError, KeyError, TypeError, ValueError):
+                got = None
+            else:
+                filecache.keep("myworld-plan", [path], key, got)
+                out[w] = got
+                continue
+        far.append((w, path, key))
+    if far:
+        for (w, path, key), got in zip(far, apart.numbers([x[1] for x in far])):
+            filecache.keep("myworld-plan", [path], key, got)
+            out[w] = got
+    return out
 
 
 def competitions(project):
@@ -125,14 +149,19 @@ def competition_room(project):
         return len(have), len(have) + len(free)
     paths = [os.path.join(d, "CompetitionRegulation.bin") for d in (db, project.base) if d]
     try:
-        return filecache.by_files("myworld-room", paths, make)
+        return filecache.by_files("myworld-room-%d" % B.W.CID_MAX, paths, make)
     except (OSError, ValueError):
         return None
 
 
-def info_text(r):
-    """the dim line of a card: only what is known"""
-    bits = [r["world"]] if r["title"] != r["world"] else []
+def LIVE_NO_DELETE():
+    """why Delete does nothing for the world in the game: the card's tooltip and what a press says"""
+    return _("%s is the world in the game now. Put another world in the game first, then you can delete it.")
+
+
+def info_text(r, short=False):
+    """the dim line of a card: only what is known. short: without the world's folder name"""
+    bits = [r["world"]] if r["title"] != r["world"] and not short else []
     if r.get("leagues") is not None:        # B70: "1 leagues"
         bits.append(_("%d league") % 1 if r["leagues"] == 1 else _("%d leagues") % r["leagues"])
     if r.get("clubs") is not None:
@@ -184,7 +213,30 @@ def kind_of(path):
 def carry_added(before, rec):
     """B146 (Tysonche35 18.10.): leagues added to a ready world from a zip before Make it editable
     went with the recipe read again from its plan. The ones of `before` (the recipe open till then)
-    that the plan does not have go on at the end of `rec`; their names"""
+    that the plan does not have go on at the end of `rec`; their names.
+    B487 (pop1806 16.11.): a league of the plan renamed before it (Edit league...) was not in the
+    plan under its new name, so it went on as an added one, a second league beside the plan's
+    under the old name, with no players. It is the plan's league under the name given it now:
+    renamed in `rec` as Edit league renames (project.rename_in: its players, the leagues under it,
+    pre-season cups, packages, and built_as, so Build gives it the ids it has). Which league it was
+    is told as Build tells it (leaguebuilder.build, built_as newest last; an old name a league of
+    `before` still has is that league's own). The rest of `rec`'s league is the plan's, as for
+    every league the plan has"""
+    from ..project import rename_in
+    have = {L.get("name") for L in rec.get("leagues") or []}
+    now = {L.get("name") for L in (before or {}).get("leagues") or []}
+    used = set()
+    for L in (before or {}).get("leagues") or []:
+        nm = L.get("name")
+        if L.get("others") or not nm or nm in have:
+            continue
+        was = next((x for x in reversed(L.get("built_as") or []) if x in have and x not in now and x not in used),
+                   None)
+        if was is None:
+            continue
+        used.add(was)
+        next(P for P in rec["leagues"] if P.get("name") == was)["name"] = nm
+        rename_in(rec, was, nm)
     have = {L.get("name") for L in rec.get("leagues") or []}
     out = []
     for L in (before or {}).get("leagues") or []:
@@ -194,6 +246,38 @@ def carry_added(before, rec):
         have.add(L["name"])
         out.append(L["name"])
     return out
+
+
+def carry_edits(before, rec):
+    """B487 (pop1806 16.11., "I changed players' names, it did not apply"): the players (Players
+    page: names, squads, coaches) and the edit tab (game leagues, clubs, competitions, swaps)
+    changed in a ready world before Make it editable went with the recipe read again from its
+    plan. `before` was read from that same plan (app: fresh install, B468), so what it has other
+    than the plan is the person's: those entries go into `rec`. Run after carry_added (a renamed
+    league's players are under its new name in both). An entry the person took out entirely is
+    not told from one never there: the plan's stays. Returns how many entries were carried"""
+    n = 0
+    pl = rec.setdefault("players", {})
+    for k, v in ((before or {}).get("players") or {}).items():
+        if pl.get(k) != v:
+            pl[k] = v
+            n += 1
+    ed = rec.setdefault("edits", {})
+    for kind, v in ((before or {}).get("edits") or {}).items():
+        mine = ed.get(kind)
+        if isinstance(v, dict) and isinstance(mine, dict):
+            for k, x in v.items():
+                if mine.get(k) != x:
+                    mine[k] = x
+                    n += 1
+        elif isinstance(v, list) and isinstance(mine, list):
+            new = [x for x in v if x not in mine]
+            mine.extend(new)
+            n += len(new)
+        elif v != mine and v not in (None, {}, []):
+            ed[kind] = v
+            n += 1
+    return n
 
 
 def unstick(b):
@@ -271,7 +355,7 @@ class WorldCard(QFrame):
             nr.addWidget(tag, 0, Qt.AlignVCenter)
         nr.addStretch(1)
         txt.addLayout(nr)
-        self.info = QLabel(info_text(r))
+        self.info = QLabel()
         self.info.setObjectName("cardnote")
         txt.addWidget(self.info)
         top.addLayout(txt, 1)
@@ -319,10 +403,9 @@ class WorldCard(QFrame):
         self.delete.setObjectName("danger")
         self.delete.clicked.connect(lambda: sec.delete(self.world))
         if r["live"]:
-            # Content folders refuses the world in the game too (worlds.delete never takes it out)
-            self.delete.setEnabled(False)
-            self.delete.setToolTip(_("%s is the world in the game now. Put another world in the game first, "
-                                     "then you can delete it.") % self.world)
+            # the world in the game is never deleted (worlds.delete never takes it out). The button stays
+            # alive and a press says why: a grey button told a tester nothing (vmican, 12.11.2026)
+            self.delete.setToolTip(LIVE_NO_DELETE() % self.world)
         elif not r["built"]:
             self.delete.setEnabled(False)
             self.delete.setToolTip(_("Nothing of it is on disk yet"))
@@ -334,6 +417,22 @@ class WorldCard(QFrame):
             bot.addWidget(b)
         v.addLayout(bot)
         self.set_title()
+        self.set_note()
+
+    def set_note(self):
+        """the dim line in the room the card has: whole, else without the folder name, else cut with
+        "..."; the whole line stays in its tip (the UI tour, pt, 11.11.: "_FL26Megapack · 317
+        campeonatos · 4494 clubes novos · construído 10.11. 10:49" was 20 pixels wider than the card)"""
+        self.info.ensurePolished()
+        fm, room = self.info.fontMetrics(), CARD_W - 30
+        whole = info_text(self.r)
+        text = whole
+        if fm.horizontalAdvance(text) > room:
+            text = info_text(self.r, short=True)
+        if fm.horizontalAdvance(text) > room:
+            text = fm.elidedText(text, Qt.ElideRight, room)
+        self.info.setText(text)
+        self.info.setToolTip(whole if text != whole else "")
 
     def set_title(self):
         room = CARD_W - 40 - (90 if self.r["zipped"] else 0)
@@ -343,7 +442,7 @@ class WorldCard(QFrame):
         """the leagues and new clubs of its plan, once they are read"""
         if summ and self.r.get("leagues") is None:
             self.r.update(leagues=summ["leagues"], clubs=summ["clubs"])
-            self.info.setText(info_text(self.r))
+            self.set_note()
 
 
 class DropZone(QFrame):
@@ -489,6 +588,10 @@ class AddDialog(QDialog):
                 Ls = self.man.get("leagues") or []
                 text = "✓ " + _('Found: league package "%s" (%d leagues, %d clubs)') % (
                     self.man.get("name") or base, len(Ls), sum(int(L.get("clubs") or 0) for L in Ls))
+                # mato 07.11.: a package made on the other game (FL26 / FL 2027) says so before Add
+                other = I.pack_wrong_game(self.app.game.folder if self.app.game else None, path, self.man)
+                if other:
+                    state, text = "err", text + "\n" + other
                 for L in Ls:
                     c = QCheckBox("%s — %s, %d %s" % (L["name"], L.get("country", ""), int(L.get("clubs") or 0),
                                                            _("clubs")))
@@ -503,8 +606,8 @@ class AddDialog(QDialog):
                 self.replaces = bool(old)
                 self.count()
         elif self.kind == "world":
-            text = "✓ " + _("Found: a world zip, %s. Add opens Import your world with it; Install puts it "
-                                 "in the game as a world of its own.") % base
+            text = "✓ " + _("Found: a world zip, %s. Install puts it in the game as a world of its own, "
+                                 "nothing to build.") % base
         elif self.kind == "newlife":
             from .. import newlife as N
             parts = N.parts_in(N.find(self.where) or self.where)
@@ -524,6 +627,9 @@ class AddDialog(QDialog):
         self.found.setProperty("state", state)
         theme.repolish(self.found)
         self.found.show()
+        # 07.11. mato: people added a package and never built it; one button does it all now
+        self.add.setText(_("Add and install") if self.kind == "pack" else
+                         _("Install the world") if self.kind == "world" else _("Add"))
         self.add.setEnabled(bool(self.kind))
 
     def picked(self):
@@ -539,7 +645,7 @@ class AddDialog(QDialog):
         after, cap = room[0] + len(self.picked()), room[1]
         colour = theme.DANGER if after > cap else theme.TEXT
         text = _("Competitions after adding: %s") % ('<b style="color:%s">%d / %d</b>' % (colour, after, cap))
-        text += " · " + _("nothing reaches the game until Build and install")
+        text += " · " + _("Add and install adds them and builds your world")
         if getattr(self, "replaces", False):
             text += "<br>" + _("Your world has this package already: Add puts this version in its place.")
         self.after.setText(text)
@@ -556,8 +662,10 @@ class AddDialog(QDialog):
             self.accept()
             packs = self.app.page("Packages")
             if packs.add_pack(path, leagues=leagues):
-                self.app.open_page("Leagues")
                 self.app.status(packs.banner.text())
+                build = self.app.page("Build")
+                self.app.open_page("Build")
+                build.build_all()
         elif kind == "newlife":
             self.accept()
             nl = self.app.page("NewLife")
@@ -570,7 +678,7 @@ class AddDialog(QDialog):
         elif kind in ("world", "mod"):
             self.accept()
             self.app.open_page("Install")
-            self.app.page("Install").look(path)
+            self.app.page("Install").look(path, auto=kind == "world")
 
 
 class MyWorld(QWidget):
@@ -628,11 +736,11 @@ class MyWorld(QWidget):
         self.c_comps.setObjectName("counter")
         self.c_comps.setToolTip(_("Competitions (leagues and cups) of the world in the game, and how many it can "
                                   "have: a new league or cup takes a free id from 130 to %d, the lower ones are "
-                                  "the game's. Leagues > More > Competition IDs lists them.") % CID_MAX)
+                                  "the game's. Leagues > More > Competition IDs lists them.") % B.W.CID_MAX)
         self.c_regions = QLabel()
         self.c_regions.setObjectName("counter")
         self.c_regions.setToolTip(_("Countries the world in the game adds to the game's own; there is room for %d.")
-                                  % NEW_COUNTRIES)
+                                  % new_countries())
         self.note = QLabel()
         self.note.setObjectName("mlnote")
         self.note.setToolTip(_("A career saved before keeps the world it started with: after Build and install "
@@ -651,8 +759,8 @@ class MyWorld(QWidget):
         self.b_edit.hide()
         for x in (self.c_comps, self.c_regions, self.note, self.b_edit, self.world_state):
             h.addWidget(x, 0, Qt.AlignVCenter)
-        self.set_counter(self.c_comps, "Competitions", None, CID_MAX)
-        self.set_counter(self.c_regions, "New countries", None, NEW_COUNTRIES)
+        self.set_counter(self.c_comps, "Competitions", None, B.W.CID_MAX)
+        self.set_counter(self.c_regions, "New countries", None, new_countries())
         self.update_note()
         return w
 
@@ -707,20 +815,6 @@ class MyWorld(QWidget):
             b.clicked.connect(lambda _c=False, p=n: self.app.open_page(p))
             self.tab_btn[n] = b
             h.addWidget(b, 0, Qt.AlignBottom)
-        # the cups are windows of Leagues > More, not a page: Cups opens them from here
-        cups = QToolButton()
-        cups.setObjectName("subtab")
-        cups.setText(_("Cups"))
-        cups.setAccessibleName(_("Cups"))
-        cups.setPopupMode(QToolButton.InstantPopup)
-        cups.setCursor(Qt.PointingHandCursor)
-        m = QMenu(cups)
-        for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
-                            ("Competition names", "competition_names"), ("Trophies", "trophies")):
-            m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: self.cup_window(n))
-        cups.setMenu(m)
-        self.cups = cups
-        h.addWidget(cups, 0, Qt.AlignBottom)
         h.addStretch(1)
         self.add_btn = QPushButton("+ " + _("Add..."))
         self.add_btn.setObjectName("blue")
@@ -736,6 +830,8 @@ class MyWorld(QWidget):
             mm.addAction(_(label)).triggered.connect(lambda _c=False, p=page: self.app.open_page(p))
         mm.addSeparator()
         mm.addAction(_("Content folders")).triggered.connect(self.content_folders)
+        mm.addAction(_("Export all players (CSV)...")).triggered.connect(
+            lambda _c=False: self.app.page("Players").export_world(self))
         more.setMenu(mm)
         self.more = more
         # jibibi 17.10.: twenty minutes to find the NewLife Database under More -- its own button
@@ -783,7 +879,10 @@ class MyWorld(QWidget):
             self.update_note()
         b = self.app.pages.get("Build")
         if b is not None and hasattr(b, "state"):
-            self.world_state.setText(b.state.text().split("   ·   ")[0])
+            # the first sentence here, all of it in the tooltip (the UI tour, 11.11.: a world from
+            # a zip says three sentences, cut off at the window's edge at 1920 in every language)
+            first = b.state.text().split("   ·   ")[0]
+            self.world_state.setText(first.split(". ")[0] + ("." if ". " in first else ""))
             self.world_state.setToolTip(b.state.text().replace("   ·   ", "\n"))
 
     def later(self, *_a):
@@ -805,15 +904,9 @@ class MyWorld(QWidget):
         if self._stale:
             self.refresh()
         self.update_bar()
-        for b in (self.cups, self.more):
-            unstick(b)
-
-    def cup_window(self, name):
-        """a window of Leagues > More from Cups; the button lets go of its lit look after it"""
-        try:
-            getattr(self.app.page("NewLeagues"), name)()
-        finally:
-            unstick(self.cups)
+        unstick(self.more)
+        from .. import anim
+        anim.stagger(self.cards, self)
 
     def refresh(self):
         """the cards and the counts, from what is on disk now"""
@@ -849,10 +942,10 @@ class MyWorld(QWidget):
         if getattr(self, "_renaming", None) or getattr(self, "_switching", None):
             self.hold_cards()                         # a rename or a switch still runs (B66, B104)
         room = competition_room(self.app.project)
-        self.set_counter(self.c_comps, "Competitions", room and room[0], room[1] if room else CID_MAX)
+        self.set_counter(self.c_comps, "Competitions", room and room[0], room[1] if room else B.W.CID_MAX)
         live = [x["world"] for x in rows if x["live"]]
         if not live:
-            self.set_counter(self.c_regions, "New countries", None, NEW_COUNTRIES)
+            self.set_counter(self.c_regions, "New countries", None, new_countries())
         self.update_bar()
         # the plans of the built worlds: their leagues and clubs, the live one's countries
         g = self.app.game
@@ -860,14 +953,39 @@ class MyWorld(QWidget):
         if not want:
             return
 
+        self.summaries(want, live[0] if live else None)
+
+    def summaries(self, want, live):
+        """the cards' leagues and clubs and the live world's countries, from the built worlds' plans,
+        by a worker. One at a time (B480 round 3, 17.11.2026: the refresh at the end of Make it
+        editable and the one ini_changed asked for 0.3 s later each started a plan process for the
+        GigaPack's plan, side by side): asked again while one works, it runs again after it, for the
+        worlds asked last"""
+        if getattr(self, "_summing", False):
+            self._sum_next = (want, live)
+            return
+        self._summing = True
+        g = self.app.game
+
         def done(got):
+            self._summing = False
             for c in self.cards:
                 if c.world in got:
                     c.set_info(got[c.world])
-            if live and live[0] in got:
-                s = got[live[0]]
-                self.set_counter(self.c_regions, "New countries", s["regions"] if s else None, NEW_COUNTRIES)
-        run_job(lambda progress: {w: plan_summary(g, w) for w in want}, done, lambda tb: None)
+            if live and live in got:
+                s = got[live]
+                self.set_counter(self.c_regions, "New countries", s["regions"] if s else None, new_countries())
+            more()
+
+        def failed(_tb):
+            self._summing = False
+            more()
+
+        def more():
+            nxt, self._sum_next = getattr(self, "_sum_next", None), None
+            if nxt is not None:
+                self.summaries(*nxt)
+        run_job(lambda progress: plan_summaries(g, want), done, failed)
 
     # ---- the buttons ----
     def make_editable(self):
@@ -900,14 +1018,35 @@ class MyWorld(QWidget):
         except Exception:
             pass
         copies, base = project.copies_dir(), project.base
-        before = json.loads(json.dumps(project.recipe)) if project.recipe.get("world") == w else {}
+        mine = project.recipe if project.recipe.get("world") == w else None
         carried = []
 
         def job(progress):
-            folder = WL.make_editable(g, w)
+            # (the window is busy: nothing changes the recipe under this copy. On the window's
+            # thread it was 1.9 s of a stopped window, B480)
+            before = bigjson.loads(bigjson.dumps(mine)) if mine is not None else {}
+            # B480 round 3: the gigabytes copied come in at low memory priority (Windows takes them
+            # back first, not the window's memory), and what Windows put out of this process in the
+            # copy comes back now, in big reads with Python's lock let go, before the work below
+            # (and the pages after it) goes over the recipe page by page with the lock held
+            low = procstat.low_memory_priority(thread=True)
+            try:
+                folder = WL.make_editable(g, w, log=lambda t: progress(str(t)[:90]))   # B431: the MB copied
+            finally:
+                if low:
+                    procstat.normal_memory_priority()
+            procstat.bring_back()
             with open(os.path.join(g.livecpk_dir, w, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-                rec = B.recipe_from_plan(json.load(f), base)
+                plan = bigjson.load(f)
+            rec = B.recipe_from_plan(plan, base)
+            # B480 round 3: the plan read here went at the end of the line above, in one call of C
+            # with Python's lock held (millions of objects): freed by letgo's thread, in small steps
+            letgo.drop(plan)
+            del plan
+            from ..app import warm_game_info
+            warm_game_info(base)                  # B480: not on the window's thread at adopt()
             carried[:] = carry_added(before, rec)
+            carry_edits(before, rec)              # B487: the players' names etc. changed before
             os.makedirs(copies, exist_ok=True)
             kept = os.path.join(copies, w + ".json")
             if os.path.exists(kept):
@@ -915,17 +1054,44 @@ class MyWorld(QWidget):
             with open(kept + ".tmp", "w", encoding="utf-8") as f:
                 json.dump(rec, f, indent=1, ensure_ascii=False)
             os.replace(kept + ".tmp", kept)
-            return folder, kept
+            # B480: both were the window's (9 s of a stopped window at the end): what was kept of
+            # the ready world's files is dropped here, and the recipe is read back here
+            filecache.forget_under(os.path.join(g.livecpk_dir, w))
+            # (and the two recipes this made, freed in small steps by letgo's thread: freed here
+            # at once, each kept Python's lock for seconds with the GigaPack, B480)
+            letgo.drop(rec, before)
+            del rec, before
+            with open(kept, encoding="utf-8") as f:
+                read = bigjson.load(f)
+            # 16.11. (hangstacks, 6.3-6.6 s of a stopped window at the end): adopt's copy for Undo and the
+            # world's plan the pages read next were the window's too. Both are made here
+            for k, v in (("leagues", []), ("edits", {}), ("players", {})):
+                read.setdefault(k, v)             # as adopt does, before the copy it compares with
+            snap = project._split(read)
+            try:
+                filecache.json_file(os.path.join(g.livecpk_dir, w, "leaguebuilder-plan.json"))
+            except (OSError, ValueError):
+                pass
+            # the header's look at the modules after it too (the world's own modules were copied
+            # with it): on the window's thread most of a 4 s stop, the exe test of beta4p (B480)
+            from .. import checks
+            checks.warm_modules(g)
+            return folder, kept, read, snap
 
         def done(r):
             self.app.busy(False)
-            filecache.forget_under(os.path.join(g.livecpk_dir, w))
-            folder, kept = r
+            folder, kept, read, snap = r
             try:
-                project.open(kept, copy=True)
+                project.adopt(read, kept, copy=True, snap=snap)
                 self.app.settings["last_recipe"] = kept
             except Exception as e:
                 error(self, title, str(e))
+            # B480: the rest on turns of their own -- in the turn of adopt() (the page on screen
+            # filled in it) the header, the pages and the box were 0.45-0.55 s of a stopped window
+            # with 220,000 players
+            next_turn(rest)
+
+        def rest():
             self.app.bus.ini_changed.emit()
             self.app.bus.content_changed.emit()
             self.refresh()
@@ -937,14 +1103,15 @@ class MyWorld(QWidget):
                      "new Master League.\n\nThe copy of it as it came: Restore points.") % w
             if carried:
                 said += "\n\n" + _("Kept the leagues you added before: %s.") % ", ".join(carried)
-            info(self, title, said)
+            next_turn(lambda: info(self, title, said))
 
         def failed(tb):
             self.app.busy(False)
             if not denied(self, tb):
                 error(self, title, _("It stopped, the world was not changed:") + "\n\n" + str(tb).strip().splitlines()[-1])
         self.app.busy(True)
-        run_job(job, done, failed)
+        run_job(job, done, failed,
+                progress=lambda t: self.app.status_busy.setText("● " + t))   # B431
 
     def card_title(self):
         """the name + Add... adds to: the open world's card title (a ready world's pack name)"""
@@ -1023,9 +1190,12 @@ class MyWorld(QWidget):
             if w and c.world == w:
                 c.info.setText((_("Renaming %s...") if r else _("Switching %s on")) % w)
             elif not w:
-                c.info.setText(info_text(c.r))
+                c.set_note()
 
     def delete(self, w):
+        if w in WL.live(self.app.game):
+            info(self, "Delete world", LIVE_NO_DELETE() % w)
+            return
         if self.app.page("Roots").delete_world(w):
             self.app.status(_("%s is deleted. Restore points > Put this copy back brings it back.") % w)
         self.refresh()

@@ -83,6 +83,19 @@ def main():
     ok("no last Build: nothing moves", L._keep_ids({}, None, changes, first, players, assigns, index, top) == {}
        and first["Liga/0"] == [1004, 1005])
 
+    # B327: FL26 2.2's ids run to 183693 with holes; a world built up to 0.2.5.1 has players in them
+    # (mkplayers counted from 179673). A hole is kept, an id of the game's own player is not
+    players, assigns, index = tables({706: [1004, 1005, 1006]})
+    first = {"H/0": [1004, 1005, 1006]}
+    prev = {"H/0": {"0": 995, "1": 997, "2": 1003}}
+    L._keep_ids(prev, None, {}, first, players, assigns, index, top, shipped={990, 996, 997, 1000})
+    ok("a hole under the game's top stays the player's, a game player's id does not",
+       first["H/0"] == [995, 1005, 1003] and sound(players, assigns, index))
+    players, assigns, index = tables({706: [1004, 1005]})
+    first = {"H/0": [1004, 1005]}
+    L._keep_ids({"H/0": {"0": 995, "1": 1003}}, None, {}, first, players, assigns, index, top)
+    ok("without the game's ids only those above its top are kept (as before)", first["H/0"] == [1004, 1003])
+
     # one team id under two club keys (a NewLife club in two leagues): both keys list the same
     # players. Build 2 pins them once and the second key follows (it kept the temporary ids,
     # which the ids file then recorded) ...

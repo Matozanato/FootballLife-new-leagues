@@ -13,6 +13,10 @@ from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write,
 ROW = Qt.UserRole
 WORLDS = "<worlds>"           # the "only" choice that lists the world backups (Content folders > Delete / Rename world)
 TEXT_EXT = (".ini", ".txt", ".csv", ".lua", ".json", ".cfg")
+# 0.3.1: the size of a world or save copy, counted once and off the window's thread. Walking the
+# copies of a few big worlds file by file kept the window still for 38 s each time the page was
+# opened (the UI tour, 11.11.); a copy never changes once it is made, so its size is kept
+_SIZES = {}
 
 
 # world backups that keep a world where it is (worlds.backup)
@@ -38,6 +42,8 @@ def _reasons():
         ("Switch on: %s map", _("Switch on: %s map")),
         ("Switch on %s: the world file", _("Switch on %s: the world file")),
         ("Switch on %s: its own module", _("Switch on %s: its own module")),
+        ("Switch on %s: its trophies in %s", _("Switch on %s: its trophies in %s")),
+        ("Switch on %s: another world's modules switched off", _("Switch on %s: another world's modules switched off")),
         ("Switch on %s: its leagues in the Kick Off list", _("Switch on %s: its leagues in the Kick Off list")),
         ("Your world: switch on %s", _("Your world: switch on %s")),
         ("Import your world: switch on %s", _("Import your world: switch on %s")),
@@ -46,6 +52,7 @@ def _reasons():
         ("Install the modules", _("Install the modules")),
         ("Install the modules: replaced by Mod Studio's", _("Install the modules: replaced by Mod Studio's")),
         ("Install the modules: %s now ships bundled", _("Install the modules: %s now ships bundled")),
+        ("Install the modules: the world's own", _("Install the modules: the world's own")),
         ("Install the modules: livecpk\\%s loaded", _("Install the modules: livecpk\\%s loaded")),
         ("world %s renamed to %s", _("world %s renamed to %s")),
         ("world %s deleted: its lines taken out", _("world %s deleted: its lines taken out")),
@@ -140,9 +147,11 @@ class Restore(Page):
         split.addWidget(right)
         split.setSizes([700, 520])
         self.outer.addWidget(split, 1)
-        app.bus.ini_changed.connect(self.refresh)
-        app.bus.content_changed.connect(self.refresh)
-        app.bus.game_changed.connect(self.refresh)
+        # (behind another page the list waits for shown())
+        later = lambda: self.refresh() if self.isVisible() else None
+        app.bus.ini_changed.connect(later)
+        app.bus.content_changed.connect(later)
+        app.bus.game_changed.connect(later)
 
     def sd(self):
         return self.app.game.sider_dir
@@ -168,8 +177,45 @@ class Restore(Page):
         self.only.blockSignals(False)
         self.fill()
 
+    def _size(self, folder):
+        """the size of a copy's folder for its row: known, or counted in the background ("...")"""
+        if folder in _SIZES:
+            return human(_SIZES[folder])
+        self._unsized.append(folder)
+        return "..."
+
+    def shown(self):
+        self._seen = True
+        self.refresh()
+
+    def _count_sizes(self):
+        # (not before the page was opened once: every start and every Put in the game walked all
+        # the world backups behind another page, 80,000 folders with the big worlds, 11.11.)
+        if not getattr(self, "_seen", False):
+            return
+        todo, self._unsized = [f for f in dict.fromkeys(self._unsized) if f not in _SIZES], []
+        if not todo or getattr(self, "_sizing", False):
+            return
+        self._sizing = True
+
+        def done(got):
+            self._sizing = False
+            _SIZES.update(got)
+            for i in range(self.tree.topLevelItemCount()):
+                it = self.tree.topLevelItem(i)
+                f = it.data(3, ROW)
+                if f in _SIZES:
+                    it.setText(3, human(_SIZES[f]))
+            self._count_sizes()                       # rows that came while this ran
+
+        def failed(_tb):
+            self._sizing = False
+
+        run_job(lambda _progress: {f: WL.size_of(f) for f in todo}, done, failed)
+
     def fill(self):
         self.tree.clear()
+        self._unsized = []
         only = self.only.currentData()
         rows = [] if only == WORLDS else [(r["time"], r) for r in backups.history(self.sd(), only)]
         # a world deleted or renamed in Content folders is one row: Put this copy back brings all of
@@ -184,19 +230,23 @@ class Restore(Page):
             if "saves_backup" in r:
                 it = QTreeWidgetItem([when(t), SV.ACTIVE + "  (" + _("Master League saves") + ")",
                                       _("the save folder before the first world switch"),
-                                      human(WL.size_of(r["saves_backup"]))])
+                                      self._size(r["saves_backup"])])
+                it.setData(3, ROW, r["saves_backup"])
             elif "world_backup" in r:
                 inf = r["info"]
+                files = os.path.join(r["world_backup"], "files")
                 if inf.get("kind") == "renamed":
                     what = _("world renamed to %s") % inf.get("new", "")
-                    size = ""
+                    size, files = "", None
                 elif copy_what(inf.get("kind")):
                     what = copy_what(inf["kind"])
-                    size = human(WL.size_of(os.path.join(r["world_backup"], "files")))
+                    size = self._size(files)
                 else:
                     what = _("world deleted (all of it is in this copy)")
-                    size = human(WL.size_of(os.path.join(r["world_backup"], "files")))
+                    size = self._size(files)
                 it = QTreeWidgetItem([when(t), "livecpk\\" + inf.get("world", ""), what, size])
+                if files:
+                    it.setData(3, ROW, files)
                 f = it.font(1)
                 f.setBold(True)
                 it.setFont(1, f)
@@ -207,6 +257,7 @@ class Restore(Page):
             self.tree.addTopLevelItem(it)
         if self.tree.topLevelItemCount():
             self.tree.setCurrentItem(self.tree.topLevelItem(0))
+        self._count_sizes()
 
     def current(self):
         it = self.tree.currentItem()

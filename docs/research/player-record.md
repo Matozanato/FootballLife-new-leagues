@@ -6,7 +6,8 @@ writes every field below; this page is for anyone who wants to write their own t
 
 | bytes | what |
 |---|---|
-| +0x00 | 8 bytes not decoded |
+| +0x00 | the player's youth club, a team id, 32 bits (0 for most); see below |
+| +0x04 | 4 bytes, 0 in every shipped record |
 | +0x08 | player id, 32 bits |
 | +0x0c to +0x43 | the bit fields below; bits not listed are not decoded |
 | +0x44 | four name slots of 0x3d bytes each, UTF-8, zero-padded: full name, name on the shirt, name on screen, printed name |
@@ -146,3 +147,24 @@ a fixed order. For the new clubs' default 4-2-3-1: order 0 GK, 1 CB, 2 CB, 3 RB,
 5 DMF, 6 DMF, 7 RMF, 8 LMF, 9 AMF, 10 CF (seen on the Game Plan screen, 2026-09-24). The role
 flags above bit 16 appear on a handful of shipped players only and are not decoded;
 `playeredit.py` leaves them as they are.
+
+## What the tables do not hold: contract, loan (06.11.2026)
+
+Checked on FL27's tables (FL26 2.2 has the same format) against a 2026/27 database of 4,246 of
+their players with a known contract end and 24 on loan:
+
+- **No contract.** No undecoded bit window of the record (1 to 16 bits wide) follows the contract
+  end: the best correlation with the end year is 0.09, and no window equals the year less a
+  constant for more players than a constant does. `PlayerAssignment.bin` is four numbers (row,
+  player, team, the shirt/order/roles dword). Master League gives contracts out itself when a
+  career starts.
+- **No loan.** No field holds a second team id beside the assignment. The one team id the
+  record has, +0x00, is the **youth club**: Mbappe AS Monaco, Kane Tottenham, Musiala Chelsea,
+  Cole Palmer and Foden Manchester City, Pedri Las Palmas, Garnacho Atletico Madrid, Rice West Ham;
+  the Classics teams' legends their first club (Giggs Manchester City, Hierro Valladolid). It is
+  set for 10,439 of 26,395 players and is a club they play for in only 1,540. A player a real B
+  team has on loan shows his parent club there because he grew up in it, not because of the loan.
+- **The shirt number** is the one of the three the game keeps: `PlayerAssignment.bin` +0x0c bits
+  0-9, per assignment, so a club's number and a national team's are apart.
+
+A new player Mod Studio makes is a copy of another record, so he carries that player's youth club.

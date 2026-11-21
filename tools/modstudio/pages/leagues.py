@@ -10,8 +10,9 @@ from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLa
 import fl26world
 
 from ..i18n import _
-from ..ui import hint, row
-from .. import theme
+from ..project import OTHERS
+from ..ui import hint, row, in_steps, next_turn
+from .. import anim, theme
 from .builder import (BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, pixmap, others_labels,
                       built_plan, built_league, select_team_text, place_box)
 
@@ -35,11 +36,15 @@ def keep_continent_places(leagues, keys, confeds):
     return out
 
 
-def updown_text(r, L):
-    """how many clubs go up and down: with the league above, and with the league below"""
+def updown_text(r, L, names=None):
+    """how many clubs go up and down: with the league above, and with the league below. names:
+    the game's own leagues by id (B468: a league under one of them said "2 with 30 above")"""
     out = []
     if L.get("above") not in (None, ""):
-        out.append(_("%d with %s above") % (int(L.get("exchange", 3)), L["above"]))
+        up = L["above"]
+        if isinstance(up, int) and names:
+            up = names.get(up, up)
+        out.append(_("%d with %s above") % (int(L.get("exchange", 3)), up))
     for M in r["leagues"]:
         if M.get("above") == L["name"]:
             out.append(_("%d with %s below") % (int(M.get("exchange", 3)), M["name"]))
@@ -107,8 +112,14 @@ class Leagues(BuilderPage):
             "- ours: a league your world adds; Edit league changes its clubs, format and division.\n"
             "- changed: a league of the game you changed.\n\n"
             "Drag a league up or down to put the leagues of a continent in order.\n"
-            "The More menu has the cups, European places, UEFA ranking and competition names.\n"
+            "Cups > Game Countries / Our Countries edits domestic cups.\n"
+            "Cups > Continental > Competitions manages continental competitions; Qualification edits their places.\n"
+            "UEFA Ranking and First-season clubs are in Cups > Continental > UEFA > Qualification.\n"
+            "Game content > Trophies manages trophy assignments.\n"
+            "The More menu keeps only Pre-season cups, Competition names, Competition IDs, League order, Seasons of the game's leagues, and World name and file...\n"
             "Nothing reaches the game until Build and install.")
+
+    zip_notice = True       # B487c: Make it editable... does not carry these changes (ui.Page)
 
     def __init__(self, app):
         super().__init__(app)
@@ -117,12 +128,8 @@ class Leagues(BuilderPage):
         more.setText(_("More") + "  ▾")
         more.setPopupMode(QToolButton.InstantPopup)
         m = QMenu(more)
-        for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
-                            ("Club World Cup", "club_world_cup"),
-                            ("European places of the game's leagues", "game_europe"),
-                            ("First-season European clubs", "europe_first"),
-                            ("UEFA ranking", "uefa_rank"), ("South American places", "samerica"),
-                            ("Competition names", "competition_names"), ("Trophies", "trophies"),
+        for label, name in (("Pre-season cups", "preseason"),
+                            ("Competition names", "competition_names"),
                             ("Competition IDs", "competition_ids"),
                             # the order of the countries in Select Team; the 0.1.8 look left it and the
                             # two below out of this menu (Discord, laracroft7826 15.10.: "it was in the old one")
@@ -141,7 +148,14 @@ class Leagues(BuilderPage):
         lv.setSpacing(8)
         self.search = QLineEdit()
         self.search.setPlaceholderText(_("Find a league..."))
-        self.search.textChanged.connect(self.fill)
+        # B410 (Vicentico 10.11., GigaPack 343 leagues): every key refilled the whole list, the
+        # places table (317 rows of boxes) and the crests of the league shown twice, 0.4-1.3 s a
+        # key; now the list only, a moment after the last key
+        self._find = QTimer(self)
+        self._find.setSingleShot(True)
+        self._find.setInterval(250)
+        self._find.timeout.connect(lambda: self.fill(places=False))
+        self.search.textChanged.connect(lambda *_a: self._find.start())
         lv.addWidget(self.search)
         chips = QHBoxLayout()
         chips.setSpacing(6)
@@ -156,7 +170,7 @@ class Leagues(BuilderPage):
             self.filter.addButton(b, i)
             chips.addWidget(b)
         chips.addStretch(1)
-        self.filter.idClicked.connect(lambda *_a: self.fill())
+        self.filter.idClicked.connect(lambda *_a: self.fill(places=False))
         lv.addLayout(chips)
         self.tree = LeagueTree()
         self.tree.currentItemChanged.connect(lambda *_a: self.show_current())
@@ -263,7 +277,7 @@ class Leagues(BuilderPage):
         split.setSizes([340, 900])
         split.setStretchFactor(1, 1)
         self.outer.addWidget(split, 1)
-        self.project.changed.connect(self.fill)
+        self.project.changed.connect(self.on_change(self.fill))
         self._countries = (None, {})        # (tables, {game league's regulation id: country}) for natural
 
     def nl(self):
@@ -277,6 +291,12 @@ class Leagues(BuilderPage):
 
     def refresh(self):
         self.fill()
+
+    def plan_read(self):
+        """the world's plan came in from the worker that read it (builder.built_plan then=): the
+        page shows its ids and places now"""
+        if self.isVisible():
+            self.fill()
 
     # ---- the list ----
     def entries(self):
@@ -293,6 +313,14 @@ class Leagues(BuilderPage):
             e = changed.get(str(rid), {})
             out.append(("g%d" % cid, P.game_confeds.get(cid, 0), e.get("name", name),
                         "changed" if e else "game", (rid, cid, name, teams)))
+        # #140 (mato 17.11.): the game's clubs in no league were reachable only from the game's
+        # leagues panel's own list, hidden here since 0.1.8 -- in the exe Edit club could not reach
+        # them. The group is a row of the list now, under Other, its clubs on the right as a
+        # league's. National teams stay on Players (Call up players...): Edit club on them (name,
+        # manager, stadium) is not checked in the game
+        for gid, name, teams in P.game_groups():
+            if gid == OTHERS:
+                out.append(("x%d" % gid, 0, name, "group", (gid, None, name, teams)))
         for i, L in enumerate(P.recipe["leagues"]):
             out.append(("o" + L["name"], P.confeds.get(L.get("country", ""), 0), L["name"], "ours", i))
         order = {k: n for n, k in enumerate(P.recipe.get("league_order") or [])}
@@ -324,7 +352,10 @@ class Leagues(BuilderPage):
         fold = lambda t: unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().casefold()
         return (fold(country) or "~", tier or 99, fold(name))
 
-    def fill(self):
+    def fill(self, places=True):
+        """the list of leagues; places: the places table too and the league on the right shown
+        again (a change of the world). The search and the All/Ours/Changed chips touch neither:
+        the right side is shown again only when another league is the current one"""
         q = self.search.text().strip().lower()
         want = self.filter.checkedId()
         cur = self.tree.currentItem()
@@ -342,7 +373,7 @@ class Leagues(BuilderPage):
             h.setFont(0, fnt)
             heads[code] = h
         tags = {"game": (_("game"), theme.SUBTLE), "ours": (_("ours"), theme.ACCENT),
-                "changed": (_("changed"), theme.WARN)}
+                "changed": (_("changed"), theme.WARN), "group": (_("no league"), theme.SUBTLE)}
         pick, shown, total = None, 0, 0
         kinds = {}
         for e in self.entries():
@@ -356,7 +387,9 @@ class Leagues(BuilderPage):
             it = QTreeWidgetItem(["⠿  " + name, tags[kind][0]])
             it.setForeground(1, QBrush(QColor(tags[kind][1])))
             it.setTextAlignment(1, Qt.AlignRight | Qt.AlignVCenter)
-            it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+            # the game's clubs in no league (#140) have no place in the order: not dragged
+            it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable
+                        | (Qt.ItemIsDragEnabled if kind != "group" else Qt.NoItemFlags))
             it.setData(0, ROLE, e)
             if kind == "ours":
                 pm = pixmap(self.project.recipe["leagues"][payload].get("logo"), 20)
@@ -376,15 +409,18 @@ class Leagues(BuilderPage):
         self.tree.header().setSectionResizeMode(1, self.tree.header().ResizeMode.ResizeToContents)
         if pick is None and self.tree.topLevelItemCount():
             pick = self.tree.topLevelItem(0).child(0)
-        self.tree.blockSignals(False)
         if pick:
-            self.tree.setCurrentItem(pick)
-        self.show_current()
+            self.tree.setCurrentItem(pick)          # signals still blocked: shown once, below
+        self.tree.blockSignals(False)
+        now = pick.data(0, ROLE)[0] if pick and pick.data(0, ROLE) else None
+        if places or now != key or now is None:
+            self.show_current()
         # B93 (vmican, 16.10.): a group of clubs in no league ("Other Europe") is not a league --
         # it is counted apart, and the leagues with a place in Select Team are counted too
         r = self.project.recipe
         groups = sum(1 for L in r["leagues"] if L.get("others"))
         ours = len(r["leagues"]) - groups
+        groups += kinds.get("group", 0)         # the game's own clubs in no league (#140)
         total -= groups
         for (b, text), n in zip(self.chips, (total, ours, kinds.get("changed", 0))):
             b.setText("%s  %d" % (text, n))
@@ -393,13 +429,29 @@ class Leagues(BuilderPage):
         if groups:
             text += "  " + (_("%d group of clubs in no league.") if groups == 1 else
                             _("%d groups of clubs in no league.")) % groups
-        plan = built_plan(self.app.game, r.get("world"))
+        plan = built_plan(self.app.game, r.get("world"), then=self.plan_read)   # (B480: not read here)
         if plan:
             placed = sum(1 for p in plan.get("leagues") or [] if not p.get("others")
                          and p.get("slot") not in (None, fl26world.NO_SLOT))
             text += "  " + _("%d of yours with a place in Select Team.") % placed
         self.count.setText(text)
-        self.fill_places(plan)
+        if places:
+            if self.places.isVisible():
+                self.fill_places(plan)
+            else:
+                # B480 (17.11.2026): not on screen (Places in Select Team not pressed): on a turn of
+                # its own. In the turn of a change of the world its 317 rows were 0.14-0.31 s of the
+                # 0.55 s the window stood still at the end of Make it editable (220,000 players)
+                self._places_plan = plan
+                if not getattr(self, "_places_owed", False):
+                    self._places_owed = True
+                    next_turn(self.owed_places)
+
+    def owed_places(self):
+        """the places table, when fill() left it for later"""
+        if getattr(self, "_places_owed", False):
+            self._places_owed = False
+            self.fill_places(self._places_plan)
 
     def fill_places(self, plan):
         """the places table: the order and where the last Build put each league in Select Team
@@ -410,6 +462,7 @@ class Leagues(BuilderPage):
         was = [p.get("name") for p in (plan or {}).get("leagues") or []]
         rows = sorted(r["leagues"], key=lambda L: (bool(L.get("others")), order.index(L["name"]) if L["name"] in order else 0))
         self.places.setRowCount(len(rows))
+        boxes = []
         for n, L in enumerate(rows):
             up = L.get("above")
             div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
@@ -432,12 +485,16 @@ class Leagues(BuilderPage):
             pm = pixmap(L.get("logo"), 20)
             if pm:
                 self.places.item(n, 1).setIcon(pm)
+            self.places.removeCellWidget(n, 4)
             if not L.get("others") and not L.get("exhibition"):
                 # the place of one of the game's "other" groups, picked here (vmican 02.11.)
-                self.places.setCellWidget(n, 4, place_box(self, L, seen, b))
-                self.places.item(n, 4).setText("")
-            else:
-                self.places.removeCellWidget(n, 4)
+                def box(n=n, L=L, seen=seen, b=b):
+                    self.places.setCellWidget(n, 4, place_box(self, L, seen, b))
+                    self.places.item(n, 4).setText("")
+                boxes.append(box)
+        # the combos of the rows on screen now, the rest while the window goes on answering (B411,
+        # Vicentico 10.11.: the page took 2-3 s to open with a world of hundreds of leagues)
+        in_steps(self, "places", boxes)
         self.places.resizeColumnsToContents()
 
     def save_order(self):
@@ -487,16 +544,25 @@ class Leagues(BuilderPage):
                 return True
         return False
 
+    def _right(self, w):
+        """the right side shows w; another kind of thing than before fades in"""
+        if self.right.currentWidget() is not w:
+            anim.cover(self.right)
+        self.right.setCurrentWidget(w)
+
     def show_current(self):
         if self.b_places.isChecked():
-            self.right.setCurrentWidget(self.places)
+            self.owed_places()                  # pressed before its turn came (fill())
+            self._right(self.places)
             return
         e = self.current()
         if not e:
-            self.right.setCurrentWidget(self.empty)
+            self._right(self.empty)
             return
         k, conf, name, kind, payload = e
         if kind == "ours":
+            if self.right.currentWidget() is not self.right.widget(0):
+                anim.cover(self.right)
             self.show_ours(payload)
             self.right.setCurrentWidget(self.right.widget(0))
         else:
@@ -507,7 +573,7 @@ class Leagues(BuilderPage):
                 if rowx[0] == payload[0]:
                     g.list.setCurrentRow(n)
                     break
-            self.right.setCurrentWidget(g)
+            self._right(g)
 
     def show_ours(self, i):
         from .builder import built_plan, built_league, world_dir, world_crest, world_logo
@@ -518,12 +584,12 @@ class Leagues(BuilderPage):
         up = L.get("above")
         div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
         t = tier_of(P, up)
-        plan = built_plan(self.app.game, r.get("world"))
+        plan = built_plan(self.app.game, r.get("world"), then=self.plan_read)
         b = built_league(self.app.game, r.get("world"), L, plan or {})
         self.o_name.setText(L["name"])
         vals = {"Country": L.get("country", ""), "Clubs": str(L.get("clubs", "")), "Format": fmt_text(L),
                 "Division": ("%d  (%s)" % (t, div)) if t else div,
-                "Up / down": updown_text(r, L),
+                "Up / down": updown_text(r, L, names),
                 "Europe": europe_text(L) or "—",
                 "League ID": str(b["cid"]) if b.get("cid") is not None else
                 (_("not built yet") if plan else "—")}
@@ -629,9 +695,14 @@ class Leagues(BuilderPage):
         if not e or e[3] != "ours":
             return
         nl = self.nl()
-        nl.refresh()
-        nl.tree.setCurrentItem(nl.tree.topLevelItem(e[4]))
-        getattr(nl, what)()
+        # the league named for New leagues' button, not its list filled to pick it there (B480,
+        # 17.11.2026: Edit here filled New leagues' 317 rows, logos and Select Team boxes first --
+        # 3.3 s of a stopped window with the GigaPack in the exe test of beta4p)
+        nl._pick = e[4]
+        try:
+            getattr(nl, what)()
+        finally:
+            nl._pick = None
 
     def add(self):
         self.nl().add()

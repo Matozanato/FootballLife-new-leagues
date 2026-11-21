@@ -9,7 +9,7 @@ again.
 
 | You have | What to click in Mod Studio |
 |---|---|
-| a `.zip` world (Modpack, Europack, a friend's world) | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → **Install the world**. There is no Build: it is in the game when it says **Ready to play**. Then start a NEW Master League. [Step by step](guides/en/install-a-pack.md#way-a-a-ready-world-one-zip) |
+| a `.zip` world (Modpack, Europack, a friend's world) | **2. My world** → **+ Add...** → **Choose a file...** → **Install the world**. There is no Build: it is in the game when it says **Ready to play**. Then start a NEW Master League. [Step by step](guides/en/install-a-pack.md#way-a-a-ready-world-one-zip) |
 | a `.fl26pack` league package | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → tab **Build** → **Build and install**. Then start a NEW Master League. [Step by step](guides/en/install-a-pack.md#way-c-a-league-package-fl26pack) |
 | nothing, I want to pick leagues myself | [Make your own leagues and packs](guides/en/make-your-own-leagues.md) |
 
@@ -19,7 +19,7 @@ No Mod Studio yet? Start with [Download & start](#download--start).
 
 [![Latest release](https://img.shields.io/github/v/release/Matozanato/FootballLife-new-leagues?display_name=release&label=release&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Matozanato/FootballLife-new-leagues/total?label=downloads&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases)
-[![License: MIT](https://img.shields.io/github/license/Matozanato/FootballLife-new-leagues?color=blue)](LICENSE)
+[![License: FL Mod Studio License](https://img.shields.io/badge/license-FL%20Mod%20Studio%20License-blue)](LICENSE)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078d4?logo=windows&logoColor=white)
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20HR%20%C2%B7%20ES%20%C2%B7%20PT%20%C2%B7%20FR-6f42c1)
 ![Game: Football Life 2026 and 2027](https://img.shields.io/badge/game-Football%20Life%202026%20%C2%B7%202027-c0392b)
@@ -36,7 +36,7 @@ with both.
 
 1. Open the **[latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)**
    and download `FL26ModStudio-<version>.zip` under **Assets** (for example
-   `FL26ModStudio-0.3.0.zip`; the file names say FL26 for both games).
+   `FL26ModStudio-0.4.0.zip`; the file names say FL26 for both games).
 2. Unzip it (right-click → **Extract All...**) into a folder of its own. Keep the `_internal` and
    `pack` folders next to the exe.
 3. Run `FL26ModStudio.exe`. No Python needed. If Windows says "Windows protected your PC", click
@@ -57,6 +57,12 @@ shows it again.
 
 ## What's new
 
+- **0.4.0** (2026-11-21): very big worlds for **Football Life 2027** build, install and play; an
+  update of a world you share keeps your players' careers going (new leagues come in a new Master
+  League); new faces for regens; split leagues and Apertura/Clausura, UEFA qualifying as UEFA plays
+  it, a third cup for the lower divisions, trophies in FL27; the fixes of what you reported; and a
+  new licence, the FL Mod Studio License. [Before you update](docs/changelog/changelog-0.4.0.md#before-you-update) ·
+  [What changed](docs/changelog/changelog-0.4.0.md)
 - **0.3.0** (2026-11-04): **Football Life 2027** too (the same program, Settings picks FL26 or
   FL27), the new name **FL Mod Studio**, Select Team lists a league's clubs, coloured places in the
   league tables, promotion and relegation under the game's split leagues and for NewLife leagues
@@ -103,7 +109,7 @@ In English: [questions (FAQ)](docs/faq.md) · [known issues](docs/known-issues.m
 ## Ready packs and real clubs
 
 - **A ready world or Modpack** (one `.zip`): **2. My world** → **+ Add...** → **Choose a file...** →
-  the zip → **Add** → **Install the world**. Nothing to build. Mod Studio walks you through it in
+  the zip → **Install the world**. Nothing to build. Mod Studio walks you through it in
   **Help → Install a Modpack, step by step**; the whole route is in
   [Install a ready pack](guides/en/install-a-pack.md).
 - **A league package** (`.fl26pack`): a modder makes a league once (clubs, names, crests, logos,
@@ -164,7 +170,7 @@ who covered a big part of what the project costs
 
 </div>
 
-Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons and
+Everything here is free. Weeks of disassembly, unattended test seasons and
 crash dumps went into it, and there is more to do (the crashes in the game's protected code,
 the African leagues' League Info panel, more competitions and formats). If you want to help it
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
@@ -181,7 +187,7 @@ someone who played a season, wrote down what happened and sent it. Thank you, al
 
 Everyone who helped, above all **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **vmican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus** and **papijonn**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus**, **papijonn**, **Micarodvzla22**, **Ibiss K.B.**, **Dolokhov** (moderator), **morpheus.oracle8**, **djinn6988**, **jeremy1979_**, **Shawn**, **NedimMM**, **Agus**, **evannoteven**, **gianito9**, **fddr153**, **Rosev**, **Zass**, **vanni11**, **Matheus Fellipe**, **AHMED**, **SladeBR**, **redin5ide**, **pokuuuu**, **Barcel0**, **cwrti**, **leon**, **snellejelle_2**, **Endou-san**, **Lub**, **aaronn_fg**, **Hugo Freixo**, **Tony69**, **Vran**, **nevem_a_nevem**, **Schmiddi**, **Biancopr**, **¥$**, **ferraz j.**, **Konsel**, **Pelda**, **D1eg0Ar**, **Aleperfe87**, **ismael**, **BouhMiDov**, **Cala79**, **maur0**, **Mob**, **sercsinano**, **johnnythief**, **North.Vii.7**, **rivercol**, **xxbaris**, **Ma9icz**, **komentaristo**, **huliaanos**, **frosscar**, **pczim123**, **dim0alex**, **yongmiss**, **libra1**, **xjako_**, **EveningWillingness10**, **Ben_Barkley**, **stanyboloboy**, **Falasteeny**, **Void**, **manel**, **Luka**, **Bryan**, **aaroncho**, **messicu**, **riky_bahn**, **pop1806**, **Jeyspeed**, **Black Angel**, **Kayd**, **iJuerd**, **Grouchy**, **therealmanfred**, **mfgarcia111**, **I know?**, **HaVi.**, **elias350**, **AdolfoChS97**, **georget1888**, **bellomo**, **p4v0gaming-jpg**, **SWEPRESL**, **Mdwilsonlopes**, **erengaygusuz** and **will-serrano**.
 
 What each of them did (click to open):
 
@@ -623,12 +629,32 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **General Kreutaa** (Discord): the scoreboard of another country's league in the modpack.
 - **monkusgigus** (Discord): the national team you manage left without its friendlies and EURO matches, and the league title won on the last day with no celebration.
 - **papijonn** (Discord): the port to vanilla PES 2021.
+- **Micarodvzla22** (Discord): the European and South American cups season after season: play-off ties between clubs of one country and top scorers reset, Lyon twice in the last 16, clubs knocked out in qualifying coming back, a Club World Cup without the Libertadores champion, the Libertadores groups crash, an empty Europa League table and the Colombian second division.
+- **Ibiss K.B.** (Discord): Become a Legend reports with saves and logs: the Best Player in Europe from Andorra, the wrong kit after a transfer, the calendar after a promotion, a crash in the fourth year and an empty Team of the Year.
+- **Dolokhov** (moderator on the Discord): the drawn kits (a crest sideways on the shorts, numbers in the shirt's colour), a world gone after an update, Competition Info names, and help for the testers.
+- **morpheus.oracle8** (Discord): a new Master League that crashed at the end of loading because a module had not been installed, the Europa League that was never played, and a full season-end report with sider.ini and log.
+- **djinn6988** (Dee Jay, Discord): Build stopping on a formation the list had, and an install error.
+- **jeremy1979_** (Discord): the first reports from a Steam Deck, with a clean sider.ini.
+- **Shawn** (Discord): New world writing over an old world of the same name, an old world opening with one league, and Import kits finding 0 of 12 clubs.
+- **NedimMM** (Discord): Mod Studio's kits not reaching the game next to his own kits.lua, Schalke in Heidenheim's kits, and no kits at all without map_comp.txt.
+- **Agus** (Discord): crests and kits crossed when clubs swap places, the Uruguayan league vanishing after a transfer, and a crash after his own cup, with logs.
+- **evannoteven** (Discord): Mod Studio on a Mac through CrossOver, and the Team ID column shifting after Insert club.
+- **gianito9** (Discord): a renamed league losing its kits, the "no competition ids left" counter, and the board asking clubs of other continents to qualify for the Champions League.
+- **Matheus Fellipe** (Discord): a cups-only world that would not build, and an old edit renaming a new league, both fixed in 0.1.8.
+- **fddr153** ([fddr153](https://github.com/fddr153)): the Venezuelan Liga FUTVE from the recipe alone, Apertura/Clausura play-offs included, as a pull request still in review ([#155](https://github.com/Matozanato/FootballLife-new-leagues/pull/155)).
+- **erengaygusuz** ([erengaygusuz](https://github.com/erengaygusuz)): tests for the face mappings of custom and generated players, a pull request still in review ([#151](https://github.com/Matozanato/FootballLife-new-leagues/pull/151)).
 
 </details>
 
+The players' ratings Mod Studio shows are worked out with the formula of **TEditor**
+([teditor.app](https://teditor.app), by Antony Siu Ming, the PES 2020/2021 editor).
+
+Our test seasons were played with **ML Fast Forward** (`ML_FastForward.lua`), the Sider module by
+**kacemnacer68** (Evoweb) that plays a Master League's days by itself up to a date you set.
+
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
-installed, what you did and what you saw, and you will be on this list too.
+installed, what you did and what you saw, and you will be on this list too. If we forgot you, or got what you did wrong, tell us (an issue or a message on the Discord) and we will put it right.
 
 ## For modders and developers
 
@@ -660,7 +686,8 @@ disassembly evidence in the pull request the way the module headers do.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Football Life 2026, Football Life 2027, PES 2021 and Sider belong to their
+FL Mod Studio License — see [LICENSE](LICENSE). Versions up to 0.3.0 and the parts our contributors
+shared under MIT stay under the MIT License ([LICENSE-MIT](LICENSE-MIT)). Football Life 2026, Football Life 2027, PES 2021 and Sider belong to their
 respective authors; nothing of theirs is redistributed here.
 
 The reverse engineering was done from scratch against the game's executable and data
@@ -669,9 +696,12 @@ is named.
 
 ### Free to use — please credit
 
-Everything in this repository is **free**, and it stays free. MIT licence: use it, change
-it, ship it inside your own mod, charge for your mod if you want to. No permission needed
-and nothing to pay.
+Everything in this repository is **free**, and it stays free. You can use FL Mod Studio, change it and
+share it. Two things are not allowed: selling FL Mod Studio itself, and removing the "Powered by
+FL ModStudio" mark. The full rules are in [LICENSE](LICENSE). Versions up to 0.3.0 and the parts our
+contributors shared under MIT stay under MIT.
+
+The packs and worlds you make with it are yours.
 
 There is one thing I do ask, and it is not a legal condition, just the normal courtesy
 between modders:
@@ -703,7 +733,7 @@ mapped.
 **Leagues and countries**
 
 - **Many new leagues** in one world, **10 to 28 clubs** each, playing each other 1 to 4
-  times with the real number of rounds (10 clubs four times = 36 rounds). There
+  times (29 to 32 clubs once, still untested in a whole season) with the real number of rounds (10 clubs four times = 36 rounds). There
   is room for 2,400 clubs in all, and our test world plays 86 new leagues with 1,294 new
   clubs; Build stops with a message when regulation ids or club room run out. Every league
   is selectable in Select Team (250 slots).

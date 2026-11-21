@@ -29,6 +29,8 @@ def rename_recipe(app, old, new, kept=...):
         # to be saved (Save recipe stays the player's for his own changes)
         was_dirty = P.dirty
         P.recipe["world"] = new
+        if kept and P.owns(was):
+            P.claim(kept)          # B399: its copy under the new name is still its own
         same = lambda a, b: bool(a and b) and os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
         copy = bool(kept and same(P.path, was))
         if copy:
@@ -452,8 +454,14 @@ class Roots(Page):
             return
         # another world ticked on (or the world unticked): the save folder goes with it (mato 15.10.;
         # saves.Switch), refused with nothing written when it cannot be switched now
-        from .. import saves
+        from .. import saves, installer as I
         on = saves.worlds_on(self.app.game, self.ini)
+        # mato 07.11.: a world for the other game is not switched on (an FL 2027 world breaks FL26)
+        for w in on:
+            bad = I.wrong_game(self.app.game.folder, os.path.join(self.app.game.livecpk_dir, w), world=w)
+            if bad:
+                error(self, "Content folders", bad)
+                return
         sw = save_switch(self, self.app, on[0] if on else None, title="Content folders")
         if sw is None:
             return
@@ -643,6 +651,10 @@ class Roots(Page):
         if not ok or not new or new == w:
             return
         why = WL.check_name(self.app.game, new, w)
+        if not why and os.path.exists(os.path.join(self.app.project.copies_dir(), new + ".json")):
+            # B399: the recipe copy of a world of that name (one deleted, or not built yet): the
+            # renamed world's copy cannot go there, and saving the open world would write over it
+            why = _("Mod Studio keeps the recipe of another world called %s. Pick another name.") % new
         from .. import saves
         on = saves.enabled(self.app.settings)
         if not why and on:

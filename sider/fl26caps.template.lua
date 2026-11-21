@@ -7,6 +7,7 @@ below came from disassembling the instruction at that address.
 
 Set:     --[[SET]]
 Summary: --[[SUMMARY]]
+Caps:    --[[CAPS]]
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write

@@ -13,7 +13,8 @@ Build closed the program (a SystemExit in the worker thread), then stopped with
 "FL_2026.exe not found at C:\Football Life 2026" for everyone whose game is elsewhere (OneDrive).
 This test fails on both.
 
-<game folder> gives FL_2026.exe (linked or copied into the temporary folder). <tables folder> is
+<game folder> gives FL_2026.exe, or FL_2027.exe for FL 2027 (linked or copied into the temporary
+folder; Mod Studio then builds for that game). <tables folder> is
 Mod Studio's unpacked tables, %APPDATA%\FL26ModStudio\tables by default. --recipe defaults to
 testdata/regress018/eu_places.json (three leagues with European places, so the cup dates are read
 from the exe). --keep leaves the temporary folders for a look.
@@ -49,18 +50,21 @@ def child(game, recipe):
     import flpaths
     print("Mod Studio %s, game %s" % (VERSION, w.game.folder))
     assert os.path.normcase(w.game.folder) == os.path.normcase(game), w.game.folder
-    assert os.path.normcase(flpaths.EXE) == os.path.normcase(os.path.join(game, "FL_2026.exe")), \
+    assert os.path.normcase(flpaths.EXE) == os.path.normcase(flpaths.game_exe(game)), \
         "the exe readers look at %s, not the game folder from Settings" % flpaths.EXE
     print("ok flpaths points at the game folder from Settings")
     world = json.load(open(recipe, encoding="utf-8"))["world"]
     assert w.project.recipe.get("world") == world, w.project.recipe.get("world")
     p = w.page("Build")
     p.build_all()
+    from modstudio import ui as UI
     t0 = time.time()
     while time.time() - t0 < 1800:
         qt.processEvents()
         time.sleep(0.05)
-        if "shown" in seen or (not w._busy and time.time() - t0 > 5):
+        # B480 (17.11.): the after-build window opens on a turn of its own once Build is over
+        # (ui.next_turn): the loop goes on while anything is still owed a turn
+        if "shown" in seen or (not w._busy and not UI._OWED and not UI._JOBS and time.time() - t0 > 5):
             break
     out = p.out.toPlainText()
     print("\n".join(l for l in out.splitlines() if "no player" not in l)[-3000:])
@@ -93,8 +97,10 @@ def main():
         raise SystemExit(__doc__)
     src_game = args[0]
     tables = args[1] if len(args) > 1 else os.path.join(os.environ.get("APPDATA", ""), "FL26ModStudio", "tables")
-    exe = os.path.join(src_game, "FL_2026.exe")
-    assert os.path.isfile(exe), "no FL_2026.exe in " + src_game
+    exe = next((os.path.join(src_game, n) for n in ("FL_2026.exe", "FL_2027.exe")
+                if os.path.isfile(os.path.join(src_game, n))), None)
+    assert exe, "no FL_2026.exe or FL_2027.exe in " + src_game
+    print("game exe", exe)
     assert os.path.isdir(tables), "no tables folder " + tables
 
     tmp = tempfile.mkdtemp(prefix="fl26msbuild-")
@@ -103,14 +109,15 @@ def main():
     os.makedirs(os.path.join(sider, "livecpk"))
     os.makedirs(os.path.join(sider, "modules"))          # a Sider install has both
     try:
-        os.link(exe, os.path.join(game, "FL_2026.exe"))
+        os.link(exe, os.path.join(game, os.path.basename(exe)))
     except OSError:                                    # another drive: a copy
-        shutil.copy2(exe, os.path.join(game, "FL_2026.exe"))
+        shutil.copy2(exe, os.path.join(game, os.path.basename(exe)))
     with open(os.path.join(sider, "sider.ini"), "w", encoding="utf-8") as f:
         f.write("[sider]\ndebug = 0\n")
     appdata = os.path.join(tmp, "appdata")
     msdir = os.path.join(appdata, "FL26ModStudio")
-    shutil.copytree(tables, os.path.join(msdir, "tables"))
+    # FL27's tables go in tables27 (project.tables_dir, B307)
+    shutil.copytree(tables, os.path.join(msdir, "tables27" if exe.endswith("FL_2027.exe") else "tables"))
     os.makedirs(os.path.join(msdir, "recipes"))
     rc = os.path.join(msdir, "recipes", os.path.basename(recipe))
     shutil.copy2(recipe, rc)

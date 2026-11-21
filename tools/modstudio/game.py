@@ -293,6 +293,9 @@ def guess_folders():
     return out
 
 
+_PN = []          # _process_names' Entry structure and kernel32, made once
+
+
 def _process_names():
     """the lower-case names of the running programs, from Windows' process list (a few ms) --
     0.2.4: tasklist took 0.3 s, and the window asks every 4 s: the window stopped for it each
@@ -302,17 +305,21 @@ def _process_names():
     try:
         import ctypes
         from ctypes import wintypes
-
-        class Entry(ctypes.Structure):
-            _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
-                        ("th32ProcessID", wintypes.DWORD), ("th32DefaultHeapID", ctypes.c_size_t),
-                        ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
-                        ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", ctypes.c_long),
-                        ("dwFlags", wintypes.DWORD), ("szExeFile", ctypes.c_wchar * 260)]
-        k = ctypes.WinDLL("kernel32", use_last_error=True)
-        k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
-        k.Process32FirstW.argtypes = k.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Entry)]
-        k.CloseHandle.argtypes = [wintypes.HANDLE]
+        if not _PN:
+            # made once (B480 round 3: a new Structure class and kernel32 object on every call, every
+            # 4 s, were seen in the stops of the exe test, faulthandler at the imports under it)
+            class Entry(ctypes.Structure):
+                _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                            ("th32ProcessID", wintypes.DWORD), ("th32DefaultHeapID", ctypes.c_size_t),
+                            ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+                            ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", ctypes.c_long),
+                            ("dwFlags", wintypes.DWORD), ("szExeFile", ctypes.c_wchar * 260)]
+            k = ctypes.WinDLL("kernel32", use_last_error=True)
+            k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+            k.Process32FirstW.argtypes = k.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Entry)]
+            k.CloseHandle.argtypes = [wintypes.HANDLE]
+            _PN[:] = [Entry, k]
+        Entry, k = _PN
         snap = k.CreateToolhelp32Snapshot(2, 0)                 # TH32CS_SNAPPROCESS
         if not snap or snap == wintypes.HANDLE(-1).value:
             return None

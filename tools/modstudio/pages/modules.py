@@ -90,7 +90,9 @@ class Modules(Page):
         self.outer.addWidget(split, 1)
         self.foot = hint("")
         self.outer.addWidget(self.foot)
-        app.bus.ini_changed.connect(lambda: None if self.dirty else self.load())
+        # (a hidden page reads sider.ini when it is opened, shown(): after every Put in the game it
+        # read the modules and checked their order behind another page, 11.11.)
+        app.bus.ini_changed.connect(lambda: None if self.dirty or not self.isVisible() else self.load())
         self._loading = False
 
     def shown(self):

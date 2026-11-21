@@ -22,10 +22,17 @@ What the game does today (measured 2026-09-21)
 
 What this patch does
 
-  1. copies the 80 shipped rows into the unused .rdata run at 0x143394568 (1,908 bytes that
-     no instruction reaches, tools/cave.py --check) and adds one row per league of ours,
-     all pointing at a new category 24;
-  2. re-points the two readers at the copy and raises their row count 0x50 -> the new count;
+  1. copies the 80 shipped rows into a page of its own at 0x163d00000 (VirtualAlloc, 0x3000
+     bytes: room for 1,528 rows) and adds one row per league of ours, all pointing at a new
+     category 24;
+  2. re-points the two readers at the copy and raises their row count 0x50 -> the new count.
+     The first reader's count was "cmp eax, imm8; jb": a byte with a sign, so past 127 rows
+     it read as a negative number, the unsigned jb as some four billion, and a competition
+     with no row was looked for in the memory past the table until a dword happened to
+     equal its id (06.11.: 209 rows for _FL26Comb150), and the cave in .rdata the rows had
+     then held 238 (the Megapack's 199 leagues did not fit). The five bytes of cmp + jb are
+     now a jmp to a stub at the start of the page: cmp eax, imm32; jb back; mov eax, 0x19
+     (no heading); ret;
   3. writes a 25th string pointer into the eight bytes the old row table just freed -- they
      sit immediately after the key table, which is why this costs one relocation and not
      two -- aimed at "compeCategory-event" at 0x142677240. That name is already in the
@@ -61,8 +68,10 @@ ROWS_VA   = 0x14351e0e0        # the shipped 80 rows
 ROWS_N    = 0x50
 KEYS_VA   = 0x14351e020        # 24 string pointers, ending exactly where the rows begin
 KEYS_N    = 0x18
-CAVE_VA   = 0x143394568        # 8-aligned start inside the 0x143394564 run
-CAVE_END  = 0x143394564 + 1908
+PAGE_VA   = 0x163d00000        # our page (VirtualAlloc): the stub, then the rows
+PAGE_SIZE = 0x3000
+ROWS_AT   = PAGE_VA + 0x40     # the copied and added rows
+LOOP_VA   = 0x141e5b230        # the first reader's loop head (cmp ecx, [rdx])
 EVENT_VA  = 0x142677240        # "compeCategory-event"
 NEW_CAT   = 0x18               # the category number the new key takes
 
@@ -119,15 +128,21 @@ def build(root, comps=None):
         added.append(struct.pack("<II", cid, NEW_CAT))
     rows = shipped + b"".join(added)
     n = len(rows) // 8
-    if CAVE_VA + len(rows) > CAVE_END:
-        raise SystemExit("the rows do not fit in the cave")
+    if ROWS_AT + len(rows) > PAGE_VA + PAGE_SIZE:
+        raise SystemExit("the rows do not fit in the page (%d rows, room for %d)"
+                         % (n, (PAGE_VA + PAGE_SIZE - ROWS_AT) // 8))
+    # the first reader's bound: cmp eax, n (imm32); jb the loop; mov eax, 0x19 (none); ret
+    stub = (b"\x3d" + struct.pack("<I", n)
+            + b"\x0f\x82" + struct.pack("<i", LOOP_VA - (PAGE_VA + 11))
+            + b"\xb8" + struct.pack("<I", KEYS_N + 1) + b"\xc3")
+    page = stub + bytes(ROWS_AT - PAGE_VA - len(stub)) + rows
 
     patches = [{
-        "va": "0x%x" % CAVE_VA,
-        "old": bytes(len(rows)).hex(),
-        "new": rows.hex(),
-        "why": "the %d shipped rows, copied byte for byte, plus %d of ours under category %d"
-               % (ROWS_N, len(added), NEW_CAT),
+        "va": "0x%x" % PAGE_VA,
+        "old": bytes(len(page)).hex(),
+        "new": page.hex(),
+        "why": "the first reader's bound, then the %d shipped rows, copied byte for byte, plus "
+               "%d of ours under category %d" % (ROWS_N, len(added), NEW_CAT),
     }]
 
     def code(va, size, newbytes, why):
@@ -142,12 +157,14 @@ def build(root, comps=None):
             disp = struct.unpack_from("<i", cur, 3)[0]
             if va + 7 + disp != ROWS_VA:
                 raise SystemExit("%x does not point at the row table" % va)
-            new = cur[:3] + struct.pack("<i", CAVE_VA - (va + 7))
-            code(va, 7, new, "%s -> the copy in the cave at 0x%x" % (why, CAVE_VA))
-        elif kind == "count":                 # cmp eax, 0x50  /  mov ebp, 0x50
+            new = cur[:3] + struct.pack("<i", ROWS_AT - (va + 7))
+            code(va, 7, new, "%s -> the copy in our page at 0x%x" % (why, ROWS_AT))
+        elif kind == "count":                 # cmp eax, 0x50; jb  /  mov ebp, 0x50
             cur = d[off(va):off(va) + 8]
-            if cur[:2] == b"\x83\xf8" and cur[2] == ROWS_N:
-                code(va, 3, cur[:2] + bytes([n]), "%s: %d -> %d" % (why, ROWS_N, n))
+            if cur[:2] == b"\x83\xf8" and cur[2] == ROWS_N and cur[3] == 0x72 \
+                    and va + 5 + struct.unpack_from("<b", cur, 4)[0] == LOOP_VA:
+                code(va, 5, b"\xe9" + struct.pack("<i", PAGE_VA - (va + 5)),
+                     "%s: %d -> %d, in the stub at 0x%x (an imm8 has a sign)" % (why, ROWS_N, n, PAGE_VA))
             elif cur[0] == 0xbd and struct.unpack_from("<I", cur, 1)[0] == ROWS_N:
                 code(va, 5, cur[:1] + struct.pack("<I", n), "%s: %d -> %d" % (why, ROWS_N, n))
             else:
@@ -178,7 +195,7 @@ LUA = '''--[[
 fl26regions -- GENERATED by tools/mkregioncats.py. Do not edit by hand.
 
 Gives our %(added)d leagues a heading of their own in the competition list: the 80 shipped
-heading rows are copied into unused read-only space at 0x%(cave)x, ours are added after them
+heading rows are copied into a page of our own at 0x%(cave)x, ours are added after them
 under a new category %(cat)d, the two readers are re-pointed at the copy, and the freed eight
 bytes after the key table become a 25th picture name -- compeCategory-event, which the game
 ships and no shipped key uses. Shipped rows are copied byte for byte, so nothing that had a
@@ -187,7 +204,7 @@ heading changes heading. Full reasoning: tools/mkregioncats.py.
 Two passes, in this order, and the order is the safety:
   1. verify every site against the bytes the generator read out of the exe; one mismatch and
      nothing at all is written;
-  2. write the rows first and read them back. Only if they are really there does the code get
+  2. get the page, write the stub and the rows and read them back. Only if they are really there does the code get
      touched -- the other way round leaves the readers walking zeroes, which is a competition
      list with nothing in it.
 
@@ -208,13 +225,33 @@ local function unhex(s)
   return table.concat(out)
 end
 
-function m.init(ctx)
-  log(string.format("fl26regions: %%d sites, verifying", #patches + 1))
-  local bad = 0
-  if memory.read(rows.va, #unhex(rows.old)) ~= unhex(rows.old) then
-    log(string.format("fl26regions: MISMATCH in the cave at 0x%%x -- it is not empty", rows.va))
-    bad = bad + 1
+local function reserve(page, size)
+  if ffi == nil then
+    log("fl26regions: global ffi is nil -- set luajit.ext.enabled = 1 in sider.ini")
+    return false
   end
+  if not m.cdef then
+    -- a name of our own: another module may already have declared VirtualAlloc
+    ffi.cdef([[ void* fl26regions_VirtualAlloc(void*, size_t, uint32_t, uint32_t) asm("VirtualAlloc"); ]])
+    m.cdef = true
+  end
+  local function try(kind)
+    local p = ffi.C.fl26regions_VirtualAlloc(ffi.cast("void*", page), size, kind, 0x40)
+    return p ~= nil and tonumber(ffi.cast("uint64_t", p)) or 0
+  end
+  -- MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE; MEM_COMMIT alone if already reserved
+  local got = try(0x3000)
+  if got ~= page then got = try(0x1000) end
+  if got ~= page then
+    log(string.format("fl26regions: could not get the page at 0x%%x (got 0x%%x)", page, got))
+    return false
+  end
+  return true
+end
+
+function m.init(ctx)
+  log(string.format("fl26regions: %%d sites, verifying", #patches))
+  local bad = 0
   for i = 1, #patches do
     local p = patches[i]
     local want = unhex(p.old)
@@ -228,14 +265,24 @@ function m.init(ctx)
     return
   end
 
+  if not reserve(rows.va, %(size)d) then
+    log("fl26regions: ABORTED before touching any code, the game is unmodified")
+    return
+  end
   local new = unhex(rows.new)
+  if memory.read(rows.va, #new) ~= unhex(rows.old) then
+    log(string.format("fl26regions: MISMATCH in the page at 0x%%x -- it is not empty (another "
+                      .. "module?). ABORTED, the game is unmodified", rows.va))
+    return
+  end
   memory.write(rows.va, new)
   if memory.read(rows.va, #new) ~= new then
     log(string.format("fl26regions: the rows did not stick at 0x%%x -- ABORTED before "
                       .. "touching any code, the game is unmodified", rows.va))
     return
   end
-  log(string.format("fl26regions: %%d heading rows written at 0x%%x", #new / 8, rows.va))
+  log(string.format("fl26regions: the bound and %%d heading rows written at 0x%%x",
+                    %(n)d, rows.va))
 
   local written, failed = 0, 0
   for i = 1, #patches do
@@ -293,7 +340,7 @@ def main():
                 % (p["va"], p["old"], p["new"], p["why"].replace('"', "'")))
     lp = a[a.index("--out") + 1] if "--out" in a else os.path.join(top, "sider", "fl26regions.lua")
     open(lp, "w").write(LUA % {
-        "added": added, "cave": CAVE_VA, "cat": NEW_CAT,
+        "added": added, "cave": PAGE_VA, "size": PAGE_SIZE, "n": n, "cat": NEW_CAT,
         "rows": '{va=%s, old="%s", new="%s"}' % (rows["va"], rows["old"], rows["new"]),
         "patches": "".join(lit(p) for p in code),
     })

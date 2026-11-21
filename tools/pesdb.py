@@ -61,7 +61,7 @@ def comp_rows(raw=None):
     out = []
     for r in rows(raw, 36):
         out.append(dict(raw=r, area=r[3] >> 3, parent=r[4],
-                        id=r[5], flags=r[6], conf=r[6] & 0xf, code=cstr(r[8:36])))
+                        id=r[5] | r[7] << 8, flags=r[6], conf=r[6] & 0xf, code=cstr(r[8:36])))
     return out
 
 # --- CompetitionEntry (12 B) ---
@@ -70,11 +70,13 @@ def entry_rows(raw=None):
     out = []
     for r in rows(raw, 12):
         team, rowid, cs = struct.unpack("<III", r)
-        out.append(dict(raw=r, team=team, rowid=rowid, comp=cs & 0xff, slot=cs >> 8))
+        # +8 the competition id's low byte, +9 the order, +0xb its high byte (cidwide)
+        out.append(dict(raw=r, team=team, rowid=rowid, comp=(cs & 0xff) | (cs >> 24) << 8,
+                        slot=(cs >> 8) & 0xffff))
     return out
 
 def entry_pack(team, rowid, comp, slot):
-    return struct.pack("<III", team, rowid, comp | (slot << 8))
+    return struct.pack("<III", team, rowid, (comp & 0xff) | (slot & 0xffff) << 8 | (comp >> 8) << 24)
 
 # --- CompetitionRegulation (2352 B) ---
 REG_TYPE = {1:"playoff",2:"group",3:"knockout",4:"league",5:"conf-league",8:"practice",9:"split-total"}
@@ -88,7 +90,7 @@ def reg_rows(raw=None):
             o = 0x14 + k * 115
             names.append(cstr(r[o:o+115]))
         out.append(dict(raw=r, releg=releg, id=rid, sub=sub, promo=promo, parent=parent,
-                        comp=r[8], type=r[9], group=r[0xa], teams=r[0xb],
+                        comp=r[8] | r[0x910] << 8, type=r[9], group=r[0xa], teams=r[0xb],
                         hdr=r[0xc:0x14].hex(" "), names=names, name=names[0]))
     return out
 

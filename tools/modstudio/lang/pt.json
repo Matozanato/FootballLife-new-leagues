@@ -1,9 +1,14 @@
 {
  "text": {
+  "The world's own copy: %s is not on this PC": "A cópia do próprio mundo: %s não está neste PC",
+  "Getting the Build ready": "A preparar o Build",
+  "Saving your world": "A guardar o seu mundo",
+  "Not enough room for the copy of %s: it takes %s, and the disk of %s has %s free.": "Não há espaço para a cópia de %s: ela ocupa %s e o disco de %s tem %s livres.",
+  "copying %s: %s of %s": "copiando %s: %s de %s",
   "%d clubs of %s have their NewLife squads again: %s.": "%d clubes de %s voltaram a ter os planteis do NewLife: %s.",
   "Clubs %s of %s have no squad, so Build gives them numbered players. To get them back, remove the league and add it again on the NewLife page.": "Os clubes %s de %s não têm plantel, por isso o Build dá-lhes jogadores numerados. Para os recuperar, remove a liga e adiciona-a de novo na página NewLife.",
   "Its best clubs play the country's cup too": "Os melhores clubes também jogam a taça do país",
-  "For a third division under the game's second one, like National under Ligue 2: the game's cup takes its two divisions and the first clubs of this league, up to 48 clubs in all, as the real Coupe de France takes the lower leagues. Start a new career after the Build.": "Para uma terceira divisão abaixo da segunda do jogo, como o National abaixo da Ligue 2: a taça do jogo leva as suas duas divisões e os primeiros clubes desta liga, até 48 clubes no total, como a verdadeira Coupe de France recebe as divisões inferiores. Comece uma nova carreira depois do Build.",
+  "For a third division under the game's second one, like National under Ligue 2: the game's cup takes its two divisions and the first clubs of this league, up to 44 clubs in all, as the real Coupe de France takes the lower leagues. Start a new career after the Build.": "Para uma terceira divisão abaixo da segunda do jogo, como o National abaixo da Ligue 2: a taça do jogo leva as suas duas divisões e os primeiros clubes desta liga, até 44 clubes no total, como a verdadeira Coupe de France recebe as divisões inferiores. Comece uma nova carreira depois do Build.",
   "CAREFUL: no kits file (UniformParameter.bin) was found beside your tables, unpacked from the game or in another mod, so the new clubs have no kit and the game calls them unlicensed. Unpack the game's tables (Settings) and build again.": "ATENÇÃO: não foi encontrado nenhum ficheiro de equipamentos (UniformParameter.bin) junto às suas tabelas, extraído do jogo ou noutro mod, por isso os clubes novos não têm equipamento e o jogo trata-os como sem licença. Extraia as tabelas do jogo (Definições) e faça Build de novo.",
   "Abilities taken from %s (%s), at the same rating.": "Habilidades tiradas de %s (%s), com a mesma classificação.",
   "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split, Apertura/Clausura or a league cup yet": "primeira divisão de um país novo: fevereiro a dezembro joga como Brasil, Japão ou Arábia Saudita, clubes sobem e descem no Ano Novo; as divisões abaixo a seguem. Ainda sem fase final, Apertura/Clausura nem copa da liga",
@@ -177,6 +182,7 @@
   "Checking": "Conferindo",
   "Checks": "Verificações",
   "Choose a file...": "Escolher um arquivo...",
+  "This zip is packed with %s, a method FL Mod Studio cannot read. Unpack it first (7-Zip, or right click > Extract All in Windows), then Choose a folder... on what came out.": "Este zip está compactado com %s, um método que o FL Mod Studio não consegue ler. Descompacte-o primeiro (7-Zip, ou botão direito > Extrair tudo no Windows) e depois use Escolher uma pasta... no que sair.",
   "Choose a folder...": "Escolher uma pasta...",
   "Choose the face folder": "Escolha a pasta do rosto",
   "Choose the game folder (the one with FL_2026.exe)": "Escolha a pasta do jogo (a que tem o FL_2026.exe)",
@@ -305,6 +311,7 @@
   "Import": "Importar",
   "Import CSV...": "Importar CSV...",
   "Import transfers...": "Importar transferências...",
+  "A CSV of transfers (player, to, and from if two players share a name) moves every player of it to his new club at Build": "Um CSV de transferências (jogador, destino, e origem se dois jogadores tiverem o mesmo nome) leva cada jogador ao seu novo clube no Build",
   "The first line names the columns: player (his name or id), to (the club he joins) and, if you like, from (his club now).": "A primeira linha nomeia as colunas: player (o nome ou id dele), to (o clube para onde vai) e, se quiser, from (o clube atual).",
   "%d players move to their new clubs at Build.": "%d jogadores vão para os novos clubes no Build.",
   "%d are at that club already (a transfer of theirs was called off).": "%d já estão nesse clube (uma transferência deles foi cancelada).",
@@ -352,6 +359,8 @@
   "Listen": "Ouvir",
   "Look modules": "Módulos de visual",
   "Looking inside %s ...": "Olhando dentro de %s ...",
+  "From the author of %s:": "Do autor de %s:",
+  "Reading the whole file first. When it is done, what is inside shows up here, with Install, or Update for a new version of a world you have. A big world takes a few minutes.": "Primeiro o ficheiro é lido por inteiro. Quando terminar, o que tem dentro aparece aqui, com Instalar, ou Atualizar se for uma nova versão de um mundo que já tens. Um mundo grande demora alguns minutos.",
   "Looking inside the mod": "Olhando dentro do mod",
   "Lua module": "Módulo Lua",
   "Lua modules": "Módulos Lua",
@@ -1193,6 +1202,7 @@
   "The game's own places, shown for reference. Tick the box above to change them.": "As vagas do próprio jogo, mostradas como referência. Marque a caixa acima para alterá-las.",
   "World built": "Mundo construído",
   "Your places: they replace the game's for this league.": "Suas vagas: elas substituem as do jogo para este campeonato.",
+  "The whole season: its places go by the tables of %s added together, counted when the last one ends (until then, by the first). Give places here or to one of the tournaments, not both.": "A temporada inteira: suas vagas seguem as tabelas de %s somadas, contadas quando a última termina (até lá, pela primeira). Dê vagas aqui ou a um dos torneios, não aos dois.",
   "a world with just the new European format and the game's own leagues and clubs: no new leagues": "um mundo só com o novo formato europeu e os campeonatos e clubes do próprio jogo: sem campeonatos novos",
   "built %s": "construído %s",
   "changed": "alterado",
@@ -1200,6 +1210,7 @@
   "game": "jogo",
   "installing the modules ...": "instalando os módulos ...",
   "now: %s (from the stadium pack)": "agora: %s (do pack de estádios)",
+  "Not in your stadium pack: the world keeps it, and the club plays at the game's stadium until you have it.": "Não está no teu pack de estádios: o mundo mantém-no e o clube joga no estádio do jogo até o teres.",
   "ours": "nosso",
   "the folder's name": "o nome da pasta",
   "the game's own stadium": "o estádio do próprio jogo",
@@ -1243,8 +1254,6 @@
   "Each ticked league of the game gets the clubs and squads it has in this NewLife season. A club that went up or down between two leagues of the game swaps places with one going the other way; a club that went down out of the game's leagues becomes the club that came up in its place (its name, short name, crest and squad; its kit and stadium stay). Clubs you changed by hand stay as they are.": "Cada campeonato do jogo marcado recebe os clubes e elencos que tem nesta temporada do NewLife. Um clube que subiu ou caiu entre dois campeonatos do jogo troca de lugar com um que foi no sentido contrário; um clube que caiu para fora dos campeonatos do jogo vira o clube que subiu no lugar dele (nome, sigla, escudo e elenco; o uniforme e o estádio dele continuam). Os clubes que você alterou à mão ficam como estão.",
   "First-season European clubs": "Clubes europeus da primeira temporada",
   "Pick by hand the clubs of the Champions, Europa and Conference League in a new career's first season": "Escolha à mão os clubes da Champions, da Europa League e da Conference League na primeira temporada de uma carreira nova",
-  "Pick the clubs that play the league phase of the Champions League, Europa League and Conference League in the first season of a new career.\n\nYour clubs go in first; the game fills the rest of the 36 places as it always does. With the summer qualifying on, part of the 36 are its winners: clubs past the direct places (28 in the Champions League, 20 in the other two) play the qualifying, from the play-off down. Leave a competition empty and it is filled the usual way. From the second season on, the European places of the leagues decide who goes.\n\nA club of the game must play in a league that season. Only a career started after Build gets these clubs; a career you already play keeps its own.": "Escolha os clubes que jogam a fase de liga da Champions League, da Europa League e da Conference League na primeira temporada de uma carreira nova.\n\nSeus clubes entram primeiro; o jogo preenche o resto das 36 vagas como sempre faz. Com a qualificação de verão ativa, parte das 36 vagas são dos seus vencedores: os clubes além das vagas diretas (28 na Liga dos Campeões, 20 nas outras duas) jogam a qualificação, do play-off para baixo. Deixe uma competição vazia e ela é preenchida do jeito normal. A partir da segunda temporada, as vagas europeias dos campeonatos decidem quem vai.\n\nUm clube do jogo precisa jogar num campeonato nessa temporada. Só uma carreira começada depois do Build recebe estes clubes; uma carreira que você já joga mantém os seus.",
-  "A league phase has %d clubs; %d more fit.": "Uma fase de liga tem %d clubes; cabem mais %d.",
   "Add to the %s": "Adicionar à %s",
   "Club, league or team ID": "Clube, campeonato ou ID do time",
   "Clubs for the league phases of a new career's first season. Your clubs go in first, the game fills the rest; from the second season the leagues' European places decide.": "Clubes para as fases de liga da primeira temporada de uma carreira nova. Seus clubes entram primeiro, o jogo preenche o resto; a partir da segunda temporada as vagas europeias dos campeonatos decidem.",
@@ -1364,7 +1373,7 @@
   "%s holds %d league package(s). A league package goes into your world, and into the game when you Build. Add it to your world now?": "%s traz %d pacote(s) de campeonatos. Um pacote vai para o seu mundo, e para o jogo quando você faz Build. Adicionar ao seu mundo agora?",
   "%s in %s is not the one Mod Studio installs with %s (empty or different): an antivirus may have changed it. Add the SiderAddons folder as an exclusion in your antivirus, then Home > Install now again.": "%s em %s não é o que o Mod Studio instala com %s (vazio ou diferente): talvez um antivírus o tenha alterado. Adicione a pasta SiderAddons como exceção no antivírus e depois Início > Instalar agora de novo.",
   "%s is a ready world (installed from a zip): no Build needed, press Play": "%s é um mundo pronto (instalado de um zip): não precisa de Build, aperte Play",
-  "%s is installed already (an older version). It is taken out first, then this one goes in. Your saves are not touched; start a new Master League with the new version.\n\nReplace it?": "%s já está instalado (uma versão anterior). Primeiro ela é retirada, depois entra esta. Seus saves não são tocados; comece uma Master League nova com a versão nova.\n\nSubstituir?",
+  "%s is installed already. It is taken out first, then this one goes in. Your saves are not touched; start a new Master League with this one.\n\nReplace it?": "%s já está instalado. Primeiro ele é retirado, depois entra este. Seus saves não são tocados; comece uma Master League nova com este.\n\nSubstituir?",
   "%s is missing from %s (or Windows will not open it), but %s, which is switched on, needs it: an antivirus probably removed it. Add the SiderAddons folder as an exclusion in your antivirus, then Home > Install now again.": "%s está faltando em %s (ou o Windows não o abre), mas %s, que está ligado, precisa dele: provavelmente um antivírus o removeu. Adicione a pasta SiderAddons como exceção no antivírus e depois Início > Instalar agora de novo.",
   "%s is on: a ready world, installed from a zip. It is built already: press Play and start a new Master League.\n\nBuild makes the world of your own leagues and would switch %s off. To build your own leagues, switch your own world on first (Home > Switch world...), or remove the ready one (Import your world > Remove).": "%s está ligado: um mundo pronto, instalado de um zip. Ele já está montado: aperte Play e comece uma Master League nova.\n\nO Build faz o mundo dos seus próprios campeonatos e desligaria %s. Para montar seus campeonatos, ligue primeiro o seu mundo (Início > Trocar de mundo...) ou remova o mundo pronto (Importe seu mundo > Remover).",
   "%s is the world you are editing: pick another name.": "%s é o mundo que você está editando: escolha outro nome.",
@@ -1372,6 +1381,9 @@
   "%s: a league package": "%s: um pacote de campeonatos",
   "%s: a mod": "%s: um mod",
   "%s: a newer version of the world %s you have": "%s: uma versão mais nova do mundo %s que você tem",
+  "%s: an older version of the world %s than the one you have": "%s: uma versão mais antiga do mundo %s do que a que você tem",
+  "%s: the same version of the world %s you have": "%s: a mesma versão do mundo %s que você tem",
+  "%s: another version of the world %s you have": "%s: outra versão do mundo %s que você tem",
   "%s: a ready world to play (%s)": "%s: um mundo pronto para jogar (%s)",
   "A world with nothing but the new Champions League and Europa League (league phase of 36 and play-off) and, when ticked above, the Conference League: no new leagues, the game's clubs and leagues as they are. Your own world is not changed.": "Um mundo só com a nova Champions League e Europa League (fase de liga de 36 e play-off) e, se marcada acima, a Conference League: sem campeonatos novos, os clubes e campeonatos do jogo como estão. Seu próprio mundo não muda.",
   "Add it to your world?": "Adicionar ao seu mundo?",
@@ -1408,7 +1420,7 @@
   "Take %s out of your world: its leagues %s and the changes it brought? Build again afterwards.": "Tirar %s do seu mundo: os campeonatos %s e as mudanças que ele trouxe? Depois, Build de novo.",
   "Take back %d change(s)? Build and install again to see it in the game.": "Desfazer %d mudança(s)? Construir e instalar de novo para ver no jogo.",
   "The game is installed under Program Files, which only a program run as administrator may change.": "O jogo está instalado em Program Files, que só um programa rodando como administrador pode mudar.",
-  "The older version is taken out first, nothing of it stays behind. Your saves are not touched; start a new Master League with this one.": "A versão anterior é retirada primeiro, nada dela fica. Seus saves não são tocados; comece uma Master League nova com esta.",
+  "The version you have is taken out first, nothing of it stays behind. Your saves are not touched; start a new Master League with this one.": "A versão que você tem é retirada primeiro, nada dela fica. Seus saves não são tocados; comece uma Master League nova com esta.",
   "The world in the game is %s, but Mod Studio has %s open. Open %s (File > Open a world...) before you Build.": "O mundo do jogo é %s, mas o Mod Studio está com %s aberto. Abra %s (Arquivo > Abrir um mundo...) antes do Build.",
   "This club already plays in a new league of your world.": "Este clube já joga em um campeonato novo do seu mundo.",
   "Untick a part you do not want, for example the kits. Double-click a content folder's name to rename it.": "Desmarque a parte que você não quer, por exemplo os uniformes. Clique duas vezes no nome de uma pasta de conteúdo para renomear.",
@@ -1510,7 +1522,6 @@
   "older or damaged": "antigos ou danificados",
   "switched off": "desligados",
   "no league (%s)": "sem campeonato (%s)",
-  "The clubs of the league picked at the top. Double-click a club (or Edit club) for its name, short name, crest, manager, stadium and formation.\n- Players: change the club's squad.\n- Club of the game...: put a club the game already has (Al Kuwait, say) in this place instead of a new club. If it plays somewhere in the game, you pick who takes its old place there.\n- NewLife club...: put clubs of the NewLife Database, with their squads, in this place and the places after it (open the NewLife Database on the NewLife page first).\n- New club here: undo Club of the game; the place gets a new club again. Only on a place a club of the game took (a new club's place is one already).\n- Insert club / Remove club: a new club before the selected one, or the selected one out. The league gets one club more or one less.\n- Move to another league...: the club goes to another of your new leagues, with its name, crest, manager and players.\n- Paste names... / Load names from file...: name every club at once, one name per line, in order.": "Os clubes do campeonato escolhido no topo. Dê um clique duplo num clube (ou Editar clube) para o nome, sigla, escudo, técnico, estádio e formação dele.\n- Jogadores: muda o elenco do clube.\n- Clube do jogo...: coloca neste lugar um clube que o jogo já tem (o Al Kuwait, por exemplo) em vez de um clube novo. Se ele joga em algum lugar do jogo, você escolhe quem fica com o lugar antigo dele lá.\n- Clube NewLife...: coloca clubes da NewLife Database, com seus elencos, neste lugar e nos seguintes (abra antes a NewLife Database na página NewLife).\n- Clube novo aqui: desfaz Clube do jogo; o lugar volta a ter um clube novo. Só num lugar que um clube do jogo ocupou (o de um clube novo já o é).\n- Inserir clube / Remover clube: um clube novo antes do selecionado, ou o selecionado fora. O campeonato fica com um clube a mais ou a menos.\n- Mover para outro campeonato...: o clube vai para outro dos seus campeonatos novos, com nome, escudo, técnico e jogadores.\n- Colar nomes... / Carregar nomes de um arquivo...: dá nome a todos os clubes de uma vez, um nome por linha, em ordem.",
   "Select a club first.": "Escolha um clube primeiro.",
   "Club %d of %s is a new club already. New club here only undoes Club of the game: it gives a place a club of the game took back to a new club.": "O clube %d de %s já é um clube novo. Clube novo aqui só desfaz Clube do jogo: devolve a um clube novo o lugar que um clube do jogo ocupou.",
   "Undo Club of the game: the place a club of the game took gets a new club again": "Desfaz Clube do jogo: o lugar que um clube do jogo ocupou volta a ter um clube novo",
@@ -1573,6 +1584,7 @@
   "Delete world...": "Apagar mundo...",
   "Deleting %s ...": "Apagando %s ...",
   "Drop it here or": "Solte aqui ou",
+  "Animations (pages, buttons and dialogs come in softly)": "Animações (as páginas, os botões e os diálogos aparecem suavemente)",
   "Each world keeps its own careers (the save folder is switched with the world)": "Cada mundo guarda as próprias carreiras (a pasta de saves troca junto com o mundo)",
   "Each world now keeps its own Master League careers. Your careers of %s are kept in %s (in %s); %s gets its own careers back from %s.": "Agora cada mundo guarda as próprias carreiras da Master League. Suas carreiras de %s ficam guardadas em %s (em %s); %s recebe de volta as próprias carreiras de %s.",
   "Each world now keeps its own Master League careers. Your careers of %s are kept in %s (in %s); %s starts with its own. Put %s back in the game and its careers come back.": "Agora cada mundo guarda as próprias carreiras da Master League. Suas carreiras de %s ficam guardadas em %s (em %s); %s começa com as dele. Coloque %s de volta no jogo e as carreiras dele voltam.",
@@ -1783,6 +1795,8 @@
   "There is a world called %s already.": "Já existe um mundo chamado %s.",
   "content\\%s\\%s is there already: a world of that name was here before.": "content\\%s\\%s já existe: um mundo com esse nome esteve aqui antes.",
   "A world called %s is in the game already, built on this PC. Rename that world on its card in My world (or delete it there), then install this one again.": "Já existe no jogo um mundo chamado %s, construído neste PC. Renomeie esse mundo no cartão dele em Meu mundo (ou apague-o lá) e depois instale este de novo.",
+  "The game folder's path is too long for %d file(s) of this mod: in the game they would be up to %d characters long, and the game can open a file only up to %d (a Windows limit). Those files would be missing in the game. Move the game to a folder with a path of at most %d characters (for example C:\\Games\\FL), choose it again (Game ▾), and install this again.": "O caminho da pasta do jogo é longo demais para %d arquivo(s) deste mod: no jogo eles teriam até %d caracteres, e o jogo só consegue abrir um arquivo de até %d (um limite do Windows). Esses arquivos faltariam no jogo. Mova o jogo para uma pasta com um caminho de no máximo %d caracteres (por exemplo C:\\Games\\FL), escolha-a de novo (Jogo ▾) e instale isto outra vez.",
+  "Install anyway?": "Instalar mesmo assim?",
   "Renaming %s...": "Renomeando %s...",
   "This backup was put back already.": "Esta cópia já foi restaurada.",
   "%s is not in livecpk any more: nothing to rename back.": "%s já não está em livecpk: não há nada para voltar ao nome anterior.",
@@ -1801,7 +1815,7 @@
   "Looking inside %s": "A ver dentro de %s",
   "Switching %s on": "A ativar %s",
   "Exporting %s...": "A exportar %s...",
-  "Taking out the older %s": "A tirar o %s anterior",
+  "Taking out the %s you had": "A tirar o %s que tinhas",
   "On Home press Install now, then in My world press Activate on this world.": "No Início carrega em Instalar agora e depois, em O meu mundo, carrega em Ativar neste mundo.",
   "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Uma carreira guardada antes mantém o mundo com que começou: depois de Construir e instalar ou Ativar, começa uma Master League nova.",
   "a world from a zip: changes made here do not reach the game yet": "um mundo de um zip: as alterações feitas aqui ainda não chegam ao jogo",
@@ -1822,6 +1836,8 @@
   "Switch on: %s map": "Ligar: mapa %s",
   "Switch on %s: the world file": "Ligar %s: o arquivo do mundo",
   "Switch on %s: its own module": "Ligar %s: o seu próprio módulo",
+  "Switch on %s: its trophies in %s": "Ligar %s: os seus troféus em %s",
+  "Switch on %s: another world's modules switched off": "Ligar %s: módulos de outro mundo desligados",
   "Switch on %s: its leagues in the Kick Off list": "Ligar %s: as suas ligas na lista do Kick Off",
   "Your world: switch on %s": "Seu mundo: ligar %s",
   "Import your world: switch on %s": "Importe seu mundo: ligar %s",
@@ -1829,6 +1845,7 @@
   "Mod Studio's modules switched on": "Módulos do Mod Studio ligados",
   "Install the modules: replaced by Mod Studio's": "Instalar os módulos: substituído pelo do Mod Studio",
   "Install the modules: %s now ships bundled": "Instalar os módulos: %s agora vem incluído",
+  "Install the modules: the world's own": "Instalar os módulos: os do mundo",
   "Install the modules: livecpk\\%s loaded": "Instalar os módulos: livecpk\\%s carregado",
   "world %s renamed to %s": "mundo %s renomeado para %s",
   "world %s deleted: its lines taken out": "mundo %s excluído: as suas linhas retiradas",
@@ -1879,7 +1896,9 @@
   "The NewLife Database: real squads of today for your world's leagues and the game's own (for modders; to play a ready Modpack you do not need it)": "NewLife Database: plantéis reais de hoje para as ligas do teu mundo e as do jogo (para modders; para jogar um Modpack pronto não precisas dela)",
   "Your world %s is built with Plain kits to change in Edit mode: Kit Server does not dress its new clubs, so these kits are not worn by them. Untick it on the Build page and Build again.": "O teu mundo %s foi construído com «Uniformes simples para o modo Edição»: o Kit Server não veste os seus clubes novos, por isso não usam estes uniformes. Desmarca-o na página Construção e constrói de novo.",
   "Experimental: the split and Apertura and Clausura work, but still have more bugs than everyone plays everyone, the fully tested format. Report what you find.": "Experimental: a divisão em dois grupos e Apertura e Clausura funcionam, mas ainda têm mais bugs do que todos contra todos, o formato totalmente testado. Reporta o que encontrares.",
-  "Welcome to Mod Studio 0.2.4": "Bem-vindo ao Mod Studio 0.2.4",
+  "Welcome to FL Mod Studio": "Bem-vindo ao FL Mod Studio",
+  "Another world's recipe had the name %s: it is kept in %s.": "A receita de outro mundo tinha o nome %s: ela fica guardada em %s.",
+  "Mod Studio keeps the recipe of another world called %s. Pick another name.": "O Mod Studio guarda a receita de outro mundo chamado %s. Escolha outro nome.",
   "The window has a new look, and things moved. This short tour shows where everything is now: ten steps, one minute. Nothing is changed while it runs. Help > Quick tour shows it again.": "A janela tem um visual novo e as coisas mudaram de lugar. Este tour rápido mostra onde está tudo agora: dez passos, um minuto. Nada é alterado enquanto ele corre. Ajuda > Tour rápido mostra de novo.",
   "Language at the top: English, Spanish, French, Portuguese or Croatian. The new language comes when you start Mod Studio again (this tour too, if you did not finish it).": "Idioma, no topo: inglês, espanhol, francês, português ou croata. O novo idioma vem quando você abrir o Mod Studio de novo (este tour também, se não o terminou).",
   "What is in the game now": "O que está no jogo agora",
@@ -1905,10 +1924,10 @@
   "Open My world": "Abra Meu mundo",
   "Click 2. My world. Your worlds are there, as cards.": "Clique em 2. Meu mundo. Seus mundos estão lá, como cartões.",
   "+ Add...": "+ Adicionar...",
-  "Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that window). A green line says Found: a world zip. Click Add.": "Clique em + Adicionar..., depois em Escolher um arquivo... e escolha o zip do Modpack (ou arraste o zip para essa janela). Uma linha verde diz Encontrado: um zip de mundo. Clique em Adicionar.",
+  "Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that window). A green line says Found: a world zip. Click Install the world.": "Clique em + Adicionar..., depois em Escolher um arquivo... e escolha o zip do Modpack (ou arraste o zip para essa janela). Uma linha verde diz Encontrado: um zip de mundo. Clique em Instalar o mundo.",
   "Wait while it looks inside": "Espere enquanto ele olha dentro",
   "The page Import your world opens and looks inside the zip. A big Modpack takes a minute or two. Then it says what it is (a ready world to play) and how many leagues it has.": "A página Importe seu mundo abre e olha dentro do zip. Um Modpack grande leva um ou dois minutos. Depois ela diz o que é (um mundo pronto para jogar) e quantos campeonatos tem.",
-  "Click Install the world. If an older Modpack is installed, it asks to replace it: Yes (your saves are not touched). Mod Studio copies the world, puts its modules in the game and switches the world on: no Build needed. Wait for the window Ready to play.": "Clique em Instalar o mundo. Se houver um Modpack mais antigo instalado, ele pergunta se pode substituir: Sim (seus saves não são mexidos). O Mod Studio copia o mundo, coloca os módulos dele no jogo e ativa o mundo: não precisa de Build. Espere a janela Pronto para jogar.",
+  "It installs the world by itself, nothing more to click. If an older Modpack is installed, it asks to replace it: Yes (your saves are not touched). Mod Studio copies the world, puts its modules in the game and switches the world on: no Build needed. Wait for the window Ready to play.": "Ele instala o mundo sozinho, sem mais nada para clicar. Se houver um Modpack mais antigo instalado, ele pergunta se pode substituir: Sim (seus saves não são mexidos). O Mod Studio copia o mundo, coloca os módulos dele no jogo e ativa o mundo: não precisa de Build. Espere a janela Pronto para jogar.",
   "Click Start the game and start a NEW Master League: an old career does not get the new leagues.": "Clique em Iniciar o jogo e comece uma NOVA Master League: uma carreira antiga não recebe os campeonatos novos.",
   "Another world later": "Outro mundo depois",
   "Every world is a card in 2. My world; the green one is in the game. Activate on another card puts that one in the game, and each world keeps its own careers. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "Cada mundo é um cartão em 2. Meu mundo; o verde é o que está no jogo. Ativar em outro cartão coloca esse no jogo, e cada mundo guarda as próprias carreiras. Travou? Ajuda > Guia de uso, ou pergunte no nosso Discord, FL Mod Studio.",
@@ -2071,6 +2090,469 @@
   "Where the last Build put the league in Select Team. Pick a group of the game's here and the league takes its place": "Onde o último Build pôs a liga em Select Team. Escolha aqui um grupo do jogo e a liga fica com o lugar dele",
   "Where the last Build put the league in Select Team": "Onde o último Build colocou o campeonato no Select Team",
   "%s is the division below %s (promotion and relegation). Leagues > Edit > Division changes it.": "%s é a divisão abaixo de %s (acesso e rebaixamento). Campeonatos > Editar > Divisão muda isso.",
+  "%d clubs meet %d times at most: a league plays %d rounds at most.": "%d clubes se enfrentam no máximo %d vezes: uma liga joga no máximo %d rodadas.",
+  "up to 28 clubs meet up to 4 times (54 rounds at most); 29 to 32 clubs meet once": "até 28 clubes se enfrentam até 4 vezes (no máximo 54 rodadas); de 29 a 32 clubes, uma vez",
+  "%s days: %s is not a day.month date.": "Datas de %s: %s não é uma data dia.mês.",
+  "%s days: six dates, or none for the dates shown.": "Datas de %s: seis datas, ou nenhuma para as datas mostradas.",
+  "(the league's name + Trophy)": "(nome do campeonato + Trophy)",
+  "Cup days": "Datas das copas",
+  "FL 2027: a third division of a new country too -- its first clubs join the national cup of the two divisions above it, up to 44 clubs": "FL 2027: também uma terceira divisão de um país novo -- os seus primeiros clubes entram na copa nacional das duas divisões acima, até 44 clubes",
+  "The third cup, the cups' own days and a third division of a new country in its national cup are new in FL 2027; FL26 keeps its cups as they are.": "A terceira copa, as datas próprias das copas e uma terceira divisão de um país novo na sua copa nacional são novidades do FL 2027; o FL26 mantém as suas copas como estão.",
+  "Third cup": "Terceira copa",
+  "Third cup (like the EFL Trophy)": "Terceira copa (como o EFL Trophy)",
+  "A third knockout cup for the lower divisions, like the EFL Trophy, the FA Trophy or the Copa RFEF: this division and the one below it, up to 44 clubs, one match a round from October to a final in April, on Tuesdays clear of the league cup and the country's cup. This division's clubs get the byes. For a division below the top one, August to May; FL 2027 only.": "Uma terceira copa eliminatória para as divisões inferiores, como o EFL Trophy, o FA Trophy ou a Copa RFEF: esta divisão e a de baixo, até 44 clubes, um jogo por rodada de outubro a uma final em abril, às terças, sem chocar com a copa da liga nem com a copa do país. Os clubes desta divisão ficam isentos. Para uma divisão abaixo da primeira, de agosto a maio; só FL 2027.",
+  "Your own dates for the league cup or the third cup, day.month: six of them, for the first, second and third round, the quarter-final, the semi-final and the final, in the season's order, three days apart at least. A smaller field skips the first rounds. Not on a European night or next to a round of the country's cup. Empty = the dates shown. FL 2027 only.": "As suas próprias datas para a copa da liga ou a terceira copa, dia.mês: seis, para a primeira, segunda e terceira rodada, as quartas, a semifinal e a final, na ordem da temporada, com pelo menos três dias entre elas. Um quadro menor pula as primeiras rodadas. Não numa noite europeia nem junto a uma rodada da copa do país. Vazio = as datas mostradas. Só FL 2027.",
+  "The clubs of the league picked at the top. Double-click a club (or Edit club) for its name, short name, crest, manager, stadium and formation.\n- Players: change the club's squad.\n- Club of the game...: put a club the game already has (Al Kuwait, say) in this place instead of a new club. If it plays somewhere in the game, you pick who takes its old place there.\n- NewLife club...: put clubs of the NewLife Database, with their squads, in this place and the places after it (open the NewLife Database on the NewLife page first).\n- New club here: undo Club of the game; the place gets a new club again. Only on a place a club of the game took (a new club's place is one already).\n- Insert club / Remove club: a new club before the selected one, or the selected one out. The league gets one club more or one less.\n- Move to another league...: the club goes to another of your new leagues, with its name, crest, manager and players.\n- Paste names... / Load names from file...: name every club at once, one name per line, in order.\n- Order in Select Team...: the order the league's clubs are listed in Select Team (A-Z without it). FL 2027 only.": "Os clubes do campeonato escolhido no topo. Dê um clique duplo num clube (ou Editar clube) para o nome, sigla, escudo, técnico, estádio e formação dele.\n- Jogadores: muda o elenco do clube.\n- Clube do jogo...: coloca neste lugar um clube que o jogo já tem (o Al Kuwait, por exemplo) em vez de um clube novo. Se ele joga em algum lugar do jogo, você escolhe quem fica com o lugar antigo dele lá.\n- Clube NewLife...: coloca clubes da NewLife Database, com seus elencos, neste lugar e nos seguintes (abra antes a NewLife Database na página NewLife).\n- Clube novo aqui: desfaz Clube do jogo; o lugar volta a ter um clube novo. Só num lugar que um clube do jogo ocupou (o de um clube novo já o é).\n- Inserir clube / Remover clube: um clube novo antes do selecionado, ou o selecionado fora. O campeonato fica com um clube a mais ou a menos.\n- Mover para outro campeonato...: o clube vai para outro dos seus campeonatos novos, com nome, escudo, técnico e jogadores.\n- Colar nomes... / Carregar nomes de um arquivo...: dá nome a todos os clubes de uma vez, um nome por linha, em ordem.\n- Ordem no Select Team...: a ordem em que o Select Team mostra os clubes do campeonato (sem ela, A-Z). Só FL 2027.",
+  "A-Z": "A-Z",
+  "Order in Select Team": "Ordem no Select Team",
+  "Order in Select Team...": "Ordem no Select Team...",
+  "The order of this league's clubs in Select Team (A-Z without it); FL 2027 only": "A ordem dos clubes deste campeonato no Select Team (sem ela, A-Z); só FL 2027",
+  "An own order of the clubs in Select Team is new in FL 2027; FL26 lists them A-Z.": "Uma ordem própria dos clubes no Select Team é novidade do FL 2027; o FL26 mostra-os de A a Z.",
+  "Build again and start a new career: Select Team lists %s's clubs in the new order.": "Faça Build de novo e comece uma carreira nova: o Select Team mostra os clubes de %s na nova ordem.",
+  "Drag the clubs (or Up / Down) into the order Select Team lists them in. A-Z puts them back in the game's order. Build again and start a new career to see it. FL 2027 only.": "Arraste os clubes (ou Cima / Baixo) para a ordem em que o Select Team os mostra. A-Z volta à ordem do jogo. Faça Build de novo e comece uma carreira nova para ver. Só FL 2027.",
+  "A knockout after the last round for a place in the league above. Places: the clubs from the first to the last place play for the place of the last club going up (3 to 6 with 3 up, as the EFL); with other groups named, their same places play too (group winners for one place). Against the league above: its first club going down plays this league's last club going up (16th v 3rd).": "Um mata-mata após a última rodada por uma vaga na liga de cima. Posições: os clubes da primeira à última posição jogam pela vaga do último clube que sobe (3 a 6 com 3 acessos, como a EFL); com outros grupos nomeados, as mesmas posições deles jogam também (vencedores de grupo por uma vaga). Contra a liga de cima: o primeiro clube dela que desce enfrenta o último clube desta liga que sobe (16.º contra 3.º).",
+  "Only a group of a division can send no club up: set Up / down to 1 or more.": "Só um grupo de uma divisão pode não subir nenhum clube: põe Acesso / rebaix. em 1 ou mais.",
+  "Only for one of several leagues with groups below them (three Serie C groups over nine Serie D groups): how many clubs this one sends down. Shared out: what the groups send up, split evenly.": "Só para uma de várias ligas com grupos abaixo (três grupos da Serie C sobre nove da Serie D): quantos clubes esta rebaixa. Dividido: o que os grupos sobem, repartido por igual.",
+  "Play-off": "Repescagem",
+  "Play-off: the first place is after the last.": "Repescagem: a primeira posição vem depois da última.",
+  "Sends down": "Rebaixa",
+  "Two or more leagues under the same league are groups of one division, like three Serie C groups under Serie B: the league above sends down what the groups send up, and every group keeps its size. Name them so they read as groups (Serie C Girone A, B, C).": "Duas ou mais ligas abaixo da mesma liga são grupos de uma divisão, como três grupos da Serie C abaixo da Serie B: a liga de cima rebaixa tantos quantos os grupos sobem, e cada grupo mantém o seu tamanho. Dá-lhes nomes de grupo (Serie C Girone A, B, C).",
+  "against the league above": "contra a liga de cima",
+  "and the same places of groups (names)": "e as mesmas posições dos grupos (nomes)",
+  "clubs, to the groups below it": "clubes, para os grupos abaixo",
+  "places, for the last place up": "posições, pela última vaga de acesso",
+  "shared out": "dividido",
+  "An Edit save from before this Build can crash a new Master League: its squads can list players this world no longer has. Move it aside before you start a career.": "Um save do Edit de antes deste Build pode fazer uma nova Master League travar: os seus elencos podem ter jogadores que este mundo já não tem. Tire-o do caminho antes de começar uma carreira.",
+  "%s is a world for FL 2027 (%s clubs, %s players). FL26 takes %d clubs and %d players, so it would break this game, and it does not go in. Choose FL 2027's folder (Game ▾) and put it there, or get the FL26 version of the pack.": "%s é um mundo para FL 2027 (%s clubes, %s jogadores). O FL26 aceita %d clubes e %d jogadores, então ele estragaria este jogo e não é instalado. Escolha a pasta do FL 2027 (Jogo ▾) e coloque-o lá, ou pegue a versão FL26 do pack.",
+  "%s is a world for FL26. FL 2027 has tables of its own, so it does not go in here. Choose FL26's folder (Game ▾), get the FL 2027 version of the pack, or open its recipe and Build it with FL 2027 as the game.": "%s é um mundo para FL26. O FL 2027 tem tabelas próprias, então ele não é instalado aqui. Escolha a pasta do FL26 (Jogo ▾), pegue a versão FL 2027 do pack, ou abra a receita dele e faça o Build com o FL 2027 como jogo.",
+  "%s is a recipe for FL 2027: choose FL 2027's folder (Game ▾) and Build there.": "%s é uma receita para FL 2027: escolha a pasta do FL 2027 (Jogo ▾) e faça o Build lá.",
+  "%s is a recipe for FL26: choose FL26's folder (Game ▾) and Build there.": "%s é uma receita para FL26: escolha a pasta do FL26 (Jogo ▾) e faça o Build lá.",
+  "Add and install": "Adicionar e instalar",
+  "Add and install adds them and builds your world": "Adicionar e instalar adiciona-as e constrói o teu mundo",
+  "Found: a world zip, %s. Install puts it in the game as a world of its own, nothing to build.": "Encontrado: um zip de mundo, %s. Instalar coloca-o no jogo como um mundo próprio, sem nada para construir.",
+  "Cup options...": "Opções das copas...",
+  "Opens My world > Cups: every cup and continental competition of the world": "Abre Meu mundo > Copas: todas as copas e competições continentais do mundo",
+  "the Conference League, its name and logo, the CAF Super Cup and the country cup draw are on the Cups tab": "a Conference League, seu nome e logo, a Supercopa da CAF e o sorteio da copa nacional estão na aba Copas",
+  "A world with nothing but the new Champions League and Europa League (league phase of 36 and play-off) and, when ticked on the Cups tab, the Conference League: no new leagues, the game's clubs and leagues as they are. Your own world is not changed.": "Um mundo só com a nova Champions League e Europa League (fase de liga de 36 e play-off) e, se marcada na aba Copas, a Conference League: sem campeonatos novos, os clubes e campeonatos do jogo como estão. Seu próprio mundo não muda.",
+  "World options: European cups, kits and faces of the new clubs": "Opções do mundo: copas europeias, uniformes e rostos dos clubes novos",
+  "All the cups on one page: the Cups tab": "Todas as copas numa página: a aba Copas",
+  "Every cup and continental competition of your world in one place. Nothing reaches the game until Build and install.": "Todas as copas e competições continentais do seu mundo num só lugar. Nada chega ao jogo até Construir e instalar.",
+  "National cups: the cups inside a country -- the national cup, super cup and league cup of your leagues and the game's, the friendly pre-season cups in July, and how the country cups are drawn.\nContinental cups: who plays the Champions League, Europa League, Conference League, Libertadores and the other continental competitions, the Conference League and the CAF Super Cup on or off.\nNames and trophies: new names, logos and trophies for the competitions.\nAdvanced: the competition ids and the order of the countries in Select Team.\n\nThe same windows are still in Leagues > More.": "Copas nacionais: as copas dentro de um país -- a copa nacional, a supercopa e a copa da liga dos seus campeonatos e dos do jogo, os torneios amistosos de pré-temporada em julho, e como as copas nacionais são sorteadas.\nCopas continentais: quem joga a Champions League, a Europa League, a Conference League, a Libertadores e as outras competições continentais, e a Conference League e a Supercopa da CAF ligadas ou não.\nNomes e troféus: novos nomes, logos e troféus para as competições.\nAvançado: os ids das competições e a ordem dos países no Select Team.\n\nAs mesmas janelas continuam em Campeonatos > Mais.",
+  "National cups": "Copas nacionais",
+  "Continental cups": "Copas continentais",
+  "Names and trophies": "Nomes e troféus",
+  "Advanced": "Avançado",
+  "The cups inside one country: a national cup, a super cup and a league cup for each league, and friendly tournaments in July.": "As copas dentro de um país: uma copa nacional, uma supercopa e uma copa da liga para cada campeonato, e torneios amistosos em julho.",
+  "New names and logos for the cups and continental competitions, and trophies of your own.": "Novos nomes e logos para as copas e competições continentais, e troféus seus.",
+  "The ids the competitions take in the game, and the order of the countries in Select Team.": "Os ids que as competições recebem no jogo, e a ordem dos países no Select Team.",
+  "Who plays the Champions League, Europa League, Conference League, Libertadores and the other continental competitions, and which of them the world has.": "Quem joga a Champions League, a Europa League, a Conference League, a Libertadores e as outras competições continentais, e quais delas o mundo tem.",
+  "The national cup, the super cup and the league cup of each top division of yours, in one table": "A copa nacional, a supercopa e a copa da liga de cada primeira divisão sua, numa tabela",
+  "Every league and cup with its ids, read only: what scoreboards, kits and Sider's competition maps ask for": "Todos os campeonatos e copas com seus ids, só leitura: o que pedem os placares, os uniformes e os mapas de competições do Sider",
+  "Which positions of every South American league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana; and the modern CONMEBOL competitions on or off": "Quais posições de cada campeonato sul-americano, os do jogo e os seus, vão para a Libertadores, sua fase preliminar e a Sul-Americana; e as competições modernas da CONMEBOL ligadas ou não",
+  "With the modern CONMEBOL competitions: places for South American countries that have no league in this world": "Com as competições modernas da CONMEBOL: vagas para países sul-americanos que não têm campeonato neste mundo",
+  "Export all players (CSV)...": "Exportar todos os jogadores (CSV)...",
+  "Every player of the world in the game, at every club and without one, in one table for Excel: ids, clubs, leagues": "Todos os jogadores do mundo que está no jogo, em cada clube e sem clube, numa só tabela para o Excel: IDs, clubes, ligas",
+  "Free agent": "Jogador livre",
+  "%d players written to %s": "%d jogadores gravados em %s",
+  "Nothing was written:": "Nada foi gravado:",
+  "Exporting all players...": "Exportando todos os jogadores...",
+  "%s is a league package made for FL 2027. FL26 has clubs of its own, so some of its clubs may be missing here. Ask its author for the FL26 version.": "%s é um pacote de ligas feito para o FL 2027. O FL26 tem os seus próprios clubes, por isso alguns dos seus clubes podem faltar aqui. Peça ao autor a versão para o FL26.",
+  "%s is a league package made for FL26. FL 2027 has clubs of its own, so some of its clubs may be missing here. Ask its author for the FL 2027 version.": "%s é um pacote de ligas feito para o FL26. O FL 2027 tem os seus próprios clubes, por isso alguns dos seus clubes podem faltar aqui. Peça ao autor a versão para o FL 2027.",
+  "%d of your leagues have game clubs this game does not have (%s): Update my leagues makes them new clubs with their NewLife squads.": "%d dos seus campeonatos têm clubes do jogo que este jogo não tem (%s): Atualizar meus campeonatos transforma-os em clubes novos com os seus plantéis da NewLife.",
+  "%d: this game has no such club": "%d: este jogo não tem esse clube",
+  "This game has no club %d (FL27 dropped 60 clubs of FL26). In a league from the NewLife Database, NewLife Database > Update my leagues makes it a new club. Otherwise put another club here.": "Este jogo não tem o clube %d (o FL27 tirou 60 clubes do FL26). Num campeonato da NewLife Database, NewLife Database > Atualizar meus campeonatos transforma-o num clube novo. Senão, ponha outro clube aqui.",
+  "Pick the clubs that play the league phase of the Champions League, Europa League and Conference League in the first season of a new career.\n\nYour clubs go in first; the game fills the rest of the 36 places as it always does. With the summer qualifying on, part of the 36 are its winners: clubs past the direct places (28 in the Champions League, 20 in the other two) play the qualifying, from the play-off down. Leave a competition empty and it is filled the usual way. From the second season on, the European places of the leagues decide who goes.\n\nThe AFC Champions League column: in the first season the clubs of your Asian leagues have no places yet, so the game puts its own Asian clubs in. The clubs you pick here take the places of the game's extra Asian clubs (up to 32); the clubs of the game's own Asian leagues stay.\n\nA club of the game must play in a league that season. Only a career started after Build gets these clubs; a career you already play keeps its own.": "Escolha os clubes que jogam a fase de liga da Champions League, da Europa League e da Conference League na primeira temporada de uma carreira nova.\n\nSeus clubes entram primeiro; o jogo preenche o resto das 36 vagas como sempre faz. Com a qualificação de verão ativa, parte das 36 vagas são dos seus vencedores: os clubes além das vagas diretas (28 na Liga dos Campeões, 20 nas outras duas) jogam a qualificação, do play-off para baixo. Deixe uma competição vazia e ela é preenchida do jeito normal. A partir da segunda temporada, as vagas europeias dos campeonatos decidem quem vai.\n\nA coluna Liga dos Campeões da AFC: na primeira temporada os clubes dos seus campeonatos asiáticos ainda não têm vagas, então o jogo coloca os seus próprios clubes asiáticos. Os clubes que escolher aqui ficam com as vagas dos clubes asiáticos extra do jogo (até 32); os clubes dos campeonatos asiáticos do próprio jogo ficam.\n\nUm clube do jogo precisa jogar num campeonato nessa temporada. Só uma carreira começada depois do Build recebe estes clubes; uma carreira que você já joga mantém os seus.",
+  "It takes %d clubs; %d more fit.": "Cabem %d clubes; cabem mais %d.",
+  "%d above capacity": "%d acima da capacidade",
+  "%d above direct places; qualifying/access rules apply": "%d acima das vagas diretas; valem as regras de fase preliminar/acesso",
+  "%d automatically filled": "%d preenchidas automaticamente",
+  "%d explicit places": "%d vagas explícitas",
+  "%d participants; %d groups.": "%d participantes; %d grupos.",
+  "%d participants; knockout.": "%d participantes; mata-mata.",
+  "%d participants; super cup.": "%d participantes; supercopa.",
+  "%d still to assign": "%d ainda a atribuir",
+  "%d values for %d clubs: enter exactly one value per club.": "%d valores para %d clubes: digite exatamente um valor por clube.",
+  "%d warnings — review technical details before confirming.": "%d avisos — revise os detalhes técnicos antes de confirmar.",
+  "%s needs %d eligible clubs for its fixed quota, but only %d are available.": "%s precisa de %d clubes elegíveis para sua cota fixa, mas só %d estão disponíveis.",
+  "%s place": "%s lugar",
+  "%s · %d included sources · %d changed places": "%s · %d fontes incluídas · %d vagas alteradas",
+  "%s — group stage": "%s — fase de grupos",
+  "%s: %d configured entries; seeding resolves their qualifying rounds.": "%s: %d entradas configuradas; os cabeças de chave definem suas fases preliminares.",
+  "%s: a new allocation uses an unavailable destination.": "%s: uma nova distribuição usa um destino indisponível.",
+  "%s: an allocation cannot resolve to an eligible club.": "%s: uma distribuição não chega a nenhum clube elegível.",
+  "%s: at most %d manual participants are supported.": "%s: são aceitos no máximo %d participantes manuais.",
+  "%s: malformed qualification row retained.": "%s: linha de classificação malformada mantida.",
+  "%s: shortage of %d eligible source positions.": "%s: faltam %d posições elegíveis na fonte.",
+  "%s: stored association data conflicts with playable top divisions; the backend requires explicit review/removal.": "%s: os dados de associação salvos conflitam com primeiras divisões jogáveis; é preciso revisá-los ou removê-los explicitamente.",
+  "%s: supported fields %s; inherited fill and the current plan determine the generated field.": "%s: tamanhos aceitos %s; o preenchimento herdado e o plano atual definem o tamanho gerado.",
+  "%s: table limit %d clubs (regulation %d)": "%s: limite da tabela %d clubes (regulamento %d)",
+  "%s: the existing backend retains native access for an empty game-league override. Exclusion is saved using the existing UEFA key, but cannot suppress that inherited access here.": "%s: para uma substituição vazia de um campeonato do jogo, o acesso nativo do jogo é mantido. A exclusão é salva com a chave UEFA existente, mas não pode suprimir esse acesso herdado aqui.",
+  "A club cannot be assigned to more than one European competition.": "Um clube não pode ser atribuído a mais de uma competição europeia.",
+  "A league was removed, renamed or changed its season/division. Discard to reload the current project.": "Um campeonato foi removido, renomeado ou mudou de temporada/divisão. Descarte para recarregar o projeto atual.",
+  "A new career has no retained previous-season champions to inject. Until eligible winners exist, those places keep the game's native/default filling. Do not add 2 extra domestic places: Build still requires 26.": "Uma carreira nova não tem campeões da temporada anterior para inserir. Enquanto não houver vencedores elegíveis, essas vagas mantêm o preenchimento nativo/padrão do jogo. Não adicione 2 vagas nacionais extras: o Build continua exigindo 26.",
+  "A new first-season club reference cannot be resolved: %s": "Uma nova referência de clube da primeira temporada não foi encontrada: %s",
+  "A qualification source was removed or is no longer eligible. Discard to reload it.": "Uma fonte de classificação foi removida ou não é mais elegível. Descarte para recarregá-la.",
+  "A world with nothing but the new Champions League and Europa League (league phase of 36 and play-off) and, when enabled in Cups > Continental > UEFA, the Conference League: no new leagues, the game's clubs and leagues as they are. Your own world is not changed.": "Um mundo só com a nova Champions League e Europa League (fase de liga de 36 e play-off) e, quando ativada em Copas > Continental > UEFA, a Conference League: sem campeonatos novos, os clubes e campeonatos do jogo como estão. Seu próprio mundo não é alterado.",
+  "Add selected clubs": "Adicionar clubes selecionados",
+  "All 10 CONMEBOL countries must have a playable top division to use automatic qualification allocation.": "Os 10 países da CONMEBOL precisam ter uma primeira divisão jogável para usar a distribuição automática de vagas.",
+  "All 89 CONMEBOL places are set in the CUPS draft. Review them, then Apply to save or Discard changes to restore.": "As 89 vagas da CONMEBOL estão definidas no rascunho CUPS. Revise-as e depois use Aplicar para salvar ou Descartar alterações para restaurar.",
+  "Allocation overview": "Visão geral da distribuição",
+  "Ambiguous top divisions: %s": "Primeiras divisões ambíguas: %s",
+  "An association rank must start at 1; no domestic cup-winner slot exists.": "Uma posição no país deve começar em 1; não existe vaga de campeão da copa nacional.",
+  "Association rank %d": "Posição no país %d",
+  "Association ranks resolve to eligible clubs at runtime, not league positions or team IDs. Available clubs: %d.": "As posições no país viram clubes elegíveis durante o jogo, não posições no campeonato nem IDs de time. Clubes disponíveis: %d.",
+  "Association without playable league": "Associação sem campeonato jogável",
+  "Auto set continental places": "Definir vagas continentais automaticamente",
+  "Available clubs": "Clubes disponíveis",
+  "Available in the selected game's tables.": "Disponível nas tabelas do jogo selecionado.",
+  "Available: %d/10": "Disponíveis: %d/10",
+  "Back to Qualification": "Voltar para Classificação",
+  "Back to playable league allocations": "Voltar à distribuição dos campeonatos jogáveis",
+  "Build may reject unresolved references. Review or remove them explicitly before building.": "O Build pode recusar referências não resolvidas. Revise-as ou remova-as explicitamente antes de construir.",
+  "CONMEBOL places exist outside the ten selected top divisions. Review them manually; they were preserved.": "Existem vagas da CONMEBOL fora das dez primeiras divisões selecionadas. Revise-as manualmente; elas foram preservadas.",
+  "Cannot auto-set continental places": "Não é possível definir as vagas continentais automaticamente",
+  "Changes are shared with Edit League.": "As alterações são compartilhadas com Editar campeonato.",
+  "Check current competition plan": "Verificar o plano atual das competições",
+  "Check plan for final field": "Verifique o plano para o tamanho final",
+  "Checking the current competition plan...": "Verificando o plano atual das competições...",
+  "Classic CONMEBOL": "CONMEBOL clássica",
+  "Classic Copa Sudamericana": "Copa Sul-Americana clássica",
+  "Classic Sudamericana places are not converted into modern places when modern mode is turned on; modern mode needs its own complete allocation.": "As vagas clássicas da Sul-Americana não são convertidas em vagas modernas quando o modo moderno é ativado; o modo moderno precisa de uma distribuição completa própria.",
+  "Classic mode: the classic Copa Sudamericana, groups of four then a knockout, for the leagues with Sudamericana places. The sudamericana_calendar setting dates it February to December; off, August to May.": "Modo clássico: a Copa Sul-Americana clássica, grupos de quatro e depois mata-mata, para os campeonatos com vagas na Sul-Americana. A opção sudamericana_calendar a coloca de fevereiro a dezembro; desativada, de agosto a maio.",
+  "Classic mode: the game's Libertadores qualifying, group stage and knockout. Original game access stays unless explicitly replaced.": "Modo clássico: a fase preliminar, a fase de grupos e o mata-mata da Libertadores do jogo. O acesso original do jogo continua, a menos que seja substituído explicitamente.",
+  "Club data could not be read. Stored selections are preserved. %s": "Não foi possível ler os dados dos clubes. As seleções salvas foram preservadas. %s",
+  "Club, league, country or team ID": "Clube, campeonato, país ou ID do time",
+  "Competition settings changed elsewhere. Your changes are kept; reopen the editor to review them.": "As configurações das competições mudaram em outro lugar. Suas alterações foram mantidas; reabra o editor para revisá-las.",
+  "Competition settings changed elsewhere. Your draft is kept; Discard reloads the current project.": "As configurações das competições mudaram em outro lugar. Seu rascunho foi mantido; Descartar recarrega o projeto atual.",
+  "Competition tables could not be read. Stored trophy assignments are preserved. %s": "Não foi possível ler as tabelas das competições. As atribuições de troféus salvas foram preservadas. %s",
+  "Competitions from this world's built tables.": "Competições das tabelas construídas deste mundo.",
+  "Complete": "Completo",
+  "Confederation": "Confederação",
+  "Conference League also has a 36-club league phase and a February play-off when included. Switching it off keeps its custom name and logo and leaves the Champions League and Europa League formats unchanged.": "Quando incluída, a Conference League também tem uma fase de liga com 36 clubes e um play-off em fevereiro. Desativá-la mantém o nome e o logo personalizados e não muda o formato da Champions League e da Europa League.",
+  "Conference League is disabled; its stored first-season clubs are retained and reserved.": "A Conference League está desativada; seus clubes da primeira temporada salvos são mantidos e reservados.",
+  "Conference League is off. Existing Conference allocations are retained as inactive data, not generated anew.": "A Conference League está desativada. As distribuições existentes para ela são mantidas como dados inativos, sem serem geradas de novo.",
+  "Continental club competition": "Competição continental de clubes",
+  "Continental club super cup": "Supercopa continental de clubes",
+  "Cup drafts have not been applied to their projects. Close and discard these drafts? To keep editing, cancel and return to Cups.": "Os rascunhos de copas não foram aplicados aos seus projetos. Fechar e descartar esses rascunhos? Para continuar editando, cancele e volte para Copas.",
+  "Cup settings changed elsewhere. Your draft is kept; Discard to reload the current project.": "As configurações das copas mudaram em outro lugar. Seu rascunho foi mantido; descarte para recarregar o projeto atual.",
+  "Current": "Atual",
+  "Current recipe plan completed successfully.": "O plano da receita atual foi concluído com sucesso.",
+  "Current: %s": "Atual: %s",
+  "Default": "Padrão",
+  "Depends on configured places. Check the current plan to see whether it is generated.": "Depende das vagas configuradas. Verifique o plano atual para saber se é gerado.",
+  "Destination %d is inactive, legacy or incompatible with the selected confederation/mode; its stored value is preserved.": "O destino %d está inativo, é antigo ou incompatível com a confederação/modo selecionado; o valor salvo foi preservado.",
+  "Direct places filled": "Vagas diretas preenchidas",
+  "Disabled; its name and logo are retained.": "Desativada; o nome e o logo são mantidos.",
+  "Discard removed league drafts": "Descartar rascunhos dos campeonatos removidos",
+  "Drafts for removed leagues are kept: %s. Undo the deletion to recover them, or discard only those drafts.": "Os rascunhos dos campeonatos removidos foram mantidos: %s. Desfaça a exclusão para recuperá-los ou descarte só esses rascunhos.",
+  "Duplicate saved club references require review: %s": "Referências de clubes salvas em duplicidade precisam de revisão: %s",
+  "Editing world: %s": "Editando o mundo: %s",
+  "Elite is shown through the existing native AFC Champions League slot (AFC_CHAMPIONS_LEAGUE, competition ID 8; access target 5). Its original game name, logos and format are preserved. A separate modern Elite format is not implemented by this engine.": "A Elite aparece pelo espaço nativo existente da AFC Champions League (AFC_CHAMPIONS_LEAGUE, ID de competição 8; destino de acesso 5). O nome, os logos e o formato originais do jogo são preservados. Este motor não implementa um formato Elite moderno separado.",
+  "Emblem for dark backgrounds. Empty uses the existing logo.": "Emblema para fundos escuros. Vazio usa o logo existente.",
+  "Emblem for light backgrounds. Empty uses the existing logo.": "Emblema para fundos claros. Vazio usa o logo existente.",
+  "Empty name or logo uses the existing default. Changes reach the game after Build and install.": "Nome ou logo vazio usa o padrão existente. As alterações chegam ao jogo depois do Build e da instalação.",
+  "Enable Modern CONMEBOL competitions before using automatic allocation.": "Ative Competições modernas da CONMEBOL antes de usar a distribuição automática.",
+  "Enable modern CONMEBOL explicitly before generating this preset.": "Ative explicitamente a CONMEBOL moderna antes de gerar esta predefinição.",
+  "European competition format": "Formato das competições europeias",
+  "European places, UEFA Ranking and first-season European participants remain available through the existing league tools. This page edits competition identities and the Conference League option.": "As vagas europeias, o Ranking da UEFA e os participantes europeus da primeira temporada continuam disponíveis nas ferramentas de campeonato existentes. Esta página edita a identidade das competições e a opção da Conference League.",
+  "Exact generated fields are available from the current plan. Checking it does not build or save the world.": "Os tamanhos exatos gerados vêm do plano atual. Verificá-lo não constrói nem salva o mundo.",
+  "Excess": "Excesso",
+  "Excluded UEFA associations": "Associações da UEFA excluídas",
+  "Existing allocations outside this ranking already exceed destination %d.": "As distribuições existentes fora deste ranking já excedem o destino %d.",
+  "Existing places in %s cannot be safely combined with this template. Review them manually.": "As vagas existentes em %s não podem ser combinadas com segurança com este modelo. Revise-as manualmente.",
+  "Explicit allocations to generate. Native fill can enlarge the final supported field; Check the plan shows its actual size.": "Distribuições explícitas a gerar. O preenchimento nativo pode aumentar o tamanho final aceito; Conferir o plano mostra o tamanho real.",
+  "Explicit configured rows pointing to this competition: %d. Inherited places, automatic fill and capacity limits are resolved by the current plan. Edit places through the existing league tools.": "Linhas configuradas explicitamente para esta competição: %d. Vagas herdadas, preenchimento automático e limites de capacidade são resolvidos pelo plano atual. Edite as vagas nas ferramentas de campeonato existentes.",
+  "Fields of eight or more use groups of four followed by a knockout; four clubs use a knockout.": "Com oito clubes ou mais: grupos de quatro e depois mata-mata; com quatro clubes, só mata-mata.",
+  "Find a league or association...": "Procurar um campeonato ou associação...",
+  "First stage: 32 assigned clubs play 16 one-match ties; the 16 winners reach the groups. Pairings stay inside a domestic source where possible; odd leftovers are paired across sources.": "Primeira fase: 32 clubes atribuídos jogam 16 confrontos em jogo único; os 16 vencedores vão para os grupos. Os pares ficam dentro de uma mesma fonte nacional quando possível; as sobras ímpares são pareadas entre fontes.",
+  "First-season clubs...": "Clubes da primeira temporada...",
+  "Fixed quotas for all ten playable CONMEBOL top divisions. Requires Modern CONMEBOL; changes only the CUPS draft.": "Cotas fixas para as dez primeiras divisões jogáveis da CONMEBOL. Requer Competições modernas da CONMEBOL; muda só o rascunho CUPS.",
+  "Game defaults and custom places": "Vagas padrão do jogo e vagas personalizadas",
+  "Generate preset...": "Gerar predefinição...",
+  "Generated with the world": "Gerado com o mundo",
+  "Group stage": "Fase de grupos",
+  "Highlighted in orange: changed qualification places": "Destacadas em laranja: vagas de classificação alteradas",
+  "How this system works": "Como este sistema funciona",
+  "If a retained champion also qualifies domestically, that domestic allocation cascades to the next eligible club of the same source rather than duplicating the champion.": "Se um campeão mantido também se classifica pelo campeonato nacional, essa vaga nacional passa para o próximo clube elegível da mesma fonte, em vez de duplicar o campeão.",
+  "Include original game clubs": "Incluir clubes originais do jogo",
+  "Paste manager names": "Colar nomes dos treinadores",
+  "Paste short names": "Colar nomes curtos",
+  "One value per line, in displayed club order. Blank = default.": "Um valor por linha, na ordem dos clubes mostrada. Vazio = o padrão.",
+  "Expected manager names: %d": "Nomes de treinadores esperados: %d",
+  "Expected short names: %d": "Nomes curtos esperados: %d",
+  "Included in this world.": "Incluído neste mundo.",
+  "Incomplete": "Incompleto",
+  "Initial participants of a new career only. These are separate from subsequent-season qualification places. The game automatically fills the remaining slots.": "Só os participantes iniciais de uma carreira nova. São separados das vagas de classificação das temporadas seguintes. O jogo preenche automaticamente as vagas restantes.",
+  "Knockout": "Mata-mata",
+  "Knockout competition; no group stage.": "Competição de mata-mata; sem fase de grupos.",
+  "League names are ambiguous. Give each league a unique name before automatic allocation.": "Os nomes dos campeonatos são ambíguos. Dê um nome único a cada campeonato antes da distribuição automática.",
+  "League phase of 36 clubs, knockout play-off and knockout rounds. Included only when Include the Conference League is on.": "Fase de liga com 36 clubes, play-off de mata-mata e fases de mata-mata. Incluída só quando Incluir a Conference League está ativado.",
+  "League phase of 36 clubs, knockout play-off and knockout rounds. The Champions League and Europa League retain this format with Conference League off.": "Fase de liga com 36 clubes, play-off de mata-mata e fases de mata-mata. A Champions League e a Europa League mantêm este formato com a Conference League desativada.",
+  "Libertadores keeps the game's qualifying, group and knockout stages. Original game qualification places remain unless explicitly overridden.": "A Libertadores mantém a fase preliminar, os grupos e o mata-mata do jogo. As vagas de classificação originais do jogo continuam, a menos que sejam substituídas explicitamente.",
+  "Libertadores transfers happen only after phase 3 (4 losers to Sudamericana groups) and after its group stage (8 thirds to the Sudamericana play-off). Phase-1 and phase-2 losers do not transfer.": "As transferências da Libertadores só acontecem depois da fase 3 (4 perdedores para os grupos da Sul-Americana) e depois da fase de grupos (8 terceiros para o play-off da Sul-Americana). Os perdedores das fases 1 e 2 não são transferidos.",
+  "Libertadores — groups and knockout": "Libertadores — grupos e mata-mata",
+  "Libertadores — qualifying phases 1, 2 and 3": "Libertadores — fase preliminar, fases 1, 2 e 3",
+  "Libertadores: 26 direct group places, 13 direct phase-2 places and 6 phase-1 places. Phase 3 has zero direct assignments; its entrants come from phase 2.": "Libertadores: 26 vagas diretas nos grupos, 13 vagas diretas na fase 2 e 6 vagas na fase 1. A fase 3 não tem atribuições diretas; seus participantes vêm da fase 2.",
+  "Line %d: %s": "Linha %d: %s",
+  "Loading competitions...": "Carregando competições...",
+  "Loading eligible clubs...": "Carregando clubes elegíveis...",
+  "Loading qualification sources...": "Carregando fontes de classificação...",
+  "Malformed stored rows are retained. Remove or replace them explicitly before applying this source.": "As linhas salvas malformadas foram mantidas. Remova-as ou substitua-as explicitamente antes de aplicar esta fonte.",
+  "Manually selected: %d / %d\nAutomatic fill: up to %d": "Seleção manual: %d / %d\nPreenchimento automático: até %d",
+  "Match rules and changing modes": "Regras das partidas e troca de modo",
+  "Missing: %s": "Faltando: %s",
+  "Mod Studio league": "Campeonato do Mod Studio",
+  "Modern CONMEBOL disables this league's native Libertadores access. Enable Own places and configure its allocations.": "A CONMEBOL moderna desativa o acesso nativo deste campeonato à Libertadores. Ative Vagas próprias e configure as distribuições dele.",
+  "Modern CONMEBOL replaces the game's default South American access with the explicitly configured package. Libertadores and Sudamericana use the February-December cycle; the classic Sudamericana calendar option does not override the modern calendar.": "A CONMEBOL moderna substitui o acesso sul-americano padrão do jogo pelo pacote configurado explicitamente. Libertadores e Sul-Americana usam o ciclo fevereiro-dezembro; a opção de calendário clássico da Sul-Americana não substitui o calendário moderno.",
+  "Modern CONMEBOL was not disabled. Your draft is kept.": "A CONMEBOL moderna não foi desativada. Seu rascunho foi mantido.",
+  "Modern Libertadores and Sudamericana knockout ties have no away-goals rule or extra time; a level tie is decided on penalties. Recopa retains its existing one-match rules.": "Os confrontos de mata-mata da Libertadores e da Sul-Americana modernas não têm gol fora de casa nem prorrogação; empate é decidido nos pênaltis. A Recopa mantém suas regras atuais de jogo único.",
+  "Modern mode is a complete package: three Libertadores qualifying phases, modern Sudamericana and Recopa. Build requires the full global allocation shown when the option is on; there are no fixed country quotas.": "O modo moderno é um pacote completo: três fases preliminares da Libertadores, Sul-Americana moderna e Recopa. O Build exige a distribuição global completa mostrada quando a opção está ativada; não há cotas fixas por país.",
+  "Modern mode off: the classic Copa Sudamericana is generated for the leagues that have Sudamericana places (groups of four, then a knockout). Custom Libertadores qualifying phases 1 and 2 and the Recopa are not generated.": "Modo moderno desativado: a Copa Sul-Americana clássica é gerada para os campeonatos que têm vagas na Sul-Americana (grupos de quatro, depois mata-mata). As fases preliminares 1 e 2 personalizadas da Libertadores e a Recopa não são geradas.",
+  "Modern mode: 32-club first stage, 32-club group stage, post-group play-off and knockout rounds. See the system guide below for transfers and required places.": "Modo moderno: primeira fase com 32 clubes, fase de grupos com 32 clubes, play-off depois dos grupos e mata-mata. Veja o guia do sistema abaixo para as transferências e as vagas necessárias.",
+  "Modern mode: three qualifying phases, eight groups of four, then knockout rounds. See the system guide below for progression, titleholders and required places.": "Modo moderno: três fases preliminares, oito grupos de quatro e depois mata-mata. Veja o guia do sistema abaixo para a progressão, os atuais campeões e as vagas necessárias.",
+  "Modern versus classic": "Moderno ou clássico",
+  "Names and logos are retained when a competition is hidden. Disabling modern mode removes modern-only places and association allocations only after Apply and the existing confirmation; classic Libertadores, qualifying and Sudamericana places remain.": "Nomes e logos são mantidos quando uma competição é ocultada. Desativar o modo moderno remove as vagas exclusivas do modo moderno e as distribuições de associações só depois de Aplicar e da confirmação existente; as vagas clássicas da Libertadores, da fase preliminar e da Sul-Americana continuam.",
+  "Native AFC Champions League access and format are retained; this UI does not invent an Elite access list.": "O acesso e o formato nativos da AFC Champions League são mantidos; esta interface não inventa uma lista de acesso para a Elite.",
+  "Native AFC Champions League places are retained; only the generated AFC cups are proposed.": "As vagas nativas da AFC Champions League são mantidas; só as copas da AFC geradas são propostas.",
+  "Native Libertadores groups: %s; qualifying: %s. These executable-managed places are retained, not an empty custom allocation.": "Grupos nativos da Libertadores: %s; fase preliminar: %s. Essas vagas controladas pelo executável são mantidas; não são uma distribuição personalizada vazia.",
+  "Native access is retained. The rows below are read-only reference; enable Own places to replace them.": "O acesso nativo é mantido. As linhas abaixo são só referência; ative Vagas próprias para substituí-las.",
+  "Native access retained; check plan": "Acesso nativo mantido; verifique o plano",
+  "Native stage limits from the selected tables: %s.": "Limites nativos das fases nas tabelas selecionadas: %s.",
+  "No editable rows. The game's inherited access is explained in How qualification works.": "Nenhuma linha editável. O acesso herdado do jogo é explicado em Como funciona a classificação.",
+  "No eligible qualification sources in this confederation.": "Nenhuma fonte de classificação elegível nesta confederação.",
+  "No explicit places": "Nenhuma vaga explícita",
+  "No leagues available.": "Nenhum campeonato disponível.",
+  "No logical qualification target is registered for this native competition. The existing game allocation is retained.": "Nenhum destino lógico de classificação está registrado para esta competição nativa. A distribuição existente do jogo é mantida.",
+  "No place": "Sem vaga",
+  "No places yet. Use Add place to assign a competition.": "Ainda não há vagas. Use Adicionar vaga para atribuir uma competição.",
+  "No qualification places were changed.": "Nenhuma vaga de classificação foi alterada.",
+  "No supported generated field was selected.": "Nenhum tamanho aceito foi selecionado.",
+  "No unapplied trophy changes.": "Nenhuma alteração de troféu pendente.",
+  "Not checked for the current values.": "Não verificado para os valores atuais.",
+  "Not found in the selected game's tables; identity editing is unavailable.": "Não encontrado nas tabelas do jogo selecionado; a edição da identidade não está disponível.",
+  "Not generated by the current plan.": "Não é gerado pelo plano atual.",
+  "One match in late February between the previous Libertadores and Sudamericana winners. Requires modern CONMEBOL and the Sudamericana. The first season normally has no previous winners; existing first-season participant settings are respected.": "Um jogo no fim de fevereiro entre os últimos campeões da Libertadores e da Sul-Americana. Requer a CONMEBOL moderna e a Sul-Americana. A primeira temporada normalmente não tem campeões anteriores; as configurações existentes de participantes da primeira temporada são respeitadas.",
+  "Original Libertadores access remains native. The classic Copa Sudamericana is built from the Sudamericana places.": "O acesso original à Libertadores continua nativo. A Copa Sul-Americana clássica é montada a partir das vagas da Sul-Americana.",
+  "Original game competition": "Competição original do jogo",
+  "Original game league": "Campeonato original do jogo",
+  "Original league/association data could not be read. Stored values are preserved. %s": "Não foi possível ler os dados originais de campeonato/associação. Os valores salvos foram preservados. %s",
+  "Other worlds have unapplied cup drafts, kept until closing. Reopen their project to resume: %s": "Outros mundos têm rascunhos de copas não aplicados, mantidos até fechar. Reabra o projeto deles para continuar: %s",
+  "Other worlds have unapplied trophy changes: %s.": "Outros mundos têm alterações de troféus não aplicadas: %s.",
+  "Participants are the winners of the corresponding competitions.": "Os participantes são os vencedores das competições correspondentes.",
+  "Phase 1: 6 assigned clubs play 3 two-leg ties. The 3 winners enter phase 2; the losers are eliminated.": "Fase 1: 6 clubes atribuídos jogam 3 confrontos de ida e volta. Os 3 vencedores vão para a fase 2; os perdedores são eliminados.",
+  "Phase 2: 13 assigned clubs plus the 3 phase-1 winners make 16 clubs. Eight two-leg ties send 8 winners to phase 3; the losers are eliminated.": "Fase 2: 13 clubes atribuídos mais os 3 vencedores da fase 1 formam 16 clubes. Oito confrontos de ida e volta levam 8 vencedores à fase 3; os perdedores são eliminados.",
+  "Phase 3 receives only phase-2 winners; no direct assignments are supported.": "A fase 3 recebe só os vencedores da fase 2; atribuições diretas não são aceitas.",
+  "Phase 3: only the 8 phase-2 winners participate, in 4 two-leg ties. The 4 winners enter Libertadores groups; the 4 losers transfer to Sudamericana groups. No league receives a direct phase-3 place.": "Fase 3: só os 8 vencedores da fase 2 participam, em 4 confrontos de ida e volta. Os 4 vencedores entram nos grupos da Libertadores; os 4 perdedores passam para os grupos da Sul-Americana. Nenhum campeonato recebe vaga direta na fase 3.",
+  "Places": "Vagas",
+  "Places can be distributed among custom leagues, original game leagues and eligible associations without a playable league. Build checks global totals, not country quotas. Enabling the option does not create the missing qualification assignments automatically.": "As vagas podem ser distribuídas entre campeonatos personalizados, campeonatos originais do jogo e associações elegíveis sem campeonato jogável. O Build verifica os totais globais, não cotas por país. Ativar a opção não cria automaticamente as vagas de classificação que faltam.",
+  "Plan checked for the current values. Nothing was built or saved.": "Plano verificado para os valores atuais. Nada foi construído nem salvo.",
+  "Position %d": "Posição %d",
+  "Preserved Libertadores qualifying/phase-3 legacy rows conflict with modern access. Review them explicitly before using this preset.": "Linhas antigas preservadas da fase preliminar/fase 3 da Libertadores conflitam com o acesso moderno. Revise-as explicitamente antes de usar esta predefinição.",
+  "Proposed": "Proposto",
+  "Proposed: %s": "Proposto: %s",
+  "Qualification": "Classificação",
+  "Qualification source": "Fonte de classificação",
+  "Qualification sources could not be validated; the draft is kept. %s": "Não foi possível validar as fontes de classificação; o rascunho foi mantido. %s",
+  "Qualifying": "Fase preliminar",
+  "Qualifying rounds and overflow use the existing access list and seeding. Check the current plan for the resolved rounds.": "As fases preliminares e o excedente usam a lista de acesso e os cabeças de chave existentes. Verifique o plano atual para ver as fases resolvidas.",
+  "Ranking validated for the CUPS draft": "Ranking validado para o rascunho CUPS",
+  "Ranks select eligible clubs automatically; they are not league positions.": "As posições escolhem clubes elegíveis automaticamente; não são posições no campeonato.",
+  "Read-only. Turn on custom places to edit the table.": "Somente leitura. Ative as vagas personalizadas para editar a tabela.",
+  "Ready for draft": "Pronto para o rascunho",
+  "Recopa is one match in late February between the previous Libertadores and Sudamericana champions. It requires modern Sudamericana and respects the existing Recopa enable/disable setting.": "A Recopa é um jogo no fim de fevereiro entre os últimos campeões da Libertadores e da Sul-Americana. Requer a Sul-Americana moderna e respeita a opção existente de ativar/desativar a Recopa.",
+  "Remove selected clubs": "Remover clubes selecionados",
+  "Remove the incompatible saved association override explicitly; configure the playable league's own places instead.": "Remova explicitamente a substituição de associação salva incompatível; configure as vagas próprias do campeonato jogável.",
+  "Required qualification places": "Vagas de classificação necessárias",
+  "Resolved by access list and seeding": "Definido pela lista de acesso e pelos cabeças de chave",
+  "Review required — proposal cannot be confirmed": "Revisão necessária — a proposta não pode ser confirmada",
+  "Review saved association allocations...": "Revisar distribuições de associações salvas...",
+  "Review the stored association records that now belong to playable countries before generating a preset; no legacy record was migrated or removed.": "Revise os registros de associações salvos que agora pertencem a países jogáveis antes de gerar uma predefinição; nenhum registro antigo foi migrado nem removido.",
+  "Review validation warnings in Show technical details.": "Revise os avisos de validação em Mostrar detalhes técnicos.",
+  "Selected fields specify explicit allocations. Existing fill and the current plan may change the final field; review before Build.": "Os tamanhos selecionados definem distribuições explícitas. O preenchimento existente e o plano atual podem mudar o tamanho final; revise antes do Build.",
+  "Selection exceeds the competition's capacity; nothing was added.": "A seleção excede a capacidade da competição; nada foi adicionado.",
+  "Set custom qualification places": "Definir vagas de classificação personalizadas",
+  "Short names take up to three letters or digits only.": "Nomes curtos aceitam no máximo três letras ou dígitos.",
+  "Show associations without qualification changes": "Mostrar associações sem mudanças de classificação",
+  "Show unchanged sources": "Mostrar fontes sem alteração",
+  "Some draft leagues were removed: %s. Undo the deletion to recover them, or use Discard removed league drafts in Qualification. Other edits are kept.": "Alguns campeonatos do rascunho foram removidos: %s. Desfaça a exclusão para recuperá-los ou use Descartar rascunhos dos campeonatos removidos em Classificação. As outras edições foram mantidas.",
+  "Some game defaults remain active alongside these custom places. See How qualification works.": "Algumas vagas padrão do jogo continuam ativas junto com estas vagas personalizadas. Veja Como funciona a classificação.",
+  "Stage": "Fase",
+  "Status": "Situação",
+  "Stored Libertadores qualifying entries are incompatible with this template. Review them manually; they were preserved.": "As entradas salvas da fase preliminar da Libertadores são incompatíveis com este modelo. Revise-as manualmente; elas foram preservadas.",
+  "Stored association allocations": "Distribuições de associações salvas",
+  "Stored association allocations need manual review before this action. They were not replaced or used as substitutes for playable leagues.": "As distribuições de associações salvas precisam de revisão manual antes desta ação. Elas não foram substituídas nem usadas no lugar de campeonatos jogáveis.",
+  "Stored association ranks are retained under their original key. This country now has a playable league; review these legacy rows explicitly. They are not a new league-less source.": "As posições de associação salvas são mantidas sob a chave original. Este país agora tem um campeonato jogável; revise explicitamente essas linhas antigas. Elas não são uma nova fonte sem campeonato.",
+  "Stored destination is retained, but unavailable for new assignments in this mode.": "O destino salvo é mantido, mas não está disponível para novas atribuições neste modo.",
+  "Stored qualification rows need manual review before automatic allocation.": "As linhas de classificação salvas precisam de revisão manual antes da distribuição automática.",
+  "Stored source %s is unavailable here; its data is preserved and is not counted. Check the current plan.": "A fonte salva %s não está disponível aqui; seus dados são preservados e não são contados. Verifique o plano atual.",
+  "Stored trophy configuration is invalid. It has been preserved; fix the recipe before applying trophy changes.": "A configuração de troféus salva é inválida. Ela foi preservada; corrija a receita antes de aplicar alterações de troféus.",
+  "Stored trophy references need review: %s. They are preserved until you explicitly change or clear them.": "As referências de troféus salvas precisam de revisão: %s. Elas são preservadas até você alterá-las ou apagá-las explicitamente.",
+  "Sudamericana places in the league editors fill the classic Copa Sudamericana. The setting sudamericana_calendar dates it like the Libertadores (February to December); off, it plays August to May.": "As vagas da Sul-Americana nos editores de campeonato preenchem a Copa Sul-Americana clássica. A opção sudamericana_calendar a coloca como a Libertadores (de fevereiro a dezembro); desativada, ela é jogada de agosto a maio.",
+  "Sudamericana — first stage and groups": "Sul-Americana — primeira fase e grupos",
+  "Sudamericana — transfers, play-off and knockout": "Sul-Americana — transferências, play-off e mata-mata",
+  "Sudamericana: 12 direct group places and 32 first-stage places. The remaining group and knockout entrants come from the progression described above.": "Sul-Americana: 12 vagas diretas nos grupos e 32 vagas na primeira fase. Os demais participantes dos grupos e do mata-mata vêm da progressão descrita acima.",
+  "Summer qualification rounds are selected by the existing access list; they are stages of this competition.": "As fases preliminares de verão são escolhidas pela lista de acesso existente; são fases desta competição.",
+  "Summer rounds in the current plan: %s (%d clubs per round).": "Fases de verão no plano atual: %s (%d clubes por fase).",
+  "Supported fields: %s clubs. The current plan determines the field.": "Tamanhos aceitos: %s clubes. O plano atual define o tamanho.",
+  "Switching to modern mode": "Mudar para o modo moderno",
+  "The 32-club group field is 26 configured direct places, 4 phase-3 winners and 2 protected previous-season titleholder places. There are 8 groups of 4.": "Os 32 clubes dos grupos são 26 vagas diretas configuradas, 4 vencedores da fase 3 e 2 vagas protegidas dos atuais campeões da temporada anterior. São 8 grupos de 4.",
+  "The 8 Sudamericana group winners go straight to the round of 16. The 8 group runners-up face the 8 Libertadores group thirds in 8 two-leg play-off ties.": "Os 8 primeiros colocados dos grupos da Sul-Americana vão direto para as oitavas de final. Os 8 segundos colocados enfrentam os 8 terceiros dos grupos da Libertadores em 8 confrontos de play-off de ida e volta.",
+  "The active world changed. No competition changes were applied.": "O mundo ativo mudou. Nenhuma alteração de competição foi aplicada.",
+  "The complete fixed allocation could not be validated. Review existing qualification places first.": "Não foi possível validar a distribuição fixa completa. Revise primeiro as vagas de classificação existentes.",
+  "The domestic cup for %s cannot be safely used by this template. Review its configuration first.": "A copa nacional de %s não pode ser usada com segurança por este modelo. Revise primeiro a configuração dela.",
+  "The domestic cup source for %s is ambiguous. Review its divisions first.": "A fonte da copa nacional de %s é ambígua. Revise primeiro as divisões dela.",
+  "The existing CONMEBOL mode is invalid: %s. Check the current plan before building.": "O modo CONMEBOL existente é inválido: %s. Verifique o plano atual antes de construir.",
+  "The first Recopa normally stays unplayed because a new career has no previous winners. Existing first-season participant overrides can supply the two clubs as fallbacks; retained winners take priority once available.": "A primeira Recopa normalmente não é jogada porque uma carreira nova não tem campeões anteriores. As substituições existentes de participantes da primeira temporada podem fornecer os dois clubes como reserva; os campeões mantidos têm prioridade assim que existirem.",
+  "The first two in each group reach the round of 16, followed by quarter-finals, semi-finals and the final. The 8 group thirds enter the Sudamericana post-group play-off; group fourths are eliminated.": "Os dois primeiros de cada grupo vão para as oitavas de final, depois quartas de final, semifinais e final. Os 8 terceiros dos grupos vão para o play-off da Sul-Americana depois dos grupos; os quartos colocados são eliminados.",
+  "The game or league data could not be verified. No qualification places were changed.": "Não foi possível verificar os dados do jogo ou do campeonato. Nenhuma vaga de classificação foi alterada.",
+  "The game tables changed. Your draft is kept; Discard to reload the current project.": "As tabelas do jogo mudaram. Seu rascunho foi mantido; descarte para recarregar o projeto atual.",
+  "The game tables changed. Your trophy draft is kept; Discard changes reloads the current world.": "As tabelas do jogo mudaram. Seu rascunho de troféus foi mantido; Descartar alterações recarrega o mundo atual.",
+  "The game's leagues changed. Discard to reload the current project.": "Os campeonatos do jogo mudaram. Descarte para recarregar o projeto atual.",
+  "The game's tables are unpacked.": "As tabelas do jogo foram extraídas.",
+  "The game's tables are not unpacked yet.": "As tabelas do jogo ainda não foram extraídas.",
+  "The game's tables must be available to verify the ten top divisions.": "As tabelas do jogo precisam estar disponíveis para verificar as dez primeiras divisões.",
+  "The group field has 32 clubs: 12 configured direct places, 16 first-stage winners and the 4 Libertadores phase-3 losers. They play in 8 groups of 4.": "Os grupos têm 32 clubes: 12 vagas diretas configuradas, 16 vencedores da primeira fase e os 4 perdedores da fase 3 da Libertadores. Eles jogam em 8 grupos de 4.",
+  "The national cup changed elsewhere. Discard to reload the current project before enabling its super cup.": "A copa nacional mudou em outro lugar. Descarte para recarregar o projeto atual antes de ativar a supercopa dela.",
+  "The plan could not be completed: %s": "O plano não pôde ser concluído: %s",
+  "The previous Libertadores and Sudamericana champions occupy the 2 protected Libertadores group places. The runtime retains those winners across the calendar-year rollover and protects them before assigning domestic access.": "Os últimos campeões da Libertadores e da Sul-Americana ocupam as 2 vagas protegidas nos grupos da Libertadores. O jogo guarda esses campeões na virada do ano-calendário e os protege antes de atribuir o acesso nacional.",
+  "The project changed while previewing. Generate the preset again; nothing was applied.": "O projeto mudou durante a prévia. Gere a predefinição de novo; nada foi aplicado.",
+  "The project changed while reviewing UEFA Ranking. Open the ranking again; nothing was applied.": "O projeto mudou durante a revisão do Ranking da UEFA. Abra o ranking de novo; nada foi aplicado.",
+  "The selected allocation size is not supported by the existing competition.": "O tamanho de distribuição selecionado não é aceito pela competição existente.",
+  "The selected qualification sources changed or contain incompatible places. Review them before automatic allocation.": "As fontes de classificação selecionadas mudaram ou contêm vagas incompatíveis. Revise-as antes da distribuição automática.",
+  "The trophy folder is invalid. Your draft is kept.": "A pasta de troféus é inválida. Seu rascunho foi mantido.",
+  "The world changed during automatic allocation. Try again; no qualification places were changed.": "O mundo mudou durante a distribuição automática. Tente de novo; nenhuma vaga de classificação foi alterada.",
+  "These are the same qualification fields used by Edit League. Cup-winner places cascade through this domestic source.": "Estes são os mesmos campos de classificação usados em Editar campeonato. As vagas do campeão da copa passam adiante dentro desta fonte nacional.",
+  "This backend retains native access for empty or generated-cup-only overrides. The table edits your stored rows only; inherited entries still count in the overview. Explicit native destinations replace native access.": "O acesso nativo é mantido para substituições vazias ou só com copas geradas. A tabela edita só as suas linhas salvas; as entradas herdadas continuam contando na visão geral. Destinos nativos explícitos substituem o acesso nativo.",
+  "This competition has ambiguous trophy keys. Clear its assignment explicitly before assigning another folder.": "Esta competição tem chaves de troféu ambíguas. Limpe explicitamente a atribuição dela antes de atribuir outra pasta.",
+  "This competition is not in the selected game's tables. Your draft is kept.": "Esta competição não está nas tabelas do jogo selecionado. Seu rascunho foi mantido.",
+  "Those 8 play-off winners join the 8 Sudamericana group winners in the round of 16, then quarter-finals, semi-finals and the final. Sudamericana group thirds and fourths are eliminated.": "Esses 8 vencedores do play-off se juntam aos 8 primeiros dos grupos da Sul-Americana nas oitavas de final, depois quartas de final, semifinais e final. Os terceiros e quartos dos grupos da Sul-Americana são eliminados.",
+  "Titleholder places and Recopa participants are supplied by competition results, not extra league assignments. The classic Libertadores qualifying destination cannot be mixed with the modern phase-1/phase-2 allocation.": "As vagas dos atuais campeões e os participantes da Recopa vêm dos resultados das competições, não de atribuições extras de campeonato. O destino clássico da fase preliminar da Libertadores não pode ser misturado com a distribuição moderna das fases 1 e 2.",
+  "Titleholders and the first season": "Atuais campeões e a primeira temporada",
+  "Trophy assignments changed elsewhere. Your draft is kept; Discard changes reloads the current world.": "As atribuições de troféus mudaram em outro lugar. Seu rascunho foi mantido; Descartar alterações recarrega o mundo atual.",
+  "Trophy changes have not been applied to their worlds. Close and discard these drafts? Cancel to keep editing in Game content > Trophies.": "As alterações de troféus não foram aplicadas aos seus mundos. Fechar e descartar esses rascunhos? Cancelar para continuar editando em Conteúdo do jogo > Troféus.",
+  "Two clubs, one match in late July: CAF Champions League winner versus Confederation Cup winner. Requires both African cups and CAF Super Cup on. First played in the second season, after both cups have a winner.": "Dois clubes, um jogo no fim de julho: o campeão da CAF Champions League contra o campeão da Copa das Confederações. Requer as duas copas africanas e a Supercopa da CAF ativadas. Jogada pela primeira vez na segunda temporada, quando as duas copas já têm um campeão.",
+  "UEFA association order": "Ordem das associações da UEFA",
+  "UEFA association order, exclusions and qualifying seeding are included in this proposal.": "A ordem das associações da UEFA, as exclusões e os cabeças de chave da fase preliminar estão incluídos nesta proposta.",
+  "UEFA ranking and seeding will also be updated.": "O ranking e os cabeças de chave da UEFA também serão atualizados.",
+  "UEFA ranking · %d included associations · %d qualification changes": "Ranking da UEFA · %d associações incluídas · %d mudanças de classificação",
+  "UEFA ranking...": "Ranking da UEFA...",
+  "UEFA seeding": "Cabeças de chave da UEFA",
+  "Unapplied changes (kept until closing).": "Alterações não aplicadas (mantidas até fechar).",
+  "Unapplied cup changes": "Alterações de copas não aplicadas",
+  "Unapplied trophy changes": "Alterações de troféus não aplicadas",
+  "Unapplied trophy changes. Apply keeps them in this world's recipe; Build copies the assets into the world.": "Alterações de troféus não aplicadas. Aplicar as guarda na receita deste mundo; o Build copia os arquivos para o mundo.",
+  "Unavailable": "Indisponível",
+  "Unavailable destination": "Destino indisponível",
+  "Unavailable in the selected mode or disabled by existing world settings.": "Indisponível no modo selecionado ou desativado pelas configurações existentes do mundo.",
+  "Unchanged": "Sem alteração",
+  "Unresolved reference — %s (preserved)": "Referência não resolvida — %s (preservada)",
+  "Unresolved saved references are preserved until explicitly removed: %s": "As referências salvas não resolvidas são preservadas até serem removidas explicitamente: %s",
+  "Use the game's default qualification places": "Usar as vagas de classificação padrão do jogo",
+  "Uses the game's existing competition format. This page does not change its stages or participant limits.": "Usa o formato de competição existente do jogo. Esta página não muda as fases nem os limites de participantes.",
+  "Uses the game's existing super cup format and participants.": "Usa o formato e os participantes existentes da supercopa do jogo.",
+  "Values changed while checking. Check the plan again for current information.": "Os valores mudaram durante a verificação. Verifique o plano de novo para ter informações atuais.",
+  "When qualifying is enabled, manual clubs beyond the direct slots enter the existing qualifying rounds. Build resolves those rounds.": "Quando a fase preliminar está ativada, os clubes manuais além das vagas diretas entram nas fases preliminares existentes. O Build resolve essas fases.",
+  "Your draft is kept. Apply checks changes made elsewhere; Discard reloads the current project.": "Seu rascunho foi mantido. Aplicar verifica as alterações feitas em outro lugar; Descartar recarrega o projeto atual.",
+  "How qualification works": "Como funciona a classificação",
+  "Show technical details": "Mostrar detalhes técnicos",
+  "World options: country cups, kits and faces of the new clubs": "Opções do mundo: copas dos países, uniformes e rostos dos clubes novos",
+  "Trophy assignments for the selected world. A competition with no folder keeps its existing trophy.": "Atribuições de troféus do mundo selecionado. Uma competição sem pasta mantém o troféu existente.",
+  "That did not work (an unexpected error). Send this file with your report: %s": "Isso não funcionou (um erro inesperado). Envie este ficheiro com o seu relatório: %s",
+  "Files you added to the world's folder or changed in it are not in the new version: Mod Studio keeps a copy of them and tells you where.": "Os ficheiros que adicionaste à pasta do mundo ou que alteraste nela não estão na nova versão: o Mod Studio guarda uma cópia e diz-te onde.",
+  "%s: %d file(s) you had added or changed are not in the version installed now. Nothing was deleted: they are kept in %s": "%s: %d ficheiro(s) que tinhas adicionado ou alterado não estão na versão instalada agora. Nada foi apagado: estão guardados em %s",
+  "Keep what you changed for this player now. The game shows it after Build.": "Guarda agora o que alteraste neste jogador. O jogo mostra-o depois do Build.",
+  "Saved. The game shows it after Build.": "Guardado. O jogo mostra-o depois do Build.",
+  "Could not save your world: check the folder it is saved in.": "Não foi possível guardar o teu mundo: verifica a pasta onde é guardado.",
+  "This world came from a zip. To change it, first use My world > Make it editable... Changes to leagues, clubs, cups and settings made before that are not kept (players' names and edits are).": "Este mundo veio de um zip. Para mudá-lo, use primeiro Meu mundo > Torná-lo editável... As mudanças em ligas, clubes, copas e configurações feitas antes disso não ficam (os nomes dos jogadores e suas edições ficam).",
+  "%d ids retired in the recipe (id_retire).": "%d ids retirados na receita (id_retire).",
+  "%d players of the version you have are not in this one (taken out on purpose, as two copies of one player): in a career their place may show a stand-in player.": "%d jogadores da versão que você tem não estão nesta (retirados de propósito, como duas cópias do mesmo jogador): numa carreira o lugar deles pode mostrar um jogador genérico.",
+  "%s is updated and ready to play. Press Start the game and load your career, or start a new Master League.": "%s está atualizado e pronto para jogar. Clique em Iniciar o jogo e carregue a sua carreira, ou comece uma nova Master League.",
+  "%s → %s": "%s → %s",
+  "%s: an update of the world %s you have (%s)": "%s: uma atualização do mundo %s que você tem (%s)",
+  "Ids: kept as in %s, the version you shared last -- its careers go on with this Build (the players are checked at the Build).": "Ids: mantidos como em %s, a última versão que você partilhou; as carreiras dela continuam com esta Construção (os jogadores são verificados na Construção).",
+  "Its author's first version that keeps track of ids cannot promise that.": "A primeira versão do autor que regista os ids não o pode garantir.",
+  "Press Start the game and load your career: it goes on with this version. What is new (leagues, clubs, structure) shows only in a new Master League. No Build needed.": "Clique em Iniciar o jogo e carregue a sua carreira: continua com esta versão. O que é novo (ligas, clubes, estrutura) só aparece numa nova Master League. Não é preciso Construção.",
+  "Retire these and Build again": "Retirá-los e construir de novo",
+  "The version of this zip (players see it when they install it). This is the first version that keeps track of the world's ids: the next one you share can then update it without breaking careers.": "A versão deste zip (os jogadores veem-na ao instalá-lo). É a primeira versão que regista os ids do mundo: a próxima que você partilhar poderá atualizá-la sem estragar carreiras.",
+  "The version of this zip (players see it when they install it; the version you shared last was %s):": "A versão deste zip (os jogadores veem-na ao instalá-lo; a última que você partilhou foi %s):",
+  "This Build would break the careers of %s: %d of its ids are gone and the recipe does not retire them.\n\n%s\n\nIf they went on purpose (a club or a player taken out, two copies of one player made one), retire them: careers of %s go on, and may show a stand-in player where one who went was. Otherwise put them back and Build again.": "Esta Construção estragaria as carreiras de %s: faltam %d dos seus ids e a receita não os retira.\n\n%s\n\nSe saíram de propósito (um clube ou jogador retirado, duas cópias de um jogador juntas), retire-os: as carreiras de %s continuam e podem mostrar um jogador genérico onde estava o que saiu. Caso contrário, volte a pô-los e construa de novo.",
+  "This Build would change ids the careers of %s hold, and that cannot be retired:\n\n%s\n\nPut them back as they were, then Build again.": "Esta Construção mudaria ids que as carreiras de %s usam, e isso não pode ser retirado:\n\n%s\n\nVolte a deixá-los como estavam e construa de novo.",
+  "Update": "Atualizar",
+  "Update %s: %s.": "Atualizar %s: %s.",
+  "Update (%s): the version you have is replaced by this one. Your careers stay and continue. New leagues, clubs and structure show only in a new Master League.": "Atualização (%s): a versão que você tem é substituída por esta. As suas carreiras ficam e continuam. Novas ligas, clubes e estrutura só aparecem numa nova Master League.",
+  "Version %s. Careers of %s do NOT go on in it (ids gone: %s): Install tells those players to start a new Master League.": "Versão %s. As carreiras de %s NÃO continuam nela (ids em falta: %s): Instalar diz a esses jogadores para começarem uma nova Master League.",
+  "Version %s. Careers of %s go on in it: Install offers those players an Update.": "Versão %s. As carreiras de %s continuam nela: Instalar oferece a esses jogadores uma Atualização.",
+  "Version %s. It is the first that keeps track of the world's ids: an Install of it over an older version is an Update only where the ids are the same.": "Versão %s. É a primeira que regista os ids do mundo: instalá-la sobre uma versão mais antiga só é uma Atualização onde os ids são os mesmos.",
+  "Warning: Mod Studio cannot tell the ids of the version you have, so a career of it may not continue in this one.": "Aviso: o Mod Studio não consegue saber os ids da versão que você tem, por isso uma carreira dela pode não continuar nesta.",
+  "Warning: this plan drops ids of %s, the version you shared last (%s). Build will stop and ask you to retire them, or put them back:": "Aviso: este plano perde ids de %s, a última versão que você partilhou (%s). A Construção vai parar e pedir para os retirar, ou volte a pô-los:",
+  "Warning: this version does not keep all ids of the one you have (gone or changed: %s). A career of the version you have may break in it.": "Aviso: esta versão não mantém todos os ids da que você tem (em falta ou mudados: %s). Uma carreira da versão que você tem pode estragar-se com ela.",
+  "Your careers stay and continue: your saves and the world's save folder are not touched, and the version you have is replaced by this one. New leagues, clubs and structure show only in a new Master League.": "As suas carreiras ficam e continuam: os seus saves e a pasta de saves do mundo não são tocados, e a versão que você tem é substituída por esta. Novas ligas, clubes e estrutura só aparecem numa nova Master League.",
+  "cups": "taças",
+  "ids given to someone else": "ids dados a outro",
+  "leagues": "ligas",
+  "players": "jogadores",
+  "retired at the Build of %s": "retirado na Construção de %s",
+  "the version you have → %s": "a versão que você tem → %s",
+  "the version you shared last": "a última versão que você partilhou",
+  "✓ Updated: press Start the game and load your career": "✓ Atualizado: clique em Iniciar o jogo e carregue a sua carreira",
+  "%d players of the version you have are not in this one (its author took them out). In a career their place may show a stand-in player.": "%d jogadores da versão que você tem não estão nesta (o autor os retirou). Numa carreira o lugar deles pode mostrar um jogador genérico.",
+  "%d players of the version you have are not in this one (its author took them out: %s). In a career their place may show a stand-in player.": "%d jogadores da versão que você tem não estão nesta (o autor os retirou: %s). Numa carreira o lugar deles pode mostrar um jogador genérico.",
+  "%s: another world with the name %s you have": "%s: outro mundo com o nome %s que você tem",
+  "A test zip: do not keep its ids as the version I shared last": "Um zip de teste: não guardar os ids dele como a última versão que partilhei",
+  "A test zip: its ids are not kept as the version you shared last.": "Um zip de teste: os ids dele não são guardados como a última versão que você partilhou.",
+  "An Edit save from before this update is in the game's save folder.": "Há um save do Edit de antes desta atualização na pasta de saves do jogo.",
+  "Careers of %s do not go on in %s. Keep %s as the version you shared last anyway? The next Build then keeps its ids instead of those of %s.": "As carreiras de %s não continuam em %s. Guardar %s como a última versão que você partilhou mesmo assim? A próxima Construção mantém então os ids dela em vez dos de %s.",
+  "Clubs, leagues or cups: retired, they are no longer in this version, so a career of %s that has them cannot go on in it -- Install offers those players Replace (a new Master League), not Update.": "Clubes, ligas ou taças: retirados, já não estão nesta versão, por isso uma carreira de %s que os tenha não pode continuar nela: a instalação oferece a esses jogadores Substituir (uma nova Master League), não Atualizar.",
+  "For a new Master League with this version: move it aside -- made for the version before, it can stop a new Master League in the season or leave a club without its players.": "Para uma nova Master League com esta versão: ponha-o de lado; feito para a versão anterior, pode parar uma nova Master League na temporada ou deixar um clube sem os seus jogadores.",
+  "Its author says why: %s.": "O autor diz porquê: %s.",
+  "Keep it": "Manter",
+  "Move it aside": "Pôr de lado",
+  "Otherwise put them back and Build again.": "Caso contrário, volte a pô-los e construa de novo.",
+  "Players: if they went on purpose (taken out, two copies of one player made one), retire them -- careers of %s go on, and may show a stand-in player where one who went was.": "Jogadores: se saíram de propósito (retirados, duas cópias do mesmo jogador juntadas numa), retire-os: as carreiras de %s continuam e podem mostrar um jogador genérico onde estava o que saiu.",
+  "Press Start the game and load your career: it goes on with this version. For all that is new in it, start a new Master League. No Build needed.": "Clique em Iniciar o jogo e carregue a sua carreira: ela continua com esta versão. Para tudo o que é novo nela, comece uma nova Master League. Não é preciso construir.",
+  "Retire the players of %s anyway? Their careers lose them.": "Retirar mesmo assim os jogadores de %s? As carreiras perdem-nos.",
+  "The export stopped: the world's id ledger cannot be read.": "A exportação parou: o registo de ids do mundo não pode ser lido.",
+  "The ids of %s are kept for the next Build and export.": "Os ids de %s ficam guardados para a próxima Construção e exportação.",
+  "The ids of %s were not kept:": "Os ids de %s não foram guardados:",
+  "These leagues are played another way in this version (clubs, rounds, promotion or relegation): %s. A career's season running now was laid out the old way and may not go right; this is not checked in the game.": "Estas ligas jogam-se de outra forma nesta versão (clubes, rondas, subidas ou descidas): %s. A temporada em curso de uma carreira foi preparada da forma antiga e pode não correr bem; isto não está verificado no jogo.",
+  "This Build would break the careers of %s: %d of its ids are gone and the recipe does not retire them.\n\n%s": "Esta Construção estragaria as carreiras de %s: %d dos ids dela desapareceram e a receita não os retira.\n\n%s",
+  "This is the version you have: it goes in again.": "É a versão que você tem: é instalada de novo.",
+  "To continue your career: keep it -- your career uses it.": "Para continuar a sua carreira: mantenha-o; a sua carreira usa-o.",
+  "Update (%s): the version you have is replaced by this one. Your careers stay: every club, league, cup and player id they hold is still there. What a running career shows of this version's changes is not checked in the game; for all that is new, start a new Master League.": "Atualizar (%s): a versão que você tem é substituída por esta. As suas carreiras ficam: todos os ids de clubes, ligas, taças e jogadores que usam continuam lá. O que uma carreira em curso mostra das mudanças desta versão não está verificado no jogo; para tudo o que é novo, comece uma nova Master League.",
+  "Version %s. Careers of %s do NOT go on in it (ids gone or retired: %s): Install tells those players to start a new Master League.": "Versão %s. As carreiras de %s NÃO continuam nela (ids em falta ou retirados: %s): a instalação diz a esses jogadores para começarem uma nova Master League.",
+  "WARNING: %d club(s) still in the world lost most of their players' ids (%s). That is most likely a squad Build did not follow, not players taken out: retiring them gives the whole squad new ids.": "AVISO: %d clube(s) que continuam no mundo perderam a maioria dos ids dos jogadores (%s). O mais provável é um plantel que a Construção não seguiu, não jogadores retirados: retirá-los dá ids novos a todo o plantel.",
+  "Warning: this is an older version (%s) than the one you have (%s). A career of the one you have does not continue in it.": "Aviso: esta é uma versão mais antiga (%s) do que a que você tem (%s). Uma carreira da que você tem não continua nela.",
+  "Warning: this is another world with the same name, not a later version of the one you have. A career of the one you have does not continue in it.": "Aviso: este é outro mundo com o mesmo nome, não uma versão posterior do que você tem. Uma carreira do que você tem não continua nele.",
+  "Warning: this version takes out clubs, leagues or cups of the one you have (%s). A career that has them does not continue in it, so it replaces the one you have.": "Aviso: esta versão retira clubes, ligas ou taças da que você tem (%s). Uma carreira que os tenha não continua nela, por isso substitui a que você tem.",
+  "Your careers stay: your saves and the world's save folder are not touched, and the version you have is replaced by this one, which keeps every club, league, cup and player id a career of it holds. What a running career shows of this version's changes is not checked in the game; for all that is new, start a new Master League.": "As suas carreiras ficam: os seus saves e a pasta de saves do mundo não são tocados, e a versão que você tem é substituída por esta, que mantém todos os ids de clubes, ligas, taças e jogadores que uma carreira dela usa. O que uma carreira em curso mostra das mudanças desta versão não está verificado no jogo; para tudo o que é novo, comece uma nova Master League.",
+  "%d clubs have another name under the same id (%s): a career sees each as the same club.": "%d clubes têm outro nome com o mesmo id (%s): uma carreira vê cada um como o mesmo clube.",
+  "%s: a version of the world %s that does not follow the one you have": "%s: uma versão do mundo %s que não segue a que você tem",
+  "%s: a world with the name %s you have, not a later version of it": "%s: um mundo com o nome %s que você tem, não uma versão posterior dele",
+  "A different world": "Outro mundo",
+  "A test zip: do not keep its ids as the version I shared last. It still takes a number of the world's versions, and a tester who has it gets Replace, not Update, for the next real version unless that version has exactly the same ids": "Um zip de teste: não guardar os ids dele como a última versão que partilhei. Mesmo assim toma um número das versões do mundo, e quem o tiver recebe Substituir, não Atualizar, para a próxima versão real, a não ser que essa versão tenha exatamente os mesmos ids",
+  "A test zip: its ids are not kept as the version you shared last, and its number is not given to another zip.": "Um zip de teste: os ids dele não são guardados como a última versão que você partilhou, e o número dele não é dado a outro zip.",
+  "Checking the plan...": "Verificando o plano...",
+  "Ids of the world": "Ids do mundo",
+  "It is that world": "É esse mundo",
+  "It is that world: this Build and export follow version %s and keep its ids (Install offers an Update where they are kept). A different world: its ids are left out and this one starts its own.": "É esse mundo: esta construção e a exportação seguem a versão %s e mantêm os ids dela (Instalar oferece Atualizar onde forem mantidos). Outro mundo: os ids dela ficam de fora e este começa com os seus.",
+  "Saved in the recipe: press the button again.": "Guardado na receita: carrega no botão outra vez.",
+  "The export stopped: the ids of the version shared before cannot be read.": "A exportação parou: não é possível ler os ids da versão partilhada antes.",
+  "Warning: Mod Studio cannot tell that this is a later version of the one you have: it is another world with the same name, or one its author made again without the ids of yours. A career of the one you have does not continue in it.": "Atenção: o Mod Studio não consegue saber se esta é uma versão posterior da que você tem: é outro mundo com o mesmo nome, ou um que o autor refez sem os ids do seu. Uma carreira da que você tem não continua nele.",
+  "Warning: this version (%s) and the one you have (%s) both come after an earlier version, but the one you have is not one this version was made from (a test zip, or a version made on another PC). Its ids may stand for other clubs and players, so it replaces the one you have and a career of the one you have does not continue in it.": "Atenção: esta versão (%s) e a que você tem (%s) vêm ambas depois de uma versão anterior, mas esta versão não foi feita a partir da sua (um zip de teste, ou uma versão feita noutro PC). Os ids dela podem ser de outros clubes e jogadores, por isso substitui a que você tem e uma carreira da sua não continua nela.",
+  "%d new league(s) and cup(s) appear only in a new Master League; your careers go on without them.": "%d nova(s) liga(s) e taça(s) só aparecem numa nova Master League; as suas carreiras continuam sem elas.",
+  "%s: a later version of the world %s you have, in which its careers do not go on": "%s: uma versão mais recente do mundo %s que você tem, na qual as carreiras dele não continuam",
+  "Version %s. Careers of %s do NOT go on in it (leagues or cups of it are not as they were in the competition tables: see the export's rows lines): Install tells those players to start a new Master League.": "Versão %s. As carreiras de %s NÃO continuam nela (ligas ou taças dela não estão como estavam nas tabelas de competições: veja as linhas rows da exportação): o Install diz a esses jogadores para começarem uma nova Master League.",
+  "Warning: this version changes leagues or cups a career of the one you have is playing (a place in them is gone, holds another club or has a club new to the world, or their rows in the game's tables moved). It replaces the one you have and a career of the one you have does not continue in it.": "Aviso: esta versão muda ligas ou taças que uma carreira da que você tem está a jogar (um lugar nelas desapareceu, tem outro clube ou um clube novo no mundo, ou as suas linhas nas tabelas do jogo mudaram de lugar). Ela substitui a que você tem e uma carreira da que você tem não continua nela.",
+  "For a third division under the game's second one, like National under Ligue 2: the game's cup takes its two divisions and the first clubs of this league, up to 48 clubs in all, as the real Coupe de France takes the lower leagues. Start a new career after the Build.": "Para uma terceira divisão abaixo da segunda do jogo, como o National abaixo da Ligue 2: a taça do jogo leva as suas duas divisões e os primeiros clubes desta liga, até 48 clubes no total, como a verdadeira Coupe de France recebe as divisões inferiores. Comece uma nova carreira depois do Build.",
+  "Pick the clubs that play the league phase of the Champions League, Europa League and Conference League in the first season of a new career.\n\nYour clubs go in first; the game fills the rest of the 36 places as it always does. With the summer qualifying on, part of the 36 are its winners: clubs past the direct places (28 in the Champions League, 20 in the other two) play the qualifying, from the play-off down. Leave a competition empty and it is filled the usual way. From the second season on, the European places of the leagues decide who goes.\n\nA club of the game must play in a league that season. Only a career started after Build gets these clubs; a career you already play keeps its own.": "Escolha os clubes que jogam a fase de liga da Champions League, da Europa League e da Conference League na primeira temporada de uma carreira nova.\n\nSeus clubes entram primeiro; o jogo preenche o resto das 36 vagas como sempre faz. Com a qualificação de verão ativa, parte das 36 vagas são dos seus vencedores: os clubes além das vagas diretas (28 na Liga dos Campeões, 20 nas outras duas) jogam a qualificação, do play-off para baixo. Deixe uma competição vazia e ela é preenchida do jeito normal. A partir da segunda temporada, as vagas europeias dos campeonatos decidem quem vai.\n\nUm clube do jogo precisa jogar num campeonato nessa temporada. Só uma carreira começada depois do Build recebe estes clubes; uma carreira que você já joga mantém os seus.",
+  "A league phase has %d clubs; %d more fit.": "Uma fase de liga tem %d clubes; cabem mais %d.",
+  "%s is installed already (an older version). It is taken out first, then this one goes in. Your saves are not touched; start a new Master League with the new version.\n\nReplace it?": "%s já está instalado (uma versão anterior). Primeiro ela é retirada, depois entra esta. Seus saves não são tocados; comece uma Master League nova com a versão nova.\n\nSubstituir?",
+  "The older version is taken out first, nothing of it stays behind. Your saves are not touched; start a new Master League with this one.": "A versão anterior é retirada primeiro, nada dela fica. Seus saves não são tocados; comece uma Master League nova com esta.",
+  "The clubs of the league picked at the top. Double-click a club (or Edit club) for its name, short name, crest, manager, stadium and formation.\n- Players: change the club's squad.\n- Club of the game...: put a club the game already has (Al Kuwait, say) in this place instead of a new club. If it plays somewhere in the game, you pick who takes its old place there.\n- NewLife club...: put clubs of the NewLife Database, with their squads, in this place and the places after it (open the NewLife Database on the NewLife page first).\n- New club here: undo Club of the game; the place gets a new club again. Only on a place a club of the game took (a new club's place is one already).\n- Insert club / Remove club: a new club before the selected one, or the selected one out. The league gets one club more or one less.\n- Move to another league...: the club goes to another of your new leagues, with its name, crest, manager and players.\n- Paste names... / Load names from file...: name every club at once, one name per line, in order.": "Os clubes do campeonato escolhido no topo. Dê um clique duplo num clube (ou Editar clube) para o nome, sigla, escudo, técnico, estádio e formação dele.\n- Jogadores: muda o elenco do clube.\n- Clube do jogo...: coloca neste lugar um clube que o jogo já tem (o Al Kuwait, por exemplo) em vez de um clube novo. Se ele joga em algum lugar do jogo, você escolhe quem fica com o lugar antigo dele lá.\n- Clube NewLife...: coloca clubes da NewLife Database, com seus elencos, neste lugar e nos seguintes (abra antes a NewLife Database na página NewLife).\n- Clube novo aqui: desfaz Clube do jogo; o lugar volta a ter um clube novo. Só num lugar que um clube do jogo ocupou (o de um clube novo já o é).\n- Inserir clube / Remover clube: um clube novo antes do selecionado, ou o selecionado fora. O campeonato fica com um clube a mais ou a menos.\n- Mover para outro campeonato...: o clube vai para outro dos seus campeonatos novos, com nome, escudo, técnico e jogadores.\n- Colar nomes... / Carregar nomes de um arquivo...: dá nome a todos os clubes de uma vez, um nome por linha, em ordem.",
+  "Taking out the older %s": "A tirar o %s anterior",
+  "Welcome to Mod Studio 0.2.4": "Bem-vindo ao Mod Studio 0.2.4",
+  "Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that window). A green line says Found: a world zip. Click Add.": "Clique em + Adicionar..., depois em Escolher um arquivo... e escolha o zip do Modpack (ou arraste o zip para essa janela). Uma linha verde diz Encontrado: um zip de mundo. Clique em Adicionar.",
+  "Click Install the world. If an older Modpack is installed, it asks to replace it: Yes (your saves are not touched). Mod Studio copies the world, puts its modules in the game and switches the world on: no Build needed. Wait for the window Ready to play.": "Clique em Instalar o mundo. Se houver um Modpack mais antigo instalado, ele pergunta se pode substituir: Sim (seus saves não são mexidos). O Mod Studio copia o mundo, coloca os módulos dele no jogo e ativa o mundo: não precisa de Build. Espere a janela Pronto para jogar.",
   "Club World Cup": "Copa do Mundo de Clubes",
   "Intercontinental Cup": "Copa Intercontinental",
   "The Club World Cup with 32 clubs every few years, and the old one kept as the Intercontinental Cup": "A Copa do Mundo de Clubes com 32 clubes a cada poucos anos, e a antiga mantida como Copa Intercontinental",
@@ -2094,9 +2576,192 @@
   "No free competition id: the world has all the 255 the game takes. Pick a cup below for it to take the place of.": "Nenhum ID de competição livre: o mundo já tem as 255 que o jogo aceita. Escolha abaixo uma copa para ela ficar com o lugar.",
   "No free competition id for the old Club World Cup. Pick a cup for it to take the place of, or untick \"Keep the old Club World Cup\".": "Nenhum ID de competição livre para a Copa do Mundo de Clubes antiga. Escolha uma copa para ela ficar com o lugar, ou desmarque \"Manter a Copa do Mundo de Clubes antiga\".",
   "%s is no longer built: it is unticked in its league, and the Intercontinental takes its competition id. Go on?": "%s deixa de ser construída: ela fica desmarcada no campeonato dela, e a Intercontinental fica com o ID de competição dela. Continuar?",
-  "The Club World Cup of 32 clubs, the 2025 format: eight groups of four played once, then a single-match knockout of sixteen, in June after the Champions League final. Its 32 places: 12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF and 4 CONCACAF (the game has no OFC clubs, so that place goes to the AFC and the CAF). Each confederation takes the champions of its continental cup of the four seasons before the cup; a club with two titles counts once, and the places left go to its best clubs in the confederation ranking (fl26cwc, the points of the four seasons). Any number of clubs of one country. The draw is in late November of the year before.\n\nEvery ... years, first in ...: the years it is played. 4 and 2029 as FIFA plays it; 1 plays it every season.\n\nBuild and install puts it in the game, with Mod Studio's modules (fl26swiss.dll does the draw). Start a new career afterwards: a career saved before keeps the old cup.": "A Copa do Mundo de Clubes de 32 clubes, o formato de 2025: oito grupos de quatro em turno único, depois um mata-mata de dezesseis em jogo único, em junho, depois da final da Champions League. As 32 vagas: 12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF e 4 CONCACAF (o jogo não tem clubes da OFC, então essa vaga vai para a AFC e para a CAF). Cada confederação leva os campeões da sua copa continental das quatro temporadas antes da copa; um clube com dois títulos conta uma vez, e as vagas que sobram vão para os melhores clubes dela no ranking da confederação (fl26cwc, os pontos das quatro temporadas). Sem limite de clubes do mesmo país. O sorteio é no fim de novembro do ano anterior.\n\nA cada ... anos, o primeiro em ...: os anos em que ela é jogada. 4 e 2029 como a FIFA joga; 1 joga todas as temporadas.\n\nBuild and install coloca ela no jogo, com os módulos do Mod Studio (o fl26swiss.dll faz o sorteio). Comece uma carreira nova depois: uma carreira salva antes continua com a copa antiga."
+  "The Club World Cup of 32 clubs, the 2025 format: eight groups of four played once, then a single-match knockout of sixteen, in June after the Champions League final. Its 32 places: 12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF and 4 CONCACAF (the game has no OFC clubs, so that place goes to the AFC and the CAF). Each confederation takes the champions of its continental cup of the four seasons before the cup; a club with two titles counts once, and the places left go to its best clubs in the confederation ranking (fl26cwc, the points of the four seasons). Any number of clubs of one country. The draw is in late November of the year before.\n\nEvery ... years, first in ...: the years it is played. 4 and 2029 as FIFA plays it; 1 plays it every season.\n\nBuild and install puts it in the game, with Mod Studio's modules (fl26swiss.dll does the draw). Start a new career afterwards: a career saved before keeps the old cup.": "A Copa do Mundo de Clubes de 32 clubes, o formato de 2025: oito grupos de quatro em turno único, depois um mata-mata de dezesseis em jogo único, em junho, depois da final da Champions League. As 32 vagas: 12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF e 4 CONCACAF (o jogo não tem clubes da OFC, então essa vaga vai para a AFC e para a CAF). Cada confederação leva os campeões da sua copa continental das quatro temporadas antes da copa; um clube com dois títulos conta uma vez, e as vagas que sobram vão para os melhores clubes dela no ranking da confederação (fl26cwc, os pontos das quatro temporadas). Sem limite de clubes do mesmo país. O sorteio é no fim de novembro do ano anterior.\n\nA cada ... anos, o primeiro em ...: os anos em que ela é jogada. 4 e 2029 como a FIFA joga; 1 joga todas as temporadas.\n\nBuild and install coloca ela no jogo, com os módulos do Mod Studio (o fl26swiss.dll faz o sorteio). Comece uma carreira nova depois: uma carreira salva antes continua com a copa antiga.",
+  "International": "Internacional",
+  "Add Club World Cup": "Adicionar Copa do Mundo de Clubes",
+  "Remove Club World Cup": "Remover Copa do Mundo de Clubes",
+  "FIFA's club competitions of your world. Changes reach the game after Build and install.": "As competições de clubes da FIFA do seu mundo. As mudanças chegam ao jogo depois de Construir e instalar.",
+  "4 and 2029 as FIFA plays it; 1 plays it every season.": "4 e 2029, como a FIFA joga; 1 joga todas as temporadas.",
+  "Keep it, every December, as a cup of its own": "Mantê-la, todo dezembro, como uma copa própria",
+  "No free competition id for the Intercontinental Cup. Pick a cup for it to take the place of, or untick \"Keep it\".": "Nenhum id de competição livre para a Copa Intercontinental. Escolha uma copa para ela ocupar o lugar, ou desmarque \"Mantê-la\".",
+  "Not applied: your changes are kept.": "Não aplicado: suas mudanças continuam aqui.",
+  "Not kept: the Club World Cup of 32 is the only one, and no competition id is needed.": "Não mantida: a Copa do Mundo de Clubes de 32 é a única, e nenhum id de competição é necessário.",
+  "32 clubs, the 2025 format: eight groups of four played once, then a single-match knockout of sixteen, in June after the Champions League final. The draw is in late November of the year before.": "32 clubes, no formato de 2025: oito grupos de quatro em turno único e depois um mata-mata de dezesseis em jogo único, em junho, depois da final da Champions League. O sorteio é no fim de novembro do ano anterior.",
+  "12 UEFA, 6 CONMEBOL, 5 AFC, 4 CAF, 4 CONCACAF and 1 OFC. Each confederation takes the champions of its continental cup of the four seasons before the cup (a club with two titles counts once); the places left go to its best clubs in the confederation ranking (the points of the four seasons). The OFC place is the best OFC club of the OFC ranking; a world with no OFC club in the ranking gives it to the AFC. Any number of clubs of one country.": "12 UEFA, 6 CONMEBOL, 5 AFC, 4 CAF, 4 CONCACAF e 1 OFC. Cada confederação leva primeiro os campeões do seu torneio continental das quatro temporadas anteriores à copa (um clube com dois títulos conta uma vez); as vagas restantes vão para os seus melhores clubes no ranking da confederação (os pontos das quatro temporadas). A vaga da OFC é do melhor clube do ranking da OFC; um mundo sem clube da OFC no ranking dá essa vaga à AFC. Qualquer número de clubes de um mesmo país.",
+  "Build and install puts it in the game, with Mod Studio's modules. Start a new career afterwards: a career saved before keeps the old cup. Master League and League Mode get the confederation rankings (UEFA, CONMEBOL, CONCACAF, AFC, CAF and OFC) in Data > Ranking CWC.": "Construir e instalar a coloca no jogo, com os módulos do Mod Studio. Comece uma carreira nova depois: uma carreira salva antes mantém a copa antiga. Master League e League Mode ganham os rankings das confederações (UEFA, CONMEBOL, CONCACAF, AFC, CAF e OFC) em Dados > Ranking Copa de Clubes.",
+  "The game's own Club World Cup: four clubs -- the continental champions -- a semi-final and a final in mid-December.": "A Copa do Mundo de Clubes do próprio jogo: quatro clubes -- os campeões continentais -- uma semifinal e uma final em meados de dezembro.",
+  "In the game it is still the Club World Cup. Add the Club World Cup of 32 below to have both: this one then becomes a cup of its own under the name above, every December.": "No jogo ela ainda é a Copa do Mundo de Clubes. Adicione a Copa do Mundo de Clubes de 32 abaixo para ter as duas: esta passa a ser uma copa própria, com o nome acima, todo dezembro.",
+  "The game's own Club World Cup -- four clubs, the continental champions, a semi-final and a final in mid-December -- stays in the world as a competition of its own, played every season under its name (the real Intercontinental Cup is that tournament).\n\nIt needs a competition id of its own. When none is free, pick a cup of your world below: that cup is no longer built (it is unticked in its league), and the Intercontinental takes its place. A league cannot be given away here: take a league out on the Leagues page instead.\n\nOff: the old cup is gone, and the Club World Cup of 32 is the only one.": "A Copa do Mundo de Clubes do próprio jogo -- quatro clubes, os campeões continentais, uma semifinal e uma final em meados de dezembro -- fica no mundo como uma competição própria, jogada toda temporada com o seu nome (a Copa Intercontinental de verdade é esse torneio).\n\nEla precisa de um id de competição próprio. Quando não houver nenhum livre, escolha abaixo uma copa do seu mundo: essa copa deixa de ser construída (é desmarcada na sua liga) e a Intercontinental fica no lugar dela. Uma liga não pode ser cedida aqui: tire a liga na página Ligas.\n\nDesligado: a copa antiga sai, e a Copa do Mundo de Clubes de 32 é a única."
  },
  "log": [
+  [
+   "^  (.+): (\\d+) clubs, (\\d+) groups of four, then a knockout of (\\d+)",
+   "  \\1: \\2 clubes, \\3 grupos de quatro, depois um mata-mata de \\4"
+  ],
+  [
+   "^  (.+): (\\d+) clubs, a knockout",
+   "  \\1: \\2 clubes, mata-mata"
+  ],
+  [
+   "; (\\d+) of them the winners of a preliminary round of (\\d+) clubs, one match a tie$",
+   "; \\1 deles vencedores de uma fase prévia de \\2 clubes, em jogo único"
+  ],
+  [
+   "^  (.+): the winners of the CAF Champions League and the Confederation Cup, one match in late July \\(first played in a career's second season\\)$",
+   "  \\1: os campeões da Champions League da CAF e da Taça da Confederação, um jogo no fim de julho (jogado pela primeira vez na segunda temporada de uma carreira)"
+  ],
+  [
+   "^  (.+): the previous Libertadores and Sudamericana winners, one match in late February \\(normally first played in a career's second season\\)$",
+   "  \\1: os últimos campeões da Libertadores e da Sul-Americana, um jogo no fim de fevereiro (normalmente jogado pela primeira vez na segunda temporada de uma carreira)"
+  ],
+  [
+   "^  EXPERIMENTAL: the game's leagues of (.+) play August to May$",
+   "  EXPERIMENTAL: as ligas do jogo de \\1 jogam de agosto a maio"
+  ],
+  [
+   "^  July and August qualifying: ",
+   "  fase preliminar de julho e agosto: "
+  ],
+  [
+   "first qualifying round",
+   "primeira fase preliminar"
+  ],
+  [
+   "^  European places \\(listed / clubs straight into the league phase\\): ",
+   "  vagas europeias (indicadas / clubes direto na fase de liga): "
+  ],
+  [
+   " \\((\\d+) into its qualifying rounds\\)",
+   " (\\1 para a sua fase preliminar)"
+  ],
+  [
+   "(\\d+/\\d+) \\((\\d+) more from the big five\\)",
+   "\\1 (mais \\2 das cinco grandes)"
+  ],
+  [
+   "(\\d+/\\d+) \\((\\d+) over\\)",
+   "\\1 (\\2 a mais)"
+  ],
+  [
+   "^  qualifying places \\(listed / new clubs of the rounds\\): ",
+   "  vagas da fase preliminar (indicadas / clubes novos das fases): "
+  ],
+  [
+   "^  (.+): national cup of (\\d+) clubs \\(a cup of its own; its rounds and dates follow (\\S+)\\)",
+   "  \\1: copa nacional de \\2 clubes (uma copa própria; as fases e datas seguem \\3)"
+  ],
+  [
+   "(?<=\\)), the top division only$",
+   ", só a primeira divisão"
+  ],
+  [
+   "(?<=\\)), the two divisions and the first (\\d+) of (.+)$",
+   ", as duas divisões e os \\1 primeiros de \\2"
+  ],
+  [
+   "^  (.+): the country's cup \\(regulation (\\d+)\\) takes both divisions, (\\d+) clubs$",
+   "  \\1: a copa do país (regulamento \\2) leva as duas divisões, \\3 clubes"
+  ],
+  [
+   "^  (.+): the country's cup \\(regulation (\\d+)\\) keeps the top division's clubs only$",
+   "  \\1: a copa do país (regulamento \\2) mantém só os clubes da primeira divisão"
+  ],
+  [
+   "^  team ids: (\\d+) free in the new-club block \\((\\d+)\\.\\.(\\d+)\\)$",
+   "  ids de clube: \\1 livres no bloco de clubes novos (\\2..\\3)"
+  ],
+  [
+   "^  player changes in (\\d+) clubs$",
+   "  mudanças de jogadores em \\1 clubes"
+  ],
+  [
+   "^  European places of (.+) \\(a league of the game\\): none$",
+   "  vagas europeias de \\1 (uma liga do jogo): nenhuma"
+  ],
+  [
+   "^  European places of (.+) \\(a league of the game\\): ",
+   "  vagas europeias de \\1 (uma liga do jogo): "
+  ],
+  [
+   "^  (.+): super cup, the champion v the cup winner, at the end of January \\(February-December season\\)$",
+   "  \\1: supercopa, o campeão contra o campeão da copa, no fim de janeiro (temporada de fevereiro a dezembro)"
+  ],
+  [
+   "^  (.+): super cup, the champion v the cup winner, its date follows (\\S+)$",
+   "  \\1: supercopa, o campeão contra o campeão da copa, a data segue \\2"
+  ],
+  [
+   "^  (.+): super cup, the champion v the cup winner \\(its date follows (\\S+)\\)$",
+   "  \\1: supercopa, o campeão contra o campeão da copa (a data segue \\2)"
+  ],
+  [
+   "^  (.+): super cup, the champion v the cup winner \\(at the end of January, after the February-December season: dated as (\\S+), day (\\S+)\\)$",
+   "  \\1: supercopa, o campeão contra o campeão da copa (no fim de janeiro, depois da temporada de fevereiro a dezembro: data como \\2, dia \\3)"
+  ],
+  [
+   "^  (.+): play-off for a place in the league above, filled on day (\\d+), its winner moved at the season's end \\(fl26chain\\), a ",
+   "  \\1: play-off por uma vaga na liga acima, preenchido no dia \\2, o vencedor sobe no fim da temporada (fl26chain), a "
+  ],
+  [
+   "^  (.+): playoff, filled on day (\\d+), a ",
+   "  \\1: play-off, preenchido no dia \\2, a "
+  ],
+  [
+   "^  (.+): league cup, a ",
+   "  \\1: copa da liga, a "
+  ],
+  [
+   "^  (.+): super cup in late July, a ",
+   "  \\1: supercopa no fim de julho, a "
+  ],
+  [
+   "^  (.+): pre-season cup in July, a ",
+   "  \\1: copa de pré-temporada em julho, a "
+  ],
+  [
+   "^  (.+): third cup \\(trophy\\) of a lower division and the one below it, a ",
+   "  \\1: terceira copa (troféu) de uma divisão inferior e da de baixo, a "
+  ],
+  [
+   ", a single-match knockout of (\\d+) clubs(?=,|$)",
+   ", mata-mata em jogo único de \\1 clubes"
+  ],
+  [
+   ", a knockout of (\\d+) clubs(?=,|$)",
+   ", mata-mata de \\1 clubes"
+  ],
+  [
+   ", (\\d+) of them from a pre-round of (\\d+) clubs in late September$",
+   ", \\1 deles de uma fase prévia de \\2 clubes no fim de setembro"
+  ],
+  [
+   "^  NOTE: (.+) takes the place of the game's \\\"(.+)\\\" group in Select Team$",
+   "  ATENÇÃO: \\1 ocupa o lugar do grupo \"\\2\" do jogo no Select Team"
+  ],
+  [
+   "^      plays February to December with the league above it \\(the game's season for that country\\), promotion and relegation at New Year$",
+   "      joga de fevereiro a dezembro com a liga acima (a temporada do jogo para esse país), acesso e rebaixamento no Ano-Novo"
+  ],
+  [
+   "^  groups of one division: (.+) under (.+) -- (.+) down, (.+) up, every league keeps its size \\(fl26chain moves the set at the season's end\\)$",
+   "  grupos de uma divisão: \\1 abaixo de \\2 -- \\3 descem, \\4 sobem, cada liga mantém o tamanho (fl26chain os move no fim da temporada)"
+  ],
+  [
+   "\\bthe game's league (\\d+)\\b",
+   "a liga do jogo \\1"
+  ],
+  [
+   "^      border clubs of (.+) \\(they make room for a relegated club of its region\\): ",
+   "      clubes de fronteira de \\1 (abrem vaga para um clube rebaixado da sua região): "
+  ],
+  [
+   "^  (.+): the country's cup \\(regulation (\\d+)\\) keeps the game's divisions (\\d+) and (\\d+), and the first (\\d+) of this league: (\\d+) clubs$",
+   "  \\1: a copa do país (regulamento \\2) mantém as divisões do jogo \\3 e \\4, e os \\5 primeiros desta liga: \\6 clubes"
+  ],
+  [
+   "^  (.+): the country's cup \\(regulation (\\d+)\\) keeps the game's divisions (\\d+) and (\\d+)$",
+   "  \\1: a copa do país (regulamento \\2) mantém as divisões do jogo \\3 e \\4"
+  ],
   [
    "^(.+) now has (\\d+) clubs \\(it had (\\d+)\\): check its European places and promotion$",
    "\\1 agora tem \\2 clubes (tinha \\3): confira as vagas europeias e o acesso"
@@ -2366,7 +3031,7 @@
    "\\1: não sobra nenhum clube para uma vaga de \\2"
   ],
   [
-   "(Europa League|Conference League) qualifying\\b",
+   "(Champions League|Europa League|Conference League|Libertadores) qualifying\\b",
    "\\1 (fase preliminar)"
   ],
   [
@@ -2468,6 +3133,318 @@
   [
    "^the first line needs a column player \\(or name\\) and a column to \\(or club\\); it has: ",
    "a primeira linha precisa de uma coluna player (ou name) e uma coluna to (ou club); ela tem: "
+  ],
+  [
+   "(?m)(?<=[:,] )(\\d+) leagues?(?=(?:, \\d+ [\\w ]+?)* of that version (?:is|are) gone)",
+   "\\1 liga(s)"
+  ],
+  [
+   "(?m)(?<=[:,] )(\\d+) cups?(?=(?:, \\d+ [\\w ]+?)* of that version (?:is|are) gone)",
+   "\\1 taça(s)"
+  ],
+  [
+   "(?m)(?<=[:,] )(\\d+) clubs?(?=(?:, \\d+ [\\w ]+?)* of that version (?:is|are) gone)",
+   "\\1 clube(s)"
+  ],
+  [
+   "(?m)(?<=[:,] )(\\d+) players?(?=(?:, \\d+ [\\w ]+?)* of that version (?:is|are) gone)",
+   "\\1 jogador(es)"
+  ],
+  [
+   "(?m)(?<=[:,] )(\\d+) ids? given again(?=(?:, \\d+ [\\w ]+?)* of that version (?:is|are) gone)",
+   "\\1 id(s) dado(s) de novo"
+  ],
+  [
+   "(?m)^(\\s*)(club|player|league|cup|id) (\\S+): (.*) -- gone$",
+   "\\1\\2 \\3: \\4 -- desapareceu"
+  ],
+  [
+   "(?m) -- its regulation id is (.+)'s now$",
+   " -- o id de regulamento dele é agora de \\1"
+  ],
+  [
+   "(?m) -- competition id (\\S+) -> (\\S+)$",
+   " -- id de competição \\1 -> \\2"
+  ],
+  [
+   "(?m) -- region (\\S+) -> (\\S+)$",
+   " -- região \\1 -> \\2"
+  ],
+  [
+   "(?m)^(\\s*cup \\S+: .* -- )ids (\\S+) -> (\\S+)$",
+   "\\1ids \\2 -> \\3"
+  ],
+  [
+   "\\((\\d+) of (\\d+)\\)(?=[;.])",
+   "(\\1/\\2)"
+  ],
+  [
+   "(?m) -- a retired id given again$",
+   " -- um id retirado dado de novo"
+  ],
+  [
+   "(?m) -- a regulation id an earlier version gave$",
+   " -- um id de regulamento que uma versão anterior deu"
+  ],
+  [
+   "(?m) -- regulation id (\\d+) an earlier version gave$",
+   " -- id de regulamento \\1, que uma versão anterior deu"
+  ],
+  [
+   "(?m) -- competition id (\\d+) an earlier version gave$",
+   " -- id de competição \\1, que uma versão anterior deu"
+  ],
+  [
+   "(?m) -- the regulation id of (.+)$",
+   " -- o id de regulamento de \\1"
+  ],
+  [
+   "(?m) -- regulation id (\\d+) of (.+)$",
+   " -- id de regulamento \\1 de \\2"
+  ],
+  [
+   "(?m) -- competition id (\\d+) of (.+)$",
+   " -- id de competição \\1 de \\2"
+  ],
+  [
+   "(?m) -- not in the plan$",
+   " -- não está no plano"
+  ],
+  [
+   "(?m)^(\\s*)club (\\S+(?: \\S+)?): (?=.* -- )",
+   "\\1clube \\2: "
+  ],
+  [
+   "(?m)^(\\s*)player (\\S+(?: \\S+)?): (?=.* -- )",
+   "\\1jogador \\2: "
+  ],
+  [
+   "(?m)^(\\s*)league (\\S+(?: \\S+)?): (?=.* -- )",
+   "\\1liga \\2: "
+  ],
+  [
+   "(?m)^(\\s*)cup (\\S+(?: \\S+)?): (?=.* -- )",
+   "\\1taça \\2: "
+  ],
+  [
+   "(?m)^(\\s*)id (\\S+(?: \\S+)?): (?=.* -- )",
+   "\\1id \\2: "
+  ],
+  [
+   "(?m)^(\\s*)\\.\\.\\. and (\\d+) more (\\w+)$",
+   "\\1... e mais \\2 (\\3)"
+  ],
+  [
+   "(?m)^This Build would break the careers of (.+?): (.+) of that version (?:is|are) gone or (?:has|have) another id, and the recipe does not retire them:$",
+   "Esta Construção estragaria as carreiras de \\1: dessa versão desapareceram ou têm outro id: \\2, e a receita não os retira:"
+  ],
+  [
+   "(?m)^Put them back, or retire them \\(Build asks; or the recipe's id_retire, with a reason\\) and Build again\\.$",
+   "Volte a pô-los, ou retire-os (a Construção pergunta; ou id_retire da receita, com um motivo) e construa de novo."
+  ],
+  [
+   "(?m)^Warning: (\\d+) club\\(s\\) still in the world lost most of their players' ids: (.+)\\. That is most likely a squad Build did not follow, not players taken out -- check them before retiring\\.$",
+   "Aviso: \\1 clube(s) que continuam no mundo perderam a maioria dos ids dos jogadores: \\2. O mais provável é um plantel que a Construção não seguiu, não jogadores retirados: verifique-os antes de os retirar."
+  ],
+  [
+   "(?m)^(\\s*)ids: pinned to the id ledger of (.+) \\((.+)\\)$",
+   "\\1ids: fixados ao registo de ids de \\2 (\\3)"
+  ],
+  [
+   "(?m)^(\\s*)warning: (.+) plays another (.+) than in (.+): a career of that version has its season laid out the old way, and the season running may not go right$",
+   "\\1aviso: \\2 muda (\\3) em relação a \\4: uma carreira dessa versão tem a temporada preparada da forma antiga, e a temporada em curso pode não correr bem"
+  ],
+  [
+   "(?m)^(\\s*)ids: the recipe's id_retire names (\\d+) (\\w+) (.+) does not have \\((.*)\\): left out$",
+   "\\1ids: id_retire da receita nomeia \\2 \\3 que \\4 não tem (\\5): ignorados"
+  ],
+  [
+   "(?m)^(\\s*)ids: (.+) is left out: another lineage of (.+?)(?: \\(version (.+)\\))?, not this recipe's$",
+   "\\1ids: \\2 é ignorado: outra linhagem de \\3, não a desta receita"
+  ],
+  [
+   "(?m)^(\\s*)ids: (.+) is left out: version (.+) has other leagues and clubs \\((\\d+)% of its leagues, (\\d+)% of its clubs are this recipe's\\) -- another world of the same name$",
+   "\\1ids: \\2 é ignorado: a versão \\3 tem outras ligas e clubes (\\4% das ligas, \\5% dos clubes são desta receita): outro mundo com o mesmo nome"
+  ],
+  [
+   "the recipe's id_lineage is (\\w+), but this PC has no id ledger of it: put the \\.fl26ids file of the version shared last in (.+?) \\(or set the recipe's id_ledger to it\\) and Build or export again\\. To start over as a new world \\(careers of the versions shared before do not go on\\), take id_lineage out of the recipe",
+   "o id_lineage da receita é \\1, mas este PC não tem nenhum registo de ids dele: põe o ficheiro .fl26ids da última versão partilhada em \\2 (ou define o id_ledger da receita para ele) e constrói ou exporta outra vez. Para recomeçar como um mundo novo (as carreiras das versões partilhadas antes não continuam), tira id_lineage da receita"
+  ],
+  [
+   "(\\S.*?) cannot be used: (.+)\\. It is the newest version this PC keeps of (\\S+) \\(number (\\d+)\\): put a good copy of it back, or move it out of (.+?) if that version was never shared, and Build or export again",
+   "\\1 não pode ser usado: \\2. É a versão mais recente que este PC guarda de \\3 (número \\4): volta a pôr uma cópia boa, ou tira-o de \\5 se essa versão nunca foi partilhada, e constrói ou exporta outra vez"
+  ],
+  [
+   "version (.+?) of (\\S+) \\((.+?)\\) has (\\d+)% of this recipe's leagues and (\\d+)% of its clubs: is this recipe that world \\(its next version\\), or another world of the same name\\? Mod Studio asks; in the recipe itself: (.+) for that world, (.+) for another",
+   "a versão \\1 de \\2 (\\3) tem \\4% das ligas desta receita e \\5% dos seus clubes: esta receita é esse mundo (a sua próxima versão), ou outro mundo com o mesmo nome? O Mod Studio pergunta; na própria receita: \\6 para esse mundo, \\7 para outro"
+  ],
+  [
+   "the recipe's id_ledger (.+?) is the ledger of a test zip \\((.+?)\\): a test zip is never the version a Build follows -- name the ledger of the version shared last",
+   "o id_ledger da receita \\1 é o registo de um zip de teste (\\2): um zip de teste nunca é a versão que uma construção segue; indica o registo da última versão partilhada"
+  ],
+  [
+   "(?m)^(\\s*)ids: (.+?) is left out: version (.+) is a test zip$",
+   "\\1ids: \\2 fica de fora: a versão \\3 é um zip de teste"
+  ],
+  [
+   "(?m)^(\\s*)ids: (.+?) is left out: the recipe says that lineage is another world \\(id_not_lineages\\)$",
+   "\\1ids: \\2 fica de fora: a receita diz que essa linhagem é outro mundo (id_not_lineages)"
+  ],
+  [
+   "(?m)^(\\s*)ids: club (\\d+) (.+) is (.+) now \\(the same id: a career of (.+) sees it as the same club\\)$",
+   "\\1ids: o clube \\2 \\3 agora é \\4 (o mesmo id: uma carreira de \\5 vê-o como o mesmo clube)"
+  ],
+  [
+   "(?m)^(\\s*)ids: \\.\\.\\. and (\\d+) more clubs with another name$",
+   "\\1ids: ... e mais \\2 clubes com outro nome"
+  ],
+  [
+   "(?m)^(\\s*)ids: (\\d+) players kept their id under a name spelt another way: (.*)$",
+   "\\1ids: \\2 jogadores mantiveram o id com um nome escrito de outra forma: \\3"
+  ],
+  [
+   "(?m)^(\\s*)ids: every club, league, cup and player of (.+) keeps its id \\((\\d+) retired by the recipe, (\\d+) clubs with another name\\)$",
+   "\\1ids: cada clube, liga, taça e jogador de \\2 mantém o id (\\3 retirados pela receita, \\4 clubes com outro nome)"
+  ],
+  [
+   "(?m)^ids: (.+) is the first version of a new lineage \\((\\w+)\\): over a world of before the id ledger, Install offers an Update only when it keeps every id of it$",
+   "ids: \\1 é a primeira versão de uma linhagem nova (\\2): sobre um mundo de antes do registo de ids, Instalar oferece Atualizar só se mantiver todos os ids dele"
+  ],
+  [
+   "(?m)^ids: the version shared before: (.+)$",
+   "ids: a versão partilhada antes: \\1"
+  ],
+  [
+   "(?m)^ids: a test zip: its ledger is not kept, no Build or export follows it \\(number (\\d+) is spent\\)$",
+   "ids: um zip de teste: o registo não é guardado, nenhuma construção nem exportação o segue (o número \\1 fica gasto)"
+  ],
+  [
+   "(?m)^ids: (.+) kept as the version shared last \\((.+)\\)$",
+   "ids: \\1 guardada como a última versão partilhada (\\2)"
+  ],
+  [
+   "(?m)^ids: the world's plan names its lineage (\\w+) now$",
+   "ids: o plano do mundo indica agora a linhagem \\1"
+  ],
+  [
+   "(?m)^ids: (.+) is not kept as the version shared last: careers of (.+) do not go on in it \\(number (\\d+) is spent\\)$",
+   "ids: \\1 não é guardada como a última versão partilhada: as carreiras de \\2 não continuam nela (o número \\3 fica gasto)"
+  ],
+  [
+   "the export stopped: the number of (.+?) could not be noted \\((.+)\\)",
+   "a exportação parou: não foi possível anotar o número de \\1 (\\2)"
+  ],
+  [
+   "the export stopped: the id ledger of (.+?) could not be kept \\((.+)\\)",
+   "a exportação parou: não foi possível guardar o registo de ids de \\1 (\\2)"
+  ],
+  [
+   "(?m)^(\\s*)ids: (.+) is left out: (.+)$",
+   "\\1ids: \\2 é ignorado: \\3"
+  ],
+  [
+   "(?m)^(\\s*)ids: this PC keeps no version of (.+?) it shared( of this lineage)?; pinned to the ledger its zip brought \\((.+), version (.+)\\)$",
+   "\\1ids: este PC não guarda nenhuma versão de \\2 que tenha partilhado; fixados ao registo que o zip trouxe (\\4, versão \\5)"
+  ],
+  [
+   "(?m)^(.+) is not a whole id ledger \\((.+)\\)$",
+   "\\1 não é um registo de ids completo (\\2)"
+  ],
+  [
+   "(?m)^(.+) is an id ledger of a newer Mod Studio$",
+   "\\1 é um registo de ids de um Mod Studio mais recente"
+  ],
+  [
+   "(?m)^(.+) is not an id ledger of a world(?: \\(format_version\\))?$",
+   "\\1 não é um registo de ids de um mundo"
+  ],
+  [
+   "(?m)^(.+) is the id ledger of (.+), not of (.+)$",
+   "\\1 é o registo de ids de \\2, não de \\3"
+  ],
+  [
+   "(?m)^the recipe's id_ledger (.+) is not there$",
+   "o id_ledger da receita \\1 não existe"
+  ],
+  [
+   "(?m)^(.+): the place of (.+) in Select Team is the regulation id of another league of an earlier version of this world \\(its id ledger\\) -- a career of it has that league there; pick another place$",
+   "\\1: o lugar de \\2 no Select Team é o id de regulamento de outra liga de uma versão anterior deste mundo (o registo de ids): uma carreira dela tem essa liga lá; escolha outro lugar"
+  ],
+  [
+   "(?m)^ids: careers of (.+) go on in (.+)$",
+   "ids: as carreiras de \\1 continuam em \\2"
+  ],
+  [
+   "(?m)^ids: careers of (.+) break in (.+) \\((.+)\\)$",
+   "ids: as carreiras de \\1 estragam-se em \\2 (\\3)"
+  ],
+  [
+   "(?m)^(.+): its id ledger is not kept: (.+)$",
+   "\\1: o registo de ids não é guardado: \\2"
+  ],
+  [
+   "(?m)^(.+): the ids of (.+) are kept for the next Build \\((.+)\\)$",
+   "\\1: os ids de \\2 ficam guardados para a próxima Construção (\\3)"
+  ],
+  [
+   "(?m)^(\\s*id )club (?=\\S+: .* -- )",
+   "\\1clube "
+  ],
+  [
+   "(?m)^(\\s*id )player (?=\\S+: .* -- )",
+   "\\1jogador "
+  ],
+  [
+   "(?m)^(\\s*id )league (?=\\S+: .* -- )",
+   "\\1liga "
+  ],
+  [
+   "(?m)^(\\s*id )cup (?=\\S+: .* -- )",
+   "\\1taça "
+  ],
+  [
+   "(?m)^(\\s*\\S+ ?: id_retire .*? \\d+ )leagues ",
+   "\\1ligas "
+  ],
+  [
+   "(?m)^(\\s*\\S+ ?: id_retire .*? \\d+ )cups ",
+   "\\1taças "
+  ],
+  [
+   "(?m)^(\\s*\\S+ ?: id_retire .*? \\d+ )clubs ",
+   "\\1clubes "
+  ],
+  [
+   "(?m)^(\\s*\\S+ ?: id_retire .*? \\d+ )players ",
+   "\\1jogadores "
+  ],
+  [
+   "(?m)^(\\s*\\S+ ?: id_retire .*? \\d+ )reused ",
+   "\\1ids dados de novo "
+  ],
+  [
+   "(?m)(\\.\\.\\. .+ \\d+ .*)\\(leagues\\)$",
+   "\\1(ligas)"
+  ],
+  [
+   "(?m)(\\.\\.\\. .+ \\d+ .*)\\(cups\\)$",
+   "\\1(taças)"
+  ],
+  [
+   "(?m)(\\.\\.\\. .+ \\d+ .*)\\(clubs\\)$",
+   "\\1(clubes)"
+  ],
+  [
+   "(?m)(\\.\\.\\. .+ \\d+ .*)\\(players\\)$",
+   "\\1(jogadores)"
+  ],
+  [
+   "(?m)(\\.\\.\\. .+ \\d+ .*)\\(reused\\)$",
+   "\\1(ids dados de novo)"
+  ],
+  [
+   "(?m)^version (.+) of (.+) \\((.+)\\) has (\\d+)% of this recipe's leagues and (\\d+)% of its clubs: set the recipe's id_lineage to (\\S+) if it is that world, or give this world another name$",
+   "a versão \\1 de \\2 (\\3) tem \\4% das ligas desta receita e \\5% dos clubes: ponha id_lineage da receita em \\6 se for esse mundo, ou dê outro nome a este mundo"
   ]
  ]
 }

@@ -68,8 +68,8 @@ LEAGUE_PICTURES = ("logo", "flag", "cup_logo", "supercup_logo", "league_cup_logo
 # the league fields each part of a package (PARTS) carries
 LEAGUE_PARTS = {"squads": ("formation", "club_formations"),
                 "crests": LEAGUE_PICTURES + ("club_crests",),
-                "managers": ("club_coaches",),
-                "kits": ("club_kits", "club_away_kits"),
+                "managers": ("club_coaches", "club_coach_countries"),
+                "kits": ("club_kits", "club_away_kits", "club_third_kits"),
                 "kitfiles": ("kit_folders",),
                 "scoreboards": ("scoreboard",)}
 
@@ -280,6 +280,10 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
            "parts": [x for x in PARTS if x in parts],
            "edits": {k: len(v) for k, v in out_r["edits"].items()},
            "player_changes": sum(len(c.get("edits") or {}) + len(c.get("add") or []) for c in out_r["players"].values())}
+    # mato 07.11.: the package says which game it was made on (FL26 or FL 2027: their clubs differ)
+    game = str(meta.get("game") or recipe.get("game") or "").lower()
+    if game in ("fl26", "fl27"):
+        man["game"] = game
     json.dump(man, open(os.path.join(tmp, "manifest.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     json.dump(out_r, open(os.path.join(tmp, "recipe.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     part = out + ".part"
@@ -301,6 +305,10 @@ def manifest(path):
     try:
         with zipfile.ZipFile(path) as z:
             man = json.loads(z.read("manifest.json").decode("utf-8"))
+    except NotImplementedError:
+        # B386: a zip packed with a method Python's zipfile does not read (Deflate64)
+        raise Error("%s is packed with a compression method this program cannot read -- zip it again "
+                    "with the normal method (Deflate)" % os.path.basename(path))
     except (zipfile.BadZipFile, KeyError, ValueError) as e:
         raise Error("%s is not a league package (%s)" % (path, e))
     if man.get("format") != FORMAT:
@@ -309,6 +317,21 @@ def manifest(path):
         raise Error("%s was made by a newer program (package format %s); update FL Mod Studio"
                     % (os.path.basename(path), man.get("format_version")))
     return man
+
+
+def game_of(path, man=None):
+    """the game the package was made on, "fl26" / "fl27": its manifest's "game", else what its
+    recipe says (worldgame.recipe_game: the game's own clubs it uses); None when it does not say"""
+    import worldgame as WG
+    man = man if man is not None else manifest(path)
+    g = str(man.get("game") or "").lower()
+    if g in WG.GAMES:
+        return g
+    try:
+        with zipfile.ZipFile(path) as z:
+            return WG.recipe_game(json.loads(z.read("recipe.json").decode("utf-8")))
+    except (zipfile.BadZipFile, KeyError, ValueError, OSError):
+        return None
 
 
 def unpack(path, store):
@@ -324,7 +347,12 @@ def unpack(path, store):
             t = os.path.realpath(os.path.join(dst, n))
             if not (t == root or t.startswith(root + os.sep)):
                 raise Error("%s: a file points outside the package (%s)" % (path, n))
-        z.extractall(dst)
+        try:
+            z.extractall(dst)
+        except NotImplementedError:           # B386: one file of it packed with Deflate64
+            rmtree(dst)
+            raise Error("%s is packed with a compression method this program cannot read -- zip it again "
+                        "with the normal method (Deflate)" % os.path.basename(path))
     r = json.load(open(os.path.join(dst, "recipe.json"), encoding="utf-8"))
 
     def full(p):
@@ -371,7 +399,7 @@ def clashes(recipe, piece, tag):
     return [L["name"] for L in piece.get("leagues", []) if L["name"] in mine]
 
 
-OVERLAY = ("club_crests", "club_coaches", "club_kits", "club_away_kits", "kit_folders", "scoreboard")
+OVERLAY = ("club_crests", "club_coaches", "club_kits", "club_away_kits", "club_third_kits", "kit_folders", "scoreboard")
 
 
 def overlay(recipe, piece, got, names):

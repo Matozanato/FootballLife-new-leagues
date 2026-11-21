@@ -54,10 +54,19 @@
 #define REG_ARRAY_OFF 0x1d4c330 /* edit block + this = regulation records, stride 0x314 (caps sets) */
 #endif
 #define REG_STRIDE    0x314
-#define REG_CAP       600       /* the caps sets raise the array to 600 rows; unused rows carry id 0 */
+#define REG_CAP       lay_regcap() /* the caps set's rows: 600 (0.3.0), 1200 (limits set); unused rows carry id 0 */
 
-#define MAX_IDS   256        /* our competitions (64 until the limits branch: a world of 75+ leagues) */
-#define MAX_LIST  1024       /* merged include list */
+#define MAX_IDS   1024       /* our competitions (64 until the limits branch: a world of 75+ leagues;
+                                256 until the league band 320..499, ~250 leagues and their cups) */
+#define MAX_LIST  8192       /* merged include list: the shipped one and every id of ours (join_pre
+                                refuses a list longer than MAX_LIST - MAX_IDS). 2048 until the
+                                limits branch: fl26swiss's teardown list (TD_MAX 4096, ~256 cups
+                                of ours and their rows) comes in here before ours are added */
+/* Per-id memory (g_moved_conf, g_door_yes, g_cal_shut) is indexed by the regulation id itself:
+   every base id, 1..1023 (a regulation id is stage << 10 | base id). Until the league band it was
+   256, and an id of 256 or more silently skipped the bookkeeping -- for a January-December league
+   of ours that is the doubled schedule and the missing second season the comments below describe. */
+#define ID_SLOTS  1024
 
 /* 15 whole instructions worth of prologue at each site, checked before anything is written */
 static const unsigned char SIG_JOIN[16] = {
@@ -80,6 +89,7 @@ static const unsigned char SIG_CLOSE[15] = {
 typedef struct { uint16_t* b; uint16_t* e; uint16_t* c; } vec16_t;
 
 static uint64_t           g_base = 0;
+#include "fl26layout.h"   /* block offsets read from the code fl26caps patched */
 unsigned char*            g_tramp_join = 0;   /* referenced by the naked stubs */
 unsigned char*            g_tramp_reg  = 0;
 unsigned char*            g_tramp_bld  = 0;
@@ -105,6 +115,18 @@ static int       g_nbuilder_extra = 0;
  * cup has no season (no header entry, 2025 nor 2026). It goes in behind them instead: set when
  * the door lets a builder extra in, cleared by the next calendar-year build. */
 static uint8_t   g_extra_yes[MAX_IDS];
+/* B333 (huliaanos 05.11. and Uncle Lanscilo 06.11.: the Suomen Cup, NM Cupen, Svenska Cupen; the
+ * Megapack's Logmanssteypid on 25.06.2027): past B318 the door lets that cup into the season, and
+ * nothing ever gives it clubs. A cup of an August-May country gets them in the game's July season
+ * pass (fl26chain: "cup N: ... (season pass)"); a region of ours with January-December leagues has
+ * no such pass, so the cup's list stayed empty -- "The lineup of teams eligible for this
+ * competition has not been decided", not one match all year, and its Fixtures screen took the
+ * game down. So when the door lets such a cup in, it is handed the clubs of its league here,
+ * through the game's setter; fl26chain, hooked on the same setter, makes that the field the
+ * world asks for (cupall: both leagues in turn; cupn: the cap). Once per build. */
+static uint16_t  g_calcup_top[MAX_IDS];    /* per builder extra: the league it takes clubs from, 0 = none */
+static uint8_t   g_calcup_given[MAX_IDS];
+static void cal_cup_give(int i);
 static uint16_t  g_builder_list[MAX_LIST];
 static vec16_t   g_builder_vec;
 typedef struct { uint16_t id, conf; } builder_conf_t;
@@ -167,18 +189,21 @@ static int td_extra(uint16_t id) { for (int i = 0; i < g_ntd_extra; i++) if (g_t
    season ends at New Year with the league above them, not in July: the July teardown closed
    them half way through and they ended every season with no final table (GitHub #27). */
 static uint16_t g_cal[MAX_IDS]; static int g_ncal = 0;
+static uint32_t listed_n(const unsigned char* rec);
+static int july_relist(uint16_t id);
 static int calyr(uint16_t id) { for (int i = 0; i < g_ncal; i++) if (g_cal[i] == id) return 1; return 0; }
-/* A record's region. With fl26reg128 live the full region (0..127) is the byte at +0x2fe,
-   marked by REG128_MARK at +0x2ff, and the 6-bit field at +0x30c bits 7..12 holds
-   min(region, 63); without it the 6-bit field is all there is. An unmarked record (an old
-   career before fl26_join_regions repaired it) falls back to the 6-bit field. */
+/* A record's region. With fl26reg128 live the full region (0..127; 0..255 with fl26caps'
+   regions step, FL 2027) is the byte at +0x2fe, marked by REG128_MARK at +0x2ff, and the 6-bit
+   field at +0x30c bits 7..12 holds min(region, 63); without it the 6-bit field is all there is.
+   An unmarked record (an old career before fl26_join_regions repaired it) falls back to the
+   6-bit field. */
 #define REG128_MARK 0x5a
 static int reg128_live(void);
 static int rec_region(const unsigned char* rec)
 {
   if (!rec) return -1;
   int six = (int)((*(const uint32_t*)(rec + 0x30c) >> 7) & 63);
-  if (reg128_live() && rec[0x2ff] == REG128_MARK && rec[0x2fe] <= 127) return rec[0x2fe];
+  if (reg128_live() && rec[0x2ff] == REG128_MARK) return rec[0x2fe];
   return six;
 }
 /* shipped leagues that do enter, as a yardstick beside ours in the door log */
@@ -231,7 +256,7 @@ static int has_table(uint16_t id);
 static const uint16_t MOVED[MOVED_N][2] = {
   {29,16}, {163,16}, {31,16}, {67,18}, {68,18}, {120,21}, {127,21}, {132,21},
   {52,24}, {55,24}, {97,24}, {162,28}, {164,28}, {165,28} };
-static uint8_t g_moved_conf[256];   /* 0x80 | its own runtime confederation while it carries UEFA's */
+static uint8_t g_moved_conf[ID_SLOTS];   /* 0x80 | its own runtime confederation while it carries UEFA's */
 static int moved_region(int r);
 static int moved(uint16_t id)
 {
@@ -270,7 +295,7 @@ static void moved_conf_back(uint16_t only, const char* why)
 /* Ids of ours the door said YES to since the last July teardown: the builder lets 49 and 60
    in at creation, and their table is only made later, so "flagged but no table" alone would
    admit them a second time (2026-09-28: 264 matches for a 12-club double round). */
-static uint8_t g_door_yes[256];
+static uint8_t g_door_yes[ID_SLOTS];
 /* Set by the July list, cleared when a calendar-year league of ours closes with its region at
    New Year: in between, such a league is half-way through its season. The July register_all saw
    it flagged with no table (a table is only final at the end) and let it in a second time --
@@ -278,10 +303,18 @@ static uint8_t g_door_yes[256];
    played, so at New Year it could not be finalised and nobody went up or down (Saudi second
    division under 162, 2026-09-29: "season end: ... 11(no table) 162(below has none)"). The
    door's own memory does not survive a load, this does not need to. */
-static int g_cal_midseason = 0;
+/* B488 (16.11.2026, a GigaPack career on FL 2027 saved on the hub before 1 August and loaded):
+   it did need to. A career built on day 181 has had its July list, so in the run that built it
+   this is 1 until New Year, and on 1 August no January-December league of ours goes in -- they
+   start after New Year. Loaded, it was 0: all 81 of them went in on 1 August, a whole extra
+   season each (~16,000 matches), the match table ran into its twins and the calendar showed no
+   league matches. So it starts unknown (-1), goes back to unknown with the rest of a career's
+   memory (timeline_check), and while unknown join_pre takes it from the game date instead:
+   from July to December, the half the July list opens and the New Year list closes. */
+static int g_cal_midseason = -1;
 /* Closed this season (reset by the July list): the New Year list closes every calendar-year
    league of ours that no region list has closed yet, and none is closed twice. */
-static uint8_t g_cal_shut[256];
+static uint8_t g_cal_shut[ID_SLOTS];
 /* The three above belong to one career, not to the run of the game: see timeline_check. */
 static void timeline_check(const char* where, int newyear);
 /* A season in progress has its rounds: the phase count at +0x300 bits 19-24 and the first
@@ -332,6 +365,69 @@ static int live_rounds(uint16_t id, const unsigned char* rec)
   logf("register_all: %u has rounds but no match left in the table -- last season's, let in", id);
   return 0;
 }
+
+/* ---- B488: "already in a season", from what the save holds as well as from memory ----
+ *
+ * 16.11.2026, a tester on FL 2027 with the GigaPack (318 leagues): new Master League, saved on
+ * the hub before the first registration day (1 August, day 213), the game quit, the save loaded.
+ * On 1 August register_all appended 110 of ours a second time ("flagged in a season but has no
+ * table -- appended"), against 2 in a career built in the same run: 81 January-December leagues
+ * and 29 split parents (kind 6). Both were held out only by this module's memory, which a load
+ * does not bring back:
+ *   - a January-December league is not in a season on 1 August of the career's first year at all
+ *     (it starts after New Year); g_cal_midseason said so, set by the July list of the career's
+ *     creation. Loaded, it was 0. Now unknown, and then read off the game date (see above).
+ *   - a split parent has no rounds and no table of its own (its fixtures are its phases'), so only
+ *     g_door_yes knew the builder had let it in at creation. What the save does hold is the
+ *     season enter_season gave it: +0x2fc names the year, the competition's standings header has
+ *     the sub-record of that year, and none of its tables is final yet. The July teardown puts
+ *     +0x2fc back to 0xffff for everyone it closes, and a season over has a final table, so a
+ *     competition with that is in THIS season, not last.
+ * The second test is asked only of an id that is about to be appended anyway (flagged, and none of
+ * the other reasons), so every case the earlier fixes let in -- a league flagged by its parent and
+ * never entered (GitHub #19: +0x2fc 0xffff), a January-December league after its New Year close
+ * (+0x2fc reset, its matches gone), last season's rounds (B253) -- still goes in.
+ *
+ * The reasons, in the order they are asked (the first that holds is the one counted). */
+enum { JOIN_IN = 0,          /* not in a season: appended */
+       JOIN_ROUNDS,          /* rounds with matches behind them (live_rounds) */
+       JOIN_TABLE,           /* a table, for an August-May league */
+       JOIN_DOOR,            /* the door said YES since the last July list (memory) */
+       JOIN_MIDSEASON,       /* a January-December league between the July list and New Year (memory) */
+       JOIN_MIDSEASON_DATE,  /* the same, read off the game date: the memory is unknown (a load) */
+       JOIN_SAVED_SEASON,    /* entered into a season that is still running, as the save holds it */
+       JOIN_NREASONS };
+static const char* const JOIN_WHY[JOIN_NREASONS] = {
+  "appended", "rounds", "table", "door", "mid-season", "mid-season by date", "season in the save" };
+typedef struct {
+  int flagged;     /* +0x304 bit 8 */
+  int cal;         /* a January-December league of ours (calyr) */
+  int rounds;      /* live_rounds() */
+  int table;       /* has_table() */
+  int door;        /* g_door_yes */
+  int midseason;   /* g_cal_midseason: 1, 0, or -1 unknown */
+  int month;       /* the game's month, 1..12, or -1 unread */
+} join_facts_t;
+/* Pure: no game memory but what `saved` reads (tested by test_join_already.c). `saved(id)` is
+   only called when every other reason has failed: it walks the standings header. */
+static int join_why(const join_facts_t* f, uint16_t id, int (*saved)(uint16_t))
+{
+  if (!f->flagged) return JOIN_IN;
+  if (f->rounds) return JOIN_ROUNDS;
+  if (!f->cal && f->table) return JOIN_TABLE;
+  if (f->door) return JOIN_DOOR;
+  if (f->cal) {
+    if (f->midseason > 0) return JOIN_MIDSEASON;
+    if (f->midseason < 0 && f->month >= 7) return JOIN_MIDSEASON_DATE;
+  }
+  if (saved && saved(id)) return JOIN_SAVED_SEASON;
+  return JOIN_IN;
+}
+static int game_month(void);
+static int game_date(void);
+static int season_live(uint16_t id);
+static int g_why_lines = 0;   /* per-id lines of the B488 reasons, per season start like g_reg_logged */
+
 vec16_t* join_pre(vec16_t* in)
 {
   g_stat[0]++;
@@ -351,6 +447,8 @@ vec16_t* join_pre(vec16_t* in)
   }
 
   int added = 0, already = 0, added_cal = 0;
+  int why_n[JOIN_NREASONS] = {0}, flagged_in = 0;
+  int month = g_cal_midseason < 0 ? game_month() : -1;   /* B488: read once, only when needed */
   for (int i = 0; i < g_nids; i++) {
     int dup = 0;
     for (int j = 0; j < n; j++) if (g_list[j] == g_ids[i]) { dup = 1; break; }
@@ -370,12 +468,30 @@ vec16_t* join_pre(vec16_t* in)
        after a load let every one of our leagues in a second time: two schedules, each round
        played twice, 121 points in League One (2026-10-01, loaded at day 232; rec 4020 and
        rec 11026 both 22 rounds of Liga A). The rounds are in the save, the memory is not. */
-    if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1)
-        && (live_rounds(g_ids[i], rec) || (!calyr(g_ids[i]) && has_table(g_ids[i]))
-            || (g_ids[i] < 256 && g_door_yes[g_ids[i]])
-            || (g_cal_midseason && calyr(g_ids[i])))) { already++; continue; }
-    if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1))
+    /* B488: and what the save holds where the memory is gone -- see join_why. The facts are
+       taken in the order join_why asks them, each only when the ones before it said no, as the
+       || chain here did (live_rounds walks the match table, has_table calls the game). */
+    join_facts_t f = { 0 };
+    f.flagged = rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1);
+    f.cal = calyr(g_ids[i]);
+    f.midseason = g_cal_midseason; f.month = month;
+    if (f.flagged) {
+      f.rounds = live_rounds(g_ids[i], rec);
+      if (!f.rounds && !f.cal) f.table = has_table(g_ids[i]);
+      if (!f.rounds && !f.table) f.door = g_ids[i] < ID_SLOTS && g_door_yes[g_ids[i]];
+    }
+    int why = join_why(&f, g_ids[i], season_live);
+    why_n[why]++;
+    if (why != JOIN_IN) {
+      already++;
+      if (why >= JOIN_MIDSEASON_DATE && g_why_lines++ < 400)
+        logf("register_all: %u is flagged and has no table -- not appended: %s", g_ids[i], JOIN_WHY[why]);
+      continue;
+    }
+    if (f.flagged) {
+      flagged_in++;
       logf("register_all: %u is flagged in a season but has no table -- appended", g_ids[i]);
+    }
     g_list[n++] = g_ids[i]; added++;
     if (calyr(g_ids[i])) added_cal++;
   }
@@ -404,6 +520,18 @@ vec16_t* join_pre(vec16_t* in)
     buf[p] = 0;
     logf("register_all %u: game gave %d ids [%s], we appended %d -> %d (%d of ours already in a season)",
          g_stat[0], n - added, buf, added, n, already);
+  }
+  /* B488: one line a tester can send -- how many of ours were already in, why, and what the
+     January-December memory was. A run of "appended" here after a load is the bug. */
+  if (why_n[JOIN_IN] || why_n[JOIN_MIDSEASON_DATE] || why_n[JOIN_SAVED_SEASON] || g_stat[0] <= 4) {
+    int d = game_date();
+    logf("register_all %u (day %d): ours %d appended (%d flagged), %d already in a season -- rounds %d, table %d, "
+         "door %d, mid-season %d, mid-season by date %d, season in the save %d; January-December memory %s (month %d); "
+         "%d calendar cup(s) behind them",
+         g_stat[0], d >= 0 ? d % 365 : -1, why_n[JOIN_IN], flagged_in, already, why_n[JOIN_ROUNDS], why_n[JOIN_TABLE],
+         why_n[JOIN_DOOR], why_n[JOIN_MIDSEASON], why_n[JOIN_MIDSEASON_DATE], why_n[JOIN_SAVED_SEASON],
+         g_cal_midseason < 0 ? "unknown" : g_cal_midseason ? "mid-season" : "New Year passed", month,
+         added - why_n[JOIN_IN]);
   }
   return &g_vec;
 }
@@ -463,7 +591,7 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
     if (id == 55 || id == 97 || id == 127 || id == 164 || id == 165)
       calendar_build = 1;
   }
-  if (calendar_build) memset(g_extra_yes, 0, sizeof g_extra_yes);
+  if (calendar_build) { memset(g_extra_yes, 0, sizeof g_extra_yes); memset(g_calcup_given, 0, sizeof g_calcup_given); }
 
   if (g_stat[4] <= 8) {
     char buf[480]; list_ids(inc ? inc->b : 0, n, buf, sizeof buf);
@@ -500,9 +628,15 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
       uint16_t id = g_july_extra[i];
       unsigned char* rec = (unsigned char*)find_record(id);
       if (!rec) continue;
+      /* B365: a league of ours in a region the exe holds to the calendar year and the world file
+         to August (J3 430, Saudi Second Division 944) is left off the July list like the super
+         cups, and played its first season only. It keeps its own confederation, and goes in
+         only with last season's clubs still listed -- an empty one would enter with nobody. */
+      int league = *(uint32_t*)(rec + 0x84) == 1;
+      if (league && listed_n(rec) < 2 && july_relist(id) < 2) { logf("July league %u: no clubs listed -- left out of the build", id); continue; }
       uint32_t* meta = (uint32_t*)(rec + 0x300);
       uint32_t own = (*meta >> 25) & 0xf;
-      if (own != 1) {
+      if (own != 1 && !league) {
         g_july_was[i] = (uint8_t)(0x80 | own);
         *meta = (*meta & ~(0xFu << 25)) | (1u << 25);
       }
@@ -511,7 +645,7 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
       uint32_t* fl = (uint32_t*)(rec + 0x304);
       if (!((*fl >> 8) & 1)) {
         *fl |= 1u << 8;
-        logf("July super cup %u: runs-this-season flag was clear -- set for the build", id);
+        logf("July %s %u: runs-this-season flag was clear -- set for the build", league ? "league" : "super cup", id);
       }
       extra[ne++] = id; njuly++;
     }
@@ -617,6 +751,12 @@ static const unsigned char* find_record(uint16_t cid)
  * that comes to the door with a full list, as long as its configured size (+0x30c), and a
  * count of 0 gets the count set to the list's length first -- the one field the game's own
  * setter 0x1414ca080 writes. A league whose count is already set is not touched. */
+static uint32_t listed_n(const unsigned char* rec)
+{
+  uint32_t n = 0;
+  while (n < 48 && *(const uint32_t*)(rec + 0x170 + 4 * n) != 0xffffffffu) n++;
+  return n;
+}
 static void count_listed(uint16_t cid)
 {
   unsigned char* rec = (unsigned char*)find_record(cid);
@@ -761,6 +901,11 @@ int door_pre(uint64_t id, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
   free_stale_rounds(cid);
+  /* B333: a calendar cup's clubs go in before its door, not after: the entry draws the rounds
+     from the list it finds, and clubs given after a YES stood in the draw with no match played
+     (06.11.2026: Suomen Cup 569, twelve clubs on 20 April and rounds 65 and 107 gone by) */
+  for (int i = 0; i < g_nbuilder_extra; i++)
+    if (g_builder_extra[i] == cid) cal_cup_give(i);
   if (ours(cid)) { timeline_check("door", 0); canon_listed(cid); count_listed(cid); }
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
@@ -784,11 +929,11 @@ void door_post(uint64_t id, uint64_t result, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
   g_stat[5]++;
-  if (cid < 256 && g_moved_conf[cid]) moved_conf_back(cid, (result & 0xff) ? "the door said YES" : "the door said no");
+  if (cid < ID_SLOTS && g_moved_conf[cid]) moved_conf_back(cid, (result & 0xff) ? "the door said YES" : "the door said no");
   for (int i = 0; i < g_njuly; i++)
     if (g_july_extra[i] == cid) {
       if (g_july_was[i]) moved_conf_back(cid, (result & 0xff) ? "the door said YES" : "the door said no");
-      logf("door(%u) -> %s  July super cup of ours", cid, (result & 0xff) ? "YES" : "no");
+      logf("door(%u) -> %s  July extra of ours", cid, (result & 0xff) ? "YES" : "no");
     }
   for (int i = 0; i < g_nbuilder_extra; i++)
     if (g_builder_extra[i] == cid) {
@@ -799,7 +944,7 @@ void door_post(uint64_t id, uint64_t result, uint64_t ret)
   if (!(result & 0xff)) g_stat[6]++;
   if (!ours(cid) && !control(cid)) return;
   if (ours(cid)) g_stat[7]++;
-  if (ours(cid) && (result & 0xff) && cid < 256) g_door_yes[cid] = 1;
+  if (ours(cid) && (result & 0xff) && cid < ID_SLOTS) g_door_yes[cid] = 1;
   uint32_t flags = 0, kind = 0, clubs = 0; int found = 0;
   const unsigned char* rec = find_record(cid);
   if (rec) {
@@ -1075,13 +1220,12 @@ __attribute__((naked)) void reg_handler(void)
 #define SETCLUBS_RVA 0x1522b50  /* set_clubs(u16 id, vec_u32* handles, u8 flag)                 */
 #define CLUBREC_RVA  0x14bca80  /* club_record(block, handle) -> record or NULL                 */
 #define NOPARENT_RVA 0x351ae44  /* the "no parent club" sentinel the mover compares +0x628 to   */
-#define SLOT7_PROBE_RVA 0xb08f74 /* 0xff here: fl26slot7 made the league slot the whole byte    */
 #define CAL_MAXCLUBS 48
 typedef struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec32_t;
 typedef void (*setclubs_fn)(uint64_t id, vec32_t* v, uint64_t flag);
 typedef unsigned char* (*ctable_fn)(uint64_t id);
 typedef unsigned char* (*clubrec_fn)(unsigned char* block, uint64_t handle);
-#define MAX_CPAIR 64
+#define MAX_CPAIR 256   /* 64 until the league band: a world of ~150 countries has more January-December pairs */
 typedef struct { uint16_t up, low; uint8_t n; } cpair_t;
 static cpair_t g_cpair[MAX_CPAIR]; static int g_ncpair = 0;
 static uint8_t g_cpair_done[MAX_CPAIR];   /* exchanged this New Year (reset by the July list) */
@@ -1089,6 +1233,20 @@ static int cal_exchanged(uint16_t id)
 {
   for (int i = 0; i < g_ncpair; i++) if (g_cpair_done[i] && (g_cpair[i].up == id || g_cpair[i].low == id)) return 1;
   return 0;
+}
+/* B494 (17.11.2026): a pair closed here with a league of the game's in its region (Colombia's
+   428<->960) is not exchanged here -- the game's season end and fl26chain have it. Said once, so
+   the log shows who has it (the pair used to be skipped without a line). Only a log line. */
+static void cal_left(const uint16_t* alone, int nalone, const uint16_t* withgame, int ngame)
+{
+  for (int i = 0; i < g_ncpair; i++) {
+    const cpair_t* p = &g_cpair[i];
+    int up_a = 0, up_g = 0, low_a = 0, low_g = 0;
+    for (int j = 0; j < nalone; j++) { up_a |= alone[j] == p->up; low_a |= alone[j] == p->low; }
+    for (int j = 0; j < ngame; j++) { up_g |= withgame[j] == p->up; low_g |= withgame[j] == p->low; }
+    if (g_cpair_done[i] || !(up_a || up_g) || !(low_a || low_g) || !(up_g || low_g)) continue;
+    logf("new year: %u<->%u -- a league of the game's in the region, left to the game's season end", p->up, p->low);
+  }
 }
 
 /* n clubs each way between upper (ta: its table, la: its list) and lower; eligible(h) says whether
@@ -1155,13 +1313,29 @@ static int cal_list(uint16_t id, uint32_t* out)
   while (n < CAL_MAXCLUBS && *(const uint32_t*)(rec + 0x170 + n * 4) != 0xffffffffu) { out[n] = *(const uint32_t*)(rec + 0x170 + n * 4); n++; }
   return n;
 }
+/* B365: the season's end empties such a league's list before the July build (a league of ours
+   under one of the game's in France keeps it), so it is listed again from its own table -- last
+   season's clubs, as the July build of every other league of ours has them; the season pass after
+   the build moves the promoted and the relegated as usual. */
+static int july_relist(uint16_t id)
+{
+  uint32_t club[CAL_MAXCLUBS]; uint8_t played[CAL_MAXCLUBS];
+  int n = cal_table(id, club, played);
+  if (n < 2) return n;
+  for (int k = 0; k < n; k++) if (!club[k] || club[k] == 0xffffffffu) return 0;
+  vec32_t v = { club, club + n, club + CAL_MAXCLUBS };
+  ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(id, &v, 1);
+  const unsigned char* rec = find_record(id);
+  int now = rec ? (int)listed_n(rec) : 0;
+  logf("July league %u: no clubs listed -- %d put back from its table (%08x first), %d listed now", id, n, club[0], now);
+  return now;
+}
 /* closed[]: the ids this teardown closes for having no league of the game's in their region */
 static void cal_exchange(const uint16_t* closed, int nclosed)
 {
   void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
   unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
   if (!blk) return;
-  uint32_t mask = *(const unsigned char*)(uintptr_t)(g_base + SLOT7_PROBE_RVA) == 0xff ? 0xff : 0x7f;
   clubrec_fn club = (clubrec_fn)(uintptr_t)(g_base + CLUBREC_RVA);
   for (int i = 0; i < g_ncpair; i++) {
     cpair_t* p = &g_cpair[i];
@@ -1178,7 +1352,7 @@ static void cal_exchange(const uint16_t* closed, int nclosed)
     }
     /* the slot bytes of a club staying in each league, before anybody moves */
     unsigned char* sa = club(blk, la[0]); unsigned char* sb = club(blk, lb[0]);
-    uint32_t slot_up = sa ? sa[0x41c] & mask : 0x7b, slot_low = sb ? sb[0x41c] & mask : 0x7b;
+    uint32_t slot_up = sa ? lay_slot(sa) : 0x7b, slot_low = sb ? lay_slot(sb) : 0x7b;
     int r = cal_swap(ta, pa, ra, la, &na, tb, pb, rb, lb, &nb, p->n, cal_eligible, down, up);
     if (r <= 0) {
       logf("new year: %u<->%u -- %s, nobody moves", p->up, p->low,
@@ -1186,8 +1360,8 @@ static void cal_exchange(const uint16_t* closed, int nclosed)
       continue;
     }
     for (int k = 0; k < r; k++) {
-      unsigned char* c = club(blk, down[k]); if (c) c[0x41c] = (unsigned char)((c[0x41c] & ~mask) | slot_low);
-      c = club(blk, up[k]);                  if (c) c[0x41c] = (unsigned char)((c[0x41c] & ~mask) | slot_up);
+      unsigned char* c = club(blk, down[k]); if (c) lay_set_slot(c, slot_low);
+      c = club(blk, up[k]);                  if (c) lay_set_slot(c, slot_up);
     }
     vec32_t va = { la, la + na, la + CAL_MAXCLUBS }, vb = { lb, lb + nb, lb + CAL_MAXCLUBS };
     ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(p->up, &va, 1);
@@ -1198,9 +1372,39 @@ static void cal_exchange(const uint16_t* closed, int nclosed)
          r, up[0], r > 1 ? up[1] : 0, r > 2 ? up[2] : 0, na, nb);
   }
 }
+/* B333: see g_calcup_top */
+static void cal_cup_give(int i)
+{
+  uint16_t cup = g_builder_extra[i], top = g_calcup_top[i];
+  if (!top || g_calcup_given[i]) return;
+  uint32_t had[CAL_MAXCLUBS], la[CAL_MAXCLUBS];
+  int nh = cal_list(cup, had), na = cal_list(top, la);
+  if (na <= 0) { logf("calendar cup %u: its league %u has no clubs yet (%d), left as it is", cup, top, na); return; }
+  g_calcup_given[i] = 1;
+  vec32_t v = { la, la + na, la + CAL_MAXCLUBS };
+  ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(cup, &v, 1);
+  int nn = cal_list(cup, had);
+  logf("calendar cup %u: had %d clubs, given %u's %d -> %d (B333: no season pass gives them)", cup, nh, top, na, nn);
+}
 #else
 static void cal_exchange(const uint16_t* closed, int nclosed) { (void)closed; (void)nclosed; }
+static void cal_cup_give(int i) { (void)i; }
+static int july_relist(uint16_t id) { (void)id; return 0; }
 #endif
+
+/* B333: v: n pairs {calendar cup, the league it takes clubs from}, for cups fl26_join_builder_extra
+   already named. Returns the number matched. */
+__declspec(dllexport) int fl26_join_cal_cups(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+  int k = 0;
+  memset(g_calcup_top, 0, sizeof g_calcup_top);
+  for (int j = 0; j < n; j++)
+    for (int i = 0; i < g_nbuilder_extra; i++)
+      if (g_builder_extra[i] == v[2 * j]) { g_calcup_top[i] = v[2 * j + 1]; k++; break; }
+  logf("calendar cups given their league's clubs when they join a season (B333): %d of %d", k, n);
+  return k;
+}
 
 /* v: n triples (upper, lower, clubs each way), the upper pairs first. Returns the number kept. */
 __declspec(dllexport) int fl26_join_cal_pairs(const uint16_t* v, int n)
@@ -1332,6 +1536,22 @@ static void log_tables(void)
 #define GATE1_RVA    0x1313d47   /* je (74 4f) after 0x141546c70 in the switch-on            */
 #define GATE2_RVA    0x13140d6   /* je rel32 (0f 84) after 0x141546c70 in the kind-1 filler  */
 #define TABBASE_IMM  0x158df94   /* u32 immediate: where the tables start (hdr patches move it) */
+#define TABCOUNT_IMM 0x158f383   /* u32 immediate: how many tables (cmp ebx, n in the allocator) */
+#define HDRCOUNT_IMM 0x14fd4e5   /* u32 immediate: how many header entries (mov r9d, n)       */
+/* The header and pool as the patched code has them (fl26hdr255: 255 entries, 595 tables at
+   0xb34c; the FL 2027 standings step, tools/standings.py: 1024 entries, 2400 tables at the old
+   end of the grown object, 0x3a2ef0). 0 when the code is not one of those shapes. */
+static uint32_t pool_entries(uint32_t* tabbase_out, uint32_t* ntab_out)
+{
+  uint32_t b = *(const uint32_t*)(uintptr_t)(g_base + TABBASE_IMM);
+  uint32_t n = *(const uint32_t*)(uintptr_t)(g_base + TABCOUNT_IMM);
+  uint32_t k = *(const uint32_t*)(uintptr_t)(g_base + HDRCOUNT_IMM);
+  if (k < 100 || k > 4096 || n < 1 || n > 8192 || b < k * 0xb4) return 0;
+  if (b + (uint64_t)n * 0x187c > 0x39a8f0 && b < 0x3a2ef0) return 0;
+  *tabbase_out = b;
+  if (ntab_out) *ntab_out = n;
+  return k;
+}
 typedef uint64_t (*getctx_fn)(void);
 typedef void (*keyof_fn)(uint32_t* out, uint64_t id);
 typedef void (*activate_fn)(uint64_t ctx, uint64_t id);
@@ -1339,9 +1559,8 @@ static void ensure_tables(const vec16_t* in)
 {
   if (!g_base) return;
   hastab_fn has = (hastab_fn)(uintptr_t)(g_base + HASTAB_RVA);
-  uint32_t tabbase = *(const uint32_t*)(uintptr_t)(g_base + TABBASE_IMM);
-  if (tabbase < 0x4650 || tabbase > 0x10000) return;
-  uint32_t entries = tabbase / 0xb4;
+  uint32_t tabbase, ntab, entries = pool_entries(&tabbase, &ntab);
+  if (!entries) return;
   uint64_t ctx = ((getctx_fn)(uintptr_t)(g_base + GETCTX_RVA))();
   if (!ctx) return;
   const unsigned char* std = *(const unsigned char* const*)(uintptr_t)(ctx + 0x78);
@@ -1372,7 +1591,7 @@ static void ensure_tables(const vec16_t* in)
         uint16_t y = *(const uint16_t*)(s + 4);
         if (*(const uint32_t*)s == 0xffffffff || y == 0xffff) continue;
         int32_t t0 = *(const int32_t*)(s + 8);
-        if (t0 < 0) continue;                              /* no table built for it */
+        if (t0 < 0 || (uint32_t)t0 >= ntab) continue;      /* no table built for it */
         if (y < earliest) earliest = y;
         if (y == cur) cur_final = std[tabbase + (size_t)t0 * 0x187c + 0x314] != 0;
       }
@@ -1443,8 +1662,8 @@ static void ensure_tables(const vec16_t* in)
 #define DOOR_RET_RVA 0x13ac37e   /* enter_season's return address inside the door          */
 #define SUBRESET_RVA 0x158f870   /* (u8* subrecord): clear its tables                        */
 #define SUBFILL_RVA  0x158f9b0   /* (u8* entry, u16 year, u8 flag): build the year's tables  */
-#ifndef TODAY_OFF   /* the -calendar set (0.2.0): the unit tail moved by 0x2cebc8; -DTODAY_OFF=... for an older set */
-#define TODAY_OFF    0x19115ec   /* u32 date in the edit block: low word = year              */
+#ifndef TODAY_OFF   /* u32 date in the edit block, 8 past the day counter: 0x19115ec under the 0.3.0 set */
+#define TODAY_OFF    (lay_today() + 8)   /* low word = year */
 #endif
 typedef void (*subreset_fn)(unsigned char* sub);
 typedef void (*subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
@@ -1481,7 +1700,7 @@ static void timeline_check(const char* where, int newyear)
   if (other) {
     memset(g_door_yes, 0, sizeof g_door_yes);
     memset(g_cal_shut, 0, sizeof g_cal_shut);
-    g_cal_midseason = 0; g_reg_logged = 0; g_ny_date = -1;
+    g_cal_midseason = -1; g_reg_logged = 0; g_why_lines = 0; g_ny_date = -1;   /* B488: unknown, not "New Year passed" */
     logf("another career or save in this run (%s, game date %d/%d -> %d/%d): door and New Year memory cleared",
          where, g_seen_date / 365, g_seen_date % 365, y, d % 365);
   }
@@ -1493,8 +1712,8 @@ static void timeline_check(const char* where, int newyear)
 static unsigned char* season_entry(uint16_t id, unsigned char** std_out, uint32_t* tabbase_out)
 {
   if (!g_base) return 0;
-  uint32_t tabbase = *(const uint32_t*)(uintptr_t)(g_base + TABBASE_IMM);
-  if (tabbase < 0x4650 || tabbase > 0x10000) return 0;
+  uint32_t tabbase, entries = pool_entries(&tabbase, 0);
+  if (!entries) return 0;
   uint64_t ctx = ((getctx_fn)(uintptr_t)(g_base + GETCTX_RVA))();
   if (!ctx) return 0;
   unsigned char* std = *(unsigned char* const*)(uintptr_t)(ctx + 0x78);
@@ -1502,7 +1721,7 @@ static unsigned char* season_entry(uint16_t id, unsigned char** std_out, uint32_
   uint32_t key = 0xffffffff;
   ((keyof_fn)(uintptr_t)(g_base + KEYOF_RVA))(&key, id);
   if (key == 0xffffffff) return 0;
-  for (uint32_t k = 0; k < tabbase / 0xb4; k++) {
+  for (uint32_t k = 0; k < entries; k++) {
     unsigned char* e = std + (size_t)k * 0xb4;
     if (*(const uint32_t*)e == key) { *std_out = std; *tabbase_out = tabbase; return e; }
   }
@@ -1513,6 +1732,8 @@ static unsigned char* season_entry(uint16_t id, unsigned char** std_out, uint32_
 static int sub_final(const unsigned char* e, const unsigned char* std, uint32_t tabbase,
                      uint16_t year, int* h_out)
 {
+  uint32_t ntab = 0x258, tb;
+  pool_entries(&tb, &ntab);       /* 600 as shipped; the patched code's count otherwise */
   for (int h = 0; h < 2; h++) {
     const unsigned char* s = e + 4 + h * 0x58;
     if (*(const uint32_t*)s == 0xffffffff || *(const uint16_t*)(s + 4) != year) continue;
@@ -1520,12 +1741,37 @@ static int sub_final(const unsigned char* e, const unsigned char* std, uint32_t 
     for (int j = 0; j < 20; j++) {
       int32_t t = *(const int32_t*)(s + 8 + j * 4);
       if (t < 0) break;
-      if (t < 0x258 && std[tabbase + (size_t)t * 0x187c + 0x314]) fin = 1;
+      if ((uint32_t)t < ntab && std[tabbase + (size_t)t * 0x187c + 0x314]) fin = 1;
     }
     if (h_out) *h_out = h;
     return fin;
   }
   return -1;
+}
+
+/* B488: the game's month (1..12, the byte after the year, as reg_post reads it), -1 unread */
+static int game_month(void)
+{
+  if (!g_base) return -1;
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  const unsigned char* blk = owner ? (const unsigned char*)owner[0x48 / 8] : 0;
+  if (!blk) return -1;
+  int m = blk[TODAY_OFF + 2];
+  return m >= 1 && m <= 12 ? m : -1;
+}
+
+/* B488: entered into a season that is still running, as the save holds it (see join_why): +0x2fc
+   names a year, the standings header has that year's sub-record, and none of its tables is final.
+   0 when anything is missing or the pool is not where it was -- the id then goes in as before. */
+static int season_live(uint16_t id)
+{
+  const unsigned char* rec = find_record(id);
+  if (!rec) return 0;
+  uint16_t cur = *(const uint16_t*)(rec + 0x2fc);
+  if (cur == 0xffff) return 0;
+  unsigned char* std; uint32_t tabbase;
+  unsigned char* e = season_entry(id, &std, &tabbase);
+  return e && sub_final(e, std, tabbase, cur, 0) == 0;
 }
 
 void reg_fix_pre(uint64_t compid, uint64_t ret)
@@ -1640,7 +1886,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   { int ny = 0; for (int j = 0; j < n; j++) if (in->b[j] == 8) { ny = 1; break; }
     timeline_check("teardown", ny); }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
-  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0;
+  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0; g_why_lines = 0;
               memset(g_cpair_done, 0, sizeof g_cpair_done); }
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
@@ -1679,6 +1925,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
      region -- the season group the list is. */
   int cadd = 0, cdup = 0; char cbuf[160]; int cp = 0; cbuf[0] = 0;
   uint16_t alone[MAX_IDS]; int nalone = 0;   /* closed here with no league of the game's in their region */
+  uint16_t withgame[MAX_IDS]; int ngame = 0; /* closed here with one (B494: only for the log) */
   /* The New Year list is the one with shipped id 8, as the July list is the one with 2. A
      calendar-year league of ours in a region with no league of the game's (Norway and Sweden
      in the modpack, regions 39 and 45) never has a mate on any list: it was never closed, the
@@ -1709,17 +1956,18 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
          same, so the door's memory of it goes too. Kept, the July door YES and the mid-season
          mark held it out on day 41 and it played no second season (2026-10-01: "door(93)
          refused ... joins on day 41", then 13 of ours "already in a season", 93 without). */
-      if (dup) { if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; } cdup++; if (!game) alone[nalone++] = id; continue; }
-      if (id < 256 && g_cal_shut[id]) continue;
+      if (dup) { if (id < ID_SLOTS) { g_door_yes[id] = 0; g_cal_shut[id] = 1; } cdup++; if (!game) alone[nalone++] = id; else withgame[ngame++] = id; continue; }
+      if (id < ID_SLOTS && g_cal_shut[id]) continue;
       if ((!mate && !newyear) || k >= MAX_LIST) continue;
       g_td_list[k++] = id; changed++; cadd++;
-      if (!game) alone[nalone++] = id;
-      if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; }
+      if (!game) alone[nalone++] = id; else withgame[ngame++] = id;
+      if (id < ID_SLOTS) { g_door_yes[id] = 0; g_cal_shut[id] = 1; }
       if (cp < (int)sizeof cbuf - 8) cp += snprintf(cbuf + cp, sizeof cbuf - (size_t)cp, "%u ", id);
     }
   }
   if (cadd || cdup) g_cal_midseason = 0;
   if (nalone && g_ncpair) cal_exchange(alone, nalone);
+  if (ngame && g_ncpair) cal_left(alone, nalone, withgame, ngame);
   if (cdup) logf("teardown: %d calendar-year league(s) of ours on the list itself, closed with it", cdup);
   if (!changed) return in;
   if (cadd) logf("teardown: calendar-year leagues of ours closed with their region: [%s]", cbuf);
@@ -1855,7 +2103,8 @@ void list_post(vec16_t* out)
   char buf[160]; int p = 0, added = 0; buf[0] = 0;
   for (int i = 0; i < g_njuly; i++) {
     uint16_t id = g_july_extra[i]; int dup = 0;
-    if (!find_record(id)) continue;
+    const unsigned char* rec = find_record(id);
+    if (!rec || (*(const uint32_t*)(rec + 0x84) == 1 && listed_n(rec) < 2)) continue;
     for (uint16_t* q = out->b; q < out->e; q++) if (*q == id) { dup = 1; break; }
     if (dup) continue;
     if (out->e >= out->c) reserve(out, (uint64_t)(out->e - out->b) + 8);
@@ -1863,7 +2112,7 @@ void list_post(vec16_t* out)
     *out->e++ = id; added++;
     if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
   }
-  if (added) logf("July door list: %d super cup(s) of ours appended [%s] -> %d ids", added, buf,
+  if (added) logf("July door list: %d super cup(s)/league(s) of ours appended [%s] -> %d ids", added, buf,
                   (int)(out->e - out->b));
 }
 
@@ -1999,21 +2248,22 @@ static const uint32_t STYPE_RDATA[12] = {
 static uint32_t STYPE_EXPECT[25][2] = {
   {2,0},{4,0},{5,0},{3,0},{7,0},{6,0},{22,0},{8,0},{9,0},{27,0},{15,0},{10,0},{11,0},{12,0},
   {14,2},{13,2},{16,1},{18,1},{23,1},{19,1},{17,3},{20,3},{21,1},{28,1},{24,1} };
-static uint8_t g_stype[128];
+#define NREGIONS 256                   /* regions 0..255 (fl26caps' regions step, FL 2027) */
+static uint8_t g_stype[NREGIONS];
 static int g_stype_live = 0;
 unsigned char* g_tramp_stype = 0;       /* made by hook(), never called: the handler answers alone */
 uint32_t stype_handler(const int32_t* region)
 {
   int32_t r = *region;
-  if (r >= 0 && r < 128 && g_stype[r] != 0xff) return g_stype[r];
+  if (r >= 0 && r < NREGIONS && g_stype[r] != 0xff) return g_stype[r];
   if (!r) return 5;
   for (int i = 0; i < 25; i++) if ((int32_t)STYPE_EXPECT[i][0] == r) return STYPE_EXPECT[i][1];
-  return (r >= 29 && r < 128) ? 0 : 5;   /* fl26augseason's answer for ours, the game's for the rest */
+  return (r >= 29 && r < NREGIONS) ? 0 : 5;   /* fl26augseason's answer for ours, the game's for the rest */
 }
 /* a region of the game's calendar-year ones the world file plays August-May */
 static int moved_region(int r)
 {
-  if (!g_stype_live || r < 0 || r >= 128 || g_stype[r] != 0) return 0;
+  if (!g_stype_live || r < 0 || r >= NREGIONS || g_stype[r] != 0) return 0;
   for (int i = 0; i < 25; i++) if ((int)STYPE_EXPECT[i][0] == r) return STYPE_EXPECT[i][1] == 1;
   return 0;
 }
@@ -2023,12 +2273,12 @@ static int moved_region(int r)
    -3 when the hook could not be written. */
 __declspec(dllexport) int fl26_join_season_types(const uint8_t* v, int n)
 {
-  if ((!v && n) || n < 0 || n > 128 || !g_base) return -1;
+  if ((!v && n) || n < 0 || n > NREGIONS || !g_base) return -1;
   memset(g_stype, 0xff, sizeof g_stype);
   int k = 0;
   for (int i = 0; i < n; i++) {
     uint8_t r = v[2 * i], t = v[2 * i + 1];
-    if (r >= 128 || t > 3) continue;
+    if (t > 3) continue;                 /* r is a byte: every region 0..255 has its entry */
     g_stype[r] = t; k++;
   }
   if (!k) return 0;
@@ -2057,7 +2307,7 @@ __declspec(dllexport) int fl26_join_season_types(const uint8_t* v, int n)
     g_stype_live = 1;
   }
   char buf[400]; int p = 0;
-  for (int r = 0; r < 128 && p < (int)sizeof buf - 12; r++)
+  for (int r = 0; r < NREGIONS && p < (int)sizeof buf - 12; r++)
     if (g_stype[r] != 0xff) p += snprintf(buf + p, sizeof buf - (size_t)p, "%d:%u ", r, g_stype[r]);
   buf[p] = 0;
   logf("season types from the world file (region:type, 0 August-May, 1 January-December): %s", buf);
@@ -2108,6 +2358,16 @@ static uint32_t reg_rows(void)
   return 300;
 }
 
+/* B488 finding (16.11.2026), counted here and NOT acted on: the tester's GigaPack log has "745
+   regulation record(s) of an old career" on a load AND on a career built in the same run (recount
+   3), i.e. every row of every career comes here unmarked, not only old ones -- the mark does not
+   survive the mode copy or the save. If +0x2fe still holds the full region then, a region above
+   63 (the tester's GigaPack: 194 regions, January-December ones up to 131) is cut to 63 below. Whether it does is not known from
+   the code; these count the rows whose byte was above 63 with the 6-bit field at 63 (a full
+   region the line below would cut), for the log to answer it. Old careers (fl26reg64, at most 63)
+   can show such a byte too (d0 bits 18..26), so a count alone does not prove it. */
+static volatile uint32_t g_regions_cut = 0;
+static uint16_t g_regions_cut_id = 0; static uint8_t g_regions_cut_was = 0;
 static int repair_block(unsigned char* block)
 {
   unsigned char* rec = block + reg_off();
@@ -2116,6 +2376,9 @@ static int repair_block(unsigned char* block)
   for (uint32_t i = 0; i < rows; i++, rec += REG_STRIDE) {
     if (*(const uint16_t*)rec == 0) continue;            /* unused row */
     if (rec[0x2ff] == REG128_MARK) continue;               /* written by fl26reg128's parser */
+    if (rec[0x2fe] > 63 && ((*(const uint32_t*)(rec + 0x30c) >> 7) & 63) == 63) {
+      if (!g_regions_cut++) { g_regions_cut_id = *(const uint16_t*)rec; g_regions_cut_was = rec[0x2fe]; }
+    }
     rec[0x2fe] = (unsigned char)((*(const uint32_t*)(rec + 0x30c) >> 7) & 63);
     rec[0x2ff] = REG128_MARK;
     fixed++;
@@ -2144,7 +2407,9 @@ void recount_pre(unsigned char* block)
   if (n) {
     g_regions_fixed += (uint32_t)n;
     static int logged = 0;
-    if (logged++ < 40) logf("regions: %d regulation record(s) of an old career given their region from the 6-bit field (recount %u)", n, g_regions_passes);
+    if (logged++ < 40) logf("regions: %d regulation record(s) of an old career given their region from the 6-bit field (recount %u); "
+                            "B488: %u so far had a byte above 63 cut to 63 (first: %u, byte %u)", n, g_regions_passes,
+                            (unsigned)g_regions_cut, (unsigned)g_regions_cut_id, (unsigned)g_regions_cut_was);
   }
 }
 

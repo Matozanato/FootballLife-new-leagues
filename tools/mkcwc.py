@@ -58,12 +58,12 @@ def reshape(regs, ko, log=print):
     if not 175 < ko < REPLICA_STEP:
         raise SystemExit("--ko wants a free id between 176 and 1023")
 
-    cwc = [r for r in R if r[M.R_CID] == CWC_CID]
+    cwc = [r for r in R if M.reg_cid(r) == CWC_CID]
     if len(cwc) != 1 or rid(cwc[0]) != CWC_REG:
         raise SystemExit("competition 1 is not the shipped one-row Club World Cup here "
                          "(%d rows: %s) -- already reshaped?" % (len(cwc), [rid(r) for r in cwc]))
     old = cwc[0]
-    src = [r for r in R if rid(r) & 0x3ff == GROUPS_FROM and r[M.R_CID] == 5]
+    src = [r for r in R if rid(r) & 0x3ff == GROUPS_FROM and M.reg_cid(r) == 5]
     master = [r for r in src if r[R_GROUP] == NO_GROUP]
     reps = sorted((r for r in src if r[R_GROUP] != NO_GROUP), key=lambda r: r[R_GROUP])
     if len(master) != 1 or len(reps) != GROUPS or (master[0][M.R_TEAMS] & 0x3f) != CLUBS:
@@ -74,7 +74,7 @@ def reshape(regs, ko, log=print):
     for r in master + reps:
         g = bytearray(r)
         g[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
-        g[M.R_CID] = CWC_CID
+        M.set_reg_cid(g, CWC_CID)
         grp = g[R_GROUP]
         g[M.R_ID:M.R_ID + 2] = (CWC_REG if grp == NO_GROUP
                                 else CWC_REG + (grp + 1) * REPLICA_STEP).to_bytes(2, "little")
@@ -108,7 +108,7 @@ def reshape(regs, ko, log=print):
     # the shipped row's place in the table is where the group stage goes; the rest follows it
     out_regs = bytearray()
     for r in R:
-        if r[M.R_CID] == CWC_CID:
+        if M.reg_cid(r) == CWC_CID:
             for g in new:
                 out_regs += g
         else:
@@ -124,11 +124,11 @@ def intercontinental(comp, regs, ents, cid, reg, name, code="FL_INTERCONTINENTAL
     -- copied in place onto competition `cid` and regulation `reg`, called `name` (Mod Studio's
     "keep the old Club World Cup"). Before reshape: it copies the shipped row. No entries: the
     game's four entrants of regulation 1 are handed to it by fl26swiss.dll"""
-    at = next((i for i in range(len(comp) // M.COMP) if comp[i * M.COMP + M.CID_OFF] == CWC_CID), None)
+    at = next((i for i in range(len(comp) // M.COMP) if M.comp_cid(comp, i * M.COMP) == CWC_CID), None)
     if at is None:
         raise SystemExit("no competition 1 (the Club World Cup) in these tables")
     R = rows(regs)
-    old = [r for r in R if r[M.R_CID] == CWC_CID]
+    old = [r for r in R if M.reg_cid(r) == CWC_CID]
     if len(old) != 1 or rid(old[0]) != CWC_REG:
         raise SystemExit("competition 1 is not the shipped one-row Club World Cup here -- already reshaped?")
     proto = M.code_of(comp[at * M.COMP:(at + 1) * M.COMP])

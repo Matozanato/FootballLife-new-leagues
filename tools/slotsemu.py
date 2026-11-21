@@ -21,7 +21,13 @@ for base, vs, raw, rs, name in secs:
     size = ((base + vs + 0xfff) & ~0xfff) - lo
     mu.mem_map(lo, size)
     mu.mem_write(base, d[raw:raw + min(rs, vs)])
-mu.mem_map(M.PAGE, 0x1000)
+# what the module allocates at its page (0x1000; more past 416 slots, mkslots.tables_at)
+alloc = re.search(r'VirtualAlloc\(ffi\.cast\("void\*", page\), (0x[0-9a-f]+), kind', txt)
+PAGE_SIZE = int(alloc.group(1), 16)
+assert PAGE_SIZE == M.tables_at(N)[2], (hex(PAGE_SIZE), N)
+mu.mem_map(M.PAGE, PAGE_SIZE)
+for va, old, new in P:                          # every patch lands in the exe or on that allocation
+    assert va < M.PAGE or va + len(new) // 2 <= M.PAGE + PAGE_SIZE, hex(va)
 # pass 1 + pass 2, like the applier
 for va, old, new in P:
     cur = bytes(mu.mem_read(va, len(old) // 2)).hex()
@@ -111,7 +117,7 @@ for s in range(N):
         exp = (s << 16) | i if i in (0, 1, 4) else 0xffff
         assert v == exp, (s, i, hex(v), hex(exp))
     assert call(GET, rdx=s, r8=c) & 0xffffffff == 0xffffffff
-for s in (123, N, 255, 0xffffffff):
+for s in (123, N, 0xffffffff) + ((255,) if N <= 255 else ()):      # 255 is a real slot past 256 (B346)
     assert call(GET, rdx=s, r8=0) & 0xffffffff == 0xffffffff
 # a garbage count (an old save) never lets get read past the slot
 mu.mem_write(REG + L["cnt"] + 2 * 10, struct.pack("<H", 0xffff))
@@ -136,7 +142,7 @@ for va, kind, why in M.SITES:
     c, j = list(md.disasm(d[o:o + 24], va))[:2]
     reg = c.op_str.split(",")[0]
     tgt = int(j.op_str, 16); back = va + c.size + j.size
-    for v in (0, 1, 122, 123, 124, 127, 128, 200, N - 1, N, N + 1, 255, 0x7fffffff, 0x80000000, 0xffffffff):
+    for v in (0, 1, 122, 123, 124, 127, 128, 200, 379, 635, N - 1, N, N + 1, 255, 0x7fffffff, 0x80000000, 0xffffffff):
         mu.reg_write(REGS[reg], v)
         stop = []
         def h(uc, addr, size, ud):

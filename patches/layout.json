@@ -67,6 +67,14 @@
    "players_ceiling": "0x16038a8",
    "_ceiling_note": "the season calendar (stride 0x2c4) begins here; the shipped match table's last record runs into it, which is why rec596 has an extra end-pointer site"
   },
+  "lower_tail": {
+   "_comment": "Everything the block keeps above the shipped player array's last record and below its old end: the players' dummy at 0x184c3bc, the table at 0x184c538, the group set at 0x184db1c (0x1d514 bytes, its constructor memsets exactly that much), the object at 0x186b030, and the cluster that runs to 0x186cec8. The player array starts at +0 and grows in place, so every cap past 30001 records puts this span inside the array: the game then reads its own structures out of player bytes. On 2026-10-27 that killed Edit at 0x1414d688b, where `base[10]` of the group set at block+0x186afdc held `0x6c502033` -- a player's name. The span moves as one piece, by one delta, to the first place after the player array; tools/lowertail.py lists every operand that names an offset inside it.",
+   "start": "0x16705a8",
+   "end": "0x1877068",
+   "sites_file": "patches/lower-tail-sites.json",
+   "_end_note": "'end' is the shipped block size, not the last offset found: what sits between 0x186cec8 and there is named by no operand the scan can see, so it is carried along rather than left behind as a hole the player array would write through.",
+   "_start_note": "0x16705a8, where the season calendar's unit ends (calwiden OLD_BASE + OLD_UNIT), not the players' dummy at 0x184c3bc: 2026-11-04, the span 0x16705a8..0x184c3bc holds 395 live fields named by 3412 operands (the user's club at 0x1798ab0 alone by 367) that no other family moves, and a player cap past 61905 records puts them inside the array (record 65112 is the user club). The 5 operands of the match flags (0x18378a0, relocated on their own) are left out of the scan (lowertail.py RELOCATED)."
+  },
   "tail_pad": "0x20000",
   "tail_pad_why": "spare room after the relocated arrays, holding nothing. Some references to a relocated array are virtualised into .impdata, where the attribution cannot see them, and still compute from the old base; one such read was measured on 2026-09-17 at block + 0x3060284 and killed the season twice. The pad makes such a read land inside our own allocation. Reads only."
  },
@@ -128,11 +136,6 @@
      "why": "0x1414bc0xx: finds the user's club row by scanning 750 records against 0x14351ae44"
     },
     {
-     "va": "0x1414f370a",
-     "mnemonic": "mov",
-     "why": "clamps a team count to 750 (cmova)"
-    },
-    {
      "va": "0x1412fb530",
      "mnemonic": "cmp",
      "why": "The BACK EDGE of the team walk in 0x1412fb360, which indexes the array with `imul rcx, rax, 0x690` / `add rcx, 0xadf4bc` and builds an index keyed by the id in each record. The compiler peeled the first iteration: the guard at 0x1412fb41a tests r12d, which is zeroed before the loop and never changes, and every later pass enters at 0x1412fb42c and skips that guard entirely -- so this back edge is the only real bound the walk has. Raising the guard alone left the walk covering clubs 0..749 of 1600. Found 2026-09-16 by the back-edge sweep that check_cap_completeness now runs, after the same shape in the fixture array (0x141579e64) turned out to be the whole of G2a's remaining defect."
@@ -155,6 +158,10 @@
      "va": "0x14140172f",
      "why": "A -> block (0x1414016b0): the loop bound over the copy's 750-record team array",
      "released_by": "mlcopy"
+    },
+    {
+     "va": "0x1414f370a",
+     "why": "2026-11-06 audit A: the 750 is the structure, not a check. 0x1414f3640 fills two fixed tables in upper2 from DB getters 0x1a/0x1b: 30000 x 0xc-byte reads into 8-byte entries from block+0xe63de4 (clamp 0x7530) and 750 x 8 bytes from +0xe9e764, which ends exactly at +0xe9fed4 where the two counts live (+0xe9fed4/+0xe9fed8). Raised, a DB with more than 750 rows in table 0x1b writes over the counts and the objects after them. upper2 moves as one piece (cap 1), so the table does not grow; growing it needs its own relocation."
     }
    ],
    "hold_note": "loop bounds inside the copy code that measure the copy's arrays, not the block's; the copy keeps its shipped layout (0x140afd660: 750 teams at +0x50, 750 coaches at +0x133a30, 180 regulations, 1750 fixtures, 12360 matches, 0x135bd10 bytes from 0x1413fea00), so these stay. The dummy-select sites next to them (cmp then a forward jb to the dummy record) may be raised: they only decide whether a block row past the old cap is real."
@@ -1888,6 +1895,15 @@
    ],
    "_sites_note": "Every site in the image that names one of variant B's offsets, from `copyscan.py --variant b`.  Thirty-one of them, in four runs: the constructor 0x140afd660 (11), two near-identical walkers around 0x1413fead7 and 0x1413feeaf (17), and three strays.  Coaches is not searched for, because 0x133a30 is shared with variant A and a hit on it says nothing about which layout the site belongs to.",
    "_packed_note": "B is packed end to end, not only at the fixture array: rec596 runs straight into the first singleton too, 0x9a8c60 - 0x2a24c0 == 0x7067a0 == 12360 * 0x254, to the byte.  So growing the fixture record moves rec596 and all ten singletons, and nothing else."
+  }
+ },
+ "fl27": {
+  "_comment": "patchset.py --fl27: the caps of the FL 2027 limits set (Mod Studio installs it only into an FL_2027.exe folder; FL26 keeps the 0.3.0 set). Each replaces arrays.<name>.cap_new for that run; players is the default --player-cap. 123825 puts the lower tail inside the grown player array, so the set moves it (block.lower_tail). The output goes to patches/<set>.fl27.json and sider/fl26caps.fl27.lua and leaves the FL26 install copy alone.",
+  "caps": {
+   "teams": 4800,
+   "coaches": 6800,
+   "regulations": 1200,
+   "players": 123825
   }
  },
  "getters": {

@@ -36,14 +36,14 @@ LEAGUES = ("ENGLAND_D1_LEAGUE", "SPAIN_D1_LEAGUE", "ITALY_D1_LEAGUE", "GERMANY_D
            "RUSSIA_D1_LEAGUE", "GREECE_D1_LEAGUE", "TURKEY_D1_LEAGUE", "DENMARK_D1_LEAGUE",
            "SCOTLAND_D1_LEAGUE")
 FIELD = 36
-NAME, CODE = "FL Conference League", "FL_UECL"
+NAME, CODE = "UEFA Conference League", "FL_UECL"
 CID = 174                    # the competition id (see above)
 REG, KO, ROW = 186, 187, 1210  # league phase, knockout, the league phase's one group
 
 
 def cid_of(comp, code):
     i = M.find_code(comp, code)          # by code, or by its shipped id (GitHub #54)
-    return None if i is None else comp[i * M.COMP + M.CID_OFF]
+    return None if i is None else M.comp_cid(comp, i * M.COMP)
 
 
 def pick(base):
@@ -51,7 +51,7 @@ def pick(base):
     by = {}
     for i in range(len(ents) // M.ENT):
         e = ents[i * M.ENT:(i + 1) * M.ENT]
-        by.setdefault(e[M.E_CID], []).append(
+        by.setdefault(M.ent_cid(e), []).append(
             (e[M.E_ORDER], int.from_bytes(e[M.E_TEAM:M.E_TEAM + 4], "little")))
     taken = {t for code in EUROPE for _o, t in by.get(cid_of(comp, code), [])}
     lists = [[t for _o, t in sorted(by.get(cid_of(comp, code), [])) if t not in taken]
@@ -92,7 +92,7 @@ def build(base, out, cid=CID, log=print, name=None):
         raise SystemExit("mkphases returned %s\n%s" % (rc, buf.getvalue()))
     regs = M.load(os.path.join(out, PESDB), "CompetitionRegulation.bin")
     have = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
-            for i in range(len(regs) // M.REG) if regs[i * M.REG + M.R_CID] == cid}
+            for i in range(len(regs) // M.REG) if M.reg_cid(regs, i * M.REG) == cid}
     if not {REG, KO, ROW} <= have:
         raise SystemExit("the Conference League got regulations %s, not %d/%d/%d -- fl26swiss and "
                          "the fixture dates know only those; is the Europa League reshaped "

@@ -1,0 +1,6 @@
+{ "world": "_FL26RgApD2",
+  "leagues": [
+    { "name": "RG Liga Peru", "country": "Peru", "clubs": 18, "legs": 2, "apertura": true,
+      "europe": [[1, 3], [2, 3], [3, 4], [4, 9], [5, 9]] },
+    { "name": "RG Liga Peru 2", "country": "Peru", "clubs": 16, "legs": 2, "above": "RG Liga Peru", "exchange": 2 }
+  ] }

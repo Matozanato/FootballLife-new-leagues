@@ -92,6 +92,10 @@ QPushButton#navitem, QToolButton#navitem { font-family: %(HEAD_STACK)s; font-wei
 QPushButton#navitem:hover, QToolButton#navitem:hover { color: white; background: %(PANEL)s; }
 QPushButton#navitem:checked, QToolButton#navitem:checked { color: %(ORANGE)s; border-bottom: 2px solid %(ORANGE)s; background: transparent; }
 QToolButton#navitem::menu-indicator { image: none; width: 0; }
+QToolButton#navarrow { background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+                       padding: 7px 7px 5px 7px; margin: 0; min-height: 0; }
+QToolButton#navarrow:hover:enabled { background: %(PANEL)s; }
+QToolButton#navarrow:pressed:enabled { background: %(PANEL2)s; }
 
 /* page header */
 QLabel#pagetitle { font-family: %(HEAD_STACK)s; font-weight: 600; font-size: 11pt; color: %(ORANGE)s; }
@@ -149,14 +153,16 @@ QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QPlainTextEdit, QTextEdit, QDate
     selection-background-color: %(SELECTION)s; }
 QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus { border-color: %(ACCENT)s; }
 QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled { color: %(DIM)s; }
+QComboBox#rowbox { padding: 1px 6px; }
+QLabel#picview { border: 1px solid %(BORDER)s; background: %(PANEL)s; }
 QComboBox::drop-down { border: none; width: 18px; }
 QComboBox::down-arrow { image: url("%(ASSETS)s/arrow-down.png"); width: 10px; height: 8px; margin-right: 6px; }
 QComboBox::down-arrow:hover, QComboBox::down-arrow:on { image: url("%(ASSETS)s/arrow-down-hot.png"); }
 QComboBox QAbstractItemView { background: %(PANEL2)s; border: 1px solid %(LINE2)s; selection-background-color: %(SELECTION)s; }
 QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { background: %(PANEL2)s; border: none; width: 16px; }
 QSpinBox::up-button:hover, QSpinBox::down-button:hover, QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover { background: %(SELECTION)s; }
-QSpinBox::up-arrow, QDoubleSpinBox::up-arrow { image: url("%(ASSETS)s/arrow-up.png"); width: 8px; height: 6px; }
-QSpinBox::down-arrow, QDoubleSpinBox::down-arrow { image: url("%(ASSETS)s/arrow-down.png"); width: 8px; height: 6px; }
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow { image: url("%(ASSETS)s/spin-up.png"); width: 8px; height: 6px; }
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow { image: url("%(ASSETS)s/spin-down.png"); width: 8px; height: 6px; }
 QPlainTextEdit#log { background: %(PANEL)s; font-family: %(MONO_STACK)s; font-size: 9pt; }
 QCheckBox, QRadioButton { spacing: 7px; }
 QCheckBox::indicator, QRadioButton::indicator { width: 12px; height: 12px; border: 1px solid %(LINE2)s; background: %(PANEL2)s; }
@@ -349,17 +355,49 @@ def fit_heads(header):
 
 def _caps_filter():
     from PySide6.QtCore import QObject, QEvent
-    from PySide6.QtWidgets import (QAbstractButton, QHeaderView, QTabBar, QCheckBox, QRadioButton, QTreeView,
-                                   QTableView)
+    from PySide6.QtWidgets import (QAbstractButton, QDialog, QHeaderView, QMenu, QPushButton, QTabBar, QCheckBox,
+                                   QRadioButton, QTabWidget, QTreeView, QTableView)
+    from . import anim
 
     class Caps(QObject):
-        def eventFilter(self, obj, ev):
-            if ev.type() == QEvent.Show and isinstance(obj, QHeaderView) and not obj.property("_fit"):
-                obj.setProperty("_fit", True)
-                fit_heads(obj)
+        def eventFilter(self, obj, ev, _show=QEvent.Show, _polish=QEvent.Polish, _enter=QEvent.Enter,
+                        _hide=QEvent.Hide, _wheel=QEvent.Wheel,
+                        _soft=frozenset((QEvent.Show, QEvent.Enter, QEvent.Leave, QEvent.Hide, QEvent.Wheel))):
+            # every event of the window comes through here: one look at its type, then out
+            t = ev.type()
+            if t != _polish:
+                if t in _soft:
+                    if t == _show:
+                        if isinstance(obj, QHeaderView):
+                            if not obj.property("_fit"):
+                                obj.setProperty("_fit", True)
+                                fit_heads(obj)
+                        elif isinstance(obj, QDialog):
+                            # every dialog, the plain questions and notices too: until beta 3 only
+                            # the main window and the big editors had the dark title bar and a
+                            # "Build" notice came with a white strip on top
+                            if obj.isWindow() and not obj.property("_dark_bar"):
+                                obj.setProperty("_dark_bar", True)
+                                dark_title_bar(obj)
+                            anim.dialog(obj)
+                        elif isinstance(obj, QTabWidget):
+                            anim.tabs(obj)
+                        elif isinstance(obj, QMenu) or obj.inherits("QComboBoxPrivateContainer"):
+                            anim.popup(obj)
+                    elif t == _hide:
+                        if isinstance(obj, QDialog) and not ev.spontaneous():
+                            anim.leave(obj)
+                    elif t == _wheel:
+                        return anim.wheel(obj, ev)
+                    elif isinstance(obj, QPushButton):
+                        anim.hover(obj, t == _enter)
                 return False
-            if ev.type() != QEvent.Polish:
-                return False
+            self.dress(obj)
+            return False
+
+        @staticmethod
+        def dress(obj):
+            """what a widget gets when it is first polished"""
             # every table and tree: rows that alternate (jibibi, 15.10.: not enough contrast)
             if isinstance(obj, (QTreeView, QTableView)) and not obj.property("_alt"):
                 obj.setProperty("_alt", True)
@@ -369,8 +407,41 @@ def _caps_filter():
                     and obj.objectName() not in ("helpmark", "fold", "statusbtn")):
                 obj.setProperty("_caps", True)
                 caps(obj)
-            return False
     return Caps
+
+
+class quiet:
+    """with quiet(root): build many widgets under root without the filter above. Every event of
+    the program goes through that filter, in Python: a table of 190 cups sent it 140,000 events
+    while it was built, 0.2 s of the 0.8 s it took (11.11.). The widgets polished meanwhile are
+    dressed at the end; the rest when their own first polish comes, as ever"""
+
+    def __init__(self, root):
+        self.root = root
+
+    def __enter__(self):
+        from PySide6.QtWidgets import QApplication
+        self.app = QApplication.instance() if _CAPS is not None else None
+        if self.app is not None:
+            self.app.removeEventFilter(_CAPS)
+        return self
+
+    def __exit__(self, *exc):
+        if self.app is None:
+            return False
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QHeaderView, QWidget
+        self.app.installEventFilter(_CAPS)
+        try:
+            for w in self.root.findChildren(QWidget):
+                if w.testAttribute(Qt.WA_WState_Polished):
+                    _CAPS.dress(w)
+                if isinstance(w, QHeaderView) and w.isVisible() and not w.property("_fit"):
+                    w.setProperty("_fit", True)
+                    fit_heads(w)
+        except RuntimeError:
+            pass
+        return False
 
 
 def _Caps(app):

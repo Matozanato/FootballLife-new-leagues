@@ -53,6 +53,11 @@ the game recounts a career: region = the 6-bit field, which is the whole region 
 saved under fl26reg64 or before, and the mark is set. Without the DLL, an old career shows
 wrong regions in its menus. New careers are fine either way.
 
+Regions 128..255. A caps set with the regions step (tools/regions.py, patchset.py
+<set>-regions) writes these same 44 sites itself, with the parser reading bit 2 of the +3 byte
+as region bit 7 (wide= below). This module, loaded after fl26caps, then finds every site done
+-- the parser in its wide form counts as done -- writes nothing and says regions 0..255.
+
 All or nothing. Every site is checked first. If any site holds bytes that are neither old=,
 new= nor alt=, nothing is written: half of this patch set would read +0x2fe while the
 other half still wrote only the 6-bit field.
@@ -116,7 +121,7 @@ local PATCHES = {
    why="full region (movzx byte +0x2fe, was +0x30c shr 7 / and 0x3f): inline 'region of competition' -> 0x1414ce270"},
   {va=0x1414cee9d, old="8b880c030000c1e90783e13f", new="0fb688fe0200000f1f440000",
    why="full region (movzx byte +0x2fe, was +0x30c shr 7 / and 0x3f): inline 'region of competition' -> 0x1414ce270"},
-  {va=0x1414f8390, old="8b08c1e91b0fb6c1241f3c1d7304440fb6f1", new="8b088bc1c1e91bc1e81383e0600bc8448bf1", alt="8b088bc1c1e91bc1e81383e0200bc8448bf1",
+  {va=0x1414f8390, old="8b08c1e91b0fb6c1241f3c1d7304440fb6f1", new="8b088bc1c1e91bc1e81383e0600bc8448bf1", alt="8b088bc1c1e91bc1e81383e0200bc8448bf1", wide="0fb64803c0c903440fb6f10f1f8000000000",
    why="parser: region = Competition.bin +3 bits 3..7 (low five) | bit 0 -> 5 | bit 1 -> 6, 0..127; every row with bits 0..1 clear decodes as before"},
   {va=0x1414f83d1, old="740b0fb7d1488bcfe8521bfdff", new="c687ff0200005a660f1f440000",
    why="parser: the call that copied Competition.bin d0 bits 18..26 into +0x2fe (0x1414c9f30) becomes mov byte [rdi+0x2ff],0x5a -- the mark that says +0x2fe holds a region (old careers lack it)"},
@@ -170,12 +175,14 @@ end
 
 function m.init(ctx)
   -- pass 1: check every site, write nothing
-  local todo, done, bad = {}, 0, 0
+  local todo, done, bad, wide = {}, 0, 0, false
   for _, p in ipairs(PATCHES) do
     local old, new = unhex(p.old), unhex(p.new)
     local cur = memory.read(p.va, #old)
     if cur == new then
       done = done + 1
+    elseif p.wide and cur == unhex(p.wide) then
+      done, wide = done + 1, true
     elseif cur == old or (p.alt and cur == unhex(p.alt)) then
       todo[#todo + 1] = p
     else
@@ -198,8 +205,9 @@ function m.init(ctx)
       log(string.format("fl26reg128: WRITE FAILED at 0x%x", p.va))
     end
   end
-  log(string.format("fl26reg128: %d of %d sites rewritten, %d already were%s -- regions 0..127",
-                    #todo - fail, #PATCHES, done, fail > 0 and " (WRITE FAILURES above)" or ""))
+  log(string.format("fl26reg128: %d of %d sites rewritten, %d already were%s -- regions 0..%d%s",
+                    #todo - fail, #PATCHES, done, fail > 0 and " (WRITE FAILURES above)" or "",
+                    wide and 255 or 127, wide and " (the parser is fl26caps' regions step)" or ""))
 end
 
 return m

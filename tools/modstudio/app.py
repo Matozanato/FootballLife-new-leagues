@@ -9,18 +9,19 @@ r"""python -m modstudio.app   -> the FL Mod Studio window
 Settings (game folder, language, window size) live in %APPDATA%\FL26ModStudio\settings.json.
 """
 import json, os, sys
+import bigjson
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if os.path.dirname(HERE) not in sys.path:
     sys.path.insert(0, os.path.dirname(HERE))
 
-from PySide6.QtCore import Qt, QTimer, Signal, QObject
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject
 from PySide6.QtGui import QAction, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
                                QMenu, QPushButton, QScrollArea, QSizePolicy, QStackedWidget, QStatusBar,
                                QTextBrowser, QToolButton, QVBoxLayout, QWidget, QMessageBox)
 
-from modstudio import VERSION, theme, i18n
+from modstudio import VERSION, anim, icons, theme, i18n
 from modstudio.i18n import _
 from modstudio.game import Game, guess_folders
 from modstudio.siderini import SiderIni
@@ -70,14 +71,14 @@ def page_groups():
     """(caption, [page classes]) in the order of the left bar; caption "" is a group without a
     caption, None pages that are built but not in the bar (reached from another page)"""
     from modstudio.pages import overview, roots, modules, install, profiles, restore
-    from modstudio.pages import content, stadiums, balls, kits, commentary, music
-    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife, leagues
+    from modstudio.pages import content, stadiums, balls, kits, commentary, music, trophies
+    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife, leagues, cups
     return [
         ("", [overview.Overview]),
         ("LEAGUE BUILDER", [leagues.Leagues, builder.NewClubs, players.Players, newlife.NewLife,
-                            packages.Packages, builder.Build]),
+                            packages.Packages, builder.Build, cups.Cups]),
         ("GAME CONTENT", [kits.Kits, stadiums.Stadiums, balls.Balls, commentary.Commentary,
-                          music.Music, content.Servers]),
+                          music.Music, content.Servers, trophies.Trophies]),
         ("MANAGE", [install.Install, modules.Modules, roots.Roots, profiles.Profiles, restore.Restore,
                     diagnostics.Diagnostics, settings.Settings]),
         (None, [builder.NewLeagues]),
@@ -94,8 +95,8 @@ NAV = [
     # install above them, the pages that change the open world as tabs (pages/myworld.py)
     # 0.2.4 beta (B82, mato 16.10.): Build is the first tab, the section's home -- testers lost the
     # Build page when it sat under More
-    ("MY WORLD", False, [("World", "My world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums"])]),
-    ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Servers")]),
+    ("MY WORLD", False, [("World", "My world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums", "Cups"])]),
+    ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Trophies", "Servers")]),
     ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
     ("SETTINGS", False, [("Settings", None, ["Settings"])]),
 ]
@@ -131,10 +132,27 @@ def file_version(path):
         return ""
 
 
+def warm_game_info(base):
+    """leaguebuilder.game_info read ahead, from a worker (it is read once per tables). B480
+    (17.11.2026): the NewLife page counts with it at project.changed, and the first time was at the
+    end of a world zip install or of Make it editable -- 0.25 s of the 0.55 s the window stood still
+    in the stall test with 220,000 players"""
+    if not base:
+        return
+    try:
+        import leaguebuilder
+        leaguebuilder.game_info(base)
+    except Exception:
+        pass                              # the page reads it itself then, and says what is wrong
+
+
 class Main(QMainWindow):
+    _running_got = Signal(bool, bool)       # (game running, Sider running), asked by a worker
+
     def __init__(self):
         super().__init__()
         self.settings = load_settings()
+        anim.set_on(self.settings.get("animations", True))
         self._seen = json.loads(json.dumps(self.settings))
         i18n.set_language(self.settings.get("lang", "en"))
         self.bus = Bus()
@@ -157,6 +175,7 @@ class Main(QMainWindow):
         # switched on in sider.ini, and the next Build would have replaced the live one with it
         self._start_note = self.open_live_world()
         self.bus.game_changed.connect(self.project.load_tables)
+        self.project.tables_changed.connect(self._live_after_tables)
         self.setWindowTitle("FL Mod Studio")
         self.resize(*self.settings.get("size", [1360, 820]))
         self.setMinimumSize(1080, 640)
@@ -213,6 +232,9 @@ class Main(QMainWindow):
         self.setStatusBar(sb)
         self.project.changed.connect(self.show_saved)
         self.project.saved.connect(self.show_saved)
+        self._warming, self._warmed = None, None
+        self.project.changed.connect(self.warm_pictures)
+        QTimer.singleShot(0, self.warm_pictures)
         QShortcut(QKeySequence.Save, self, lambda: self.project.autosave())
         self.show_saved()
         self._blink = QTimer(self, interval=550, timeout=self._blink_step)
@@ -241,16 +263,34 @@ class Main(QMainWindow):
         QTimer.singleShot(1200, self.auto_tables)
         self.bus.game_changed.connect(lambda: QTimer.singleShot(500, self.auto_tables))
 
-    def live_recipe(self):
+    def _live_open(self, live):
+        """the world open in Mod Studio is one of the worlds in the game. The empty world of a start
+        never is, whatever its name: it got a free name for the game found at the start, and another
+        game folder picked in Settings since can have a world of that name (B399, U4 10.11.: the
+        empty _FL26MyWorld was taken for the _FL26MyWorld in the game, whose leagues never opened)"""
+        return self.project.recipe.get("world") in live and not self.project.untouched()
+
+    def live_recipe(self, fresh=False):
         """the file part of open_live_world, with no window work so it can run off the window's
         thread: (the world in the game, its recipe copy, the recipe read or None), or None when
         there is nothing to open. On the Modpack it is most of the 9 s the window stood still after
         a switch (coldstart, 17.10.): reading its 132 MB recipe back from the plan, writing the copy,
-        reading it, and making the 86 league logos small"""
+        reading it, and making the 86 league logos small.
+
+        fresh (B468, 14.11.): the world was installed from a zip just now, so a copy of a recipe of
+        that name is an older world's (GigaPack beta 1 and beta 2 are both _FL26Megapack: the
+        Leagues page showed beta 1's Argentina, "not built yet" and no crests, over beta 2's plan).
+        The copy goes aside to <world>.json.before-install and the recipe is read from the plan
+        again, also when a world of that name is the one open"""
         live = self.project.live_worlds()
-        if not live or self.project.recipe.get("world") in live:
+        if not live or (not fresh and self._live_open(live)):
             return None
         kept = os.path.join(self.project.copies_dir(), live[0] + ".json")
+        if fresh and os.path.exists(kept) and self.project.base:
+            try:
+                os.replace(kept, kept + ".before-install")
+            except OSError:
+                pass
         if not os.path.exists(kept) and self.project.base:
             # no copy of its recipe (built before Build kept one, or elsewhere): read the
             # recipe back from the plan the world carries (leaguebuilder.recipe_from_plan)
@@ -258,42 +298,105 @@ class Main(QMainWindow):
                 import leaguebuilder
                 plan = os.path.join(self.game.livecpk_dir, live[0], "leaguebuilder-plan.json")
                 with open(plan, encoding="utf-8") as f:
-                    rec = leaguebuilder.recipe_from_plan(json.load(f), self.project.base)
+                    read = bigjson.load(f)
+                rec = leaguebuilder.recipe_from_plan(read, self.project.base)
+                # B480 round 3 (17.11.2026): the plan and this recipe (millions of objects) went
+                # where their last name went, each in one call of C with Python's lock held, from
+                # this worker: freed by letgo's thread instead, in small steps
+                from modstudio import letgo
+                letgo.drop(read)
+                del read
                 os.makedirs(self.project.copies_dir(), exist_ok=True)
-                text = json.dumps(rec, indent=1, ensure_ascii=False)   # not dump(): see Project._write
+                # not dump(): see Project._write. In steps: one json.dumps of the GigaPack's recipe
+                # stopped the window for 1.4 s from this worker (B479, 15.11.)
+                text = bigjson.dumps(rec, 1, False)
                 with open(kept, "w", encoding="utf-8") as f:
-                    f.write(text)
+                    # in 4 MB pieces too: one write of the whole text (encoding it, \n to \r\n)
+                    # held the interpreter from this worker for 0.95 s at the end of a GigaPack
+                    # zip install (B480, the stall probe 16.11.); the same bytes
+                    for i in range(0, len(text), 1 << 22):
+                        f.write(text[i:i + (1 << 22)])
             except Exception:
                 pass
+            else:
+                from modstudio import letgo
+                letgo.drop(rec)
         rec = None
         if os.path.exists(kept):
             try:
                 with open(kept, encoding="utf-8") as f:
-                    rec = json.load(f)
+                    rec = bigjson.load(f)
                 from modstudio.pages import builder as _PB
                 _PB.warm([L.get("logo") for L in rec.get("leagues") or []], (20, 28))
+                # the Cups page's pictures and the copy Undo compares with, here too (11.11.: on
+                # the window's thread they were 2 s of Put in the game and most of the 5 s the
+                # Cups page took to open with 317 leagues)
+                _PB.warm([L.get(k + "_logo") for L in rec.get("leagues") or []
+                          for k in ("cup", "supercup", "league_cup")], (32,))
+                for k, v in (("leagues", []), ("edits", {}), ("players", {})):
+                    rec.setdefault(k, v)
+                self._live_snap = (rec, self.project._split(rec))
             except Exception:
                 pass
+        warm_game_info(self.project.base)
         return live[0], kept, rec
 
-    def open_live_world(self, found=False):
+    def warm_pictures(self):
+        """the small pictures of the open world's league and cup logos, made in the background once
+        per world opened. Until 11.11. only Put in the game made them ahead (live_recipe): a start
+        with the big world open already, or File > Open, left them to the pages, and the first
+        visit of Leagues, New leagues and Cups stood the window still for 2 to 5 s with 317
+        leagues (300 logos read and made small on the window's thread; the UI tour in es/fr/pt/hr)"""
+        rec = self.project.recipe
+        if rec is self._warmed:
+            return
+        self._warmed = rec
+        leagues = [L for L in rec.get("leagues") or [] if isinstance(L, dict)]
+        logos = [L.get("logo") for L in leagues if L.get("logo")]
+        cups = [L.get(k + "_logo") for L in leagues for k in ("cup", "supercup", "league_cup") if L.get(k + "_logo")]
+        if not logos and not cups and not rec.get("players"):
+            return
+        import threading
+        from modstudio.pages import builder as _PB
+
+        def work():
+            try:
+                _PB.warm(logos, (20, 28))
+                _PB.warm(cups, (32,))
+                # the squads of the game's tables too: the Leagues page counts the players of the
+                # clubs the world changes, and reading them was another 0.5 s of its first opening
+                if any((rec.get("players") or {}).values()):
+                    self.project.squads()
+            except Exception:
+                pass
+
+        # (_warming: true while one works -- the UI tour waits for it, as it waits for a job)
+        self._warming = t = threading.Thread(target=work, daemon=True, name="warm-pictures")
+        t.start()
+
+    def open_live_world(self, found=False, fresh=False):
         """open the recipe of the world in the game when another one is open (at a start, and after
         My world's Put in the game); what to tell, or "". found: what live_recipe() gave, when it
         ran in the background already"""
         if found is False:
-            found = self.live_recipe()
+            found = self.live_recipe(fresh)
         if not found:
             return ""
         world, kept, rec = found
         live = self.project.live_worlds()
-        if not live or live[0] != world or self.project.recipe.get("world") in live:
+        if not live or live[0] != world or (not fresh and self._live_open(live)):
             return ""
         note = ""
         was = self.project.recipe.get("world")
         if rec is not None:
             try:
-                self.project.autosave()            # the world open now keeps its changes
-                self.project.adopt(rec, kept, copy=True)
+                stale = fresh and self.project.path and os.path.normcase(os.path.abspath(
+                    self.project.path)) == os.path.normcase(os.path.abspath(kept))
+                if not stale:                      # B468: never the old world's recipe over the new copy
+                    self.project.autosave()        # the world open now keeps its changes
+                snap = getattr(self, "_live_snap", None)
+                self._live_snap = None
+                self.project.adopt(rec, kept, copy=True, snap=snap[1] if snap and snap[0] is rec else None)
                 self.settings["last_recipe"] = kept
                 note = _("Opened %s, the world in the game "
                          "(the last one open was %s).") % (world, was)
@@ -305,6 +408,32 @@ class Main(QMainWindow):
             note = _("The world in the game is %s, but Mod Studio has %s open. "
                      "Open %s (File > Open a world...) before you Build.") % (world, was, world)
         return note
+
+    def _live_after_tables(self):
+        """B399: the first start with a new APPDATA and a world in the game opens that world once the
+        tables are unpacked (its recipe is read back from its plan, which needs them), in place of
+        the empty world of the start. The empty one used to be called like the world in the game
+        (_FL26MyWorld), so it was taken for it: the world's leagues never opened, and Build (after
+        its question) replaced the world with the empty one"""
+        if self.project.base is None or not self.project.untouched() or getattr(self, "_live_reading", False):
+            return
+        # its recipe is read in the background (review 11.11.: on the window's thread a big world's
+        # plan, 128 MB, stood the window still at the first start and at every change of game folder)
+        self._live_reading = True
+
+        def opened(found):
+            self._live_reading = False
+            if not found or self.project.base is None or not self.project.untouched():
+                return
+            try:
+                note = self.open_live_world(found)
+            except Exception:
+                return
+            if note and getattr(self, "status_left", None) is not None:
+                self.status(note)
+
+        from modstudio.ui import run_job
+        run_job(lambda _progress: self.live_recipe(), done=opened, failed=lambda _tb: opened(None))
 
     def auto_tables(self):
         """unpack the game's tables when there are none yet and no tables folder of your own was
@@ -331,7 +460,7 @@ class Main(QMainWindow):
                 m.addSeparator()
             else:
                 label, slot = it[0], it[1]
-                a = m.addAction(label if it[2:3] == [True] else _(label))
+                a = m.addAction(label if it[2:3] == (True,) else _(label))
                 # triggered(checked) would land in a slot's first default argument (the Language
                 # items' code, which became False and left the program in English)
                 a.triggered.connect(lambda _c=False, f=slot: f())
@@ -469,10 +598,13 @@ class Main(QMainWindow):
         # could not find his way back to Build details). Alt+Left/Right and the mouse's side
         # buttons do the same; only whole pages are remembered, not what was picked on them.
         self.nav_back, self.nav_fwd = QToolButton(), QToolButton()
-        for b, text, tip, go, keys in ((self.nav_back, "◀", _("Back"), self.go_back, (QKeySequence.Back, "Alt+Left")),
-                                       (self.nav_fwd, "▶", _("Forward"), self.go_forward, (QKeySequence.Forward, "Alt+Right"))):
-            b.setObjectName("navitem")
-            b.setText(text)
+        for b, way, tip, go, keys in ((self.nav_back, -1, _("Back"), self.go_back, (QKeySequence.Back, "Alt+Left")),
+                                      (self.nav_fwd, 1, _("Forward"), self.go_forward, (QKeySequence.Forward, "Alt+Right"))):
+            # (drawn, not the characters of some font: icons.py)
+            b.setObjectName("navarrow")
+            b.setIcon(icons.chevron(way))
+            b.setIconSize(QSize(16, 16))
+            b.setAutoRaise(True)
             b.setToolTip(tip)
             b.setAccessibleName(tip)
             b.setCursor(Qt.PointingHandCursor)
@@ -587,6 +719,8 @@ class Main(QMainWindow):
                     placed.add(n)
                 tabs.currentChanged.connect(lambda _i, t=tabs: self.open_page(
                     next(k for k, h in self.holder_of.items() if h is t.currentWidget())))
+                # (the click comes before the tab changes: the page that goes fades out over the next)
+                tabs.tabBarClicked.connect(lambda i, t=tabs: self._tab_fade(t, i))
                 hv.addWidget(tabs)
                 self.section_tabs[key] = tabs
                 self.section_holder[key] = holder
@@ -616,6 +750,18 @@ class Main(QMainWindow):
     def page(self, name):
         return self.pages[name]
 
+    def _tab_fade(self, tabs, i):
+        at = tabs.currentIndex()
+        if 0 <= i != at and tabs.isTabEnabled(i) and tabs.currentWidget() is not None:
+            anim.cover(tabs.currentWidget().parentWidget(), 1 if i > at else -1)
+
+    @staticmethod
+    def _side(box, old, new):
+        """1 / -1: `new` stands after / before `old` in `box` (the sections, a section's tabs): the
+        side the page slides in from. 0: one of them is not there, it just fades"""
+        a, b = box.indexOf(old), box.indexOf(new)
+        return 0 if a < 0 or b < 0 or a == b else (1 if b > a else -1)
+
     def open_page(self, name):
         if not getattr(self, "_nav_jump", False) and name in self.pages:
             hist = self.nav_history
@@ -629,16 +775,30 @@ class Main(QMainWindow):
         key = self.section_of.get(name) or OPEN_FOR.get(name)
         tabs = self.section_tabs.get(key) if name in self.section_of else None
         if tabs is not None:
+            if self.stack.currentWidget() is not self.section_holder[key]:
+                anim.cover(self.stack, self._side(self.stack, self.stack.currentWidget(), self.section_holder[key]))
+            elif tabs.currentWidget() is not self.holder_of[name]:
+                # another tab of the open section: only what is under the tabs moves
+                area = tabs if isinstance(tabs, QStackedWidget) else tabs.currentWidget().parentWidget()
+                anim.cover(area, self._side(tabs, tabs.currentWidget(), self.holder_of[name]))
             self.stack.setCurrentWidget(self.section_holder[key])
             if tabs.currentWidget() is not self.holder_of[name]:
                 tabs.blockSignals(True)
                 tabs.setCurrentWidget(self.holder_of[name])
                 tabs.blockSignals(False)
         else:
+            if self.stack.currentWidget() is not self.holder_of[name]:
+                anim.cover(self.stack, self._side(self.stack, self.stack.currentWidget(), self.holder_of[name]))
             self.stack.setCurrentWidget(self.holder_of[name])
         b = self.nav_buttons.get(key)
         if b:
+            # (not nav_group.checkedButton(): a click has checked the button before it gets here,
+            # so the group always answered "the same one" and the line never travelled)
+            was = getattr(self, "_nav_on", None)
             b.setChecked(True)
+            self._nav_on = b
+            if was is not None and was is not b:
+                anim.line(b.parentWidget(), was, b, theme.ORANGE, theme.BAR)
         # a group's button says which of its pages is open ("6. Tools: Lua modules")
         for head in self.nav_heads.values():
             head.sub = self.nav_titles.get(key) if b is head else None
@@ -682,11 +842,15 @@ class Main(QMainWindow):
         except OSError:
             return None
 
-    def save_ini(self, ini, reason):
-        """write sider.ini (a restore point is taken first) and tell every page"""
-        ini.save(reason=reason)
+    def save_ini(self, ini, reason, saved=False, running=None):
+        """write sider.ini (a restore point is taken first) and tell every page. saved: a worker
+        wrote it already (ini.save), running: Game.running() as that worker asked -- B480 round 2
+        (17.11.2026): at the end of a world zip's install the restore point's copy and the look at
+        the running programs took 1.2 s of a stopped window while the disk was still busy"""
+        if not saved:
+            ini.save(reason=reason)
         self.bus.ini_changed.emit()
-        g, s = Game.running()
+        g, s = running if running is not None else Game.running()
         self.status(_("sider.ini saved: %s") % reason
                     + ("  — " + _("restart the game to use it") if (g or s) else ""))
 
@@ -703,6 +867,8 @@ class Main(QMainWindow):
         import flpaths
         if self.game.folder:
             flpaths.use_game(self.game.folder, self.game.sider_dir)
+            import leaguebuilder                   # the clubs and players a world may have in this game
+            leaguebuilder.use_game(self.game.folder)
 
     def set_sider(self, name):
         """use the Sider folder `name` of the game folder (one of siderdir.candidates)"""
@@ -713,7 +879,10 @@ class Main(QMainWindow):
         self.bus.game_changed.emit()
 
     def status(self, text):
+        new = bool(text) and text != self.status_left.text()
         self.status_left.setText(text)
+        if new:
+            anim.notice(self.status_left)
 
     def show_changes(self):
         from modstudio.pages.changes import WorldChangesDialog
@@ -768,6 +937,8 @@ class Main(QMainWindow):
         else:
             self._blink.stop()
             self.status_busy.setText("")
+            if getattr(self, "_header_held", False):          # the header waited for this job
+                QTimer.singleShot(0, lambda: self.update_header(getattr(self, "_home_problems", None)))
 
     def _blink_step(self):
         c = theme.ACCENT if self.status_busy.property("b") else "#FFFFFF"
@@ -815,7 +986,13 @@ class Main(QMainWindow):
             st["world"].set(_("none"), "", _("No world of yours is switched on in the game"))
         # Mod Studio's modules: the count, or the files that are not right, by name
         state = checks.modules_state(g) if g.ok() else None
-        if state and checks.modules_ok(state):
+        # modules not right while a job runs: the job may be the one that puts them there (a world
+        # zip is installed first and switched on after, with its own modules). The header waits
+        # for the job's end instead of turning red in between; busy() looks again then
+        held = self._header_held = bool(state) and not checks.modules_ok(state) and self._busy > 0
+        if held:
+            st["modules"].set("…", "", _("Working..."))
+        elif state and checks.modules_ok(state):
             n = state["total"]
             st["modules"].set(_("%d / %d ON") % (n - len(state["left_off"]), n), "ok",
                               _("Mod Studio's modules: installed, up to date and switched on"))
@@ -843,7 +1020,7 @@ class Main(QMainWindow):
             st["leagues"].set(str(len(r.get("leagues") or [])), "", _("Leagues in %s") % r.get("world"))
         else:
             st["leagues"].set("—", "", _("Open the world in the game to see its leagues"))
-        recs = installer.records(g.sider_dir) if g.ok() else []
+        recs = installer.records_seen(g.sider_dir) if g.ok() else []
         shown = installer.header_pack(recs, live)       # the active world's pack (B168)
         last = max(recs, key=lambda x: x.get("time", "")).get("name", "?") if recs else ""
         if shown:
@@ -860,7 +1037,11 @@ class Main(QMainWindow):
             pts = 0
         self.status_points.setText(_("RESTORE POINTS: %d") % pts if pts else "")
         problems = bad + [p for p in self._home_problems if p not in bad]
-        if problems:
+        if held and not problems:
+            self.h_ready.setText("■ " + _("Working...").upper())
+            state_ = "warn"
+            self.status_state.setText("● " + _("Working..."))
+        elif problems:
             self.h_ready.setText("■ " + _("NOT READY"))
             state_ = "err"
             first = problems[0]
@@ -881,7 +1062,31 @@ class Main(QMainWindow):
         self.h_profile.setText(_("Profile: %s") % prof if prof else "")
 
     def update_running(self):
-        g, s = Game.running()
+        """asked off the window's thread: the process list is ~500 short calls into Windows, and
+        while a worker is busy (a world read, a Build) the window's thread waits for Python's lock
+        after each one -- 5.7 s of a stopped window on "back to the GigaPack", 1.2 s after Install
+        (the stall recorder 15.11.2026, game._process_names under update_running)"""
+        if getattr(self, "_running_asked", False):
+            return
+        if not getattr(self, "_running_wired", False):
+            self._running_wired = True
+            self._running_got.connect(self._show_running)
+        self._running_asked = True
+        import threading
+
+        def work():
+            try:
+                g, s = Game.running()
+            except Exception:
+                g, s = False, False
+            try:
+                self._running_got.emit(bool(g), bool(s))
+            except RuntimeError:        # the window is gone
+                pass
+        threading.Thread(target=work, name="running", daemon=True).start()
+
+    def _show_running(self, g, s):
+        self._running_asked = False
         if g:
             self.run_label.setText("● " + _("the game is running"))
             self.run_label.setStyleSheet("color: %s;" % theme.GOOD)
@@ -1140,6 +1345,24 @@ class Main(QMainWindow):
             self._head_text(head)
 
     def closeEvent(self, e):
+        cups = self.pages.get("Cups")
+        if cups is not None and cups.has_drafts():
+            box = QMessageBox(QMessageBox.Question, _("Unapplied cup changes"),
+                              _("Cup drafts have not been applied to their projects. Close and discard these drafts? To keep editing, cancel and return to Cups."),
+                              QMessageBox.Discard | QMessageBox.Cancel, self)
+            box.setDefaultButton(QMessageBox.Cancel)
+            if box.exec() != QMessageBox.Discard:
+                e.ignore()
+                return
+        trophies = self.pages.get("Trophies")
+        if trophies is not None and trophies.has_drafts():
+            box = QMessageBox(QMessageBox.Question, _("Unapplied trophy changes"),
+                              _("Trophy changes have not been applied to their worlds. Close and discard these drafts? Cancel to keep editing in Game content > Trophies."),
+                              QMessageBox.Discard | QMessageBox.Cancel, self)
+            box.setDefaultButton(QMessageBox.Cancel)
+            if box.exec() != QMessageBox.Discard:
+                e.ignore()
+                return
         # changes made since the last Save recipe or Build were lost without a word when Mod
         # Studio closed (the poll, Bon Kirk 11.10.: "an Apply button" -- OK only keeps a change
         # in the open recipe). 0.2.5: a change of the last moment is saved like any other, the
@@ -1193,8 +1416,26 @@ def denied_hook(previous):
                 showing.clear()
             return
         keep_error(kind, err, tb)
+        tell_error(err)
         previous(kind, err, tb)
     return hook
+
+
+def main_window():
+    return next((w for w in QApplication.topLevelWidgets() if isinstance(w, Main)), None)
+
+
+def tell_error(err):
+    """the status line says that a click failed and which file holds why. Until beta 3 the error
+    only went to errors.log: the button "did nothing", and whoever reported it had nothing to send
+    (Xxspedd 12.11.2026: "Edit league opens no window")"""
+    try:
+        w = main_window() if isinstance(err, Exception) else None
+        if w is not None:
+            w.status(_("That did not work (an unexpected error). Send this file with your report: %s")
+                     % os.path.join(APPDIR, "errors.log"))
+    except Exception:
+        pass
 
 
 def keep_error(kind, err, tb):
@@ -1218,10 +1459,248 @@ def keep_error(kind, err, tb):
         pass
 
 
+def record_stalls(w, path, short=0.3):
+    """FL26_STALLS=<file>: where every thread is whenever the window has not answered for 0.6 s
+    (B479, 15.11.: a stop of 1.4 s after Install and after Switch on, and no way to see in what).
+    The watcher is faulthandler's own C thread: it writes while Python's lock is held.
+
+    16.11.: and a sampler. Every 50 ms of a stop of `short` seconds or more it notes the line the
+    window's thread is at, and at the end of the stop writes the lines it saw most, so a stop is
+    put down to a function and a line without reading the dumps. Each stop is also kept in
+    w._stall_gaps as (when, seconds, [(where, count), ...]) for the tests. The lines come from
+    faulthandler.dump_traceback, written in C in one go: walking sys._current_frames() from the
+    sampler while the other threads ran closed the process (access violation in the sampler,
+    3 times in 5 runs of the stall probe, 16.11.)"""
+    import faulthandler
+    import time as _time
+    import threading as _th
+    from collections import Counter
+    from modstudio import ui as _ui
+    w._stalls = open(path, "a", encoding="utf-8")
+    w._stall_gaps = []
+    w._stalls_timer = QTimer(w, interval=100)
+    seen = [_time.perf_counter(), _ui.PROGRESS_SENT[0]]
+    from modstudio import procstat as _ps
+    try:
+        _hb = _ps.beat()            # for tools/hangstacks.py --beat (B480 round 3)
+    except Exception:
+        _hb = None
+
+    def _beat():
+        now, sent = _time.perf_counter(), _ui.PROGRESS_SENT[0]
+        if _hb is not None:
+            _hb.tick()
+        if now - seen[0] > 0.6:
+            # after the stacks: how long it was, and how many progress lines of the
+            # workers came in it (a window busy drawing them shows no Python frame)
+            w._stalls.write("%s gap %.2f s, %d progress line(s) sent in it\n\n"
+                            % (_time.strftime("%H:%M:%S"), now - seen[0], sent - seen[1]))
+            w._stalls.flush()
+        seen[0], seen[1] = now, sent
+        # arming again replaces the last; repeat: a long stop is written every 0.6 s of it
+        faulthandler.dump_traceback_later(0.6, repeat=True, file=w._stalls)
+    w._stalls_timer.timeout.connect(_beat)
+    w._stalls_timer.start()
+
+    # a second watcher, a Python thread: in a stop it says every half second how long it
+    # waited for its own turns and how much processor time the window's thread took. Its
+    # own waits long: Python's lock is held by a worker. Its waits short and the window's
+    # thread idle: the window waits for something outside Python. Its waits short and the
+    # window's thread busy: Qt itself is working (drawing, laying out)
+    import ctypes as _ct
+    _k = _ct.WinDLL("kernel32")
+    _k.OpenThread.restype = _ct.c_void_p
+    _k.GetThreadTimes.argtypes = [_ct.c_void_p] + [_ct.c_void_p] * 4
+    _h = _k.OpenThread(0x0040 | 0x0800, False, _k.GetCurrentThreadId())   # QUERY_(LIMITED_)INFORMATION
+    main_id = _th.main_thread().ident
+
+    def _cpu():
+        t = (_ct.c_ulonglong * 4)()
+        if not _h or not _k.GetThreadTimes(_h, _ct.byref(t, 0), _ct.byref(t, 8),
+                                           _ct.byref(t, 16), _ct.byref(t, 24)):
+            return 0.0, 0.0
+        return t[3] / 1e7, t[2] / 1e7           # user, kernel
+
+    import re as _re
+    import tempfile as _tf
+    _dump = _tf.TemporaryFile()
+    _head = _re.compile(rb"(?:Current thread|Thread) 0x([0-9a-fA-F]+)")
+    _line = _re.compile(rb'\s+File "(.*)", line (\d+) in (.*)')
+
+    def _stacks():
+        """{thread id: ["file:line function", ...] most recent first}, from faulthandler"""
+        _dump.seek(0)
+        _dump.truncate()
+        faulthandler.dump_traceback(_dump, all_threads=True)
+        _dump.seek(0)
+        out, cur = {}, None
+        for ln in _dump.read().splitlines():
+            m = _head.match(ln)
+            if m:
+                cur = out.setdefault(int(m.group(1), 16), [])
+                continue
+            m = _line.match(ln)
+            if m and cur is not None:
+                cur.append("%s:%s %s" % (os.path.basename(m.group(1).decode("utf-8", "replace")),
+                                         m.group(2).decode(), m.group(3).decode("utf-8", "replace")))
+        return out
+
+    def _where(lines, n=3):
+        return " <- ".join((lines or [])[:n]) or "(no Python frame: in Qt or waiting)"
+
+    try:
+        from PySide6.QtGui import QAccessible as _qacc
+    except Exception:
+        _qacc = None
+
+    # B480 round 3 (17.11.2026): in the stops of beta4r's exe test (3.9 s at the end of Build) this
+    # sampler got its own turn only after the stop, when the worker that had kept Python's lock was
+    # done: it wrote "1x letgo" and nothing of the holder, which faulthandler's C dumps showed the
+    # whole time (builder.built_plan). The summary now counts the threads of those dumps too, and
+    # says from Windows which threads took the processor in the stop and how many page faults the
+    # process had (a stop with every thread idle and the faults in the hundreds of thousands is the
+    # memory coming back from the disk, not Python)
+    _fh_thread = _re.compile(r"^(?:Current thread|Thread) 0x([0-9a-fA-F]+)")
+    _fh_line = _re.compile(r'^\s+File "(.*)", line (\d+) in (.*)')
+    mine = [None]
+
+    def _dumped(since):
+        """{where: count} of the threads other than the window's and the watcher's in the C
+        watchdog's dumps written to the file since offset `since`"""
+        got = Counter()
+        try:
+            with open(path, "rb") as f:
+                f.seek(since)
+                text = f.read(4 << 20).decode("utf-8", "replace")
+        except OSError:
+            return got
+        cur, lines = None, []
+
+        def flush():
+            if cur is not None and cur not in (main_id, mine[0]):
+                got[_where(lines, 2) if lines else "(no Python frame: in C or waiting)"] += 1
+        for ln in text.splitlines():
+            m = _fh_thread.match(ln)
+            if m or ln.startswith("Timeout ("):
+                flush()
+                cur, lines = (int(m.group(1), 16) if m else None), []
+                continue
+            m = _fh_line.match(ln)
+            if m and cur is not None:
+                lines.append("%s:%s %s" % (os.path.basename(m.group(1)), m.group(2), m.group(3)))
+        flush()
+        return got
+
+    def _watch():
+        mine[0] = _th.get_ident()
+        last, worst, told, at = _time.perf_counter(), 0.0, 0.0, _cpu()
+        where, others, opened = Counter(), Counter(), None
+        took_me = 0.0
+        calm_at, calm = 0.0, None           # (threads, memory, file offset) a moment before a stop
+        while True:
+            _time.sleep(0.05)
+            now = _time.perf_counter()
+            worst, last = max(worst, now - last - 0.05), now
+            gap = now - seen[0]
+            if gap < short and opened is None and now - calm_at >= 0.5:
+                try:
+                    w._stalls.flush()
+                    calm = (_ps.threads(tids=list(_stacks())), _ps.memory(), os.path.getsize(path))
+                except Exception:
+                    calm = None
+                calm_at = _time.perf_counter()
+                last = calm_at              # (its own time is not a wait for a turn)
+            if gap >= short:
+                if opened is None:
+                    opened = seen[0]
+                try:
+                    frames = _stacks()
+                except Exception:
+                    frames = {}
+                # B480 (17.11.2026): the wait for a turn is the sleep's alone now; the sampling
+                # (faulthandler writes the stacks with Python's lock held) is told apart below
+                last = _time.perf_counter()
+                took_me = max(took_me, last - now)
+                where[_where(frames.get(main_id))] += 1
+                for tid, f in frames.items():
+                    if tid not in (main_id, _th.get_ident()):
+                        others[_where(f, 2) if f else "(no Python frame: in C or waiting)"] += 1
+            elif opened is not None:
+                took = seen[0] - opened if seen[0] > opened else gap
+                top = where.most_common(4)
+                w._stall_gaps.append((opened, took, top))
+                if took >= short:
+                    try:
+                        extra = ""
+                        if calm is not None:
+                            w._stalls.flush()
+                            dumps = _dumped(calm[2])
+                            if dumps:
+                                extra += ("  other threads in faulthandler's dumps (written while the lock was held):\n%s\n"
+                                          % "\n".join("    %3dx %s" % (n, s) for s, n in dumps.most_common(4)))
+                            extra += "  " + _ps.told(calm[0], _ps.threads(tids=list(calm[0]) + list(_stacks())), calm[1], _ps.memory()) + "\n"
+                        w._stalls.write("%s stop %.2f s; the window's thread was at:\n%s\n  other threads:\n%s\n%s\n" % (
+                            _time.strftime("%H:%M:%S"), took,
+                            "\n".join("    %3dx %s" % (n, s) for s, n in top),
+                            "\n".join("    %3dx %s" % (n, s) for s, n in others.most_common(4)), extra))
+                        w._stalls.flush()
+                    except Exception:
+                        return
+                where, others, opened = Counter(), Counter(), None
+            if gap < 0.6:
+                worst, told, at, took_me = 0.0, now, _cpu(), 0.0
+            elif now - told >= 0.5:
+                u, kk = _cpu()
+                try:
+                    # (and whether a program reads the window through Windows' accessibility -- a UI
+                    # test driver, a screen reader: Qt then answers it from the window's thread)
+                    w._stalls.write("  watcher: stopped %.1f s so far; my longest wait for a turn "
+                                    "%.2f s (my sampling up to %.2f s); the window's thread took %.2f s user "
+                                    "+ %.2f s kernel; accessibility %s\n"
+                                    % (gap, worst, took_me, u - at[0], kk - at[1],
+                                       "?" if _qacc is None else ("on" if _qacc.isActive() else "off")))
+                    w._stalls.flush()
+                except Exception:
+                    return
+                told = now
+    _th.Thread(target=_watch, name="stallwatch", daemon=True).start()
+
+    # and the garbage collector: one pass of it keeps Python's lock from start to end and
+    # shows in the stacks only as the line that happened to allocate (16.11.: 10-15 s
+    # stops with a worker "in" a list comprehension and nothing in C under it)
+    import gc as _gc
+    _gcat = {}
+
+    def _gcsaid(phase, info):
+        g = info.get("generation")
+        if phase == "start":
+            _gcat[g] = _time.perf_counter()
+            return
+        took = _time.perf_counter() - _gcat.pop(g, _time.perf_counter())
+        if took >= 0.2:
+            try:
+                # (no count of what is tracked: gc.get_objects() of a paged-out process was
+                # itself 6.5 s of a stopped window, 16.11.)
+                w._stalls.write("  gc: generation %s took %.2f s (%s collected, %s frozen) in thread %s\n"
+                                % (g, took, info.get("collected"), _gc.get_freeze_count(),
+                                   _th.current_thread().name))
+                w._stalls.flush()
+            except Exception:
+                pass
+    _gc.callbacks.append(_gcsaid)
+
+
 def main():
     # 0.2.4: Build runs in a thread of this process; the window gets its turn every millisecond
     # instead of every five, so it keeps answering while a big world builds (exe test 15.10.)
     sys.setswitchinterval(0.001)
+    # 0.3.1: and a big world's files are read in pieces off the window's thread (gentlejson: json.loads
+    # keeps Python's lock for the whole text, 2-3 s of a window standing still with 255 MB)
+    from modstudio import gentlejson
+    gentlejson.install()
+    # B480: ... and bigjson's readers in worker threads rest between their steps, so the window's
+    # calls into Qt do not wait a switch interval each behind them
+    bigjson.GENTLE = True
     if sys.platform == "win32":
         try:
             import ctypes
@@ -1236,7 +1715,7 @@ def main():
     # one Mod Studio at a time: the program takes a few seconds to unpack itself, a second
     # click in that time started a second one, and the two wrote over each other's settings
     lock = None
-    if "--shot" not in sys.argv:
+    if "--shot" not in sys.argv and "--selfcheck" not in sys.argv:
         from PySide6.QtCore import QLockFile
         os.makedirs(APPDIR, exist_ok=True)
         lock = QLockFile(os.path.join(APPDIR, "running.lock"))
@@ -1255,11 +1734,32 @@ def main():
     except Exception:
         pass
     sys.excepthook = denied_hook(sys.excepthook)
+    # 0.3.1: the name and "by Matozanato" while the window builds itself (mato 06.11.), drawn by a
+    # process of its own so the building does not stop it, then grown into the window (10.11.)
+    from modstudio import splash
+    sp = splash.Start(app) if splash.wanted() else None
     w = Main()
     theme.dark_title_bar(w)
+    # B480 round 3: what Windows put out of Mod Studio's memory while the PC was short of it comes
+    # back in a thread of its own, not page by page under Python's lock on the window's thread
+    try:
+        from modstudio import procstat
+        procstat.keep_in()
+    except Exception:
+        pass
+    if os.environ.get("FL26_STALLS"):
+        try:
+            record_stalls(w, os.environ["FL26_STALLS"])
+        except Exception:
+            pass
     if os.environ.get("FL26_SHOT_SIZE"):          # --shot at a given window size ("1280x720")
         w.resize(*(int(x) for x in os.environ["FL26_SHOT_SIZE"].split("x")))
-    w.show()
+    late = 0
+    if sp:
+        late = splash.RUN_MS + splash.GROW_MS     # the tour and the questions wait for the window
+        sp.finish(w)
+    else:
+        w.show()
     if "--shot" in sys.argv:                     # a picture of each page, for the guide
         out = sys.argv[sys.argv.index("--shot") + 1]
         os.makedirs(out, exist_ok=True)
@@ -1290,17 +1790,34 @@ def main():
             d.close()
             app.quit()
         QTimer.singleShot(1500, shoot)
+    elif "--selfcheck" in sys.argv:              # the window walks itself and writes what it saw
+        from modstudio import selfcheck
+        w._selfcheck = selfcheck.begin(app, w, sys.argv[sys.argv.index("--selfcheck") + 1])
     else:
         # 0.2.4: the first start of a version with a new look shows where things are now
         # (FL26_NO_TOUR=1: the exe tests that click through the window)
         from modstudio import tour
         if tour.due(w.settings) and not os.environ.get("FL26_NO_TOUR"):
-            QTimer.singleShot(1500, w.start_tour)
+            QTimer.singleShot(late + 1500, w.start_tour)
         if not os.environ.get("FL26_NO_TOUR"):
-            QTimer.singleShot(2500, w.ask_support)
+            QTimer.singleShot(late + 2500, w.ask_support)
         if w.settings.get("check_updates", True):
-            QTimer.singleShot(3000, lambda: w.check_updates(quiet=True))
-    sys.exit(app.exec())
+            QTimer.singleShot(late + 3000, lambda: w.check_updates(quiet=True))
+    code = app.exec()
+    # B480: with a big world open Python took 30 s and more to end after the window closed, the
+    # window "not responding" all that time (15.11.2026, the GigaPack: 2 GB given back piece by
+    # piece). Everything is saved by now (closeEvent), so the process ends at once
+    if os.environ.get("FL26_SLOW_EXIT"):
+        sys.exit(code)
+    try:
+        w.hide()
+        if getattr(w, "_stalls", None):
+            w._stalls.close()
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    os._exit(int(code or 0))
 
 
 if __name__ == "__main__":

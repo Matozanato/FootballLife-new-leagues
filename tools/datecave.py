@@ -20,8 +20,8 @@ vector: 38 of them for the league (0x141582550, case 5), 10 for the cup (0x14158
 case 38, the one the Belgian Croky Cup uses).  The shift loop therefore does not care
 which of the two was called.
 
-The switch's `ja` for ids above 175 is pointed at the same stub, so the table covers ids
-1..255 whichever way the switch would have gone.  That is also the only way a cup can be
+The switch's `ja` for ids above 175 is pointed at the same stub, so the table covers every
+id it holds whichever way the switch would have gone.  That is also the only way a cup can be
 dated at all: a cup cannot live below regulation 175 (findings.md, "A cup cannot live
 below regulation 175"), and above 175 the switch never consults the case table, so the
 `ja` is the single point where a cup id can be caught.  Everything else about the season
@@ -34,18 +34,28 @@ that padding is part of the section as the file ships it, and other people's Sid
 put their own hooks there too (anticheat, awaygoals, injury_mod, attack_mentality write
 around 0x14252e670..0x14252e69f): fl26caps then found their bytes instead of zeros and
 refused the whole set.  The page is 0x23000000 past the image, close enough for every
-rel32 in and out of the stub.  The code is 0x64 bytes and the table 256, hand-assembled
+rel32 in and out of the stub.  The code is 0x64 bytes and the table 256 bytes, hand-assembled
 below and checked with capstone so that the bytes and the listing cannot disagree.
+
+The table is 256 bytes (ids 1..255) as long as every key fits, and 1024 (ids 1..1023, the whole
+base-id space: a regulation id is stage << 10 | base id) once one does not -- the new league
+band 320..499 (fl26world.LEAGUE_BAND) and the top band 920..1022 (fl26world.TOP_BAND, band-wide:
+leaguebuilder only puts a league there when the installed set's stub dates it).  The switch already sends ids 176..1025 to the stub
+(`dec r8d; cmp r8d, 0xae; ja` at JA_SITE, after the 0x402/0x403 checks), so only the table was
+in the way.  Only the `cmp eax, imm32` and the table length change: a set whose keys stay below
+256 gets exactly the bytes it always had, and a wide one gives ids 1..255 the same bytes too.
+0x64 + 0x400 still fits the page.
 
     python datecave.py                 print the listing for id 11 -> league +2 and
                                        id 186 -> cup
+    python datecave.py --wide          the same with id 499 -> league +3 (1024-byte table)
 """
 import struct, sys
 
 CAVE = 0x163000000                   # a page of our own, reserved by fl26caps.lua
 CAVE_END = CAVE + 0x1000
 OLD_CAVE = 0x14252e690               # where the stub lived until 0.1.7 (.trace padding)
-IMAGE_END = 0x150000000              # past every section of the exe
+IMAGE_END = 0x15b9a6000              # SizeOfImage of FL26 2.2 and FL27 1.00: .impdata runs to 0x15b95194f
 CASE5 = 0x141582550                  # the big-league calendar, called as a function
 CASE38 = 0x1415810d0                 # the 16-team domestic cup, same signature, 10 rounds
 SWITCH_TABLE = 0x1415801ec           # dword per case, RVA of the case's entry
@@ -53,7 +63,8 @@ CASE_EMPTY = 62
 JA_SITE = 0x14157f84b                # 0f 87 rel32: ids above 175 -> the empty return
 EMPTY_RET = 0x14158013b
 CASE_BYTES = 0x1415802e8             # byte per regulation id 1..175: which case it takes
-TABLE_SIZE = 256
+TABLE_SIZE = 1024                    # ids 0..1023: every base id (id & 0x3ff)
+SMALL_TABLE = 256                    # the table until the league band: kept while every key fits
 NO_CALENDAR = 0xff
 CUP_BIT = 0x10                       # set in a table byte: take the cup calendar
 SHIFT_MASK = 0x07                    # the rest of the byte is the day shift, 0..6
@@ -70,6 +81,11 @@ def rel32(target, next_ip):
     return struct.pack("<i", target - next_ip)
 
 
+def table_size(offsets):
+    """the stub's table length for these keys: 256 while they all fit, else 1024"""
+    return SMALL_TABLE if all(k < SMALL_TABLE for k in offsets) else TABLE_SIZE
+
+
 def build(offsets):
     """code + table bytes for {regulation id: calendar byte}; ids not listed get no calendar
 
@@ -78,11 +94,13 @@ def build(offsets):
     pass two writes the real ones.  Nothing is hand-counted any more, so inserting an
     instruction cannot silently move a jump.
     """
+    size = table_size(offsets)
+
     def emit(lab):
         at = lambda name: lab.get(name, 0)
         b = bytearray()
         b += bytes.fromhex("0fb7c7")                            # movzx eax, di      (id)
-        b += b"=" + struct.pack("<I", TABLE_SIZE)               # cmp eax, 256
+        b += b"=" + struct.pack("<I", size)                     # cmp eax, 256 (1024)
         b += b"s" + rel8(at("empty"), len(b) + 2)               # jae empty
         b += bytes.fromhex("488d0d") + rel32(at("table") + CAVE, CAVE + len(b) + 7)
         b += bytes.fromhex("0fb60401")                          # movzx eax, byte [rcx + rax]
@@ -123,10 +141,10 @@ def build(offsets):
     emit(lab)                                  # pass one: fix the labels
     b = bytearray(emit(dict(lab)))             # pass two: write the displacements
     code_len = lab["table"]
-    table = bytearray([NO_CALENDAR] * TABLE_SIZE)
+    table = bytearray([NO_CALENDAR] * size)
     for k, v in offsets.items():
-        if not 1 <= k < TABLE_SIZE:
-            raise SystemExit("regulation id %d is outside the stub's table (1..255)" % k)
+        if not 1 <= k < size:
+            raise SystemExit("regulation id %d is outside the stub's table (1..%d)" % (k, TABLE_SIZE - 1))
         if v & ~(CUP_BIT | SHIFT_MASK) or (v & SHIFT_MASK) > 6:
             raise SystemExit("calendar byte 0x%02x for id %d is neither a day shift 0..6 "
                              "nor one with the cup bit 0x10 set" % (v, k))
@@ -205,7 +223,10 @@ def patches(offsets, exe_bytes, off_of):
 
 
 if __name__ == "__main__":
-    code, code_len = build({11: league(2), 186: cup()})
+    keys = {11: league(2), 186: cup()}
+    if "--wide" in sys.argv:
+        keys[499] = league(3)                 # a league of the band: the 1024-byte table
+    code, code_len = build(keys)
     print("\n".join(listing(code, code_len)))
     print("%d bytes of code, %d of table, cave 0x%x..0x%x, %d spare"
-          % (code_len, TABLE_SIZE, CAVE, CAVE + len(code), CAVE_END - CAVE - len(code)))
+          % (code_len, len(code) - code_len, CAVE, CAVE + len(code), CAVE_END - CAVE - len(code)))

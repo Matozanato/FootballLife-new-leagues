@@ -10,6 +10,23 @@ import json, os, shutil, time
 HOME = "ModStudio"
 
 
+def long_path(p):
+    r"""B189 (SladeBR 21.10.): p as a Windows path past MAX_PATH. A world backup goes under
+    SiderAddons\ModStudio\backups\worlds\<world>\<time> edited\files\..., and with the game in
+    Program Files a scoreboard of a pack there is 275 characters: Windows stops at 260 unless long
+    paths are on, and Make it editable said it could not find the path. \\?\ lifts the limit.
+    B400 (10.11.): Install mods unpacks and copies through it too (a GigaPack trophy file was 217
+    characters in the zip, 269 in a user's %TEMP%)"""
+    if os.name != "nt":
+        return p
+    p = os.path.abspath(p)
+    if p.startswith('\\\\?\\'):
+        return p
+    if p.startswith('\\\\'):
+        return '\\\\?\\UNC\\' + p[2:]
+    return '\\\\?\\' + p
+
+
 def home(sider_dir):
     d = os.path.join(sider_dir, HOME)
     os.makedirs(d, exist_ok=True)
@@ -62,10 +79,10 @@ def snapshot(path, reason="", sider_dir=None, before=False):
     while os.path.exists(dst):
         n += 1
         dst = os.path.join(day, "%s.%s-%d" % (base, stamp[9:], n))
-    shutil.copy2(path, dst)
+    shutil.copy2(long_path(path), long_path(dst))        # a deep file of a world (B400)
     rows = load(sd)
     row = {"file": rel, "copy": os.path.relpath(dst, sd), "time": stamp,
-           "reason": reason, "size": os.path.getsize(dst)}
+           "reason": reason, "size": os.path.getsize(long_path(dst))}
     if before:
         row["before"] = True
     rows.append(row)

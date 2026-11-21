@@ -22,7 +22,19 @@ def read_val(b, p, typ, gstr):
     raise ValueError("@UTF column type %x" % typ)
 
 
+def utf_decrypt(data):
+    """CRI's masked @UTF table (packers can write the TOC this way): every byte XORed with a
+    stream that starts at 0x655f and is multiplied by 0x4115 after each byte"""
+    out, m = bytearray(data), 0x655f
+    for i in range(len(out)):
+        out[i] ^= m & 0xff
+        m = (m * 0x4115) & 0xffffffff
+    return bytes(out)
+
+
 def utf_parse(data):
+    if data[:4] != b"@UTF" and utf_decrypt(data[:4]) == b"@UTF":
+        data = utf_decrypt(data)
     if data[:4] != b"@UTF":
         raise ValueError("not a CRI table: %r" % data[:4])
     size, = struct.unpack(">I", data[4:8])

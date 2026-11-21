@@ -3,7 +3,7 @@ alone (a league's logo, a club's crest) draws only those again (17.10., Vicentic
 the Modpack to give one cup a new name and logo). The world it leaves must be the one a full Build
 makes, file for file; anything else changed means a full Build. Worlds are built in temporary game
 folders (nothing is switched on)."""
-import hashlib, json, os, shutil, sys, tempfile
+import hashlib, json, os, re, shutil, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import leaguebuilder as B
@@ -61,10 +61,14 @@ def build(base, game, r, full=False):
 
 
 def files(game):
+    """the world's files and their hashes, but the Build's record of its input (it holds the
+    pictures' file times)"""
     w, out = world(game), {}
     for d, _ds, fs in os.walk(w):
         for f in fs:
             p = os.path.join(d, f)
+            if os.path.normcase(p) == os.path.normcase(os.path.join(w, B.INPUT)):
+                continue
             with open(p, "rb") as fh:
                 out[os.path.relpath(p, w).replace(os.sep, "/")] = hashlib.sha1(fh.read()).hexdigest()
     return out
@@ -146,6 +150,37 @@ def main(base):
         build(base, fast, recipe(p3, ("Renamed FC",) + ("",) * 9))
         said = build(base, fast, r5)
         ok("a crest where the club had none: a full Build", "only pictures changed" not in said)
+
+        # mato 09.11. (jibibi: 27 minutes for two leagues added): a full Build copies the pictures
+        # the last one drew from the same jobs, draws only the rest, and makes the same world
+        r6 = recipe(p5, ("Renamed FC", "Other FC") + ("",) * 8)
+        r6["leagues"][0]["club_crests"][4] = r5["leagues"][0]["club_crests"][4]
+        r6["leagues"][1]["club_crests"] = [png(os.path.join(pics_dir, "a0.png"), (5, 90, 5, 255))]
+        mine = os.path.join(world(fast), B.crest_files(tid)[0])   # a file the Build writes, replaced by hand
+        png(mine, (7, 7, 7, 255))
+        mine_h = B.file_hash(mine)
+        ref = os.path.join(tempfile.mkdtemp(prefix="fl26-incr-ref-"), "g")
+        shutil.copytree(fast, ref)           # the same world, built again drawing every picture
+        build(base, ref, r6, full=True)
+        said = build(base, fast, r6)
+        ok("a full Build after one: the pictures of the same jobs copied, not drawn",
+           "only pictures changed" not in said and " as the last Build's)" in said)
+        drawn = [s for s in said.splitlines() if " as the last Build's)" in s and "club crests" in s]
+        m = re.search(r"\((\d+) drawn, (\d+) as the last Build's\)", drawn[0] if drawn else "")
+        ok("... only the few whose job changed drawn (a new picture, a new name, a new id): %s" % drawn,
+           m and 0 < int(m.group(1)) <= 5 and int(m.group(2)) > 10)
+        ok("the crest put in by hand still stays", B.file_hash(hand) == before)
+        ok("... and one put in the place of a crest the Build draws too", B.file_hash(mine) == mine_h)
+        d = differ(files(fast), files(ref))
+        shutil.rmtree(os.path.dirname(ref), ignore_errors=True)
+        ok("... and the world is the one a Build drawing all makes, file for file %s" % d[:6], not d)
+
+        # another Build of the Build's code: nothing copied
+        last = json.load(open(os.path.join(world(fast), B.INPUT), encoding="utf-8"))
+        last["code"] = "older"
+        json.dump(last, open(os.path.join(world(fast), B.INPUT), "w", encoding="utf-8"))
+        said = build(base, fast, recipe(p5, ("Renamed FC", "Third FC") + ("",) * 8))
+        ok("a world built by other code: every picture drawn", " as the last Build's)" not in said)
     finally:
         for d in (fast, slow, pics_dir):
             shutil.rmtree(d, ignore_errors=True)

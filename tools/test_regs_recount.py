@@ -80,6 +80,27 @@ def main():
            not problems(root, ";lua.module = \"fl26regs600.lua\""))
         ok("recount_rows reads the module's number", checks.recount_rows(SiderIni.load(
             os.path.join(root, "SiderAddons", "sider.ini"))) == 300)
+        # FL 2027: Install modules puts fl26regs1200 / fl26regs2000.fl27.lua in as fl26regs600.lua,
+        # so the file's own Set line is the count (a 380-league world has ~1370 rows)
+        mods = os.path.join(root, "SiderAddons", "modules")
+        os.makedirs(mods, exist_ok=True)
+        world(root, 1000)
+        ok("1000 rows, fl26regs600.lua not in modules: the name's 600, reported",
+           len(problems(root, "lua.module = \"fl26regs600.lua\"")) == 1)
+        for n, want in ((2000, 0), (1200, 0), (600, 1)):
+            with open(os.path.join(mods, "fl26regs600.lua"), "w", encoding="utf-8") as f:
+                f.write("--[[\nfl26regs -- regulation records\n\nSet:     regs%d\nSummary: x\n--]]\n" % n)
+            ok("1000 rows, fl26regs600.lua whose Set line says regs%d: %s" % (n, "reported" if want else "nothing"),
+               len(problems(root, "lua.module = \"fl26regs600.lua\"")) == want)
+        ok("recount_rows reads the Set line", checks.recount_rows(SiderIni.load(
+            os.path.join(root, "SiderAddons", "sider.ini"))) == 600)
+        with open(os.path.join(mods, "fl26regs600.lua"), "w", encoding="utf-8") as f:
+            f.write("--[[\nSet:     regs2000\n--]]\n")
+        ok("  ... 2000 for the FL 2027 copy", checks.recount_rows(SiderIni.load(
+            os.path.join(root, "SiderAddons", "sider.ini"))) == 2000)
+        shipped = os.path.join(os.path.dirname(HERE), "sider", "fl26regs2000.fl27.lua")
+        ok("the shipped fl26regs2000.fl27.lua has that Set line",
+           checks.RECOUNT_SET.search(open(shipped, encoding="utf-8").read(4096)).group(1) == "2000")
     finally:
         shutil.rmtree(root, ignore_errors=True)
     print("1..%d" % N)

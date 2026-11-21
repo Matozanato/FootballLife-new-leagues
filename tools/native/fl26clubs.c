@@ -140,6 +140,7 @@ typedef struct { uint16_t slot; uint16_t reg; } fl26_clubs_cfg_t;
 typedef void* (*reg_fn)(void*, unsigned);
 
 static uint64_t g_base;
+#include "fl26layout.h"   /* block offsets read from the code fl26caps patched */
 static fl26_clubs_cfg_t g_cfg[MAX_CFG];
 static int      g_ncfg;
 static uint32_t g_list[MAX_CFG][MAX_CLUBS];
@@ -389,19 +390,49 @@ __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
  * The Master League broadcasting fee (0x141567ca0: 23,000,000 / (rank + 10) - 40,000) took
  * -1 as better than first place: EUR 250M a season for a club past the 750. It is replaced
  * the same way: a listed club out of the ranking answers the rank its own entry has.
+ *
+ * A finer share and the season's income (2026-11-11, FL 2027 worlds: "fansx" lines). A whole
+ * percent with a floor of 1,000 left half of a big world's clubs on one figure (2,404 of
+ * 4,689 at 5 percent). A "fansx <share of 10,000> <ids>" line gives a listed club a finer share,
+ * and its base may go down to 100.
+ *
+ * The same clubs were paid like the game's 450th club every season, whatever their size: the
+ * broadcasting fee above (EUR 1.0M for rank 450; the unit is EUR 100) and the sponsors,
+ * 0x141567d00: 25 * max(followers base, 150,000) - 670 * min(rank, 400) - 3,451,330 -- the
+ * floor of 150,000 is above every base below class 9, so every club of rank 400 or worse gets
+ * 30,670 (EUR 3.07M). An Armenian second-division side with wages of EUR 1.39M and a transfer
+ * budget of EUR 0.3M was EUR 2.8M up after one season. Both are paid when a career starts and
+ * each season (0x14133d6fb..0x14133d7ad, each with a random tenth off or on) into the career's
+ * money, block+0x41b9374: +0x00 the transfer budget, +0x14 the salary budget, +0x2c the fee,
+ * +0x30 the sponsors, +0x34 the fan club income (= the followers base).
+ *
+ * Both functions are replaced with the same sums. For a club with a fansx share the two
+ * payments are scaled together: what the wages need (the salary budget and the tenth the
+ * caller may take off) stays whole, and of the rest the club gets its share. A club is never
+ * paid less than its wages; with no salary budget to read the payments stay the game's.
+ *
+ * When a career starts the two are set by the money's init, 0x1415698f0(handle*, flag*): the
+ * sponsors through the function above, the fee by the same sum written out in place, and only
+ * after both the budgets, from the squad's wages (0x141566150) -- so the replaced functions meet
+ * a salary budget of 0 there. The init is wrapped: once it is through, the fee (+0x2c) and the
+ * sponsors (+0x30) it stored are scaled where they lie, by the salary budget it has just set.
+ * It leaves early for a club it cannot find; a mark put into both fields before it runs tells
+ * whether it wrote them.
  */
 #define RANKFIND_RVA 0x0de2310  /* entry* find(ranking*, const u32* handle)          */
 static int replace(unsigned char* target, void* handler);
 #define FANS_RVA     0x150e950  /* int followers_base(u32 handle)                    */
 #define FTOTAL_RVA   0x1589e90  /* void followers_set(u32 handle): block+0x1798b8c   */
 #define RANKPOS_RVA  0x0b8abd0  /* int rank_of(ranking*, const u32* handle), -1 miss */
-#define BLK_RANKING  0x16705a8
-#define BLK_FBASE    0x1798b80
-#define BLK_FANS     0x1798b8c
+#define BLK_RANKING  lay_ranking()   /* 0x16705a8 unless the set moves the lower tail */
+#define BLK_FBASE    lay_fbase()     /* 0x1798b80 */
+#define BLK_FANS     lay_fans()      /* 0x1798b8c */
 #define RANK_COUNT   0x2ee0
-#define MAX_FANS     4096
+#define MAX_FANS     16384   /* 4096 until 07.11.2026: a world of 4277 new clubs lost the last 181 */
 
-typedef struct { uint32_t tid; uint8_t cls, pct; } fan_t;
+typedef struct { uint32_t tid; uint16_t share; uint8_t cls, fine; } fan_t;   /* share of 10,000 */
+#define FANS_FLOOR      1000    /* the lowest scaled base of a "fans" club          */
+#define FANS_FLOOR_FINE 100     /* ... and of a club with a "fansx" share           */
 static fan_t    g_fans[MAX_FANS];
 static int      g_nfans;
 static unsigned char g_virt[8][16];
@@ -410,6 +441,10 @@ static uint32_t g_fstat[2];                /* own ranking entries handed out, ba
 unsigned char* g_tramp_fans = 0;
 unsigned char* g_tramp_ftotal = 0;
 static uint32_t g_fstat2[2];               /* broadcasting ranks answered, star parts cut */
+static int      g_nfine;                   /* clubs with a fansx share                    */
+static uint32_t g_fin;                     /* block offset of the career's money, 0 = the income is the game's */
+static uint32_t g_istat[3];                /* payments scaled, left whole (the wages need them), no salary budget */
+static int      g_ilog;
 static const float CLASS_MULT[10] = { 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.5f, 6.0f, 7.5f, 10.0f, 40.0f };
 static const uint32_t CLASS_RANK[10] = { 450, 370, 310, 250, 190, 130, 80, 45, 20, 5 };
 
@@ -443,10 +478,10 @@ __declspec(dllexport) void* rank_find_hook(unsigned char* table, const uint32_t*
 __declspec(dllexport) int fans_post(uint32_t h, int base)
 {
   const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
-  if (!f || f->pct >= 100 || base <= 0) return base;
-  int v = (int)((int64_t)base * f->pct / 100);
+  if (!f || f->share >= 10000 || base <= 0) return base;
+  int v = (int)((int64_t)base * f->share / 10000), lo = f->fine ? FANS_FLOOR_FINE : FANS_FLOOR;
   g_fstat[1]++;
-  return v < 1000 ? 1000 : v;
+  return v < lo ? lo : v;
 }
 
 /* the rank of a club in the ranking, -1 for none -- 0x140b8abd0, with a listed club's own */
@@ -466,7 +501,7 @@ __declspec(dllexport) int rank_pos_hook(unsigned char* table, const uint32_t* ke
 __declspec(dllexport) void fans_total_post(uint32_t h, unsigned char* blk)
 {
   const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
-  if (!f || f->pct >= 100 || !blk) return;
+  if (!f || f->share >= 10000 || !blk) return;
   uint32_t key = h;
   unsigned char* e = (unsigned char*)rank_find_hook(blk + BLK_RANKING, &key);
   unsigned cls = e[0x0e] > 9 ? 9 : e[0x0e];
@@ -475,7 +510,7 @@ __declspec(dllexport) void fans_total_post(uint32_t h, unsigned char* blk)
   int base = (int)(x < 0 ? x - 0.5f : x + 0.5f);
   int star = v - base;
   if (star <= 0) return;
-  int64_t cut = (int64_t)star * f->pct / 100, room = (int64_t)base * f->pct / 100;
+  int64_t cut = (int64_t)star * f->share / 10000, room = (int64_t)base * f->share / 10000;
   if (cut > room) cut = room;
   *(int*)(blk + BLK_FANS) = base + (int)cut;
   g_fstat2[1]++;
@@ -547,11 +582,208 @@ __declspec(dllexport) int fl26_clubs_fans(const uint32_t* rows, int n)
   for (int k = 0; rows && k < n && g_nfans < MAX_FANS; k++) {
     uint32_t cls = (rows[2 * k + 1] >> 8) & 0xff, pct = rows[2 * k + 1] & 0xff;
     if (!rows[2 * k] || cls > 9 || !pct) continue;
-    g_fans[g_nfans].tid = rows[2 * k]; g_fans[g_nfans].cls = (uint8_t)cls; g_fans[g_nfans].pct = (uint8_t)pct;
+    g_fans[g_nfans].tid = rows[2 * k]; g_fans[g_nfans].cls = (uint8_t)cls;
+    g_fans[g_nfans].share = (uint16_t)((pct > 100 ? 100 : pct) * 100); g_fans[g_nfans].fine = 0;
     g_nfans++;
   }
   qsort(g_fans, g_nfans, sizeof g_fans[0], cmp_fan);
+  g_nfine = 0;
   return g_nfans;
+}
+
+/* The world file's fansx lines, after fl26_clubs_fans and before fl26_clubs_install: rows of
+   {team id, share of 10,000}. Only a club with a fans line takes one (the class comes from
+   there). Returns how many were taken. */
+__declspec(dllexport) int fl26_clubs_fans2(const uint32_t* rows, int n)
+{
+  g_nfine = 0;
+  for (int k = 0; rows && k < n; k++) {
+    fan_t* f = (fan_t*)fan_of(rows[2 * k]);
+    uint32_t sh = rows[2 * k + 1];
+    if (!f || !sh || sh > 10000) continue;
+    f->share = (uint16_t)sh; f->fine = 1;
+    g_nfine++;
+  }
+  return g_nfine;
+}
+
+/* ---- the season's broadcasting fee and sponsors (see the note above) ---- */
+#define TV_RVA          0x1567ca0  /* int broadcasting_fee(u32 handle)                 */
+#define SPONSOR_RVA     0x1567d00  /* int sponsors(u32 handle)                         */
+#define SPONSOR_PRE_RVA 0x1568770  /* what sponsors() calls first: (handle, 0, 0)      */
+#define FIN_WAGES       0x14       /* the salary budget, in the career's money         */
+static const unsigned char SIG_TV[9]       = { 0x89,0x4c,0x24,0x08, 0x48,0x83,0xec,0x28, 0xe8 };
+static const unsigned char SIG_SPONSOR[10] = { 0x89,0x4c,0x24,0x08, 0x57, 0x48,0x83,0xec,0x20, 0xe8 };
+typedef int   (*fbase_fn)(uint32_t);
+typedef void* (*spre_fn)(uint32_t, uint32_t, void*);
+static unsigned char* ml_block(void);
+
+static int tv_plain(unsigned char* blk, uint32_t h)
+{
+  uint32_t key = h;
+  int rank = rank_pos_hook(blk + BLK_RANKING, &key);
+  int v = (int)(23000000u / (uint32_t)(rank + 10)) - 40000;
+  return v <= 0 ? 1000 : v;
+}
+
+static int sponsor_plain(unsigned char* blk, uint32_t h, int pre)
+{
+  if (pre) ((spre_fn)(uintptr_t)(g_base + SPONSOR_PRE_RVA))(h, 0, 0);
+  int base = ((fbase_fn)(uintptr_t)(g_base + FANS_RVA))(h);
+  uint32_t key = h;
+  unsigned char* e = (unsigned char*)rank_find_hook(blk + BLK_RANKING, &key);
+  uint32_t rank = *(uint32_t*)(e + 4);
+  if (rank > 400) rank = 400;
+  if (base < 150000) base = 150000;
+  int v = base * 25 - (int)rank * 670 - 3451330;
+  return v <= 0 ? 1000 : v;
+}
+
+/* `mine` of a club's two payments (the other one is `other`) for a club with this salary budget and
+   share of 10,000: what the wages need (and the tenth a caller may take off) whole, of the rest
+   the share. As it was with no salary budget, a payment of nothing, or less than the wages need.
+   Exported for the test: no game memory in it. */
+__declspec(dllexport) int fl26_clubs_pay(int mine, int other, int wages, uint32_t share)
+{
+  int64_t orig = (int64_t)mine + other, need = (int64_t)wages * 112 / 100;
+  if (wages <= 0 || mine <= 0 || other < 0 || share >= 10000 || orig <= need) return mine;
+  int v = (int)((int64_t)mine * (need + (orig - need) * share / 10000) / orig);
+  return v < 1 ? 1 : v;
+}
+
+/* `mine` of a club's two payments, scaled for a club with a fansx share */
+static int income_scaled(unsigned char* blk, uint32_t h, int mine, int other, const char* what)
+{
+  const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
+  if (!f || !f->fine || f->share >= 10000 || !g_fin) return mine;
+  int64_t orig = (int64_t)mine + other;
+  int wages = *(int*)(blk + g_fin + FIN_WAGES), v = fl26_clubs_pay(mine, other, wages, f->share);
+  g_istat[wages <= 0 ? 2 : v == mine ? 1 : 0]++;
+  if (g_ilog < 12 && wages > 0) {
+    g_ilog++;
+    logf("fl26clubs: season income of club %u, %s: %d -> %d (with the other payment %d, salary budget %d, "
+         "share %u of 10000)", h >> HANDLE_SHIFT, what, mine, v, (int)orig, wages, f->share);
+  }
+  return v;
+}
+
+/* ---- the same when a career starts: the money's init, wrapped ---- */
+#define INIT_RVA    0x15698f0  /* void money_init(const u32* handle, const u8* flag)   */
+#define FIN_TV      0x2c
+#define FIN_SPONSOR 0x30
+#define FIN_MARK    0x7ffffffe /* the init clamps what it stores to +-99,999,999        */
+/* mov rax,rsp; push rdi/r12/r13/r14/r15; sub rsp,0x70 -- sixteen bytes, nothing rip-relative */
+static const unsigned char SIG_INIT[16] = {
+  0x48,0x8b,0xc4, 0x57, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57, 0x48,0x83,0xec,0x70 };
+unsigned char* g_tramp_init = 0;
+static int g_was_tv, g_was_sp;
+
+__declspec(dllexport) void init_before(const uint32_t* ph)
+{
+  unsigned char* blk = ml_block();
+  (void)ph;
+  if (!blk || !g_fin) return;
+  int* m = (int*)(blk + g_fin);
+  g_was_tv = m[FIN_TV / 4]; g_was_sp = m[FIN_SPONSOR / 4];
+  m[FIN_TV / 4] = FIN_MARK; m[FIN_SPONSOR / 4] = FIN_MARK;
+}
+
+__declspec(dllexport) void init_after(const uint32_t* ph)
+{
+  unsigned char* blk = ml_block();
+  if (!blk || !g_fin) return;
+  int* m = (int*)(blk + g_fin);
+  int tv = m[FIN_TV / 4], sp = m[FIN_SPONSOR / 4];
+  if (tv == FIN_MARK || sp == FIN_MARK) {            /* it left early: as it was */
+    if (tv == FIN_MARK) m[FIN_TV / 4] = g_was_tv;
+    if (sp == FIN_MARK) m[FIN_SPONSOR / 4] = g_was_sp;
+    return;
+  }
+  uint32_t h = ph ? *ph : 0;
+  const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
+  if (!f || !f->fine || f->share >= 10000) return;
+  int wages = m[FIN_WAGES / 4];
+  int tv2 = tv, sp2 = sp;
+  if (wages <= 0 || tv <= 0 || sp <= 0) g_istat[2]++;
+  else {
+    tv2 = fl26_clubs_pay(tv, sp, wages, f->share); sp2 = fl26_clubs_pay(sp, tv, wages, f->share);
+    m[FIN_TV / 4] = tv2; m[FIN_SPONSOR / 4] = sp2;
+    g_istat[tv2 == tv && sp2 == sp ? 1 : 0]++;
+  }
+  logf("fl26clubs: a career's first income of club %u: broadcasting %d -> %d, sponsors %d -> %d "
+       "(salary budget %d, share %u of 10000)", h >> HANDLE_SHIFT, tv, tv2, sp, sp2, wages, f->share);
+}
+
+/* CALL-style wrap of 0x1415698f0. entry rsp = 8 mod 16; push -> 0; sub 0x20 -> 0. rdx waits in
+   our own home space (entry rsp + 0x10 = rsp + 0x38 here), which no callee of ours touches. */
+__attribute__((naked)) void init_handler(void)
+{
+  __asm__ volatile(
+    "push %rbx\n"
+    "sub  $0x20, %rsp\n"
+    "mov  %rcx, %rbx\n"
+    "mov  %rdx, 0x38(%rsp)\n"
+    "call init_before\n"
+    "mov  %rbx, %rcx\n"
+    "mov  0x38(%rsp), %rdx\n"
+    "call *g_tramp_init(%rip)\n"
+    "mov  %rbx, %rcx\n"
+    "call init_after\n"
+    "add  $0x20, %rsp\n"
+    "pop  %rbx\n"
+    "ret\n");
+}
+
+__declspec(dllexport) int tv_hook(uint32_t h)
+{
+  unsigned char* blk = ml_block();
+  if (!blk) return 1000;
+  int tv = tv_plain(blk, h);
+  const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
+  if (!f || !f->fine) return tv;
+  return income_scaled(blk, h, tv, sponsor_plain(blk, h, 0), "broadcasting");
+}
+
+__declspec(dllexport) int sponsor_hook(uint32_t h)
+{
+  unsigned char* blk = ml_block();
+  if (!blk) return 1000;
+  int sp = sponsor_plain(blk, h, 1);
+  const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
+  if (!f || !f->fine) return sp;
+  return income_scaled(blk, h, sp, tv_plain(blk, h), "sponsors");
+}
+
+/* payments scaled, left whole, met with no salary budget */
+__declspec(dllexport) void fl26_clubs_income_stats(uint32_t* out3)
+{
+  out3[0] = g_istat[0]; out3[1] = g_istat[1]; out3[2] = g_istat[2];
+}
+
+static int rel_to(const unsigned char* at, uint32_t rva)      /* at: an e8 call to g_base + rva? */
+{
+  return at[0] == 0xe8 && (uintptr_t)(at + 5 + *(const int32_t*)(at + 1)) == (uintptr_t)(g_base + rva);
+}
+
+static unsigned char* tramp(unsigned char* fn, int n);
+
+/* 0 all in, 1 not this build's functions (nothing touched), 2 alloc or protect failed */
+static int install_income(uint64_t exe_base)
+{
+  unsigned char* in = (unsigned char*)(uintptr_t)(exe_base + INIT_RVA);
+  unsigned char* tv = (unsigned char*)(uintptr_t)(exe_base + TV_RVA);
+  unsigned char* sp = (unsigned char*)(uintptr_t)(exe_base + SPONSOR_RVA);
+  if (memcmp(tv, SIG_TV, 9) || memcmp(sp, SIG_SPONSOR, 10)) return 1;
+  if (tv[0x11] != 0x48 || tv[0x12] != 0x8d || tv[0x13] != 0x81) return 1;      /* lea rax, [rcx + money] */
+  if (memcmp(in, SIG_INIT, 16)) return 1;
+  if (!rel_to(tv + 0x2e, RANKPOS_RVA) || !rel_to(sp + 0x32, SPONSOR_PRE_RVA) || !rel_to(sp + 0x3b, FANS_RVA)
+      || !rel_to(sp + 0x4e, RANKFIND_RVA)) return 1;
+  uint32_t fin = *(uint32_t*)(tv + 0x14);
+  if (!(g_tramp_init = tramp(in, 16))) return 2;
+  if (replace(tv, (void*)tv_hook) || replace(sp, (void*)sponsor_hook)) return 2;
+  g_fin = fin;
+  if (replace(in, (void*)init_handler)) return 2;
+  return 0;
 }
 
 /* a trampoline: the first n bytes of fn, then a jump back past them */
@@ -716,6 +948,13 @@ __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs
                 : "alloc/protect failed", g_nfans);
     else logf("fl26clubs: club ranking lookups replaced, followers wrapped -- %d club(s) with a class, a rank "
               "and a followers share of their own", g_nfans);
+    if (!r && g_nfine) {
+      int q = install_income(exe_base);
+      if (q) logf("fl26clubs: season income NOT scaled (%s) -- %d club(s) keep the game's broadcasting fee and sponsors",
+                  q == 1 ? "the income functions differ in this game" : "protect failed", g_nfine);
+      else logf("fl26clubs: a finer followers share for %d club(s), their broadcasting fee and sponsors by it "
+                "(money at block+0x%x)", g_nfine, g_fin);
+    }
   }
   logf("fl26clubs: readers and the setter replaced (count@%llx get@%llx), %d slot(s) served from our regulations, "
        "%d club(s) kept out of the pools",

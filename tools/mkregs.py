@@ -47,9 +47,9 @@ import sys
 import capstone
 
 IMAGE_BASE = 0x140000000
-EXE = os.path.join(os.environ.get("FL26_DIR", r"E:\instalacija"), "FL_2026.exe")
+EXE = os.path.join(os.environ.get("FL26_DIR", r"E:\FL\FL26\game"), "FL_2026.exe")
 SIDER_DIRS = [r"D:\dev\fl26\wt\limits\sider", r"D:\dev\fl26\wt\limits\sider\experimental",
-              r"E:\instalacija\SiderAddons\modules"]            # read only: overlap checks
+              r"E:\FL\FL26\game\SiderAddons\modules"]            # read only: overlap checks
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGE = 0x163800000            # our page; fl26caps 0x163000000, fl26slots 0x163400000

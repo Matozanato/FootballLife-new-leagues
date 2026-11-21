@@ -72,6 +72,8 @@ local TRAMP = "4883ec28e877e7dcfe488b05006f1d014885c00f84d10000004c8b40484d85c00
   .. "4180b91d04000000752d448b114539ca74254539da74204139d2741bf68123040000047512c6811d0400"
   .. "00ff41c780f4159101ffffffff4881c190060000ffc875bf4883c428c3"
 local TEAMS_LE, COUNT_LE = "70708701", "8008b203"
+-- and the user club at +0x1798ab0 and the schedule owner at +0x19115f4 (the 0.3.0 set's)
+local USER_LE, OWNER_LE = "b08a7901", "f4159101"
 
 local function unhex(s)
   local out = {}
@@ -100,9 +102,27 @@ function m.init(ctx)
                       .. "expected code (%s / %s); nothing was written", tohex(lea), tohex(cnt)))
     return
   end
+  -- the user club and the day schedule's owner word move with the caps set too (the limits set
+  -- of FL27 moves both): `lea rcx,[rsi+user]` at 0x140ac8fe3, `movzx r9d,word [rcx+today]` at
+  -- 0x140aed7b0, and the owner word is today + 0x10
+  local usr = memory.read(0x140ac8fe3, 7)
+  local tdy = memory.read(0x140aed7b0, 8)
+  if usr == nil or tdy == nil or string.sub(usr, 1, 3) ~= unhex("488d8e")
+     or string.sub(tdy, 1, 4) ~= unhex("440fb789") then
+    log(string.format("fl26ctlguard: ABORTED, the user club / day counter reads are not the "
+                      .. "expected code (%s / %s); nothing was written", tohex(usr), tohex(tdy)))
+    return
+  end
+  local b1, b2, b3, b4 = string.byte(tdy, 5, 8)
+  local owner = b1 + b2 * 0x100 + b3 * 0x10000 + b4 * 0x1000000 + 0x10
+  local owner_le = string.format("%02x%02x%02x%02x", owner % 0x100, math.floor(owner / 0x100) % 0x100,
+                                 math.floor(owner / 0x10000) % 0x100, math.floor(owner / 0x1000000) % 0x100)
+  local user_le = tohex(string.sub(usr, 4, 7))
   local teams_le, count_le = tohex(string.sub(lea, 4, 7)), tohex(string.sub(cnt, 4, 7))
   local tramp = string.gsub(TRAMP, TEAMS_LE, teams_le)
   tramp = string.gsub(tramp, COUNT_LE, count_le)
+  tramp = string.gsub(tramp, USER_LE, user_le)
+  tramp = string.gsub(tramp, OWNER_LE, owner_le)
 
   local patches = {
     {va=CAVE, old=string.rep("00", #tramp / 2), new=tramp,
@@ -111,8 +131,8 @@ function m.init(ctx)
      why="the day loop's call to 0x1412fd680 -> the trampoline at 0x14252ef00"},
   }
   local n = #patches
-  log(string.format("fl26ctlguard: teams at +0x%s, count at +0x%s, %d patches, verifying",
-                    teams_le, count_le, n))
+  log(string.format("fl26ctlguard: teams at +0x%s, count at +0x%s, user club +0x%s, owner +0x%s, %d patches, verifying",
+                    teams_le, count_le, user_le, owner_le, n))
 
   -- pass 1: read only. Nothing is written until every single site has been confirmed.
   local bad = 0

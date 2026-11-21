@@ -144,7 +144,15 @@ _INIT = re.compile(r"^\s*(?:local\s+)?function\s+(?:m\.|M\.)?init\s*\(|^\s*init\
 
 def links(path):
     """(names it publishes on ctx, names its init() reads from ctx).  Only init counts:
-    reads inside event handlers run after every module is loaded, so order does not matter."""
+    reads inside event handlers run after every module is loaded, so order does not matter.
+    Read again only when the file changed (B480, 17.11.2026: Home's checks read every module
+    switched on, each sider.ini save, on the window's thread -- part of a 1.25 s stop right after
+    Install the modules in the exe test of beta4p, the files just written and the disk busy)"""
+    from . import filecache
+    return filecache.by_files("module-links", [path], lambda: _links(path))
+
+
+def _links(path):
     try:
         text = open(path, encoding="utf-8", errors="replace").read()
     except OSError:

@@ -90,6 +90,8 @@ def const_offset(ins, value):
     return hits[-1] if hits else None
 
 
+ELEMS = None                               # --elems: the day-list element accesses
+
 SCRATCH = (X86_REG_RAX, X86_REG_RCX, X86_REG_RDX, X86_REG_R8, X86_REG_R9,
            X86_REG_R10, X86_REG_R11)
 
@@ -300,7 +302,15 @@ def walk(f, sites, odd, shape_ok=True, seed=(), passed=None):
             elif EVENTS <= m.disp < STRIDE:
                 k = "event"
             elif 0 <= m.disp < COUNT:
-                continue                   # an id: the list still starts at +0
+                # an id: the list still starts at +0, but its elements are 16-bit (u32
+                # match ids, M2: --elems lists every access to them)
+                if ELEMS is not None and by == "taint":
+                    ELEMS.append(dict(kind="elem", va="0x%x" % ins.address, func="0x%x" % f,
+                                      size=op.size, scale=m.scale if m.index else 0,
+                                      disp=m.disp, write=bool(op.access & CS_AC_WRITE),
+                                      lea=ins.id == X86_INS_LEA,
+                                      text="%s %s" % (ins.mnemonic, ins.op_str)))
+                continue
             else:
                 odd.append(("disp", ins.address, f, "%s %s  (+0x%x)" % (ins.mnemonic, ins.op_str, m.disp)))
                 continue
@@ -331,7 +341,10 @@ def walk(f, sites, odd, shape_ok=True, seed=(), passed=None):
 
 
 def main():
-    rest = [a for a in sys.argv[1:] if not a.startswith("--")]
+    global ELEMS
+    if "--elems" in sys.argv:
+        ELEMS = []
+    rest = [a for a in sys.argv[1:] if not a.startswith("--") and a not in sys.argv[sys.argv.index("--elems") + 1:sys.argv.index("--elems") + 2]] if "--elems" in sys.argv else [a for a in sys.argv[1:] if not a.startswith("--")]
     out = rest[0] if rest else None
     funcs = funcs_touching_base()
     sites, odd = [], []
@@ -366,6 +379,13 @@ def main():
         else:
             sites.extend(probe)
             odd.extend(throw)
+    if ELEMS is not None:
+        el, sk = [], set()
+        for e in ELEMS:
+            if e["va"] not in sk:
+                sk.add(e["va"]); el.append(e)
+        json.dump(el, open(sys.argv[sys.argv.index("--elems") + 1], "w"), indent=0)
+        print("%d day-list element accesses in %d functions" % (len(el), len({e["func"] for e in el})))
     seen, uniq = set(), []
     for s in sites:
         k = (s["va"], s["kind"])

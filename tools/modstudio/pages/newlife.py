@@ -133,7 +133,7 @@ class PlayerPickDialog(Dialog):
         self.list.setColumnWidth(0, 240)
         self.v.insertWidget(1, self.list, 1)
         self.scroll.hide()
-        rows = sorted(rel.squads.get(cid, []), key=lambda r: -P.overall(r))
+        rows = sorted(rel.squads.get(cid, []), key=lambda r: -P.level(r))
         self.order = [str(r.get("newlife_id", "")).strip() for r in rows]
         self.best = {str(r.get("newlife_id", "")).strip() for r in rel.squad(cid)}
         mine = {str(i) for i in chosen or []} & set(self.order)
@@ -141,7 +141,7 @@ class PlayerPickDialog(Dialog):
         self.gk = {i for i, r in zip(self.order, rows) if r.get("Registered Position") == "GK"}
         for i, r in zip(self.order, rows):
             it = QTreeWidgetItem([r.get("name", ""), r.get("Registered Position", ""), str(r.get("Age", "")),
-                                  str(P.overall(r))])
+                                  str(P.level(r))])
             it.setData(0, Qt.UserRole, i)
             it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
             it.setCheckState(0, Qt.Checked if i in self.ticked else Qt.Unchecked)
@@ -305,6 +305,8 @@ class NewLife(BuilderPage):
     hint = ("Real clubs and players for new leagues. Put the NewLife parts you downloaded (a continent each) "
             "in one folder, open it, pick leagues and add them: each becomes a new league with its clubs and "
             "their squads, ready to Build.")
+
+    zip_notice = True       # B487c: Make it editable... does not carry these changes (ui.Page)
 
     def __init__(self, app):
         super().__init__(app)
@@ -663,21 +665,26 @@ class NewLife(BuilderPage):
             text += "\n" + _("%d of your leagues have squads of another size than Players per new club (%d): "
                              "Update my leagues takes their players again (%s).") % (
                 len(size), P.SQUAD, ", ".join(x["name"] for x in size))
+        gone = N.lost(self.project.recipe, self.rel, info) if self.rel else []
+        if gone:
+            text += "\n" + _("%d of your leagues have game clubs this game does not have (%s): Update my leagues "
+                             "makes them new clubs with their NewLife squads.") % (
+                len(gone), ", ".join(x["name"] for x in gone))
         self.foot.setText(text)
         busy = getattr(self, "bringing", False)  # B260: not while Bring the game's leagues works on a copy
         self.b_add.setEnabled(bool(sel) and used + sel <= room and not busy)
-        self.b_update.setEnabled(bool(old or size) and not busy)
+        self.b_update.setEnabled(bool(old or size or gone) and not busy)
         self.b_game.setEnabled(bool(self.rel) and info is not None and not busy)
         self.b_undo.setEnabled(bool(self.project.recipe.get("newlife_game")) and not busy)
 
     def update(self):
-        old = N.to_update(self.project.recipe, self.rel) if self.rel else []
+        info = self.info()
+        old = N.to_update(self.project.recipe, self.rel, info) if self.rel else []
         if not old:
             return
         d = UpdateDialog(self, self.rel, old, self.rows)
         if not d.finish():
             return
-        info = self.info()
         done, notes, failed = [], [], []
         for x in old:
             try:

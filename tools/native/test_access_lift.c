@@ -27,6 +27,8 @@ static char g_path_test[MAX_PATH + 64];
 int rcal_test_today(void) { return g_today_test; }
 int rcal_test_invites(int k, uint16_t id) { (void)k; (void)id; return 0; }
 int rcal_test_recday(uint16_t id) { (void)id; return -1; }
+int rcal_test_dayload(int d) { (void)d; return 0; }      /* B329: no day load, no league rounds */
+int rcal_test_round(uint16_t id) { (void)id; return 0; }
 int state_test_date(void) { return g_year_now * 365 + g_today_test; }
 uint32_t state_test_user(void) { return 0; }
 const char* state_test_path(void) { return g_path_test; }

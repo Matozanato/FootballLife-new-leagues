@@ -118,23 +118,23 @@ def main():
     comp, regs, ents = (M.load(base, n) for n in
                         ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
     C, R, E = rows(comp, M.COMP), rows(regs, M.REG), rows(ents, M.ENT)
-    used_cid = {c[M.CID_OFF] for c in C}
+    used_cid = {M.comp_cid(c) for c in C}
     used_reg = {rid(r) for r in R}
 
-    lib = [r for r in R if r[M.R_CID] == LIB_CID and rid(r) & 0x3ff == LIB_GROUPS]
+    lib = [r for r in R if M.reg_cid(r) == LIB_CID and rid(r) & 0x3ff == LIB_GROUPS]
     master = [r for r in lib if r[R_GROUP] == NO_GROUP]
     reps = sorted((r for r in lib if r[R_GROUP] != NO_GROUP), key=lambda r: r[R_GROUP])
     ko_src = [r for r in R if rid(r) == UEL_KO]
-    lib_comp = [c for c in C if c[M.CID_OFF] == LIB_CID]
+    lib_comp = [c for c in C if M.comp_cid(c) == LIB_CID]
     if len(master) != 1 or len(reps) < 8 or len(ko_src) != 1 or len(lib_comp) != 1:
         raise SystemExit("this world has no shipped Libertadores group stage (reg 9, 8 groups) "
                          "or Europa League knockout (reg 6) to copy")
 
     # a league's clubs in its own entry order, for the entries written here
-    cid_of_reg = {rid(r): r[M.R_CID] for r in R}
+    cid_of_reg = {rid(r): M.reg_cid(r) for r in R}
     listed = {}
     for e in E:
-        listed.setdefault(e[M.E_CID], []).append(
+        listed.setdefault(M.ent_cid(e), []).append(
             (e[M.E_ORDER], int.from_bytes(e[M.E_TEAM:M.E_TEAM + 4], "little")))
     eid = max(int.from_bytes(e[M.E_EID:M.E_EID + 4], "little") for e in E)
 
@@ -154,7 +154,7 @@ def main():
         n = 4 * cup["groups"]
 
         c = bytearray(lib_comp[0])
-        c[M.CID_OFF] = cup["cid"]
+        M.set_comp_cid(c, cup["cid"])
         M.put(c, M.CODE_OFF, cup["code"], M.COMP - M.CODE_OFF)
         if cup["conf"] is not None:
             c[M.FLAG_OFF] = (c[M.FLAG_OFF] & ~CONF_MASK) | cup["conf"]
@@ -166,7 +166,7 @@ def main():
         for r in (master + reps[:cup["groups"]] if cup["groups"] else []):
             g = bytearray(r)
             g[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
-            g[M.R_CID] = cup["cid"]
+            M.set_reg_cid(g, cup["cid"])
             grp = g[R_GROUP]
             g[M.R_ID:M.R_ID + 2] = (cup["reg"] if grp == NO_GROUP
                                     else cup["reg"] + (grp + 1) * REPLICA_STEP).to_bytes(2, "little")
@@ -186,7 +186,7 @@ def main():
             k = bytearray(ko_src[0])
         k[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
         k[M.R_ID:M.R_ID + 2] = cup["ko"].to_bytes(2, "little")
-        k[M.R_CID] = cup["cid"]
+        M.set_reg_cid(k, cup["cid"])
         nko = 2 * cup["groups"] if cup["groups"] else len(cup["entry"])
         k[M.R_TEAMS] = (k[M.R_TEAMS] & ~0x3f) | nko
         new.append(k)
@@ -207,7 +207,8 @@ def main():
             e[M.E_TEAM:M.E_TEAM + 4] = t.to_bytes(4, "little")
             eid += 1
             e[M.E_EID:M.E_EID + 4] = eid.to_bytes(4, "little")
-            e[M.E_CID], e[M.E_ORDER] = cup["cid"], i + 1
+            M.set_ent_cid(e, cup["cid"])
+            e[M.E_ORDER] = i + 1
             E.append(e)
 
         if cup["groups"]:

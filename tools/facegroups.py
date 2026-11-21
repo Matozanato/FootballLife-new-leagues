@@ -11,13 +11,61 @@ portraits, and puts the Nordic nations on it. Every other nationality keeps its 
 faces; the DLL (fl26regen.c face_of) takes any group number. Without --write it only shows.
 
   pack: "FL26RF01", 512 bytes nationality -> group (0xff none), u32 n, n x (u8 group, u8 0,
-        u16 portrait number, 56 appearance bytes)"""
+        u16 portrait number, 56 appearance bytes)
+
+17.11.2026 (mato: "obvious region errors + a new region"): group 10, "sea", South-East Asia, and
+the nations the 30.09. map put in the wrong part of the world (REGIONS_1711, regroup()). "sas"
+was South + South-East Asia + Oceania: only 22% of the GigaPack's new players with a sas face
+were South Asian. The face pool (facepool.py) uses the new map; the faces of every group that
+kept its nations stay the same bytes (facepool.REDRAWN)."""
 import struct, sys
 
-GROUPS = ["nweu", "seu", "eeu", "afr", "mena", "lat", "bra", "eas", "sas", "nord"]
+GROUPS = ["nweu", "seu", "eeu", "afr", "mena", "lat", "bra", "eas", "sas", "nord", "sea"]
 NORD = GROUPS.index("nord")
+SEA = GROUPS.index("sea")
 NORDIC = {203: "Denmark", 206: "Faroe Islands", 207: "Finland", 213: "Iceland", 226: "Norway",
           237: "Sweden"}                       # Country.bin ids
+# The 17.11. region map, on top of the 30.09./B183 one: nationality (Country.bin id; the same ids
+# in FL26 and FL27, whose Country.bin is the same file) -> its group. sas keeps India 9, Pakistan
+# (below), Bangladesh 3, Bhutan 4, Nepal 25, Sri Lanka 33, Maldives 22. Afghanistan 1 stays mena,
+# with Iran and the three Central Asian nations moved there.
+REGIONS_1711 = {
+    # South-East Asia (sas until now): its own group
+    5: ("sea", "Brunei"), 6: ("sea", "Cambodia"), 10: ("sea", "Indonesia"), 18: ("sea", "Laos"),
+    21: ("sea", "Malaysia"), 24: ("sea", "Myanmar"), 29: ("sea", "Philippines"),
+    32: ("sea", "Singapore"), 36: ("sea", "Thailand"), 38: ("sea", "Vietnam"),
+    43: ("sea", "Timor-Leste"),
+    # Polynesia and Micronesia (sas until now): Austronesian peoples like the islands of
+    # South-East Asia, brown skin (the 3-4 band the sea faces have most) and black hair; nearer
+    # those faces than Africa's or South Asia's. The Oceania ids without a Country.bin entry
+    # (no player has one) go with them.
+    161: ("sea", "American Samoa"), 163: ("sea", "Cook Islands"), 168: ("sea", "Samoa"),
+    170: ("sea", "Tahiti"), 171: ("sea", "Tonga"), 176: ("sea", "Guam"), 184: ("sea", "Palau"),
+    173: ("sea", "-"), 174: ("sea", "-"), 175: ("sea", "-"), 177: ("sea", "-"), 178: ("sea", "-"),
+    179: ("sea", "-"), 180: ("sea", "-"), 181: ("sea", "-"), 182: ("sea", "-"), 183: ("sea", "-"),
+    # Melanesia (sas until now): dark skin, the afr faces
+    164: ("afr", "Fiji"), 165: ("afr", "New Caledonia"), 167: ("afr", "Papua New Guinea"),
+    169: ("afr", "Solomon Islands"), 172: ("afr", "Vanuatu"),
+    # mena until now
+    27: ("sas", "Pakistan"),
+    # eeu until now
+    216: ("eas", "Kazakhstan"), 40: ("eas", "Kyrgyzstan"),
+    240: ("mena", "Uzbekistan"), 41: ("mena", "Tajikistan"), 42: ("mena", "Turkmenistan"),
+    # afr until now: Central America
+    108: ("lat", "Belize"),
+    # placed nowhere until now (any face of the pack): no Country.bin entry; the id between
+    # Grenada 117 and Guatemala 119 of the alphabetical North American ids, most likely
+    # Guadeloupe. With Haiti and the other Caribbean islands (the GigaPack has one player of it)
+    118: ("afr", "Guadeloupe?"),
+}
+
+
+def regroup(nat):
+    """the nationality map with REGIONS_1711 (done twice: the same)"""
+    nat = bytearray(nat)
+    for n, (g, _name) in REGIONS_1711.items():
+        nat[n] = GROUPS.index(g)
+    return nat
 LIGHT = 2                                      # skin 1-2
 SKIN = 4 + 33                                  # in a 60-byte face: group, 0, portrait, then the
                                                # appearance record after its id (byte 37 there)

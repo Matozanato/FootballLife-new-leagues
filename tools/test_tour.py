@@ -79,6 +79,8 @@ def run():
     ok("due with no tour seen", TR.due({}))
     ok("due after the tour of an older version", TR.due({"tour": "0.2.3"}))
     ok("not due after this version's", not TR.due({"tour": TR.TOUR}))
+    # B398: the title lost its version; the tour seen in 0.2.4 and after is not shown again
+    ok("not due for a player who saw it (settings tour 0.2.4)", not TR.due({"tour": "0.2.4"}))
 
     w = A.Main()
     ok("the window speaks %s" % LANG, i18n.CODE == LANG or LANG == "en")
@@ -91,6 +93,8 @@ def run():
     settle(qa)
     t = w._tour
     ok("the tour starts", t is not None and t.card.isVisible() and t.i == 0)
+    import re
+    ok("B398: the first card's title has no version number", not re.search(r"\d\.\d", t.steps[0][0]))
     first = t
     w.start_tour()
     ok("a second start while it runs is not a second tour", w._tour is first)
@@ -99,7 +103,7 @@ def run():
     for i, (title, text, target) in enumerate(t.steps[1:], 2):
         ok("step %d (%s) points at a widget" % (i, title), target is not None)
     if LANG != "en":
-        ok("the steps are in %s" % LANG, t.steps[0][0] != "Welcome to Mod Studio 0.2.4"
+        ok("the steps are in %s" % LANG, t.steps[0][0] != "Welcome to FL Mod Studio"
            and t.skip.text() != "Skip the tour")
 
     def check(size):

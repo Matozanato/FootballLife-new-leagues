@@ -3,6 +3,7 @@
  "text": {
   "everyone %dx": "todos contra todos %dx",
   "%dx, then %s %dx": "%dx, luego %s %dx",
+  "%dx, then %s": "%dx, luego %s",
   "League": "Liga",
   "Name": "Nombre",
   "Country": "País",
@@ -124,6 +125,8 @@
   ["^  no kits: the game's UniformParameter.bin was not unpacked \\(Unpack from game\\)$", "  sin equipaciones: no se desempaquetó UniformParameter.bin del juego (Desempaquetar del juego)"],
   ["^  changed (\\d+) of the game's clubs and (\\d+) of its leagues$", "  cambiados: \\1 clubes y \\2 ligas del juego"],
   ["^built (.+): (\\d+) leagues, (\\d+) clubs$", "construido \\1: \\2 ligas, \\3 clubes"],
+  ["^kits drawn from colours and crests: (\\d+) so far \\(of at most (\\d+)\\)$", "equipaciones dibujadas con colores y escudos: \\1 hasta ahora (como mucho \\2)"],
+  ["^kits made from colours and crests: (\\d+) \\((\\d+) new or changed\\)", "equipaciones hechas con colores y escudos: \\1 (\\2 nuevas o cambiadas)"],
   ["^world file -> ", "archivo del mundo -> "],
   ["^NOTE: sider.ini does not load (.+) -- those parts of the world will not work$", "OJO: sider.ini no carga \\1 -- esas partes del mundo no funcionarán"],
   ["not loaded$", "no cargado"],
@@ -158,7 +161,8 @@
   ["^players of (.+?): no free player id left below (\\d+) \\(the game packs a player id into 18 bits\\)", "jugadores de \\1: no queda ningún id de jugador libre por debajo de \\2 (el juego guarda el id de un jugador en 18 bits)"],
   ["^no free player id left below (\\d+) \\(the game packs a player id into 18 bits\\)", "no queda ningún id de jugador libre por debajo de \\1 (el juego guarda el id de un jugador en 18 bits)"],
   [" -- the world has too many players\\. Take out a league or two \\(Leagues > Remove\\), then Build again$", " -- el mundo tiene demasiados jugadores. Quita una liga o dos (Ligas > Quitar) y vuelve a hacer Build"],
-  ["no free competition or regulation ids left for (.+) -- the world has all the competitions the game takes \\(255\\)\\. Untick the national or super cups of countries you don't play \\(My world > Cups > Cups of our countries / of the game's countries\\) or take out a league, then Build again$", "no quedan ids de competición libres para \\1 -- el mundo ya tiene todas las competiciones que admite el juego (255). Desmarca las copas nacionales o supercopas de países que no juegas (Mi mundo > Copas > Copas de nuestros países / Copas de los países del juego) o quita una liga, y vuelve a hacer Build"],
+  ["no free competition or regulation ids left for (.+) -- the world has all the competitions the game takes \\((\\d+)\\)\\. Untick the national or super cups of countries you don't play \\(My world > Cups > Cups of our countries / of the game's countries\\) or take out a league, then Build again$", "no quedan ids de competición libres para \\1 -- el mundo ya tiene todas las competiciones que admite el juego (\\2). Desmarca las copas nacionales o supercopas de países que no juegas (Mi mundo > Copas > Copas de nuestros países / Copas de los países del juego) o quita una liga, y vuelve a hacer Build"],
+  ["^(.+?) has competition ids up to (\\d+), and the game's caps set reads only 255 \\(it has no cidwide step\\) -- Home > Install now, then switch it on again$", "\\1 tiene ids de competición hasta \\2, y el caps set del juego solo lee hasta 255 (no tiene el paso cidwide) -- Inicio > Instalar ahora, y vuelve a activarlo"],
   ["^the game was updated since \\((.+)\\)$", "el juego se ha actualizado desde entonces (\\1)"],
   [" \\(or tick 'It keeps its places in continental competitions' in Club of the game\\)$", " (o marca 'Conserva sus plazas en competiciones continentales' en Club del juego)"],
   [", not all (\\d+) of the two divisions: the cup screens draw only some field sizes$", ", no los \\1 de las dos divisiones: las pantallas de copa solo dibujan algunos tamaños"],
@@ -176,6 +180,11 @@
   ["^  region headings for (\\d+) leagues$", "  títulos de región para \\1 ligas"],
   ["^  no region headings: (.+)$", "  sin títulos de región: \\1"],
   ["^(fl26\\S+\\.lua) -> (.+)$", "\\1 -> \\2"],
-  ["^(\\d+) new clubs, but the game has room for (\\d+) more \\(a full squad each\\)$", "\\1 clubes nuevos, pero en el juego solo caben \\2 más (cada uno con plantilla completa)"]
+  ["^(\\d+) new clubs, but the game has room for (\\d+) more \\(a full squad each\\)$", "\\1 clubes nuevos, pero en el juego solo caben \\2 más (cada uno con plantilla completa)"],
+  ["^(\\d+) new clubs, but FL26 has room for (\\d+) more \\(a full squad each\\) -- a world this big is for FL 2027: choose FL 2027's game folder \\(Game\\) and Build there$", "\\1 clubes nuevos, pero FL26 tiene sitio para \\2 más (cada uno con plantilla completa) -- un mundo tan grande es para FL 2027: elige la carpeta del juego FL 2027 (Juego) y haz Build allí"],
+  ["^(\\S+) is a recipe for (FL26|FL 2027) -- choose (FL26|FL 2027)'s game folder \\(Game\\) and Build there$", "\\1 es una receta para \\2 -- elige la carpeta del juego \\3 (Juego) y haz Build allí"],
+  ["^(\\S+) is a world for FL 2027 \\((\\S+) clubs, (\\S+) players; FL26 takes (\\d+) clubs and (\\d+) players\\) -- it would break FL26: install it in FL 2027, or get the FL26 version of the pack$", "\\1 es un mundo para FL 2027 (\\2 clubes, \\3 jugadores; FL26 admite \\4 clubes y \\5 jugadores) -- estropearía FL26: instálalo en FL 2027 o consigue la versión FL26 del pack"],
+  ["^(\\S+) is a world for FL26 -- FL 2027 has tables of its own: install it in FL26, get the FL 2027 version of the pack, or Build it again with FL 2027 as the game$", "\\1 es un mundo para FL26 -- FL 2027 tiene sus propias tablas: instálalo en FL26, consigue la versión FL 2027 del pack o haz Build de nuevo con FL 2027 como juego"],
+  ["^(.+) could not be replaced: another program has a file of it open -- close it \\(the game, a folder window\\) and Build again$", "\\1 no se pudo reemplazar: otro programa tiene abierto un archivo suyo; ciérralo (el juego, una ventana de carpeta) y vuelve a hacer Build"]
  ]
 }

@@ -111,6 +111,140 @@ local function world_slots(world)
   return kept
 end
 
+-- B427 (11.11.2026, pop1806: "u srpskoj ligi stoji bedz od J-lige") -- Kick Off between two clubs
+-- of a league whose competition id is past 255 (FL 2027 worlds).
+--
+-- SmokePatch's lib\CommonLib.lua tells its scoreboard, referee, adboard and sleeve badge modules
+-- which league a Kick Off match is of: it reads CompetitionEntry.bin (12 bytes a row: club u32 at
+-- +0, competition id at +8) into teams_in_playable_leagues_map[competition id] and answers
+-- tid_same_league(home, away) from it. It reads the competition id as ONE byte. A league of the
+-- world with id 553 (its high byte is at +0x0b of the row) is read as 41, the J.League: the 16
+-- clubs of Srpska liga Istok stood in the J.League's list, and a Kick Off between two of them wore
+-- the J.League's sleeve badge and scoreboard. In GigaPack 43 of 198 such leagues fell on a league
+-- of the game this way; the other 155 were in no list at all, so their Kick Off was a plain
+-- exhibition (Mod Studio's line in CommonLib's playable list names 553, which a byte never is).
+--
+-- Here, from our side and without touching SmokePatch's file: the same file is read with the whole
+-- id, the clubs that were read into a league they are not in are taken out of its list, and each
+-- league of the world past 255 gets a list of its own under its full id, with the league's
+-- tournament id (the `league <id>` of the world file: its first regulation). CommonLib fills its
+-- lists again whenever the game reads the file again, so this is done again after every read.
+local KO = { chunks = {}, raw = nil, dirty = false, world = nil }
+
+-- cl: CommonLib's table; bytes: CompetitionEntry.bin unpacked; world: the world file's leagues.
+-- Returns clubs taken out of lists they were wrongly in, lists made, and one example for the log.
+local function ko_apply(cl, bytes, world)
+  local wide, real = {}, {}
+  for o = 1, #bytes - 11, 12 do
+    local b0, b1, b2, b3 = bytes:byte(o, o + 3)
+    local team = b0 + b1 * 256 + b2 * 65536 + b3 * 16777216
+    local lo, hi = bytes:byte(o + 8), bytes:byte(o + 11)
+    if hi > 0 then
+      local cid = lo + hi * 256
+      local t = wide[cid]
+      if not t then t = { list = {}, has = {} }; wide[cid] = t end
+      if not t.has[team] then t.has[team] = true; t.list[#t.list + 1] = team end
+    else
+      local t = real[lo]
+      if not t then t = {}; real[lo] = t end
+      t[team] = true
+    end
+  end
+  local out, example = 0, nil
+  for cid, t in pairs(wide) do
+    local low = cid % 256
+    local list = cl.teams_in_playable_leagues_map[low]
+    if type(list) == "table" then
+      local keep = real[low] or {}
+      for i = #list, 1, -1 do
+        if t.has[list[i]] and not keep[list[i]] then
+          table.remove(list, i)
+          out = out + 1
+          example = example or string.format("competition %d had been read as %d", cid, low)
+        end
+      end
+    end
+  end
+  local made = 0
+  for _, L in ipairs(world or {}) do
+    local t = L.cid and L.cid > 255 and wide[L.cid]
+    if t then
+      local list = {}
+      for i, team in ipairs(t.list) do list[i] = team end
+      cl.teams_in_playable_leagues_map[L.cid] = list
+      cl.compID_to_tournamentID_map[L.cid] = L.id
+      if type(cl.tournamentID_to_compID_map) == "table" then cl.tournamentID_to_compID_map[L.id] = L.cid end
+      made = made + 1
+    end
+  end
+  return out, made, example
+end
+
+local function ko_fix(ctx)
+  KO.dirty = false
+  local cl = ctx.common_lib
+  if not (cl and cl.try_unzlib and cl.teams_in_playable_leagues_map and cl.compID_to_tournamentID_map) then
+    if not KO.said then
+      KO.said = true
+      log("fl26slotnames: Kick Off -- no CommonLib (lib\\CommonLib.lua) in this game, nothing to set right")
+    end
+    return
+  end
+  -- (sider's module env has no pcall: nothing here may raise. The file was read whole, the lists
+  -- are tables -- looked at just above and below -- and ko_apply only reads and writes them)
+  if type(KO.raw) ~= "string" or #KO.raw < 12 then
+    log("fl26slotnames: Kick Off -- CompetitionEntry.bin came empty, CommonLib's lists left as they are")
+    return
+  end
+  local bytes, err = cl.try_unzlib(KO.raw)
+  if type(bytes) ~= "string" or (err and err ~= "ERR_NOT_ZLIBBED") then
+    log("fl26slotnames: Kick Off -- CompetitionEntry.bin not unpacked (" .. tostring(err) .. "), CommonLib's lists left as they are")
+    return
+  end
+  if type(cl.teams_in_playable_leagues_map) ~= "table" or type(cl.compID_to_tournamentID_map) ~= "table" then
+    log("fl26slotnames: Kick Off -- CommonLib's lists are not tables in this game, left as they are")
+    return
+  end
+  local out, made, example = ko_apply(cl, bytes, KO.world)
+  KO.times = (KO.times or 0) + 1
+  if KO.times <= 3 then
+    log(string.format("fl26slotnames: Kick Off -- %d league(s) of the world past competition id 255 given to CommonLib "
+                      .. "under their own id; %d club(s) taken out of leagues of the game they had been read into%s",
+                      made, out, example and (" (" .. example .. ")") or ""))
+  end
+end
+
+local function ko_read(ctx, filename, addr, len, total_size, offset)
+  if not filename:lower():match("common\\etc\\pesdb\\competitionentry%d?%.bin") then return end
+  if offset == 0 then KO.chunks = {} end
+  KO.chunks[#KO.chunks + 1] = memory.read(addr, len)
+  if offset + len >= total_size then
+    KO.raw = table.concat(KO.chunks)
+    KO.chunks = {}
+    KO.dirty = true      -- CommonLib reads the same chunk after us (it is loaded later): set right at the next event
+  end
+end
+
+local function ko_make_key(ctx, filename)
+  if KO.dirty then ko_fix(ctx) end
+end
+
+local function ko_set_teams(ctx, home, away)
+  if KO.dirty then ko_fix(ctx) end
+end
+
+local function ko_init(ctx, world)
+  local n = 0
+  for _, L in ipairs(world or {}) do if L.cid and L.cid > 255 then n = n + 1 end end
+  if n == 0 then return end           -- FL 2026, or a world with no competition id past 255: nothing to do
+  KO.world = world
+  ctx.register("livecpk_read", ko_read)
+  ctx.register("livecpk_make_key", ko_make_key)
+  ctx.register("set_teams", ko_set_teams)
+  log(string.format("fl26slotnames: Kick Off -- %d league(s) of the world have a competition id past 255; "
+                    .. "CommonLib's league lists are set right after it reads CompetitionEntry.bin", n))
+end
+
 local HOOK_SLOT     = 0x140ea0a37        -- mov ecx, ebp; call 0x1414ce170 (slot -> its competitions)
 local HOOK_SLOT_OLD = "8bcde832d76200"
 local HOOK_OUT      = 0x140ea0af7        -- mov rbx, [rsp+0x50] (the epilogue)
@@ -176,6 +310,7 @@ end
 
 function m.init(ctx)
   local world = read_world(ctx)
+  ko_init(ctx, world)     -- B427, before anything below can stop: it writes nothing into the game
   if world then
     SLOTS = world_slots(world)
     log(string.format("fl26slotnames: world file -- %d leagues, %d of them on a slot with a borrowed heading", #world, #SLOTS))

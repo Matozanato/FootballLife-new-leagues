@@ -8,6 +8,7 @@ end of sider.log. Both check the League Builder world that is switched on (world
 the recipe being edited when it is that world's.
 """
 import json, os, re
+import bigjson
 
 from . import modules as MOD, servers as S
 from .i18n import _
@@ -76,11 +77,20 @@ def _pack_modules():
 
 
 def _same_file(a, b):
-    try:
-        with open(a, "rb") as x, open(b, "rb") as y:
-            return x.read() == y.read()
-    except OSError:
-        return False
+    """are the two files the same, byte for byte. Read again only when one of them changed: the
+    header asks for every module of the pack each time sider.ini is saved, on the window's thread
+    (B479, 15.11.: 0.6 s and more of a stopped window right after Install)"""
+    from . import filecache
+
+    def read():
+        try:
+            if os.path.getsize(a) != os.path.getsize(b):
+                return False
+            with open(a, "rb") as x, open(b, "rb") as y:
+                return x.read() == y.read()
+        except OSError:
+            return False
+    return filecache.by_files("same_file", [a, b], read)
 
 
 def dll_problems(game, ini):
@@ -103,7 +113,8 @@ def dll_problems(game, ini):
         lua = MOD.path_of(e.value, mdir)
         if not lua or not os.path.isfile(lua):
             continue
-        names = B.dll_names(lua)
+        from . import filecache
+        names = filecache.by_files("dll-names", [lua], lambda: B.dll_names(lua))
         if not names:
             continue
         src = None
@@ -111,7 +122,13 @@ def dll_problems(game, ini):
             pack = _pack_modules() or ""
         if pack and _same_file(lua, os.path.join(pack, os.path.basename(lua))):
             src = pack
-        for f, why in B.check_dlls(mdir, names, src):
+        # (each DLL read whole, and the pack's copy: kept while none of the files changed, B480
+        # round 2 -- Home's checks did this on the window's thread on every refresh)
+        paths = [os.path.join(mdir, n) for n in names] + ([os.path.join(src, n) for n in names] if src else [])
+        got = filecache.by_files("check-dlls", paths, lambda: B.check_dlls(mdir, names, src))
+        if any(why == "blocked" for _f, why in got):     # (Windows let it be opened again: asked anew)
+            filecache._KEPT.pop(("check-dlls", tuple(paths)), None)
+        for f, why in got:
             (changed if why == "changed" else gone).append((f, os.path.basename(lua)))
     out = []
     for f, lua in gone:
@@ -195,6 +212,26 @@ UEFA_CODE = 2                     # Competition.bin +6, low three bits: the conf
 # makes the recount cover all 600 rows fl26caps gives the array.
 RECOUNT_ROWS = 300
 RECOUNT_MODULE = re.compile(r"^fl26regs(\d+)\.lua$")
+# The number in the file name is not always the count: in an FL_2027.exe folder Install modules
+# puts the FL 2027 copy (fl26regs1200 / fl26regs2000.fl27.lua) in under the plain name
+# fl26regs600.lua (leaguebuilder.shipped_source), so the module's own `Set:     regs<N>` line
+# (mkregs.py writes it) is what the game counts; the name only when the file cannot be read.
+RECOUNT_SET = re.compile(r"^Set:\s+regs(\d+)\b", re.M)
+
+
+def recount_of(ini, value, fallback):
+    """the rows the regs module `value` (a lua.module line of `ini`) recounts: its Set line, read
+    from SiderAddons\\modules, else `fallback` (the number in its name)"""
+    if getattr(ini, "path", None):
+        p = os.path.join(os.path.dirname(ini.path), "modules", value.replace("\\", os.sep).replace("/", os.sep))
+        try:
+            with open(p, encoding="utf-8", errors="replace") as f:
+                m = RECOUNT_SET.search(f.read(4096))
+            if m:
+                return int(m.group(1))
+        except OSError:
+            pass
+    return fallback
 
 
 def recount_rows(ini):
@@ -203,7 +240,7 @@ def recount_rows(ini):
     for e in ini.entries("lua.module"):
         m = RECOUNT_MODULE.match(os.path.basename(e.value.replace("\\", "/")).lower())
         if e.enabled and m:
-            n = max(n, int(m.group(1)))
+            n = max(n, recount_of(ini, e.value, int(m.group(1))))
     return n
 
 
@@ -219,7 +256,7 @@ def old_confed_tops(d, leagues, calendar=()):
         comp = M.load(os.path.join(d, "common", "etc", "pesdb"), "Competition.bin")
     except (OSError, ValueError):
         return []
-    code = {comp[i * M.COMP + M.CID_OFF]: comp[i * M.COMP + M.FLAG_OFF] & 7
+    code = {M.comp_cid(comp, i * M.COMP): comp[i * M.COMP + M.FLAG_OFF] & 7
             for i in range(len(comp) // M.COMP)}
     return [L.get("name") or str(L["id"]) for L in leagues
             if (L.get("region") or 0) >= FIRST_OWN_REGION and L.get("region") not in calendar
@@ -250,6 +287,71 @@ def short_squads(d):
                                   lambda: lbplayers.short_squads(db, tids))
     except (ImportError, OSError, ValueError, TypeError, AttributeError):
         return {}
+
+
+DRAWN_FNS = ("league_logo", "club_crest")   # the picture jobs whose empty picture Build draws
+DRAWN_DIR = re.compile(r"(^|[\\/])drawn[^\\/]*[\\/]", re.I)   # a folder of our drawn pictures: drawn, drawn1111
+LOGO_KEYS = ("logo", "cup_logo", "promo_logo")
+
+
+def recipe_drawn(d):
+    """[("recipe_crest" / "recipe_logo", team or competition id, name)] of the pictures the plan of
+    the world's last Build (leaguebuilder-plan.json) takes from a folder of drawn ones (DRAWN_DIR):
+    a crest or logo we drew ourselves and put in the recipe, which Build uses as any picture.
+    [] without a plan"""
+    try:
+        with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            plan = bigjson.load(f)
+    except (OSError, ValueError):
+        return []
+    out = []
+    for L in (plan.get("leagues") or []) + (plan.get("others") or []):
+        if not isinstance(L, dict):
+            continue
+        teams, names = L.get("teams") or [], L.get("club_names") or []
+        for k, p in enumerate(L.get("club_crests") or []):
+            if isinstance(p, str) and DRAWN_DIR.search(p):
+                out.append(("recipe_crest", teams[k] if k < len(teams) else None,
+                            names[k] if k < len(names) else ""))
+        for key in LOGO_KEYS:
+            p = L.get(key)
+            if isinstance(p, str) and DRAWN_DIR.search(p):
+                out.append(("recipe_logo", L.get("cid"), "%s (%s)" % (L.get("name") or "", key)))
+    return out
+
+
+def drawn_pictures(d, shields_ok=False):
+    """[(job, id, name)] of the logos and crests the world's last Build drew because it had no
+    picture for them: the jobs of leaguebuilder-input.json (leaguebuilder.write_input) whose
+    picture argument (leaguebuilder.PIC_ARG, "sha1:..." when there was one) is null. A job whose
+    files are all in "gone" is not drawn: its picture is on the PC the recipe was made on, and the
+    world keeps the one it has (keep_added). shields_ok: a club crest drawn as a shield in the
+    colours of its kit counts as a picture (NewLife's new clubs; the GigaPack wants real crests,
+    mato 11.11.). 14.11.2026: 62 play-offs of GigaPack beta 2 went out with a drawn emblem and no
+    check saw it (logo-lanac-nalaz-1411.md).
+    17.11.2026: also the drawn pictures the recipe itself points to (recipe_drawn): Build takes
+    them as pictures, so the jobs never show them, and six drawn crests (clubs/crests/drawn1111)
+    were still in the GigaPack after the check passed"""
+    try:
+        with open(os.path.join(d, "leaguebuilder-input.json"), encoding="utf-8") as f:
+            last = bigjson.load(f)
+    except (OSError, ValueError):
+        last = {}                          # no record (a world built before Build wrote one): no jobs to tell
+    gone = set(last.get("gone") or [])
+    out = recipe_drawn(d)
+    for job in last.get("jobs") or []:
+        try:
+            fn, args, rels = job
+        except (TypeError, ValueError):
+            continue
+        if fn not in DRAWN_FNS or len(args) < 3 or args[2]:
+            continue
+        if rels and all(r in gone for r in rels):
+            continue
+        if fn == "club_crest" and shields_ok and len(args) > 3 and args[3]:
+            continue
+        out.append((fn, args[0], args[1]))
+    return out
 
 
 def club_names(db):
@@ -462,6 +564,39 @@ def full(game, ini, recipe=None):
     return out
 
 
+_STATE = {}         # game folder: (_modules_sig, modules_state) as last worked out
+
+
+def _modules_sig(game):
+    """what modules_state() depends on, from a few folder listings: the files (name, size, time) of
+    the pack's modules and of the game's, sider.ini, the pack's module list, livecpk's folders and
+    the modules each world there brings, and which game it is. None when it cannot be told"""
+    try:
+        import leaguebuilder as B
+        pack = B.pack_dir()
+    except Exception:
+        return None
+    from . import filecache as F
+    worlds = {}
+    try:
+        with os.scandir(game.livecpk_dir) as it:
+            names = sorted(e.name for e in it if e.is_dir())
+    except (OSError, AttributeError, TypeError):
+        names = []
+    for n in names:
+        got = F.listed_stamps(os.path.join(game.livecpk_dir, n, "modules"))
+        if got:
+            worlds[n] = tuple(sorted(got.items()))
+    try:
+        return (pack, F.stamp(os.path.join(pack, "modules.txt")),
+                tuple(sorted(F.listed_stamps(os.path.join(pack, "modules")).items())),
+                tuple(sorted(os.listdir(os.path.join(pack, "livecpk")))) if os.path.isdir(os.path.join(pack, "livecpk")) else (),
+                F.stamp(game.ini_path), tuple(sorted(F.listed_stamps(game.modules_dir).items())),
+                tuple(names), tuple(sorted(worlds.items())), B.is_fl27(game.folder))
+    except Exception:           # (a game object without one of these: not kept, worked out each time)
+        return None
+
+
 def modules_state(game):
     """Mod Studio's own modules on this PC, for the one line Home and Lua modules show (0.2.4:
     people could not tell whether they had them, or the right version):
@@ -470,7 +605,42 @@ def modules_state(game):
     changed  one there that is not the pack's: an older version, or damaged
     off      a module of the pack sider.ini does not load
     left_off an optional one the player switched off on purpose (not a problem)
-    None when there is no pack or no Sider folder to compare with."""
+    None when there is no pack or no Sider folder to compare with.
+
+    Worked out again only when one of the files it looks at changed (_modules_sig: a few folder
+    listings). B480 (17.11.2026): the header asks on every sider.ini save and content change, on the
+    window's thread, and each time it asked the disk about every file of the pack and of the game
+    (and read the changed ones): 1.25 s of a stopped window right after Install the modules and most
+    of a 4 s stop after Make it editable in the exe test of beta4p. The workers that change the
+    modules (Install the modules, a world's install, Build) work it out before they end"""
+    sig = _modules_sig(game)
+    got = _STATE.get(game.folder)
+    if sig is not None and got is not None and got[0] == sig:
+        return got[1]
+    out = _modules_state(game)
+    if sig is not None:
+        _STATE[game.folder] = (sig, out)
+    return out
+
+
+def warm_modules(game):
+    """from a worker, at the end of a job that changed the modules or sider.ini: modules_state and
+    what checks.quick reads of the modules (modules.links) worked out here, so the window's thread
+    finds them kept"""
+    try:
+        modules_state(game)
+        from .siderini import SiderIni
+        ini = SiderIni.load(game.ini_path)
+        dll_problems(game, ini)             # (the module files and DLLs it compares, read here)
+        for e in ini.entries("lua.module"):
+            p = MOD.path_of(e.value, game.modules_dir)
+            if p and os.path.exists(p):
+                MOD.links(p)
+    except Exception:
+        pass
+
+
+def _modules_state(game):
     try:
         import leaguebuilder as B
         pack = B.pack_dir()
@@ -490,7 +660,7 @@ def modules_state(game):
     order = [m for m in order if m not in per_world or m in brought]
     out = {"missing": [], "changed": [], "off": [], "left_off": [], "total": len(order)}
     for f in files + [m + ".lua" for m in order if m in per_world]:
-        a = brought[f[:-4]] if f[:-4] in per_world else os.path.join(src, f)
+        a = brought[f[:-4]] if f[:-4] in per_world else B.shipped_source(src, f, game.folder)
         b = os.path.join(mdir, f)
         if not os.path.isfile(b):
             out["missing"].append(f)

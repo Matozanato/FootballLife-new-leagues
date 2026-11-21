@@ -76,6 +76,7 @@ UTF-8, with a header row, one player per row:
 | `birth_date` | the birth date (not used by Build; `Age` is) |
 | `club_id` | the `newlife_id` of his club. A player without one belongs to no squad |
 | everything after | the 97 fields of `tools/playeredit.py` (`FIELDS`), by their names and in its CSV texts: `Registered Position`, the position ratings (`GK` ... `CF`), `Height (cm)`, `Weight (kg)`, `Age`, `Nationality`, `Stronger Foot`, the abilities, `Playing Style`, the skills and the AI styles |
+| `shirt` | optional: the player's number at his club, 1-99. Build keeps each number once in the squad (whoever else wore it takes a free one); a release without the column is numbered by position. Contract and loan columns are not read: the game's tables have no place for them ([player-record.md](../../research/player-record.md)) |
 
 A field left empty keeps the value of the placeholder player whose place the player takes.
 Values are checked at Build, like any `players` edit in a recipe ([recipe-keys.md](recipe-keys.md)).

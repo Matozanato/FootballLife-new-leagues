@@ -399,6 +399,12 @@ class FakeProject:
     def touch(self):
         self.dirty = True
 
+    def owns(self, path):           # Project's B399 bookkeeping of the copies that are the open world's
+        return False
+
+    def claim(self, path):
+        pass
+
 
 def pages(t):
     from PySide6.QtCore import Qt

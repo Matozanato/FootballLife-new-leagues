@@ -106,6 +106,19 @@ def main(base):
     ok("and the low ids are in the pool after 130..255", 26 in cids
        and cids.index(26) > max(i for i, x in enumerate(cids) if x >= B.CID_FROM))
     ok("a world without them: no low id", not any(x < B.CID_FROM for x in B.pinned_ids(first, base, "cup:X")[0]))
+
+    # 09.11. (_FL26Megapack built again: 11 playoff cups moved): a continental cup's competition
+    # id is its own though another cup's regulation has the same number -- two tables
+    want = {"ccup:A": {"cid": 700, "reg": 758, "ko": 758}, "ccup:B": {"cid": 758, "reg": 760, "ko": 760}}
+    used_c, used_r, pool_c, pool_r = set(), set(), [740, 741], [800, 801]
+    got = {}
+    for key in ("ccup:A", "ccup:B"):
+        got[key] = (B.own_id(want, key, "cid", pool_c, {700, 758}, used_c, used_r),
+                    B.own_id(want, key, "reg", pool_r, {758, 760}, used_c, used_r))
+    ok("continental cups keep their ids, a competition id equal to another's regulation (%s)" % got,
+       got == {"ccup:A": (700, 758), "ccup:B": (758, 760)})
+    ok("... an id already given out goes to the pool's next",
+       B.own_id({"ccup:C": {"cid": 700}}, "ccup:C", "cid", pool_c, {700}, used_c, used_r) == 740)
     print("1..%d" % N)
 
 

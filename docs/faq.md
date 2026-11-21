@@ -112,8 +112,15 @@ division, or 36, 40 or 44 with the division below.) The game fills a country's c
 division and the one below it. When the two together have a size a cup of the game has, that
 cup is copied; any other number up to 44 plays on the English cup's rounds, and when the number
 is not 8, 16, 32 or 64 some clubs get a bye in the first round. With more than 44 clubs the cup
-keeps the top division alone. A third division does not change anything: the cup only ever
-looks at the first two.
+keeps the top division alone. A third division stays out of the cup unless you tick **Its best
+clubs play the country's cup too** in its League dialog:
+- Under the game's second division (like National under Ligue 2), the game's cup then takes its
+  two divisions and the first clubs of the third: 36, 40 or 44 clubs in all, as the real Coupe de
+  France takes the lower leagues.
+- In FL 2027, a third division of a new country can join that country's national cup the same
+  way, up to 44 clubs.
+
+Start a new career after the Build.
 
 **Why does my cup have 20 clubs when my two divisions have 22?** The game's cup screens can
 draw a bracket of 2 to 16, 18, 20, 24, 28, 30 or 32 clubs and nothing in between; a cup of 22
@@ -273,6 +280,34 @@ Each of the two takes its own **Logo** in that window.
 
 Since 0.1.7: **European places of the game's leagues** on the *Build* page. Tick **Own places
 for this league** and set them like a new league's. Then build the world again.
+It works for every top division of the game, also the ones that ship with no European places
+(Russia, or the leagues outside Europe). **UEFA ranking** on the same page gives every league its
+places by UEFA's rules in one go.
+
+In FL 2027 Belgium's Jupiler Pro League is one league of 18 with no split, and before the next
+version its clubs got no European place in an FL 2027 world. Build the world again with the
+new version and the Jupiler Pro League has its places again.
+
+### Can I pick the clubs of the first season's Champions League or Europa League?
+
+Yes, since 0.1.8: **First-season European clubs** on the *Build* page. Pick the clubs of the
+Champions League, the Europa League and the Conference League league phase of a new career's
+first season. The automatic choice fills the places you leave empty. From the second season on,
+the league tables decide again.
+
+### Can I put the clubs of a league in my own order in Select Team?
+
+In FL 2027, yes, in the next version: *New clubs* > *More* > **Order in Select Team...**. Drag the
+clubs into the order you want, then Build again and start a new career. Without it, and always in
+FL26, a league's clubs are listed A-Z. The order of the divisions of a country is not yours to
+set: Select Team lists them down the promotion chain, the top division first. The order of the
+countries is: **League order** on the *Build* page.
+
+Colombia's Liga BetPlay DIMAYOR and the MLS are two tournaments a season, each with its own
+table. **Liga BetPlay DIMAYOR I** (or **MLS First Round**) in that list goes by the first
+tournament's table alone; **Liga BetPlay DIMAYOR** (or **Major League Soccer**), just under it,
+goes by the whole season: both tables added together, counted when the second tournament ends.
+Give places to one of the two, not both.
 
 ### Can I rename the Champions League, the FA Cup ...?
 
@@ -296,6 +331,142 @@ A new club's id is from the first one after the game's clubs (71578) up to 81919
 is the first free one above the game's highest, up to 262143 (the game packs a player id
 into 18 bits; a higher id crashes the game when a Master League is created). The game's own clubs and players keep their ids: its
 kits, faces and your saves are tied to them.
+
+### Do the ids change when I build my world again, or update it?
+
+No. A league, a new club and a new player keep the id the first Build gave them, Build after
+Build: when you add or remove a league in front of them, when you rename a club, and when you move
+a club to another league of the world. An id a club or player once had is not given to another one
+while a free id is left. If you share a world and update it, compare the two zips before you
+publish: `python tools/checkids.py <published zip> <new zip>` lists every id that moved.
+
+### Updating a shared world without breaking careers
+
+A Master League career holds the ids of the clubs, players, leagues and cups it was started with.
+A new version of a world keeps those careers working only if every one of those ids is still there.
+Mod Studio checks that for you. It cannot tell whether an id still stands for the same club: a club
+with another name under its old id is taken as the same club renamed, so the Build log and Install
+list those clubs for you to look at.
+
+1. **Export the world...** asks for a version name (for example "My World 2"). The zip carries
+   the version and a list of every id in it (`fl26ids-ledger.json`). The list also has the
+   world's lineage: a code the first version gets and every later version keeps, so another
+   author's world with the same name is never taken for yours. Your PC keeps every version you
+   shared, by its number (`%APPDATA%\FL26ModStudio\recipes\ledgers`), and the recipe and the
+   world's plan get the lineage (`id_lineage`). Every zip gets a number of its own, also a test zip
+   and a zip you did not keep, so no two zips of a world share one.
+   - Tick **A test zip** to export without keeping the version as "the version you shared last".
+     A tester who installed a test zip gets Replace, not Update, for the next real version, unless
+     that version has exactly the same ids.
+   - If careers of the version before do not go on in the new zip, Export asks whether to keep it
+     as the version you shared last. An export from the command line (`release.py`) does not keep
+     such a zip.
+   - Export and Build stop, and say which file, when the newest version your PC keeps cannot be
+     read, or when the recipe has `id_lineage` but no list of that lineage is on this PC (another
+     PC, or a new Windows user). Put the `.fl26ids` file of the version you shared last in the
+     folder above (its file name does not matter), or set the recipe's `id_ledger` to it. The
+     world's plan keeps `id_ledger` too, so an export without the recipe finds it;
+     `release.py --recipe` hands the export the recipe itself.
+   - *Make it editable* keeps the list of a world you got as a zip (not of a test zip).
+2. The next **Build** of that world pins its ids to the latest version of its lineage. A renamed
+   club or league keeps its ids, and so does a club moved to another place in its league: its
+   players' ids go with it. A renamed player keeps his id when his place is the same and either
+   his birth date says he is the same one or the new name is the old one spelt another way: the
+   same letters without accents, two letters swapped, or one letter more or less (never one letter
+   for another: Petrović and Petković are two players). A birth date of 1 January, or one two
+   players of the club share, does not say he is the same one; with such a date he keeps his id
+   only by a spelling. The Build log lists the players kept by a spelling.
+   A new league or cup gets ids no version gave out, also none of a league or cup taken out. A new
+   club (also a NewLife club and a club that takes a game club's places) gets a team id no club of
+   the shared version has or had, while free ids are left. A retired player's id is not given to
+   another player: the Build stops if it would be. **Check the plan** warns you beforehand if
+   something of the shared version would be lost. A league that plays another way than in the
+   shared version (clubs, rounds, promotion, relegation) gets a warning in the Build log.
+3. If a club, player, league or cup of the shared version is gone, the Build stops and names it.
+   If you removed it on purpose (for example, two copies of one player merged into one), press
+   **Retire these and Build again**. They are written into the recipe (`id_retire`). Retired
+   players: careers go on, and where one was, a career may show a stand-in player. Retired clubs,
+   leagues or cups: careers of the shared version cannot go on, because they have them, so Install
+   offers those players Replace. A league or cup id that changed, or an id that now belongs to
+   another league or cup, cannot be retired: put it back as it was. If a club that is still in the
+   world lost most of its players' ids, Build warns that this looks like a squad it did not follow,
+   and asks again before it retires them.
+4. A player who installs the new zip over the version they have gets **Update** in place of
+   Replace when it is a later version of the same lineage made from their version (their version
+   is in its list of versions before), every club, league, cup and player id of their version is
+   still there, and only players were retired. Their careers and save folders are not touched, so
+   they load their career and go on. If an Edit save from before is in the game's save folder,
+   Install asks: **Keep it** to continue the career, **Move it aside** for a new Master League. What
+   a running career shows of the new version's changes is not checked in the game; for all that is
+   new, start a new Master League.
+5. **New leagues and cups go after the old ones.** A career also holds the competitions by their
+   place in the world's competition tables (`Competition.bin`, `CompetitionRegulation.bin`,
+   `CompetitionEntry.bin`). The Build that follows a shared version keeps every row of that version
+   where it was, and every entry id stands for the same club in the same competition and place.
+   New leagues and cups go after them, wherever they are in your recipe, and new entry ids come
+   after the version's highest. A new league under a league of the shared version is not linked
+   to it in the tables when it exchanges no clubs with it (promotion and relegation 0), so the old
+   league stays as it was. The Build log says what it kept (`rows:`). New leagues and cups only
+   show up in a new Master League; Install says how many there are and that your careers go on
+   without them.
+   - The zip of the version carries the order of its tables in its id list. A version exported
+     with an older Mod Studio (every version up to now) has no order in its list. Set the recipe's `id_tables` to that
+     version's world zip (or to the world folder installed from it), and the Build reads the order
+     there. The Build stops if that zip is another version. A world installed from that zip and
+     not built again on this PC is read without the setting. When none of these is there, the
+     Build lays the tables out the old way and warns that careers may not go on.
+   - Careers of the shared version do not go on when a place in its leagues and cups is gone or
+     holds another club, or when a club new to the world is entered in one of them. A career of that
+     version has none of the new club's players. Then the Build log, the export and Install say so,
+     and Install offers Replace.
+   - A league or cup of the shared version whose row changed in place (legs, or a link to a new
+     league below that exchanges clubs with it) or that has a new place for a club the world
+     already had gets a warning, as a league played another way does. A new club only in new
+     leagues and cups is listed, not stopped: a career of the shared version does not play those
+     competitions. What such a career does with those clubs is not checked in the game yet.
+
+Install offers Replace with a warning instead when Mod Studio cannot tell the zip is a later version
+of the world installed (another lineage: another world with the same name, or one its author started
+again), when it is a version of the lineage not made from the one installed (a test zip, or a version
+made on another PC), an older version or the same one, when it takes out clubs, leagues or cups of
+the version installed, when ids of it are gone, or when a place in its leagues and cups is gone,
+holds another club or has a club new to the world, or a row of its competition tables moved (step
+5). A world installed from an older zip without a list
+gets Update only if its ids are those of a version the new zip comes after (or the new zip's own
+ids, when the new zip is not the world's first version: a fix with the same ids), or if at least
+90% of its leagues and of
+its clubs' names are the new zip's and every id is kept, or at least 90% of its leagues and half of
+its clubs' names when every id is kept. A recipe without `id_lineage` pins to a version on your PC
+only if at least 60% of that version's leagues or clubs are in it. Between 20% and 60%, Build and
+Export ask: **It is that world** writes the lineage into the recipe, **A different world** leaves that
+version out from then on.
+
+### I installed a newer version of a world. Where are the files I had changed?
+
+Mod Studio takes the older version out before the new one goes in, so the world is clean. Files
+you had added to the world's folder, and files of the world you had changed after installing it,
+are not deleted: they are in `SiderAddons\ModStudio\kept\<world>-<time>`, in the same folders as
+before. The line shown after the install and the **Ready to play** window name the folder. Copy
+back what you still want.
+
+A file you copied over one of the world's files (a face or a kit from another pack) counts as
+changed, whatever date it has. For a world installed with an older Mod Studio (0.3.0, or a beta up
+to beta 4), Mod Studio can only go by the files' dates: a file you copied there from the same
+world's own files is not told apart, and a file you only opened and saved unchanged is kept as well.
+
+### I changed a world I installed from a zip, and the changes were gone
+
+A world from a zip (a Modpack) is built already, and its own recipe is read again from it when you
+make it editable. Do it in this order:
+
+1. **2. My world → Make it editable...** (the button shows only for a world from a zip) → **Yes**.
+2. Then change what you want: leagues, clubs, cups, trophies, the Build options.
+3. Then **Build and install** on the **Build** tab, and start a new Master League.
+
+Changes made before step 1 to the leagues (clubs, names, kits, crests, cups, calendar, format) and
+to the world's settings are not kept; players' names and squads, the edit tab, a league you renamed
+and a league you added are. While such a world is open, the pages where those changes are made say
+so at the top.
 
 ### Can I edit a national team, or move a player to another club?
 
@@ -376,6 +547,17 @@ every **Build** also keeps a copy in `%APPDATA%\FL26ModStudio\recipes\<world>.js
 Studio opens the last recipe again when it starts. The world an older version built stays in the
 game and keeps working; only its recipe has to be entered again to change it. Today there is no
 saving at all: your world saves itself a moment after each change.
+
+### New world replaced my world's leagues
+
+From 0.2.4 to 0.3.0 **File → New world** called every new world `_FL26MyWorld`, and its first
+change was saved over `%APPDATA%\FL26ModStudio\recipes\_FL26MyWorld.json`, the recipe of your
+own world of that name. The world in the game was not changed (until a **Build** of the new one).
+Since the fix a new world gets a free name (`_FL26MyWorld2`, `_FL26MyWorld3`...), and a recipe of
+another world is never written over: it is moved to `recipes\<world>.json.prev` first. If it
+happened to you before the fix and the world is still in the game: **File → Open a world...**
+and pick `leaguebuilder-plan.json` in the world's folder (`livecpk\<world>\`); Mod Studio reads
+the world's recipe back from it.
 
 ### A retired star came back as a 16-year-old with the same name and face
 
@@ -477,11 +659,29 @@ The Home page shows the same message as long as the game folder is not writable.
 already runs as administrator and still says it, the folder or a file in it is read-only, or
 another program (the game, an antivirus) holds it.
 
+### Import your world says "The game folder's path is too long for ... file(s) of this mod"
+
+Windows opens a file only while its whole path, from the drive letter to the file name, is at most
+259 characters long, unless long paths are switched on in Windows (they are off by default), and
+the game cannot open longer paths even then. A world puts some files deep into
+`SiderAddons\livecpk\<world>\...`, so with the game in a folder whose path is long (a Steam
+library, a folder in Documents with a long user name) those files would end up past the limit:
+they would be missing in the game.
+
+Mod Studio itself is not stopped by the limit: it unpacks and copies such files anyway (before the
+fix for B400 the import stopped with `[Errno 2] No such file or directory` on a file in
+`trophies\...`). It checks every file before Install and says how long the game folder's path may
+be. To fix it, move the game to a shorter folder, for example `C:\Games\FL` (copy the whole
+folder, start the game once from there), choose the new folder (**Game ▾**) and import the world
+again. If you answer Yes to *Install anyway?*, the world goes in as it is: everything else works,
+but the files the message counts are missing in the game.
+
 ### An antivirus removed fl26swiss.dll (or another of Mod Studio's DLLs)
 
 Some of Mod Studio's modules are a `.lua` file with a `.dll` next to it in
 `SiderAddons\modules`: `fl26swiss.dll`, `fl26join.dll`, `fl26chain.dll`, `fl26clubs.dll`,
-`fl26regen.dll`, `fl26edit.dll`, `fl26walk.dll`, `fl26compcache.dll`, `fl26squadlist.dll`. They change the game in
+`fl26regen.dll`, `fl26edit.dll`, `fl26walk.dll`, `fl26compcache.dll`, `fl26squadlist.dll`,
+`fl26confgroups.dll` (FL 2027). They change the game in
 memory, which some antivirus programs (Windows Security included) mistake for malware: they
 quarantine the DLL a moment after it is copied. The `.lua` stays, so the game starts, but the
 parts the DLL runs are silently missing: no European draws, empty league phases, no regens,

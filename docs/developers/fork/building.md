@@ -77,12 +77,65 @@ This writes `out/lbpack/modules/` (the Lua modules, the two bundles and the six 
 run of Mod Studio finds the pack in `out/lbpack` (`leaguebuilder.pack_dir`). See
 [modules.md](modules.md) for what is in it.
 
-**The regen face pack** is `fl26regen_faces.bin` plus a content root `FL26 Regen Faces`.
-It holds renders made from game faces, so it is never in a repository. lbpack takes it from
-`$FL26_REGEN_FACES`, else from `fl26-modding-research/out/regenfaces` beside the
-repository or beside any folder above it (so a worktree finds it too). Without it the pack is still built, and the log says
-`NO regen face pack -- regens will keep the generic face`. A fork that wants regen faces makes
-its own face pack and points `FL26_REGEN_FACES` at it.
+**The regen face pack** is `fl26regen_faces.bin` plus a content root `FL26 Regen Faces`: the
+face pool below. lbpack builds it from the repository (`tools/facepool.py`,
+`tools/facepool_stats.json`) into every pack, checks it against `facepool.POOL_MD5` and logs
+`pack: face pool built from tools/facepool.py: 32760 faces, md5 ...`. `$FL26_REGEN_FACES` is only
+for the pool with portraits (`facemini.py pack`): a pack there that is not the pool -- the 30.09.
+pack of 103 game faces (`FL26RF01`), a pool of fewer than 20,000 faces, an older map, other faces
+-- stops the build (`facepool.pool_problems`). Until 17.11.2026 lbpack took the pack from
+`fl26-modding-research/out/regenfaces`, which still held the 30.09. pack, and every release
+candidate shipped that one instead of the pool.
+
+**The face pool** is a face pack of our own: `python tools/facepool.py build` writes
+`out/facepool/fl26regen_faces.bin` (version 2) and an empty `FL26 Regen Faces` root. Its 32,760
+faces are made from numbers -- every slider, type, hair style and colour drawn from how often the
+game's players of that part of the world have it (`tools/facepool_stats.json`, made once by
+`facepool.py stats` from the game's PlayerAppearance.bin and Player.bin) -- so no face is a real
+player's and there are no renders in it. They have no portraits. `python tools/facepool.py check
+<pack>` says whether a pack is the pool.
+The pool is made in blocks (`BLOCKS`): the first 20,000 faces (06.11.) stay the same bytes in the
+same place when a block is added, the second block's 12,000 went to the groups with the most new
+players per face (the Megapack's Africa, Eastern Europe, north-west Europe, Latin America ...).
+**The groups** (`tools/facegroups.py`): nweu seu eeu afr mena lat bra eas sas nord sea. On 17.11.
+South-East Asia and Polynesia left sas for the new group sea, Pakistan moved to sas, Melanesia
+to afr, Kazakhstan and Kyrgyzstan to eas, Uzbekistan, Tajikistan and Turkmenistan to mena, Belize
+to lat (`facegroups.REGIONS_1711`). `facepool.py regroup <PlayerAppearance.bin> <tables>` counts
+sas and sea again with that map (`REDRAWN`) and leaves every other group's counts, so their faces
+stay byte for byte: a player of a nation that kept its group keeps his face. sas (590) and sea
+(1,570) share the room the DLL has left (32,767).
+`python tools/facepool.py near <PlayerAppearance.bin>...` (numpy, about 3 minutes) measures how
+many of the 77 face fields each face is from the nearest real face of the game's files and from
+the nearest pool face; a face of block 2 nearer than `MIN_APART` (28) to a real one is a draw for
+`SKIP`, which keeps the pack the same without the game's files; two faces of block 1 that were
+25 fields from a real one are made again in place (`REPLACE`). Each face's second byte in the
+pack is its block, so fl26regen keeps a career's faces when the pool grows: a player keeps his
+face of block 1 with the share block 1 has of his group (nweu 71%, eeu 34%, afr 38% ...; all of a
+group that did not grow), the others get one of the added faces.
+
+**The face pool's portraits** come from the game's own render of each face: fl26regen's capture
+mode (only when `modules\fl26regen_capture.txt` is there at the start; `player <id> face <k>` in
+it draws that player with pool face k, the DLL answers in `fl26regen_capture.ack`) shows face k
+on Edit's player screen, a screenshot is taken per face (`mini_<k>.png`), and
+`python tools/facemini.py convert <shots> <out>` cuts the head off the red menu into the game's
+portrait format (128 x 128 DXT5, the header of the game's own portraits, transparent around the
+player, the shirt grey) as `<out>/FL26 Regen Faces/common/render/symbol/player/regen/<k>.dds`.
+`python tools/facemini.py pack <pool fl26regen_faces.bin> <out>` gives every face with a picture
+its portrait number k; `FL26_REGEN_FACES=<out>` then builds the module pack with both (only
+when its faces are the pool's). Never ship the capture file.
+
+Until the whole pool is captured, the pictures are shared (18.11.2026): `python tools/facemini.py
+rank <list.txt> --n 1000` orders the faces to capture, best first (the first ~100 cover every
+group and the common looks, the later ones the rarer looks), and `python tools/facecap.py run
+--faces <list.txt> ...` captures them in that order and can stop anywhere (it resumes from
+`progress.tsv`). `python tools/facemini.py share <out>` then gives every face the portrait number
+of the captured face that looks most like it -- the same group, then the skin, the hair's colour,
+length and shape, the beard, the age (`facemini.distance`); a captured face keeps its own, a face
+whose group has no picture yet takes another group's only when it looks close, else none -- and
+writes `<out>/fl26regen_faces.bin` and `<out>/share.tsv`. Run it again after every capture. The
+DLL never checks a portrait number (it is only the name of `regen\<number>.dds`), so any number
+of faces can share one; lbpack and mszip stop a pack with a number that has no 128 x 128 DXT5
+`.dds` (`facepool.portrait_problems`).
 
 **The sources.** When the repository is a checkout of the public repository (its `origin`
 contains `FootballLife-new-leagues`), the Lua comes from it. Otherwise a `../fl26-public`
@@ -115,7 +168,8 @@ python tools/mszip.py --untested --no-faces   # a fork's build: no game to compa
    (`sider/fl26caps.<set>.lua`, copy it over `sider/fl26caps.lua`), when it is not the
    `fl26caps.lua` installed in the game `FL26_DIR` names, when `FL26_DIR` is not set at all
    (since 0.2.2; `--untested` lets a fork's build through), and when the pack has no regen
-   face pack (since 0.2.2; `--no-faces` for a fork without one). Other modules that differ
+   face pack (since 0.2.2; `--no-faces` for a fork without one) or one that is not the face
+   pool (17.11.2026, `facepool.pool_problems`). Other modules that differ
    from the game's copy are printed as "NOT PLAYED in the game in this form": install the
    package's modules and play them before the release.
 4. **Guides.** `guides/en/mod-studio-guide.md` -> `README.html`, and `guides/<code>/mod-studio-guide.md`
@@ -125,9 +179,9 @@ python tools/mszip.py --untested --no-faces   # a fork's build: no game to compa
 6. **Zip.** `out/FL26ModStudio-<VERSION>.zip`, with everything inside a folder called
    `FL26 Mod Studio`.
 
-**When mszip runs where no face pack is found** (a temporary folder), set
-`FL26_REGEN_FACES` first. Since 0.2.2 the release stops instead of going out without regen
-faces.
+**The face pack in a release** is built by lbpack from the repository, so mszip needs no
+`FL26_REGEN_FACES` (`mszip_stamped.py` neither). Since 0.2.2 the release stops instead of going
+out without regen faces, and since 17.11.2026 instead of going out with any pack but the pool.
 
 ## The version
 

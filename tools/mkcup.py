@@ -69,7 +69,7 @@ def prototype(comp, regs, code):
     import mkphases
     _i, cid = mkphases.find_cid(comp, code)      # by code, or the shipped id (GitHub #54)
     for i in range(len(regs) // M.REG):
-        if regs[i * M.REG + M.R_CID] == cid:
+        if M.reg_cid(regs, i * M.REG) == cid:
             return cid, regs[i * M.REG + R_TYPE]
     raise SystemExit("%s has no regulation row" % code)
 
@@ -114,7 +114,7 @@ def main():
     # mkworld does and take the first id nothing claims -- measured on _FL26G39, that is cid
     # 174 and regulation 186.
     import mkworld as W
-    used_cid = {comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)}
+    used_cid = {M.comp_cid(comp, i * M.COMP) for i in range(len(comp) // M.COMP)}
     used_reg = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
                 for i in range(len(regs) // M.REG)}
     # Regulation ids above 175 work for Master League -- measured 17 September, and the

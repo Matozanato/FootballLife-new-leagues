@@ -1,0 +1,46 @@
+{
+ "world": "_FL26RgGroups",
+ "leagues": [
+  {
+   "name": "Serie C Girone A",
+   "country": "Italy",
+   "clubs": 20,
+   "legs": 2,
+   "above": 82,
+   "exchange": 1
+  },
+  {
+   "name": "Serie C Girone B",
+   "country": "Italy",
+   "clubs": 20,
+   "legs": 2,
+   "above": 82,
+   "exchange": 1
+  },
+  {
+   "name": "Serie C Girone C",
+   "country": "Italy",
+   "clubs": 20,
+   "legs": 2,
+   "above": 82,
+   "exchange": 2,
+   "playoff": {
+    "places": [
+     2,
+     5
+    ]
+   }
+  },
+  {
+   "name": "Test National",
+   "country": "France",
+   "clubs": 18,
+   "legs": 2,
+   "above": 81,
+   "exchange": 3,
+   "playoff": {
+    "tie": true
+   }
+  }
+ ]
+}

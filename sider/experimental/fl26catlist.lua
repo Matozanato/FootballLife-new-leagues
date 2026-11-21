@@ -66,22 +66,31 @@ The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 M
 League Builder), COUNTRY is built from it instead: the region= and country= of every league
 on a region no shipped league uses (29 and up, and the headless 11, 13, 14 and 20). A shipped
 region is never overridden. Without the file the built-in table below is used, as before.
+
+Regions 128..255 (FL 2027, a caps set with the regions step -- tools/regions.py, 06.11.2026).
+When the world file has a league in a region above 127, the list goes on to 255 and the stubs'
+tables grow to 256 entries. The two loop counts are then the byte compares `cmp bl, n` /
+`cmp cl, n` (80 fb / 80 f9, unsigned: the loops count up from 0 with jb), the same three bytes;
+the stubs' `cmp r32, 0x7f` becomes `cmp r32, 0xff` (six bytes, the code after it moved by three).
+A world with no region above 127 gets exactly the bytes it got before.
 ]]
 local m = {}
 
 local SHIPPED = 0x1427d5760
 local NSHIPPED = 28
 local LAST_REGION = 127   -- fl26reg128; with fl26reg64 the ids above 63 simply never match
+local WIDE_REGION = 255   -- a world with a region above 127 (fl26caps' regions step reads them)
+local PARSER, PARSER_WIDE = 0x1414f8390, "0fb64803c0c903440fb6f1"   -- that step's region parser
 
 -- {va, expected bytes (hex)}
 local LEAS = {
   { 0x140eada38, "4c8d25217d9201" },   -- lea r12,[list]  (builder)
   { 0x140eadb9a, "488d05bf7b9201" },   -- lea rax,[list]  (sort helper)
 }
--- {va, expected bytes, offset of the imm8}
+-- {va, expected bytes, offset of the imm8, the byte compare for a count past 127}
 local COUNT_SITES = {
-  { 0x140eadab6, "83fb1c", 2 },        -- cmp ebx, 0x1c  (builder)
-  { 0x140eadbb4, "83f91c", 2 },        -- cmp ecx, 0x1c  (sort helper)
+  { 0x140eadab6, "83fb1c", 2, "\128\251" },   -- cmp ebx, 0x1c  (builder)      -> cmp bl, n
+  { 0x140eadbb4, "83f91c", 2, "\128\249" },   -- cmp ecx, 0x1c  (sort helper)  -> cmp cl, n
 }
 
 -- region -> country id
@@ -133,6 +142,23 @@ local function read_world(ctx)
     if order then
       leagues.order = {}
       for v in order:gmatch("%d+") do leagues.order[#leagues.order + 1] = tonumber(v) end
+    end
+    local gs, glow = line:match("^%s*gset%s+(%d+).-%slow=([%d:,]+)")
+    if gs then
+      local lows = {}
+      for r, n, up in glow:gmatch("(%d+):(%d+):(%d+)") do lows[#lows + 1] = { tonumber(r), tonumber(up) } end
+      leagues.gsets = leagues.gsets or {}
+      leagues.gsets[#leagues.gsets + 1] = lows
+    end
+    local st = line:match("^%s*split%s+(%d+)%s")
+    if st then                                   -- a split league's phases, each a league record of its own
+      local ph = {}
+      local reg = line:match("%sregular=(%d+)")
+      if reg then ph[#ph + 1] = tonumber(reg) end
+      local grp = line:match("%sgroups=([%d,]+)")
+      for g in (grp or ""):gmatch("%d+") do ph[#ph + 1] = tonumber(g) end
+      leagues.splits = leagues.splits or {}
+      leagues.splits[#leagues.splits + 1] = { tonumber(st), ph }
     end
     local u = { line:match("^%s*uefa%s+(%d+)%s+(%d+)%s+(%d+)") }
     if #u == 3 then
@@ -204,7 +230,8 @@ local function rel32(from_next, to)
 end
 
 -- the stub: 80 bytes of code, then two 128-entry u16 region -> country tables, COUNTRY at 80
--- and LABEL at 336
+-- and LABEL at 336 (LAST_REGION 255: `cmp ecx,0xff`, everything below 3 bytes later, 96 bytes
+-- of code, two 256-entry tables, COUNTRY at 96 and LABEL at 608)
 --   0  cmp ecx,0x7f ; ja orig          5  mov eax,ecx
 --   7  mov rdx,LABEL_RET ; cmp [rsp],rdx ; jne all      (the category label's call only)
 --  23  lea rdx,[LABEL] ; movzx edx,word [rdx+rax*2] ; cmp dx,-1 ; je all ; mov eax,edx ; ret
@@ -222,17 +249,20 @@ local function install_country()
     if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
   end
   if not stub then log("fl26catlist: VirtualAlloc for the country stub failed -- names left alone"); return end
-  local back = rel32(stub + 73, COUNTRY_FN + 7)
+  local wide = LAST_REGION > 127
+  local at, tables = wide and 3 or 0, wide and 96 or 80
+  local back = rel32(stub + 73 + at, COUNTRY_FN + 7)
   local into = rel32(COUNTRY_FN + 5, stub)
   if not (back and into) then log("fl26catlist: country stub out of jump range -- names left alone"); return end
-  local code = "\131\249\127" .. "\119\56" .. "\137\200"
+  local code = (wide and "\129\249\255\0\0\0" or "\131\249\127") .. "\119\56" .. "\137\200"
             .. "\72\186" .. u32le(LABEL_RET % 0x100000000) .. u32le(math.floor(LABEL_RET / 0x100000000))
             .. "\72\57\20\36" .. "\117\20"
-            .. "\72\141\21" .. u32le(336 - 30) .. "\15\183\20\66" .. "\102\131\250\255" .. "\116\3"
+            .. "\72\141\21" .. u32le(tables + 2 * (LAST_REGION + 1) - 30 - at) .. "\15\183\20\66" .. "\102\131\250\255" .. "\116\3"
             .. "\137\208" .. "\195"
-            .. "\72\141\21" .. u32le(80 - 50) .. "\15\183\4\66" .. "\102\131\248\255" .. "\116\1" .. "\195"
-            .. "\64\85\72\141\108\36\169" .. "\233" .. back .. string.rep("\204", 7)
-  assert(#code == 80)
+            .. "\72\141\21" .. u32le(tables - 50 - at) .. "\15\183\4\66" .. "\102\131\248\255" .. "\116\1" .. "\195"
+            .. "\64\85\72\141\108\36\169" .. "\233" .. back
+  code = code .. string.rep("\204", tables - #code)
+  assert(#code == tables)
   local tbl, lbl, named = {}, {}, 0
   for r = 0, LAST_REGION do
     local c = COUNTRY[r] or 0xffff
@@ -282,6 +312,7 @@ local function world_confeds(world)
 end
 
 -- the stub: 35 bytes of code, then the 128-entry u8 region -> runtime code table (0xff = keep)
+-- (LAST_REGION 255: `cmp edx,0xff`, 38 bytes, the table 256 entries, still at 64)
 --   0  mov ecx,[rax+0x300] ; shr ecx,0x19 ; and ecx,0xf     (the original read)
 --  12  cmp edx,0x7f ; ja done                               (edx = the league's region)
 --  17  lea rax,[tbl] ; movzx eax,byte [rax+rdx]
@@ -316,12 +347,13 @@ local function install_icons(confeds)
   if not stub then log("fl26catlist: VirtualAlloc for the icons stub failed -- League Info icons left alone"); return end
   local into = rel32(ICONS_SITE + 5, stub)
   if not into then log("fl26catlist: icons stub out of call range -- League Info icons left alone"); return end
+  local wide = LAST_REGION > 127
   local code = "\139\136\0\3\0\0" .. "\193\233\25" .. "\131\225\15"
-            .. "\131\250\127" .. "\119\17"
-            .. "\72\141\5" .. u32le(40) .. "\15\182\4\16"
+            .. (wide and "\129\250\255\0\0\0" or "\131\250\127") .. "\119\17"
+            .. "\72\141\5" .. u32le(wide and 37 or 40) .. "\15\182\4\16"
             .. "\60\255" .. "\116\2" .. "\137\193"
             .. "\195"
-  assert(#code == 35)
+  assert(#code == (wide and 38 or 35))
   code = code .. string.rep("\204", 64 - #code)
   local tbl, set = {}, {}
   for r = 0, LAST_REGION do
@@ -336,11 +368,176 @@ local function install_icons(confeds)
                     stub, #set, table.concat(set, " ")))
 end
 
+-- The League Info promotion line (mato 08.11.2026: "for the regional leagues it says promotion
+-- off"). The same builder ends by reading the league's runtime links: +0x7c (the league above) and
+-- +0x7e (the league below), and the panel prints "Promotion/Relegation On" with the two names
+-- only when one of them leads to a live regulation, else "Off" and two empty names. Our tables
+-- leave many leagues unlinked although their clubs go up and down (fl26chain moves them): every
+-- group of a set but the first (`gset`; linking them all makes the game move clubs through each,
+-- #98, leaguebuilder.group_sets) -- National 1 Groupe A, NB III Delkelet -- and the leagues next to
+-- a split one (Prva liga Srbije under the SuperLiga, the Cypriot First Division's league below).
+-- Two 8-byte runs become calls to stubs: the read of +0x7c at 0x140c6d0fd and the read of +0x7e
+-- at 0x140c6d148. Each reads the link as before and, when it is 0xffff for a league whose world
+-- line names one (above=, or a league whose above= is this one), hands the builder that id --
+-- but only while some regulation still has a live +0x7c: a Master League with
+-- Promotion/Relegation Off cuts every link (0x14126ff30), and then the page reads "Off" as the
+-- game's own leagues do. Only the builder's register changes: the runtime links stay what they
+-- were, so no club moves differently.
+--   A  0  movzx r9d,word [r10+0x7c] ; cmp r9w,-1 ; jne done      (r10 = the league's record)
+--     12  movzx eax,word [r10] ; cmp eax,0x3ff ; ja done         (its regulation id)
+--     23  lea rcx,[tbl] ; movzx eax,word [rcx+rax*2] ; cmp ax,-1 ; je done
+--     40  xor edx,edx ; loop: cmp edx,[r15+0xd0bcf4] ; jae done ; imul rcx,rdx,0x314 ; inc edx
+--         cmp word [rcx+r15+0xc12f18],-1 ; je loop                (a record's +0x7c, the game's walk)
+--     72  mov r9d,eax ; done: mov edx,r12d ; ret                  (the second replaced instruction)
+--   B  the same on +0x7e into edx, r9d counting, ending in test r8d,r8d (the second replaced one)
+-- rax, rcx and (in B) r9 are dead at the sites, loaded again before their next read.
+local LINKS_MAX, LINKS_TBL = 1023, 96
+local LINKS = {
+  { 0x140c6d0fd, "450fb74a7c418bd4", 30,     -- movzx r9d,word [r10+0x7c] ; mov edx,r12d
+    "450fb74a7c664183f9ff753f410fb7023dff0300007734488d0d",
+    "0fb704416683f8ff742331d2413b97f4bcd00073184869ca14030000ffc2664283bc39182fc100ff74e24189c1418bd4c3" },
+  { 0x140c6d148, "410fb7527e4585c0", 29,     -- movzx edx,word [r10+0x7e] ; test r8d,r8d
+    "410fb7527e6683faff7540410fb7023dff0300007735488d0d",
+    "0fb704416683f8ff74244531c9453b8ff4bcd00073184969c91403000041ffc1664283bc39182fc100ff74e189c24585c0c3" },
+}
+-- "Lower League" of a league in the middle (B420, 11.11.2026: the National League showed itself as its lower
+-- league, and so did the 2. Liga, Nationale 1 ACFF ...). The builder knows two leagues only: when the league
+-- has one above (0x140c6d12e) it writes that one as the higher league and the league ITSELF as the lower one
+-- (mov ebx,r14d ; jmp 0x140c6d188) and never looks below. Those five bytes become a jump to a third stub:
+--    0  mov ebx,r14d ; mov rax,[rbp-0x19] ; movzx edx,word [rax+0x7e] ; cmp dx,-1 ; jne have
+--   17  movzx eax,word [rax] ; cmp eax,0x3ff ; ja done ; lea rcx,[tbl] ; movzx edx,word [rcx+rax*2]
+--   38  cmp dx,-1 ; je done                                        (the world's league below, as stub B)
+--   44  have: mov ebx,edx ; mov rcx,r15 ; mov rax,0x1414bb000 ; call rax     (the game's record of an id)
+--   61  cmp [rax],bx ; mov ebx,r14d ; jne done ; mov ebx,[rax+0x80]           (found: its competition id)
+--   75  done: mov rax,0x140c6d188 ; jmp rax
+-- A league with none below keeps the game's answer (itself), as the game's own second divisions do. The
+-- lookup is the game's own function, so the stub holds no table offset (fl26caps moves the table).
+local LOWER_SITE, LOWER_BYTES, LOWER_BACK = 0x140c6d143, "418bdeeb40", 0x140c6d188
+local LOOKUP, LOOKUP_BYTES = 0x1414bb000, "40534883ec20b8ffff0000440fb7c2488bd9663bd0"
+local function u64le(v)
+  local lo, hi = v % 0x100000000, math.floor(v / 0x100000000)
+  return u32le(lo) .. u32le(hi)
+end
+local function hex2bin(h) return (h:gsub("%x%x", function(x) return string.char(tonumber(x, 16)) end)) end
+-- LOOKUP is only called: fl26compcache (loaded before) puts its jump on that entry (`e9 rel32 90`,
+-- the call then goes through its index of the regulation ids and answers the same record). Its
+-- bytes are the game's, or such a jump with nop / int3 padding and the game's bytes after it
+-- (beta4p 17.11.: "bytes at 0x1414bb000 are e95350b2fe90b8ff... -- lower league left alone").
+local function called_ok(got, want)
+  if got == want then return true end
+  if got:sub(1, 2) ~= "e9" then return false end
+  local k = 5
+  while k < #want / 2 and (got:sub(2 * k + 1, 2 * k + 2) == "90" or got:sub(2 * k + 1, 2 * k + 2) == "cc") do k = k + 1 end
+  return k < #want / 2 and got:sub(2 * k + 1) == want:sub(2 * k + 1)
+end
+m._called_ok = called_ok   -- for tools/test_hook_stack.py
+local function install_lower(stub, down)
+  for _, c in ipairs({ { LOWER_SITE, LOWER_BYTES }, { LOOKUP, LOOKUP_BYTES, true } }) do
+    local got = bin2hex(memory.read(c[1], #c[2] / 2))
+    if not (got == c[2] or (c[3] and called_ok(got, c[2]))) then
+      log(string.format("fl26catlist: bytes at 0x%x are %s, expected %s -- League Info's lower league left alone",
+                        c[1], got, c[2]))
+      return
+    end
+  end
+  local into = rel32(LOWER_SITE + 5, stub)
+  if not into then log("fl26catlist: lower-league stub out of jump range -- League Info's lower league left alone"); return end
+  local code = hex2bin("418bde488b45e70fb7507e6683faff751b0fb7003dff0300007730488d0d") .. u32le(LINKS_TBL - 34)
+            .. hex2bin("0fb714416683faff741f8bda498bcf48b8") .. u64le(LOOKUP)
+            .. hex2bin("ffd0663918418bde75068b988000000048b8") .. u64le(LOWER_BACK) .. hex2bin("ffe0")
+  assert(#code == 87)
+  code = code .. string.rep("\204", LINKS_TBL - #code)
+  local tbl, n = {}, 0
+  for r = 0, LINKS_MAX do
+    local v = down[r] or 0xffff
+    if down[r] then n = n + 1 end
+    tbl[#tbl + 1] = string.char(v % 256, math.floor(v / 256))
+  end
+  local body = code .. table.concat(tbl)
+  ffi.copy(ffi.cast("void*", stub), body, #body)
+  memory.write(LOWER_SITE, "\233" .. into)   -- jmp stub
+  log(string.format("fl26catlist: League Info lower league -- stub at 0x%x, a league with one above shows the one below it (%d known)",
+                    stub, n))
+end
+local function install_links(world)
+  local up, down, n = {}, {}, 0
+  for _, L in ipairs(world or {}) do
+    if L.above and L.id <= LINKS_MAX then
+      up[L.id] = L.above; n = n + 1
+      if L.above <= LINKS_MAX and not down[L.above] then down[L.above] = L.id end
+    end
+  end
+  for _, lows in ipairs(world and world.gsets or {}) do    -- a set's first group is its linked one
+    local f = lows[1]
+    if f and f[2] <= LINKS_MAX then down[f[2]] = f[1] end
+  end
+  -- a split league (Apertura/Clausura, a regular season and its groups): the page is a phase's,
+  -- and a phase has no links of its own -- it shows the links of its split league (mato 08.11.:
+  -- "i dalje ne pise na svim ligama promocija i relegacija": Bundesliga, Parva Liga, Ligat ha'Al)
+  for _, sp in ipairs(world and world.splits or {}) do
+    local t = sp[1]
+    for _, r in ipairs(sp[2]) do
+      if r <= LINKS_MAX then
+        if up[t] and not up[r] then up[r] = up[t]; n = n + 1 end
+        if down[t] and not down[r] then down[r] = down[t] end
+      end
+    end
+  end
+  if n == 0 and next(down) == nil then return end
+  for _, s in ipairs(LINKS) do
+    local got = bin2hex(memory.read(s[1], #s[2] / 2))
+    if got ~= s[2] then
+      log(string.format("fl26catlist: bytes at 0x%x are %s, expected %s -- League Info promotion left alone",
+                        s[1], got, s[2]))
+      return
+    end
+  end
+  local stub
+  for _, pref in ipairs({ 0x15eb00000, 0x15fb00000, 0x161b00000, 0x162b00000, 0x171b00000 }) do
+    local p = ffi.C.VirtualAlloc(ffi.cast("void*", pref), 0x3000, 0x3000, 0x40)  -- PAGE_EXECUTE_READWRITE
+    if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
+  end
+  if not stub then log("fl26catlist: VirtualAlloc for the links stubs failed -- League Info promotion left alone"); return end
+  local into = {}
+  for k, s in ipairs(LINKS) do
+    into[k] = rel32(s[1] + 5, stub + 0x1000 * (k - 1))
+    if not into[k] then log("fl26catlist: links stub out of call range -- League Info promotion left alone"); return end
+  end
+  for k, s in ipairs(LINKS) do
+    local code = hex2bin(s[4]) .. u32le(LINKS_TBL - s[3]) .. hex2bin(s[5])
+    assert(#code == 79)
+    code = code .. string.rep("\204", LINKS_TBL - #code)
+    local map, tbl = k == 1 and up or down, {}
+    for r = 0, LINKS_MAX do
+      local v = map[r] or 0xffff
+      tbl[#tbl + 1] = string.char(v % 256, math.floor(v / 256))
+    end
+    local body = code .. table.concat(tbl)
+    ffi.copy(ffi.cast("void*", stub + 0x1000 * (k - 1)), body, #body)
+  end
+  for k, s in ipairs(LINKS) do
+    memory.write(s[1], "\232" .. into[k] .. "\144\144\144")   -- call stub ; three nops
+  end
+  local nd = 0
+  for _ in pairs(down) do nd = nd + 1 end
+  log(string.format("fl26catlist: League Info promotion -- stubs at 0x%x, %d leagues with one above, %d with one below",
+                    stub, n, nd))
+  install_lower(stub + 0x2000, down)
+end
+
 local ORDER = nil   -- the world file's `order` line: region ids in the order the lists show them
 
 function m.init(ctx)
   local world = read_world(ctx)
   ORDER = world and world.order
+  local top = 0
+  for _, L in ipairs(world or {}) do if L.region and L.region > top then top = L.region end end
+  if top > LAST_REGION then
+    LAST_REGION = WIDE_REGION
+    local wide = bin2hex(memory.read(PARSER, #PARSER_WIDE / 2)) == PARSER_WIDE
+    log(string.format("fl26catlist: the world has region %d -- regions up to %d%s", top, LAST_REGION,
+                      wide and "" or " (WARNING: the game's region parser is not the regions step's: it reads 128..255 as 0..127)"))
+  end
   if world then
     COUNTRY = world_countries(world)
     local n = 0
@@ -350,6 +547,7 @@ function m.init(ctx)
   if ffi == nil then log("fl26catlist: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[ void* VirtualAlloc(void*, size_t, uint32_t, uint32_t); ]])
   install_icons(world and world_confeds(world) or {})
+  install_links(world)
   if not (check_sites(LEAS) and check_sites(COUNT_SITES)) then return end
 
   local ids, have = {}, {}
@@ -367,7 +565,7 @@ function m.init(ctx)
     if not have[id] then ids[#ids + 1] = id; have[id] = true end
   end
   local n = #ids
-  if n > 127 then log("fl26catlist: too many regions for an imm8 count -- aborting"); return end
+  if n > 255 then log("fl26catlist: too many regions for an 8-bit count -- aborting"); return end
   local parts = {}
   for i, id in ipairs(ids) do parts[i] = u32le(id) end
   local body = table.concat(parts)
@@ -389,7 +587,10 @@ function m.init(ctx)
     if disp < 0 then disp = disp + 0x100000000 end
     memory.write(s[1] + 3, u32le(disp))
   end
-  for _, s in ipairs(COUNT_SITES) do memory.write(s[1] + s[3], string.char(n)) end
+  for _, s in ipairs(COUNT_SITES) do
+    if n > 127 then memory.write(s[1], s[4] .. string.char(n))     -- cmp r8, n: unsigned, up to 255
+    else memory.write(s[1] + s[3], string.char(n)) end
+  end
 
   log(string.format("fl26catlist: category list copied to 0x%x, %d regions (%d shipped + %d ours)%s",
                     newbase, n, NSHIPPED, n - NSHIPPED, ORDER and ", in the world file's order" or ""))

@@ -75,7 +75,21 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 
 - `league <regulation id>` then `key=value` pairs; `name=` is last and takes the rest of the line.
 - `slot` = Select Team slot (absent or 123 = none). `country` = Country.bin id (flag,
-  Competition Info name). `above` = the league one division up (shipped or new).
+  Competition Info name). Two leagues of one country may name the same slot (the league band:
+  past the 97 ids of 1..255 a league takes 320..387 on slots 182..249, then 388..499 on slots
+  250..361; fl26comptab lets them, `fl26world.py`) -- but not 395: its slot, 257, is the game's own
+  "Other" heading (a pseudo-slot of six special teams), and a league there was listed as "Other"
+  (`fl26world.SKIP_IDS`; no league and no cup takes 395). That is 276 leagues. The band needs a caps set
+  with the wide date stub (`datecave.py`) dating 320..499. Past 276 comes the top band 920..1022
+  (103 more, 379 in all): Build uses it only when the installed caps module (and the pack's copy)
+  dates every id of it (`leaguebuilder.top_band`), puts only lower divisions there (a country's top
+  league keeps its slot). Select Team: 920 -> slot 362 ... 1022 -> 464, as far as the game's
+  fl26slots makes them (`leaguebuilder.slot_count`: the fewer of the installed module and the pack's
+  copy; FL 2027's makes 465 since slots-wide, FL26's 362); a top id past them plays and is not
+  listed. The slots change no id, and slots alone do not turn the top band on. Cups take
+  255..319, 500..919 and 1023 (a cup an older Build put on 920..1022 keeps that id, and no league
+  takes it). A world keeps its ids: only new leagues take the top band, and a
+  world with a league there stops the Build on a game whose caps set does not date it. `above` = the league one division up (shipped or new).
   `promote` / `demote` = how many clubs go up from / down out of this league.
 - `cup` = the country's domestic cup, written on a second division added under a shipped top
   flight that had none (Germany, Russia, ...). The game fills a country's cup from its first
@@ -99,7 +113,10 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   clubs* groups, so a club does not show twice.
 - Unknown keys are ignored, so later versions can add fields without breaking older modules.
 - A split league is one `league` line for the regular phase plus
-  `split <total> regular=<id> groups=<id>,<id>`.
+  `split <total> regular=<id> groups=<id>,<id>`. Its `cid` is under 255: Build gives it a free
+  one, or swaps ids with a league that is no split (leaguebuilder.plan). The game reads the last
+  byte of a split's competition id when it asks whether the regular phase is over, and a split
+  past 255 (Bulgaria on 255, 703 and 769, FL 2027 Megapack) never went on to its groups.
 - `uefa <regulation> <position> <competition> <alt>`: one European place per line, in
   hand-out order. Position 0 is a cup winner: `<regulation>` is the cup, `<alt>` the league
   whose next club without a place takes it when the winner already has one (a recipe's
@@ -134,7 +151,50 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   regulation 2's rollover clubs are replaced by the list's (with a Champions League third round,
   regulation 2 is left empty at the rollover and filled in August). The list's places fill the
   play-off first, then the third round, then the second. A competition's places past its direct
-  entrants spill into its own qualifying ahead of the shipped qualifying places. The recipe's `game_europe` drops the shipped places of the named game leagues (`replace` in
+  entrants spill into its own qualifying ahead of the shipped qualifying places. FL 2027 only
+  (`fl26world.Q1_CONFIG`, picked by `leaguebuilder.europe_rounds` when `is_fl27` and the places
+  fill it, `pick_rounds_q1`): a first qualifying round (stage 3, `qround <10|12> 1 <regulation>`)
+  of 32 clubs in July for the Champions League and the Conference League, and their second rounds
+  of 32 (`fl26world.q_size`; `mkeuropo.qualifying` gives those copies sixteen ties). No Europa
+  League second round: the Champions League first round's losers drop to the Conference League's
+  second, and code 11 places go to the Conference League's first round. New clubs 56 / 0 / 32,
+  88 in all. `leaguebuilder.q1_tail` adds the champion of every new top division of a UEFA
+  country with no place (`uefakey.DEFAULT_ORDER` order, one per country) as code 10 places after
+  all the others (`uefa_places(extra=...)`). fl26swiss.dll (`q1_world`, `q_n`) dates the legs on
+  the first Wednesday from day 186 and a week later, fills the round from day 181 (182) after the
+  July teardown, keeps its result the day after the second leg (`q1_keep`, state record kind 4,
+  read back after a load) and fills the second round from day 217 with it; in a career's first
+  summer the first round is not played and the second rounds take its seeded clubs. The FL 2026
+  DLL path never sees a stage 3 (`fl26_swiss_qrounds` drops round 1 lines unless
+  `g_native_uefa`). Tests: `tools/test_uefa_q1.py`, `tools/test_uefa_q1_native.py`. FL 2027's Prijedlog C
+  (`fl26world.C_CONFIG`, mato 07.11.), picked before Q1_CONFIG when the places fill it
+  (`pick_rounds_c`; `c_places` turns Conference League qualifying places the rounds have no room
+  for into Europa League ones): first rounds in July for the Champions League (32) and the Europa
+  League (16), all three competitions' second and third rounds, and the Europa and Conference
+  League's August play-offs of 32 as regulations of their own (stage 0, `qround <11|12> 0
+  <regulation>`, `mkeuropo.qualifying` sixteen ties; 188/189 stay February's). Sizes
+  `fl26world.C_SIZE`, new clubs 56 / 40 / 16 (112), direct entrants 28 / 12 / 4
+  (`direct_room(out, rounds)`); both first rounds' losers drop to the Conference League's second.
+  fl26swiss.dll (`qc_world`: FL27 and both play-off lines; `q_n` per round, `q_place` 36 / 36 /
+  36) plays the Europa League's first round on the Champions League's July days, keeps its result
+  like the Champions League's, and in a career's first summer sends the places past the grown
+  second rounds to the Conference League's second round (`c_spill`). Tests: `tools/test_uefa_c.py`,
+  `tools/test_uefa_c_native.py`. A wide Conference League (`fl26world.CW_CONFIG`, mato 07.11.: C and
+  a Conference League first round in July, `qround 12 1 <regulation>`), picked before C when the
+  places fill it (`pick_rounds_cw`; `c_places(out, rank, rounds)` with its room): Conference League
+  rounds of 62 / 62 / 40 / 40 (`fl26world.CW_SIZE`; 62 = 31 ties, the master's six-bit club count at
+  byte 0x0c and `QROUND_MAX`; `mkeuropo._copy_ties` refuses more), new clubs 56 / 40 / 74 (170),
+  direct entrants 28 / 12 / 0, the UECL league phase the play-off's 20 winners and the Europa League
+  play-off's 16 losers. Its own round takes a regulation id after C's and none of the last Build's
+  cups' (`mkeuropo.qualifying(..., avoid=)`), so a world built with C keeps C's ids. The Champions
+  League's qualifying count may be up to `C_TOPUP` (3) short of 56 (`c_fills`; Build says how many the
+  big five top up): the count now uses `access_alias` (Belgium's 155 counted as 115), and real
+  access lists have 54-55 there. fl26swiss.dll: `qcw_world` (FL27, C and the `qround 12 1` line),
+  `QCW_N`, `Q_MAX` 64; the UECL first round's 31 + 31 are kept as two state records (kind 4, the
+  losers under reg | 0x8000: a record holds `FINAL_MAX` 40 clubs); in a first summer the second
+  rounds take their 62 and the Champions and Europa League places past their rooms go to the UECL
+  second round (`c_spill`; 139 clubs instead of 170). Tests: `tools/test_uecl_wide.py`,
+  `tools/test_uecl_wide_native.py`. The recipe's `game_europe` drops the shipped places of the named game leagues (`replace` in
   `fl26world.uefa_places`) and lists its own under the regulation the access list uses (the
   split leagues' phase: Scotland 134, Belgium 155, Denmark 147).
 - `game_cups` in the recipe: for the game's own top divisions a league cup, a fl26swiss home
@@ -164,6 +224,42 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   August round (`lpre_fill`), dates it from reg 2's records, tears it down in July; the cup
   (fill=253) takes each tie's winner (`lpre_winner`, the better placed club when unplayed) and
   skips the pre-round's clubs for its direct places.
+- A continental cup's preliminary round (FL 2027, 0.3.0 beta 3; `leaguebuilder.ccup_pre_plan`): a
+  cup holds 32 clubs (a knockout cup 16), so a world with more countries than that -- 52 African
+  top divisions -- left most of them with no way in. A league's recipe key `europe_pre` marks
+  which of its `europe` places of that cup enter through the round: `[[position, competition]]`
+  or `[[position, competition, seed]]` (seed 1 = the strongest). The unmarked places are direct;
+  the marked ones play one-match ties on 20 August (day 232, filled from day 226), the strongest
+  v the weakest, the weaker club at home, 16 ties at most; the winners take the cup's remaining
+  places (its last pots). Too few marked places are made up from the cup's shipped places (the
+  CONCACAF Champions Cup: the MLS), which are then the strongest of the round. The round is a
+  helper competition of its own, `FL_PRE<cup number>` named `<cup> Preliminary Round` with the
+  cup's emblem (`prepare_cup_prelims`, `mkeuropo.prerounds_single`: a copy of the Libertadores'
+  qualifying round, as the modern Sudamericana's first stage), with ids kept from Build to Build
+  (`cup_ids` key `ccuppre:<code>`). World file: `lpre <reg> cup=<ko> fill=226 days=232,232
+  entry=... single=1 [alt=<entry>:<league>:<first position>]`. A cup winner's place in the round
+  goes down its league when the winner stands on a league place of a continental cup or round
+  (fl26swiss `lpre_claimed`: the champion that won the cup too plays the Champions League; the
+  round is filled before the cups, so `ccup_taken` cannot tell). The recipe's
+  `"ccup_pre": {"<cup number>": {"fill": day, "day": day}}` moves a round. No League dialog for
+  it yet: the key is written by hand. The Sudamericana does not read it (its first stage is the
+  modern format's).
+- A play-off under a split season of the game's own (B425, 0.3.0 beta 3). The Scottish
+  Premiership (total 133, regular phase 134, groups 135 / 136) and FL 2027's Danish Superliga
+  (141, 147, 148 / 175) are split seasons the game ships; a league built under one names the
+  regular phase as `above=` and the total as `splittotal=`, and its relegation play-off's place
+  is written on the regular phase (`poff 724 up=134 low=413 entry=134:11,413:2`). That place is
+  the FINAL table's, not the regular phase's: fl26swiss does not take the regular phase's
+  progression (day 98) for the league's end (`ccup_fill_leagues_over`, `gsplit_keep`), keeps the
+  two groups' tables the day their last round is played (the game's own group table, else counted
+  from the matches; looked at every day from April, `gsplit_day`, since the game does not always
+  ask for a group's progression) and answers place N from them (`gsplit_club`: the top group's
+  N-th, else the bottom group's); fl26chain.lua rewrites the play-off's entry to the total
+  (`133:11`), whose standings the pair's move goes by, so both modules name the same club. The
+  world file's `gsplit <total> regular=<id> groups=<top>,<bottom>` line gives fl26swiss the ids
+  (`fl26world.from_tables`); without it (a world built before) the DLL knows the Scottish season.
+  Before: the 11th of 33 rounds played, the real 11th went down unplayed (Build 5 season test,
+  second season: "not in 413 or not in 134 after the move -- untouched").
 - Libertadores qualifying (4) places of new leagues: the round (regulation 8) is set on day 0
   with shipped clubs only, none of them from the pool slot 73 that the other places replace. So
   fl26swiss.c `cont_standins` gives each of our places the place of a shipped club: the last
@@ -227,6 +323,31 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   places, or for a league of the game, where its places in the game's lower cups begin (J1 5th,
   so its champion stays with the Champions League Elite). Without `:<from>` it starts at 1st. A world file has up to 16 `ccup`
   lines, continental, league and pre-season cups together (8 before 0.2.0).
+  `comp=<n>` (written before `name=`, `leaguebuilder.ccup_comp`): the cup's competition number
+  (6, 7, 8, 9, 13, 14, 15; none on league, super and pre-season cups or play-offs), for the
+  standings' zone strip: fl26swiss.lua hands `(knockout, comp)` pairs to `fl26_swiss_ccup_zone`
+  after `fl26_swiss_ccup`. A world built before it has no `comp=`; the lua then knows a cup that
+  still has its default name (`fl26world.CCUPS`) by that name, and a renamed one gets no colour
+  until the world is built again.
+- The zone strip's colours (fl26swiss.c `zone_access`, the standings' `flZone` cell): a row is
+  coloured by the first list that names its league and position -- the access list (`uefa`
+  lines, or the DLL's own), the entries of the `ccup` lines with a `comp=`, then the `lpre`
+  lines (`cup=0`: the modern Libertadores phase 1 or 2; `cup=<ko>`: the pre-round of that cup,
+  the Sudamericana's first stage). A confederation's top cup is blue (0 / 10 Champions League
+  and its play-off, 3 / 4 Libertadores and its qualifying, 16 / 17 its phases 1 and 2, 5 AFC
+  Champions League Elite, 6 CAF Champions League, 13 CONCACAF Champions Cup, 14 OFC Champions
+  League), the one below orange (1 / 11, 9 Copa Sudamericana, 19 its first stage, 7 CAF
+  Confederation Cup, 8 AFC Champions League Two), the third teal (2 / 12, 15 AFC Challenge
+  League). A cup winner's place (position 0) and an entry of another round's winners or losers
+  (`<id + 1024 k>:0`, `8:255`) are no table row. Places the game's own rights table gives (the
+  shipped South American and Asian leagues when no world line names them) are not coloured.
+  `tools/test_zone_colours.py` checks every place of a world file through the lua's `read_world`
+  and the DLL.
+  Promotion and relegation: the game's own link of a league (one league up, one down) colours
+  its rows; of a set of groups only the first has that link, so the loader also hands the `gset`
+  lines to the DLL (`world_gzones` -> `fl26_swiss_gzone`: league, clubs up, clubs down) and
+  `zone_group` colours a row by them wherever the game has no link of its own (B458).
+  `tools/test_group_zones.py` checks every row of every league of every set.
 - `confed <flag>:<code>,...` (0.2.0): every country's confederation from `Country.bin` +5 (2 UEFA,
   3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC), written when the world has continental cups of
   its own. In a world without the 32-club Club World Cup, the champion of each of those cups
@@ -275,6 +396,20 @@ and `tools/lbplayers.py`):
   (`{"folder": "Region\Stadium", "slot": "009", "name": ...}`, a folder of Stadium Server's
   library: Switch on writes it to `content/stadium-server/map_teams.txt` with the club's built
   id, `tools/lbstadiums.py`; 0.1.7).
+- `"club_money"` (FL 2027): `{"<league name>/<k>" or "<team id>": {"budget", "followers", "fame",
+  "fans", "share"}}`, a club's own money instead of Build's estimate by squad and division
+  (`leaguebuilder.money_refs`, `club_money`). `budget` is the transfer budget base (Team.bin +0x34,
+  low 24 bits; the Master League budget is it times the money setting's factor), `followers` the
+  base at +0x38 (low 23 bits), `fame` the club ranking class 0-9 and `fans` the share of
+  followers in percent (needs `fame`) of the club's `fans` line for fl26clubs. `share` is the same
+  share of 10,000 (1-10000, needs `fame`; it takes the place of `fans`, whose percent is then
+  rounded from it): the club also gets a `fansx` line, by which fl26clubs.dll scales its followers
+  base down to 100 (a `fans` percent stops at 1,000) and pays its broadcasting fee and sponsors --
+  what the salary budget needs (x1.12) whole, of the rest the share; without it a club out of the
+  game's ranking is paid like the game's 450th club whatever its size (`tools/test_clubs_fansx.py`).
+  A club of the game
+  takes the budget, and the class and share when it is out of the ranking; it keeps followers of
+  its own. A bad entry is reported in the Build log and the estimate taken. FL26 leaves the key out.
 - `"edits"` / `"swaps"`: `[[team id, team id], ...]`, two clubs of the game's leagues that trade
   every CompetitionEntry row (league, cups, continental), so no competition changes size
   (`leaguebuilder.swap_problems`, `exchange_entries`; 0.1.7).

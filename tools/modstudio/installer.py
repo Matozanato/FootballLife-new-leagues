@@ -23,10 +23,11 @@ Everything done is written to SiderAddons\ModStudio\installed.json, one record p
 files created, files replaced (with the restore point that holds the old one), sider.ini lines
 added and map lines added or taken out.  Removing a mod undoes exactly that.
 """
-import filecmp, json, os, re, shutil, tempfile, time, zipfile
+import bigjson
+import filecmp, json, os, re, shutil, sys, tempfile, time, zipfile, zlib
 
 from . import servers as S
-from .backups import home, snapshot
+from .backups import home, long_path, snapshot
 from .mapfile import MapFile
 from .siderini import norm
 
@@ -47,7 +48,17 @@ PACKS = "_packs"                         # content\<server>\<world>\_packs: othe
 PACK_OF = {"scoreboards": "scoreboard", "menus": "menu"}   # ... of the world's competitions a world zip carries
 WORLD_README = "READ ME - FL26 world.txt"
 WORLD_INFO = "fl26worldpack.json"
+NOTICE_MAX = 1500                     # Install shows this much of it (the window fits 1920x1080)
+WORLD_NOTICE = "NOTICE.txt"           # the recipe's "notice": the author's words, shown by Install before it installs
 WORLD_NOTE = "a ready world: it goes in the game, its world file goes to modules\\fl26world.txt"
+# B400 (10.11., GigaPack beta 1): Windows without long paths switched on (LongPathsEnabled 0, the
+# default) opens a file only while its whole path is under MAX_PATH: 259 characters and the NUL.
+# A trophy file of the GigaPack was 217 characters inside the zip, 269 unpacked in a user's
+# %TEMP%, and Install mods stopped on [Errno 2]. Mod Studio unpacks, copies and deletes through
+# long_path (\\?\), which has no such limit; the game cannot (FL_2026.exe / FL_2027.exe declare no
+# longPathAware, Sider adds no \\?\), so a file that goes in the game must stay within GAME_MAX.
+MAX_PATH = 260
+GAME_MAX = MAX_PATH - 1
 
 
 def world_name(path):
@@ -188,7 +199,7 @@ def world_teams(root):
     """the team ids of a built world's leagues and other clubs (leaguebuilder-plan.json)"""
     try:
         with open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-            pl = json.load(f)
+            pl = bigjson.load(f)
     except (OSError, ValueError):
         return []
     return [int(t) for p in (pl.get("leagues") or []) + (pl.get("others") or [])
@@ -247,7 +258,128 @@ def own_crests(root):
     return ids
 
 
-def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
+# B430 (12.11.2026): what Build writes down about a world names the pictures, kit folders and
+# trophies it was built from by their full path on the maker's disk -- "C:/Users/<his name>/...",
+# the names of his folders. Install, Switch on and Make editable on another PC never find those
+# files and take the copies the world carries, so the zip does not need the paths: Export writes
+# these files with every such path cut down to "source/d<n>/<its last part>" (the same folder gets
+# the same n, so two files of one name from two folders stay two). The world on the maker's own
+# disk keeps its files as they are.
+LOCAL_PATH_FILES = ("leaguebuilder-plan.json", "leaguebuilder-input.json", "trophies/trophies.json")
+_BS = chr(92)
+# a JSON string that starts as a path of a disk ("D:/", "D:" and a backslash) or of a share (two backslashes)
+_LOCAL_PATH = re.compile('"((?:[A-Za-z]:(?:/|' + _BS * 4 + ')|' + _BS * 8 + ')(?:[^"' + _BS * 2 + ']|' + _BS * 2 + '.)*)"')
+
+
+def no_local_paths(text):
+    """text of a JSON file without the paths of this PC -> (the text, how many were cut)"""
+    folders, n = {}, [0]
+
+    def one(m):
+        try:
+            p = json.loads(m.group(0))
+        except ValueError:
+            return m.group(0)
+        folder, _sep, name = p.replace(_BS, "/").rstrip("/").rpartition("/")
+        k = folders.setdefault(folder.lower(), "d%03d" % (len(folders) + 1))
+        n[0] += 1
+        return json.dumps("source/%s/%s" % (k, name) if folder else "source/%s" % k, ensure_ascii=False)
+    return _LOCAL_PATH.sub(one, text), n[0]
+
+
+def world_ledger(root, world, version=None, prev=None, log=lambda t: None, test=False):
+    """(ledger, careers) of the built world in `root` for its zip (idledger.py, 17.11.2026): every
+    id a career of this version holds, and what it says of the careers of `prev`, the version
+    shared before (its ledger, None for the first): {"continue_from": prev's version when every id
+    of it is kept (the next Install of it is an Update), else None, "after": prev's version,
+    "breaks": {kind: how many ids of prev are gone}, "first": True for a first version}.
+    Its number is one up from every number the lineage gave on this PC (idledger.next_number);
+    test: a test zip's ledger ("test": true). (None, None) for a world without a plan.
+    18.11.2026 evening (rowkeep.py): the ledger keeps the rows of the world's competition tables
+    ("rows"), so the next version's Build lays them out the same; careers["rows"] says whether every
+    row of prev is still where it was (rowkeep.summary: prev's rows, else the Build's own verdict,
+    the plan's "rows_kept"; None when neither is known) -- when not, careers of prev do not go on"""
+    import idledger, rowkeep
+    plan, pids = idledger.world_ids(root)
+    if not isinstance(plan, dict):
+        return None, None
+    settings = plan.get("settings") or {}
+    version = str(version or "").strip() or idledger.default_version(settings, prev)
+    rows = rowkeep.rows_of_world(root)
+    led = idledger.make(plan, pids, world, version, number=idledger.next_number(world, prev), prev=prev,
+                        retire=settings.get(idledger.RETIRE_KEY), test=test, rows=rows)
+    kept = plan.get("rows_kept")
+    del plan, pids
+    if not prev:
+        log("ids: %s is the first version of a new lineage (%s): over a world of before the id ledger, Install "
+            "offers an Update only when it keeps every id of it" % (version, led["lineage"]))
+        return led, {"continue_from": None, "first": True}
+    old = idledger.of_ledger(prev)
+    new = idledger.ids_of(led["plan"], led["players"])
+    probs = idledger.compare(old, new, idledger.retire_of(led["retire"]))
+    # a club, league or cup of prev retired: Install offers Replace, not Update (update_verdict)
+    gone = {k: n for k in ("clubs", "leagues", "cups")
+            for n in [sum(1 for x in led["retire"].get(k) or {} if idledger._present(old, k, x))] if n}
+    rk = None
+    if rowkeep.valid(prev.get(idledger.ROWS_KEY)) and rows is not None:
+        t = rowkeep.tables_dir(rowkeep.world_db(root), rowkeep.TABLES + (rowkeep.TEAM,))
+        # the clubs prev had: the game's (this world's Team.bin but its own new clubs) and prev's own
+        known = (rowkeep.team_ids(t[rowkeep.TEAM]) - (set(new["clubs"]) - set(old["clubs"]))) | set(old["clubs"])
+        rep = rowkeep.check(prev[idledger.ROWS_KEY], t[rowkeep.TABLES[0]], t[rowkeep.TABLES[1]], t[rowkeep.TABLES[2]],
+                            known)
+        for line in rowkeep.lines(rep, prev.get("version")):
+            log("rows: " + line)
+        rk = rowkeep.summary(rep)
+    elif isinstance(kept, dict) and rowkeep.same_version(kept.get("of"), prev):
+        rk = {k: v for k, v in kept.items() if k != "of"}     # the Build that followed prev said it
+    else:
+        log("rows: whether the competition rows of %s are where they were is not known (its ledger has none, "
+            "and the world was not built after it here)" % prev.get("version"))
+    moved = rk is not None and not rk.get("ok")
+    careers = {"continue_from": None if probs or gone or moved else prev.get("version"), "after": prev.get("version"),
+               "breaks": idledger.counts(probs), "retired": gone,
+               "changed": [nm for _r, nm, _d in idledger.structure_changes(old, new)], "rows": rk}
+    log("ids: careers of %s %s" % (prev.get("version"), "go on in %s" % version if not probs and not gone and not moved
+                                   else "break in %s (%s)" % (version, idledger.summary(probs) if probs else
+                                                              ", ".join("%d %s retired" % (n, k) for k, n in sorted(gone.items()))
+                                                              if gone else "competition rows of it moved or changed")))
+    return led, careers
+
+
+FIND = object()                           # export_world: look for the version shared before (idledger.find)
+
+
+def world_notice(recipe, root):
+    """the recipe's "notice" (a text, or a list of lines): from `recipe`, else from the built world's
+    plan (leaguebuilder.RECIPE_SETTINGS keeps it). "" when there is none"""
+    note = recipe.get("notice") if isinstance(recipe, dict) else None
+    if note is None:
+        try:
+            import idledger
+            plan, _p = idledger.world_ids(root)
+            note = (plan.get("settings") or {}).get("notice") if isinstance(plan, dict) else None
+        except Exception:
+            note = None
+    if isinstance(note, list):
+        note = "\n".join(str(x) for x in note)
+    return note.strip() if isinstance(note, str) else ""
+
+
+def read_notice(top):
+    """a world zip's NOTICE.txt (export_world), as unpacked in `top`; "" when it has none"""
+    p = os.path.join(top, WORLD_NOTICE)
+    if not os.path.isfile(long_path(p)):
+        return ""
+    try:
+        with open(long_path(p), "rb") as f:
+            text = f.read(NOTICE_MAX + 1).decode("utf-8", "replace").replace("\r\n", "\n").strip()
+        return text if len(text) <= NOTICE_MAX else text[:NOTICE_MAX].rstrip() + " ..."
+    except OSError:
+        return ""
+
+
+def export_world(sider_dir, world, out, log=lambda t: None, menus=False, version=None, prev_ledger=FIND,
+                 test=False, recipe=None, recipe_path=None, keep_broken=False):
     r"""zip the built world SiderAddons\livecpk\<world> for another PC, laid out as
     SiderAddons\livecpk\<world>\... so Install mods (or a copy by hand) puts it in place.
 
@@ -266,20 +398,68 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
     modpack's boards and themes (<world>\_packs, see world_competitions / pack_lines).
     Menu themes go only with menus=True (B88, mato 16.10.2026: the Modpack's themes stayed as the
     background of every menu on the players' PCs and looked broken; the menus stay the game's own).
-    Returns the info written to fl26worldpack.json."""
+    17.11.2026 (mato: a newer version of a shared world must not break the careers of the one
+    before): the zip carries the world's id ledger (SiderAddons\livecpk\<world>\fl26ids-ledger.json,
+    idledger.py), and fl26worldpack.json its version (`version`, else the recipe's pack_version,
+    else a number and the date) and whether careers of `prev_ledger`, the version shared before,
+    go on in it (world_ledger). Install offers an Update over that version when they do.
+    review 18.11.2026 -- the same for Mod Studio, release.py and coldstart.py:
+    - prev_ledger FIND (the default): the version shared before is looked up here (idledger.find,
+      by `recipe`, else the world's built plan: recipe_of_world); a ledger that cannot be read, or
+      a recipe that names its lineage (id_lineage) when no ledger of it is on this PC, stops the
+      export (idledger.LedgerError) -- a new lineage would turn every Install into a Replace
+    - the ledger goes into this PC's history (idledger.store_save) together with the zip: written
+      as out.part, its number noted (idledger.note_issued), the zip put in place, then the ledger
+      kept (a failure on the way takes the .part, or the zip, away again). Not for a test zip (test: its ledger
+      says "test", no Build or export follows it), and not when careers of the version before do
+      not go on in it unless keep_broken (Mod Studio asks; info["stored"] says which)
+    - the number is one up from every number the lineage gave on this PC (idledger.next_number:
+      test zips and zips not kept count), and the world's plan gets the lineage (stamp_plan)
+    Returns the info written to fl26worldpack.json, the ledger under "ledger_data" and where it
+    was kept under "stored" (None when it was not)."""
     root = os.path.join(sider_dir, "livecpk", world)
     wf = os.path.join(root, WORLD_FILE)
     if not os.path.isfile(wf):
         raise ValueError("%s has no %s: build the world first" % (root, WORLD_FILE))
+    import idledger
+    if prev_ledger is FIND:
+        notes = []
+        like = recipe if recipe is not None else idledger.recipe_of_world(os.path.join(sider_dir, "livecpk"), world)
+        _p, prev_ledger = idledger.find(dict(like, world=world), recipe_path, os.path.join(sider_dir, "livecpk"), notes)
+        for t in notes:
+            log(t)
+        log("ids: the version shared before: %s" % (prev_ledger.get("version") if prev_ledger else "none"))
     live = os.path.join(sider_dir, "modules", WORLD_FILE)
     use = wf
     if face_players(wf) == 0 and world_name(live) == world and face_players(live) > 0:
         use = live
     faces = face_players(use)
+    # mato 07.11.: the zip says which game the world is for (worldgame.py). A world built before
+    # the game line gets it here: by its size (more than FL26 takes is FL 2027's), else the game it is in
+    import worldgame as WG
+    wtext = None
+    game, teams, players, stamped = WG.world_game(root, use)
+    if not stamped:
+        game = game or WG.game_of(os.path.dirname(os.path.normpath(sider_dir)))
+        if game:
+            with open(use, "rb") as f:
+                wtext = WG.stamped(f.read().decode("utf-8", "replace"),
+                                   WG.stamp_line(game, teams, players)).encode("utf-8")
     info = {"format": "fl26world", "format_version": 1, "world": world, "face_players": faces,
             "world_file": "SiderAddons/livecpk/%s/%s" % (world, WORLD_FILE),
             "needs": ["FL Mod Studio modules with the face pack (%s): Home > Install now"
                       % FACE_PACK]}
+    if game:
+        info["game"] = game
+        info["needs"].insert(0, "%s (%s clubs, %s players)" % (WG.TITLE[game], teams, players))
+    led, careers = world_ledger(root, world, version, prev_ledger, log, test=test)
+    if led is not None:
+        info["pack_version"] = led["version"]
+        info["ledger"] = {"file": "SiderAddons/livecpk/%s/%s" % (world, idledger.LEDGER),
+                          "version": led["version"], "number": led["number"], "made": led["made"]}
+        if test:
+            info["ledger"]["test"] = True
+        info["careers"] = careers
     comps = world_competitions(use)
     content = os.path.join(sider_dir, "content")
     extra = []                            # (server, its folder here, our map lines of this world, lent folders)
@@ -324,13 +504,28 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
         if lent:
             info[key + "_borrowed"] = len(lent)
     text = README.format(world=world, pack=FACE_PACK, faces=faces, kits=info["kits"],
-                         boards=info["scoreboards"], menus=info["menus"]).replace("\n", "\r\n")
+                         boards=info["scoreboards"], menus=info["menus"])
+    if game:
+        other = "FL26" if game == "fl27" else "FL 2027"
+        text = text.replace("\n\n", "\n\nFOR %s ONLY. Do not put it into %s: Mod Studio refuses it there, and its modules "
+                            "stop the game at the start when it is copied in by hand.\n\n" % (WG.TITLE[game], other), 1)
+    text = text.replace("\n", "\r\n")
+    notice = world_notice(recipe, root)
+    if notice:
+        info["notice"] = WORLD_NOTICE
     part = out + ".part"
-    n = 0
+    n = cut = 0
     own, crests = own_crests(root), 0
-    with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
+    with _part_gone_on_error(part), zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(WORLD_README, text)
         z.writestr(WORLD_INFO, json.dumps(info, indent=1, ensure_ascii=False))
+        if notice:
+            z.writestr(WORLD_NOTICE, notice.replace("\r\n", "\n").replace("\n", "\r\n") + "\r\n")
+        if led is not None:
+            # review 3, 18.11.2026: the zip's ledger names no folder of this PC either (its ids and names
+            # stay; a path a world's files hold, in its players' file, goes as source/...)
+            z.writestr(info["ledger"]["file"],
+                       no_local_paths(json.dumps(led, ensure_ascii=False, separators=(",", ":")))[0])
         for s, here, lines, lent in extra:
             z.writestr("SiderAddons/content/%s/%s" % (s.folder, s.maps[0].file), b"\r\n".join(lines) + b"\r\n")
             done, written = set(), set()
@@ -339,11 +534,12 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
                 if dst.lower() in done or not os.path.isdir(src):
                     continue
                 done.add(dst.lower())
-                for dp, dn, fn in os.walk(src):
+                top = long_path(src)              # B400: os.walk passes over what it cannot open
+                for dp, dn, fn in os.walk(top):
                     dn.sort()
                     for f in sorted(fn):
                         p = os.path.join(dp, f)
-                        rel = os.path.relpath(p, src).replace(os.sep, "/")
+                        rel = os.path.relpath(p, top).replace(os.sep, "/")
                         if dst == world and (world + "/" + rel).lower().startswith(fresh):
                             continue              # an older copy of a borrowed kit / pack: the fresh one goes
                         # a kit or pack the world carries and nothing lends afresh (a world
@@ -362,21 +558,95 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
                 ", %d of them kits of other packs" % len(lent) if lent else ""))
         if crests:
             log("%d crest file(s) of other packs left out: the world draws those clubs' crests itself" % crests)
-        for dp, dn, fn in os.walk(root):
-            dn.sort()
+        top = long_path(root)
+        for dp, dn, fn in os.walk(top):
+            # B400: the trophies' GzsTool copies stay out, as Install leaves them out (world_prune)
+            here_rel = os.path.relpath(dp, top)
+            dn[:] = sorted(d for d in dn if not world_prune("" if here_rel == "." else here_rel, dp, d))
             for f in sorted(fn):
                 p = os.path.join(dp, f)
-                rel = os.path.relpath(p, root).replace(os.sep, "/")
+                rel = os.path.relpath(p, top).replace(os.sep, "/")
                 if rel in (".modstudio", ".modstudio-edited"):
                     continue
-                z.write(use if rel == WORLD_FILE else p, "SiderAddons/livecpk/%s/%s" % (world, rel))
+                if rel == idledger.LEDGER:
+                    continue                      # the ledger of the zip it came from: this one's went above
+                if rel == WORLD_FILE and wtext is not None:
+                    z.writestr("SiderAddons/livecpk/%s/%s" % (world, rel), wtext)
+                elif rel.lower() in LOCAL_PATH_FILES:
+                    try:
+                        with open(p, encoding="utf-8") as f:
+                            clean, k = no_local_paths(f.read())
+                    except (OSError, ValueError):
+                        clean, k = None, 0       # not text: it goes as it is
+                    if k:
+                        z.writestr("SiderAddons/livecpk/%s/%s" % (world, rel), clean.encode("utf-8"))
+                        cut += k
+                    else:
+                        z.write(p, "SiderAddons/livecpk/%s/%s" % (world, rel))
+                    del clean
+                else:
+                    z.write(use if rel == WORLD_FILE else p, "SiderAddons/livecpk/%s/%s" % (world, rel))
                 n += 1
                 if n % 2000 == 0:
                     log("%d files ..." % n)
-    os.replace(part, out)
+    stored = None
+    # review 3, 18.11.2026: only the number is noted before the zip is in place (it is spent whatever
+    # happens next); the ledger goes into the history, and the plan gets the lineage, only once the zip
+    # is there -- a zip that could not be put in place left a version in the history nobody has
+    with _part_gone_on_error(part):
+        if led is not None:
+            try:
+                idledger.note_issued(led)     # its number is spent, kept or not
+            except OSError as e:
+                raise OSError("the export stopped: the number of %s could not be noted (%s)" % (led["version"], e))
+        os.replace(part, out)
+    if led is not None:
+        c = careers or {}
+        if test:
+            log("ids: a test zip: its ledger is not kept, no Build or export follows it (number %d is spent)"
+                % led["number"])
+        elif c.get("first") or c.get("continue_from") or keep_broken:
+            try:
+                stored = idledger.store_save(led)
+                log("ids: %s kept as the version shared last (%s)" % (led["version"], stored))
+                # an export of this world that is not the recipe open now finds it by its lineage
+                if idledger.stamp_plan(root, {idledger.LINEAGE_KEY: led["lineage"]}):
+                    log("ids: the world's plan names its lineage %s now" % led["lineage"])
+            except OSError as e:          # no zip whose ids this PC does not keep: it goes again
+                for f in (out, stored):
+                    try:
+                        if f:
+                            os.remove(f)
+                    except OSError:
+                        pass
+                raise OSError("the export stopped: the id ledger of %s could not be kept (%s)" % (led["version"], e))
+        else:
+            log("ids: %s is not kept as the version shared last: careers of %s do not go on in it (number %d "
+                "is spent)" % (led["version"], c.get("after"), led["number"]))
+    if cut:
+        log("%d path(s) of this PC left out of the world's plan: the zip names no folder of yours" % cut)
     log("wrote %s: %d files, %d players with generated faces, %d kits, %d scoreboards, %d menu themes"
         % (out, n, faces, info["kits"], info["scoreboards"], info["menus"]))
-    return info
+    return dict(info, ledger_data=led, stored=stored)
+
+
+
+class _part_gone_on_error:
+    """review 3, 18.11.2026: the zip's .part file (a GigaPack's is about 6 GB) is taken away when
+    writing or putting it in place fails, whatever the error"""
+    def __init__(self, part):
+        self.part = part
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, kind, _e, _tb):
+        if kind is not None:
+            try:
+                os.remove(self.part)
+            except OSError:
+                pass
+        return False
 
 
 class Part:
@@ -385,6 +655,8 @@ class Part:
     def __init__(self, kind, src, name, server=None, note=""):
         self.kind, self.src, self.name, self.server, self.note = kind, src, name, server, note
         self.world_file = None            # a world: its fl26world.txt
+        self.notice = ""                  # a world from a zip: its author's words (read_notice)
+        self.made = None                  # a world from a zip: when the zip was made (world_made)
         self.map_line = None              # content: a loose "map line.txt" for its competition map
         self.install = True
         self.warnings = []
@@ -399,6 +671,99 @@ def safe(name):
     return re.sub(r'[<>:"/\\|?*]+', "_", name).strip(" .") or "mod"
 
 
+ZIP_METHODS = {9: "Deflate64"}      # the methods a zip may name that Python's zipfile does not read
+
+
+def zip_unreadable(members):
+    """B386 (acoco75, 09.11.2026): the name of the compression method of a zip this program cannot
+    take apart, or None. Windows packs a file past 2 GB with Deflate64, 7-Zip can be told to;
+    Python's zipfile reads Stored, Deflate, BZip2, LZMA (and Zstandard from 3.14)"""
+    ok = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED, zipfile.ZIP_BZIP2, zipfile.ZIP_LZMA,
+          getattr(zipfile, "ZIP_ZSTANDARD", zipfile.ZIP_STORED)}
+    for m in members:
+        if m.compress_type not in ok:
+            return ZIP_METHODS.get(m.compress_type, "method %d" % m.compress_type)
+    return None
+
+
+def zip_unreadable_text(name):
+    from .i18n import _
+    return _("This zip is packed with %s, a method FL Mod Studio cannot read. Unpack it first (7-Zip, or right click > "
+             "Extract All in Windows), then Choose a folder... on what came out.") % name
+
+
+# B487 (16.11.): what a zip says of each file unpack() took out of it -- its size and zlib.crc32,
+# which zipfile checked on the way out -- by the unpacked file's path, for the last few zips
+# unpacked. An install stamps every file it copies with them (Installer.copy_file): what it put
+# there is known later without reading a byte more (a crc32 summed while copying, in Python, made
+# the copy of 5000 files 1.3 to 2.8 times as long as CopyFile2's; shutil.copy2 does it, as before)
+_UNPACKED = {}
+
+
+def _sum_key(p):
+    return os.path.normcase(long_path(p))
+
+
+def zip_sum(path):
+    """(size, crc32) the zip gave for the file unpack() put at `path`; None when it was not unpacked
+    from a zip here (a folder, a .7z)"""
+    k = _sum_key(path)
+    for sums in reversed(list(_UNPACKED.values())):
+        if k in sums:
+            return sums[k]
+    return None
+
+
+def stamp_of(src, dst):
+    """what an install put at `dst` (copied from `src`): "size mtime_ns crc32", the crc32 the zip
+    gave for src ("-" when there is none: a folder, a .7z); "" when dst cannot be looked at"""
+    try:
+        st = os.stat(dst)
+    except OSError:
+        return ""
+    z = zip_sum(src)
+    return "%d %d %s" % (st.st_size, st.st_mtime_ns, "%08x" % z[1] if z and z[0] == st.st_size else "-")
+
+
+def _stamp(text):
+    """(size, mtime_ns, crc32 or None) of a stamp_of; None for none (a record of before 16.11.)"""
+    try:
+        size, mt, crc = str(text).split()
+        return int(size), int(mt), None if crc == "-" else int(crc, 16)
+    except (TypeError, ValueError):
+        return None
+
+
+# ModStudio\stamps\<file>: a record's stamps, one per file of its "created", in that order. Not
+# in installed.json: the GigaPack's record has 167 000 files, and that file is read again and
+# again (Home, Import your world); the stamps only when a newer version replaces the world
+STAMPS = "stamps"
+
+
+def stamps_path(sider_dir, rec):
+    n = rec.get("stamps")
+    if not isinstance(n, str) or not n or os.path.basename(n) != n:
+        return None
+    return os.path.join(home(sider_dir), STAMPS, n)
+
+
+def stamps_of(sider_dir, rec):
+    """{file of rec's "created": (size, mtime_ns, crc32 or None)} as the install stamped them; {}
+    for a record without (an install before 16.11.) or whose list no longer fits its files"""
+    p = stamps_path(sider_dir, rec)
+    if not p:
+        return {}
+    try:
+        with open(p, encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    created = rec.get("created") or []
+    if not isinstance(got, list) or len(got) != len(created):
+        return {}
+    return {rel: _stamp(s) for rel, s in zip(created, got) if s}
+
+
 def unpack(src, work, progress=None):
     """a folder to look at: the folder itself, or `src` unpacked into `work`; progress(done, total,
     bytes) now and then while a zip comes out (B84: a 4 GB Modpack took minutes with no word)"""
@@ -408,19 +773,32 @@ def unpack(src, work, progress=None):
     if low.endswith(".zip"):
         with zipfile.ZipFile(src) as z:
             members = z.infolist()
+            bad = zip_unreadable(members)
+            if bad:                           # B386: said before the first file, not after minutes of unpacking
+                raise ValueError(zip_unreadable_text(bad))
             for m in members:
                 target = os.path.normpath(os.path.join(work, m.filename))
                 if not target.startswith(os.path.normpath(work)):
                     raise ValueError("unsafe path in the zip: %s" % m.filename)
             done = size = 0
             last = 0.0
+            into = long_path(work)            # B400: %TEMP%\fl26ms_x\ + 217 was past MAX_PATH
+            sums = {}
             for m in members:
-                z.extract(m, work)
+                try:
+                    z.extract(m, into)
+                except NotImplementedError:   # a method zip_unreadable does not know of
+                    raise ValueError(zip_unreadable_text("method %d" % m.compress_type))
+                if not m.is_dir():
+                    sums[_sum_key(os.path.join(work, m.filename))] = (m.file_size, m.CRC)
                 done += 1
                 size += m.file_size
                 if progress and (time.monotonic() - last > 0.3 or done == len(members)):
                     last = time.monotonic()
                     progress(done, len(members), size)
+            _UNPACKED[_sum_key(work)] = sums
+            while len(_UNPACKED) > 3:         # (a zip looked at long ago is not installed now)
+                _UNPACKED.pop(next(iter(_UNPACKED)))
         return work
     if low.endswith(".7z"):
         try:
@@ -428,7 +806,7 @@ def unpack(src, work, progress=None):
         except ImportError:
             raise ValueError("7z archives need py7zr; unpack it yourself and install the folder")
         with py7zr.SevenZipFile(src, "r") as z:
-            z.extractall(work)
+            z.extractall(long_path(work))
         return work
     if low.endswith(".rar"):
         raise ValueError("unpack the .rar yourself (7-Zip, WinRAR) and install the folder it gives")
@@ -499,7 +877,7 @@ def is_root(d):
 
 def measure(p):
     n = size = 0
-    for dp, _dn, fn in os.walk(p):
+    for dp, _dn, fn in os.walk(long_path(p)):   # os.walk passes over a folder it cannot open (B400)
         for f in fn:
             n += 1
             try:
@@ -507,6 +885,67 @@ def measure(p):
             except OSError:
                 pass
     return n, size
+
+
+def world_prune(rel_dir, folder, name):
+    """B400: True for a folder of a ready world that is not copied into the game: the copy of a
+    trophy's .fpk that GzsTool unpacked beside it (lbtrophies.gzs_leftover), in the world's
+    trophies folder. <rel_dir>: the folder holding it, relative to the world; <folder>: its path"""
+    import lbtrophies
+    top = rel_dir.replace("/", os.sep).split(os.sep)[0].lower()
+    return top == lbtrophies.FOLDER and lbtrophies.gzs_leftover(folder, name)
+
+
+def files_of(src, prune=None):
+    """(path, path relative to src) of every file under folder src, through long_path; a folder
+    prune(rel dir, its path, name) is True for is left out with all it holds"""
+    top = long_path(src)
+    for dp, dn, fn in os.walk(top):
+        rel_dir = os.path.relpath(dp, top)
+        rel_dir = "" if rel_dir == "." else rel_dir
+        if prune:
+            dn[:] = [d for d in dn if not prune(rel_dir, dp, d)]
+        for f in fn:
+            yield os.path.join(dp, f), os.path.join(rel_dir, f)
+
+
+def install_paths(game, p):
+    """the paths in the game the files of part p would have (Installer: do_world, do_root,
+    do_content, do_module); [] for what is known only once unpacked (a .cpk)"""
+    if p.kind == "world":
+        out = [os.path.join(game.livecpk_dir, p.name, r) for _s, r in files_of(p.src, world_prune)]
+        return out + [os.path.join(game.livecpk_dir, p.name, WORLD_FILE), os.path.join(game.modules_dir, WORLD_FILE)]
+    if p.kind == "root":
+        return [os.path.join(game.livecpk_dir, p.name, r) for _s, r in files_of(p.src)]
+    if p.kind == "content":
+        s = S.BY_KEY.get(p.server) if p.server else None
+        dst = os.path.join(game.content_dir, s.folder_in(game.content_dir) if s else p.name)
+        return [os.path.join(dst, r) for _s, r in files_of(p.src)]
+    if p.kind == "module":
+        return [os.path.join(game.modules_dir, os.path.basename(p.src))]
+    return []
+
+
+def too_long(game, p, limit=GAME_MAX):
+    """B400: (how many, the longest's length, the longest) of the files part p puts in the game
+    whose path would be longer than the game can open; None when every one fits"""
+    over = [q for q in install_paths(game, p) if len(q) > limit]
+    if not over:
+        return None
+    worst = max(over, key=len)
+    return len(over), len(worst), worst
+
+
+def too_long_text(game, n, length):
+    """B400: the warning, translated, for a part with n files too long in the game at `game`"""
+    from .i18n import _
+    folder = getattr(game, "folder", None) or os.path.dirname(os.path.normpath(game.sider_dir))
+    room = max(0, len(os.path.abspath(folder)) - (length - GAME_MAX))
+    return _("The game folder's path is too long for %d file(s) of this mod: in the game they would be up to "
+             "%d characters long, and the game can open a file only up to %d (a Windows limit). Those files "
+             "would be missing in the game. Move the game to a folder with a path of at most %d characters "
+             "(for example C:\\Games\\FL), choose it again (Game ▾), and install this again.") % (
+        n, length, GAME_MAX, room)
 
 
 def server_by_maps(d):
@@ -609,6 +1048,7 @@ def detect(top, label="mod"):
                 any(n.lower().endswith(".bin") for n in os.listdir(os.path.join(d, "common", "etc"))):
             p.warnings.append("it replaces the game's database (common\\etc\\pesdb): leagues, clubs "
                               "and players. It will fight with a League Builder world; keep it below it.")
+            p.replaces_db = True
         parts.append(p)
 
     def visit_content(d, s=None):
@@ -661,6 +1101,16 @@ def records(sider_dir):
         return []
 
 
+def records_seen(sider_dir):
+    """records() for looking only: the same list while the file stays the same (a big world's
+    record is megabytes, and Home read it three times a visit). Never change what it gives"""
+    from . import filecache
+    try:
+        return filecache.json_file(db_path(sider_dir))
+    except (OSError, ValueError):
+        return []
+
+
 def _save(sider_dir, rows):
     p = db_path(sider_dir)
     with open(p + ".tmp", "w", encoding="utf-8") as f:
@@ -684,11 +1134,37 @@ class Installer:
         self.comps = comps
         self.rec = {"name": name, "time": time.strftime("%Y%m%d-%H%M%S"), "created": [], "replaced": [],
                     "ini": [], "map_added": {}, "map_removed": {}, "parts": []}
+        # B487: one per file of rec["created"], in its order: stamp_of, "" for a file not copied
+        # (a mark); written beside installed.json at the end (STAMPS), for keep_yours
+        self.stamps = []
         self.sd = game.sider_dir
         self.merges = []                  # (map, its file in the mod, the game's map file): after the copies
 
     def rel(self, p):
         return os.path.relpath(p, self.sd)
+
+    def created(self, p, stamp=""):
+        self.rec["created"].append(self.rel(p))
+        self.stamps.append(stamp)
+
+    def save_stamps(self):
+        """the stamps into ModStudio\\stamps\\<time>-<name>.json, its name into the record; without
+        them (the disk full) the record is one of before, and keep_yours goes by the files' times"""
+        if not any(self.stamps):
+            return
+        d = os.path.join(home(self.sd), STAMPS)
+        base = "%s-%s" % (self.rec["time"], safe(self.name)[:60])
+        p, n = os.path.join(d, base + ".json"), 2
+        try:
+            os.makedirs(d, exist_ok=True)
+            while os.path.exists(p):
+                p, n = os.path.join(d, "%s-%d.json" % (base, n)), n + 1
+            with open(p + ".tmp", "w", encoding="utf-8") as f:
+                json.dump(self.stamps, f, separators=(",", ":"))
+            os.replace(p + ".tmp", p)
+            self.rec["stamps"] = os.path.basename(p)
+        except OSError as e:
+            self.log("the files' stamps could not be written: %s" % e)
 
     def _count(self, parts):
         """the files the chosen parts bring, for the counter"""
@@ -697,8 +1173,9 @@ class Installer:
             if not p.install:
                 continue
             if os.path.isdir(p.src):
-                for _dp, _dn, fn in os.walk(p.src):
-                    n += len(fn)
+                # a world's files as do_world copies them (B400 leaves GzsTool's folders out: counted
+                # in, the bar of a world zip built before it never reached its end)
+                n += sum(1 for _f in files_of(p.src, world_prune if p.kind == "world" else None))
             else:
                 n += 1
         return n
@@ -709,32 +1186,37 @@ class Installer:
             self.progress(self.n_files, self.total, self.n_bytes)
 
     def copy_file(self, src, dst):
+        # dst stays as it is for the record (paths relative to SiderAddons); the files themselves
+        # are read and written through long_path (B400)
+        s, d = long_path(src), long_path(dst)
         self.n_files += 1
         try:
-            self.n_bytes += os.path.getsize(src)
+            self.n_bytes += os.path.getsize(s)
         except OSError:
             pass
         self._tick()
-        if os.path.exists(dst):
+        if os.path.exists(d):
             # the same file already there: compared in pieces (whole 1 GB files in memory, twice,
             # stalled the PC -- B84)
-            if os.path.getsize(dst) == os.path.getsize(src) and filecmp.cmp(src, dst, shallow=False):
+            if os.path.getsize(d) == os.path.getsize(s) and filecmp.cmp(s, d, shallow=False):
                 return
             b = snapshot(dst, "replaced by %s" % self.name, self.sd)
             self.rec["replaced"].append([self.rel(dst), self.rel(b)])
+            new = False
         else:
-            self.rec["created"].append(self.rel(dst))
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        shutil.copy2(src, dst)
+            self.created(dst)
+            new = True
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+        shutil.copy2(s, d)
+        if new:
+            self.stamps[-1] = stamp_of(s, d)
 
-    def copy_tree(self, src, dst, skip=()):
-        for dp, _dn, fn in os.walk(src):
-            for f in fn:
-                s = os.path.join(dp, f)
-                r = os.path.relpath(s, src)
-                if r.lower() in skip:
-                    continue
-                self.copy_file(s, os.path.join(dst, r))
+    def copy_tree(self, src, dst, skip=(), prune=None):
+        """every file under src to the same place under dst; prune: files_of's"""
+        for s, r in files_of(src, prune):
+            if r.lower() in skip:
+                continue
+            self.copy_file(s, os.path.join(dst, r))
 
     def run(self, parts, root_where="top"):
         self.total = self._count(parts)
@@ -752,12 +1234,19 @@ class Installer:
         for m, src, dst in self.merges:
             self.merge_map(m, src, dst)
         self.merges = []
+        # when the last file went in (keep_yours told the person's changes by it until B487; the
+        # stamps tell them now)
+        self.rec["done"] = time.strftime("%Y%m%d-%H%M%S")
+        self.save_stamps()
         rows = records(self.sd)
         rows.append(self.rec)
         _save(self.sd, rows)
         return self.rec
 
     def do_root(self, p, where):
+        bad = wrong_game(getattr(self.game, "folder", None), p.src, world=p.name)    # a world's tables without its world file
+        if bad:
+            raise WrongGame(bad)
         dst = os.path.join(self.game.livecpk_dir, p.name)
         n = 2
         while os.path.exists(dst) and not os.path.exists(os.path.join(dst, ".modstudio")):
@@ -768,11 +1257,14 @@ class Installer:
         if not os.path.exists(mark):
             with open(mark, "w", encoding="utf-8") as f:
                 f.write(self.name)
-            self.rec["created"].append(self.rel(mark))
+            self.created(mark)
         value = ".\\livecpk\\" + os.path.basename(dst)
         if not any(norm(e.value) == norm(value) for e in self.ini.entries("cpk.root")):
             # the first root listed wins; a mod that replaces the database goes last
-            self.ini.add("cpk.root", value, where="first" if where == "top" and not p.warnings else None)
+            # (review 11.11.: any warning sent it last, so a root with a long path, installed after
+            # "Install anyway?", lost to every other root without a word)
+            self.ini.add("cpk.root", value,
+                         where="first" if where == "top" and not getattr(p, "replaces_db", False) else None)
             self.rec["ini"].append(["cpk.root", value])
 
     def do_world(self, p, where):
@@ -781,7 +1273,10 @@ class Installer:
         dst = os.path.join(self.game.livecpk_dir, p.name)
         if os.path.exists(dst) and not os.path.exists(os.path.join(dst, ".modstudio")):
             raise WorldThere(world_there(p.name))
-        self.copy_tree(p.src, dst)
+        bad = wrong_game(getattr(self.game, "folder", None), p.src, p.world_file, p.name)
+        if bad:
+            raise WrongGame(bad)
+        self.copy_tree(p.src, dst, prune=world_prune)   # B400: a world zip built before the fix
         own = os.path.join(dst, WORLD_FILE)
         if p.world_file and not os.path.exists(own):
             self.copy_file(p.world_file, own)
@@ -789,7 +1284,7 @@ class Installer:
         if not os.path.exists(mark):
             with open(mark, "w", encoding="utf-8") as f:
                 f.write(self.name)
-            self.rec["created"].append(self.rel(mark))
+            self.created(mark)
         value = ".\\livecpk\\" + p.name
         if not self.ini.find("cpk.root", value):
             self.ini.add("cpk.root", value, where="first")
@@ -798,6 +1293,8 @@ class Installer:
         self.copy_file(own, os.path.join(self.game.modules_dir, WORLD_FILE))
         self.rec["world"] = p.name
         self.rec["face_players"] = face_players(own)
+        if getattr(p, "made", None):          # the next zip of this world is told newer or older by it
+            self.rec["made"] = p.made
 
     def do_module(self, p, where):
         dst = os.path.join(self.game.modules_dir, os.path.basename(p.src))
@@ -913,6 +1410,57 @@ class WorldThere(ValueError):
     """do_world: livecpk\\<world> is there and not from Install mods (the text is translated)"""
 
 
+# mato 07.11.2026: an FL 2027 world (the Megapack: 204 leagues, ~103,000 players, 4800 clubs) put
+# into FL26 by mistake would break the game, and an FL26 world in FL 2027 replaces its tables with
+# FL26's. The world file's game line says which game a world is for (worldgame.py; Build writes it,
+# an export too); a world without one is FL 2027's only when its tables hold more than FL26 takes.
+def wrong_game(folder, root, world_file=None, world=None):
+    """the reason, translated, that the world (or database folder) at <root> cannot go into the
+    game at `folder`; None when it may"""
+    import worldgame as WG
+    m = WG.mismatch(root, folder, world_file)
+    if not m:
+        return None
+    from .i18n import _
+    name = world or os.path.basename(os.path.normpath(root))
+    want, _have, teams, players = m
+    if want == "fl27":
+        return _("%s is a world for FL 2027 (%s clubs, %s players). FL26 takes %d clubs and %d players, so it "
+                 "would break this game, and it does not go in. Choose FL 2027's folder (Game ▾) and put it "
+                 "there, or get the FL26 version of the pack.") % (
+            name, "?" if teams is None else teams, "?" if players is None else players,
+            WG.FL26_CAPS[0], WG.FL26_CAPS[1])
+    return _("%s is a world for FL26. FL 2027 has tables of its own, so it does not go in here. Choose FL26's "
+             "folder (Game ▾), get the FL 2027 version of the pack, or open its recipe and Build it with "
+             "FL 2027 as the game.") % name
+
+
+def pack_wrong_game(folder, path, man=None):
+    """mato 07.11.: the warning, translated, that the league package at path was made on the other
+    game than the one at `folder` (its clubs differ, so some may be missing); None when it fits or
+    does not say"""
+    import lbpackage as K
+    import worldgame as WG
+    have = WG.game_of(folder)
+    try:
+        want = K.game_of(path, man)
+    except K.Error:
+        return None
+    if not have or not want or want == have:
+        return None
+    from .i18n import _
+    name = (man or {}).get("name") or os.path.basename(path)
+    if want == "fl27":
+        return _("%s is a league package made for FL 2027. FL26 has clubs of its own, so some of its clubs "
+                 "may be missing here. Ask its author for the FL26 version.") % name
+    return _("%s is a league package made for FL26. FL 2027 has clubs of its own, so some of its clubs "
+             "may be missing here. Ask its author for the FL 2027 version.") % name
+
+
+class WrongGame(WorldThere):
+    """do_world: the world is for the other game (wrong_game; the text is translated)"""
+
+
 def world_in_the_way(game, world):
     """True when installing the ready world `world` would stop at do_world: livecpk\\<world> is
     there, Install mods did not put it there (no .modstudio) and no install record brings it in
@@ -930,27 +1478,242 @@ def ready_world(game, world):
 
 def installed_as(sider_dir, world):
     """the install records that brought `world` in, oldest first"""
-    return sorted((r for r in records(sider_dir)
+    return sorted((r for r in records_seen(sider_dir)
                    if r.get("world") == world or ["world", world] in (r.get("parts") or [])),
                   key=lambda r: r.get("time", ""))
 
 
-def replace_world(game, ini, world, log=lambda t: None):
+def world_made(src):
+    """when the world zip `src` was made, "YYYYmmdd-HHMMSS": export_world writes fl26worldpack.json
+    into it at that moment and the zip keeps that time. None for a folder, a zip without that file
+    or one that cannot be read -- then no version can be told newer or older than another
+    (16.11.: an older zip of a world was called "a newer version of the world you have")"""
+    if not str(src).lower().endswith(".zip") or not os.path.isfile(src):
+        return None
+    try:
+        with zipfile.ZipFile(src) as z:
+            m = next((m for m in z.infolist() if m.filename.replace("\\", "/").rsplit("/", 1)[-1].lower() == WORLD_INFO),
+                     None)
+    except (OSError, zipfile.BadZipFile):
+        return None
+    if m is None or m.date_time[0] < 1990:
+        return None
+    return "%04d%02d%02d-%02d%02d%02d" % m.date_time
+
+
+def world_version(sider_dir, world, made):
+    """how a zip of `world` made at `made` (world_made) stands to the one installed: "newer",
+    "older", "same", or None when that cannot be told (a folder, no zip time, an install made
+    before Mod Studio kept it in the record)"""
+    recs = installed_as(sider_dir, world)
+    have = recs[-1].get("made") if recs else None
+    if not made or not have:
+        return None
+    return "newer" if made > have else "older" if made < have else "same"
+
+
+def update_check(game, world, new_root):
+    """17.11.2026 (idledger.py): can the world unpacked in `new_root` (a zip's world folder, with the
+    id ledger export puts in it) go in over the `world` installed as an Update -- is it a later
+    version of the same world (its lineage; a world of a zip without a ledger: its ids are a version
+    in the new one's chain, else nearly all its clubs and leagues have the same names under the same
+    ids), every id a career of the installed version holds still there, and only players retired?
+    None when the new one has no ledger (a zip of before: Install says what it said before) or
+    nothing of `world` is installed. Else idledger.update_verdict's {"ok", "why", "from", "to",
+    "gone", "retired" {kind: n}, "reasons", "retired_names", "changed", "first", "match", "renamed"}.
+    review 18.11.2026: a ledger that is JSON but not whole stopped Install with an AttributeError --
+    anything that goes wrong here is a line in the log and None (Install as before the ledger)"""
+    import idledger
+    try:
+        new_led = idledger.load(os.path.join(new_root, idledger.LEDGER), world)
+        if new_led is None:
+            return None
+        root = os.path.join(game.livecpk_dir, world)
+        if not os.path.isdir(root):
+            return None
+        old, old_led = idledger.installed_ids(root)
+        v = idledger.update_verdict(old, old_led, new_led)
+        if v.get("ok"):
+            # 18.11.2026 evening (rowkeep.py): the ids are kept -- and every competition row the careers of
+            # the version installed play on is where it was, with the same clubs in its places
+            rk = rows_verdict(root, new_root)
+            if rk is not None:
+                v["rows"] = rk
+                if not rk["ok"]:
+                    v = dict(v, ok=False, why="rows")
+        return v
+    except Exception as e:                # noqa: BLE001 -- Install goes on without the Update
+        try:
+            sys.stderr.write("update_check %s: the zip's id ledger was not checked (%s: %s): Install goes on "
+                             "as for a zip without one\n" % (world, type(e).__name__, e))
+        except Exception:                 # noqa: BLE001 -- no console (the exe)
+            pass
+        return None
+
+
+def rows_verdict(root, new_root):
+    """rowkeep.summary of the world unpacked in `new_root` against the one installed in `root`: is every
+    row of the installed one's Competition, CompetitionRegulation and CompetitionEntry tables where it
+    was, with the same club in each place (ok)? None when either has no tables to read"""
+    import rowkeep
+    try:
+        old = rowkeep.tables_dir(rowkeep.world_db(root), rowkeep.TABLES + (rowkeep.TEAM,))
+        new = rowkeep.tables_dir(rowkeep.world_db(new_root))
+    except rowkeep.RowsError:
+        return None
+    rep = rowkeep.check(rowkeep.rows_of_tables(old), new[rowkeep.TABLES[0]], new[rowkeep.TABLES[1]],
+                        new[rowkeep.TABLES[2]], rowkeep.team_ids(old[rowkeep.TEAM]))
+    return rowkeep.summary(rep)
+
+
+# files of a world Mod Studio writes itself after the install: never "changed by you".
+# kitmaker-index.json: lbservers' cache of the world's kitmaker.txt stamps (lbservers.INDEX, written
+# by every Switch on and Build that makes kits; 16.11.: it was kept as "changed by you")
+NOT_YOURS = {".modstudio", "fl26world.txt", "fl26playerids.json", "leaguebuilder-files.txt", "map.txt",
+             "fl26stadiums.json", "fl26gamestadiums.json", "map_competitions.txt",
+             "kitmaker-index.json", "fl26ids-ledger.json"} | {os.path.basename(f) for f in LOCAL_PATH_FILES}
+KEPT = "kept"                             # ModStudio\kept\<world>-<time>: keep_yours
+
+
+def _rec_time(text):
+    try:
+        return time.mktime(time.strptime(str(text), "%Y%m%d-%H%M%S"))
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+RUN_GAP = 300      # s: the longest an unpack takes between two files it writes (unpack_run)
+
+
+def unpack_run(times, start=None):
+    """(first, last) modified time of the files one unpack wrote, from the modified times of the
+    files an install record of before 16.11. brought in (B487): Install copies a file with the
+    time it has (CopyFile2), and a zip's files got theirs as they came out of it, one after the
+    other, minutes before `start` (the record's "time": when the copies began). The longest run of
+    times with no gap over RUN_GAP, of the times not after start; a file of the player's copied
+    over one of them keeps ITS time, and falls outside. None when there are no times"""
+    ts = sorted(t for t in times if start is None or t <= start + 5)
+    best, first = None, 0
+    for i in range(1, len(ts) + 1):
+        if i == len(ts) or ts[i] - ts[i - 1] > RUN_GAP:
+            if best is None or i - first >= best[0]:        # the later of two as long
+                best = (i - first, ts[first], ts[i - 1])
+            first = i
+    return best and best[1:]
+
+
+def _crc_of(p):
+    crc = 0
+    with open(p, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            crc = zlib.crc32(b, crc)
+    return crc
+
+
+def changed_since(path, st, stamp, start, run):
+    """True when the file an install put at `path` (os.stat `st`) is not what it put there.
+    With the record's stamp (stamp_of, installs of 16.11. on): its size is another, or its time is
+    and so are its bytes (the crc32; without one, kept). Without (an older record): its time is
+    later than the start of that install, or is not one the unpack gave its files (unpack_run) --
+    what cannot be told is kept: a copy too many is harmless, a file of the player's deleted is not"""
+    if stamp is not None:
+        size, mt, crc = stamp
+        if st.st_size != size:
+            return True
+        if st.st_mtime_ns == mt:
+            return False
+        if crc is None:
+            return True
+        try:
+            return _crc_of(path) != crc
+        except OSError:
+            return True
+    t = st.st_mtime
+    if start is not None and t > start + 5:
+        return True
+    return run is None or not run[0] <= t <= run[1]
+
+
+def keep_yours(game, world, olds, log=lambda t: None):
+    """before an older install of a ready world is taken out: what the PERSON put into it is not
+    deleted with it (pop1806, 14.11.2026: "installing beta 2 over beta 1 deleted what I had set
+    up"). Kept, under ModStudio\\kept\\<world>-<time>, in the same folders as they had:
+      - every file of livecpk\\<world> that no install record brought in (added by hand): moved;
+      - every file the install brought in that is not what it put there (changed_since): copied.
+        B487 (pop1806 16.11., "it deleted my faces"): that was told by its time only, later than
+        the end of the install; a face copied over one of the world's keeps the time it had, older,
+        and went without a copy -- and with a record of beta 3 or older (no "done") every changed
+        file did.
+    The new version goes in clean, as before -- an old file left in a world is a file the game
+    reads. Returns (the folder or None, files added, files changed). Without a record (the world
+    is only marked) nothing can be told apart, and nothing is kept."""
+    sd = game.sider_dir
+    if not olds:
+        return None, 0, 0
+    dest = os.path.join(home(sd), KEPT, "%s-%s" % (world, time.strftime("%Y%m%d-%H%M%S")))
+    key = lambda rel: os.path.normcase(os.path.normpath(rel))
+    owned, added, changed = set(), 0, 0
+
+    def keep(rel, move):
+        src, dst = long_path(os.path.join(sd, rel)), long_path(os.path.join(dest, rel))
+        try:
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            (shutil.move if move else shutil.copy2)(src, dst)
+            return 1
+        except OSError as e:
+            log("could not keep %s: %s" % (rel, e))
+            return 0
+    for rec in olds:
+        owned |= {key(r) for r in rec.get("created") or []} | {key(r[0]) for r in rec.get("replaced") or []}
+        stamps = stamps_of(sd, rec)
+        start = _rec_time(rec.get("time"))
+        there = []
+        for rel in rec.get("created") or []:
+            p = long_path(os.path.join(sd, rel))
+            try:
+                there.append((rel, p, os.stat(p), stamps.get(rel)))
+            except OSError:
+                continue
+        run = unpack_run([st.st_mtime for _r, _p, st, s in there if s is None], start)
+        for rel, p, st, s in there:
+            if os.path.basename(rel).lower() not in NOT_YOURS and changed_since(p, st, s, start, run):
+                changed += keep(rel, False)
+    d = os.path.join(game.livecpk_dir, world)
+    for root, _dirs, files in os.walk(long_path(d)) if os.path.isdir(d) else ():
+        for f in files:
+            full = os.path.join(root, f)
+            if full.startswith("\\\\?\\"):
+                full = full[4:]
+            rel = os.path.relpath(full, sd)
+            if key(rel) not in owned and f.lower() not in NOT_YOURS:
+                added += keep(rel, True)
+    if not (added or changed):
+        return None, 0, 0
+    log("%s: %d file(s) you added and %d you changed are kept in %s" % (world, added, changed, dest))
+    return dest, added, changed
+
+
+def replace_world(game, ini, world, log=lambda t: None, kept=None):
     """take out an older install of the same ready world before a new one goes in: every record
     that brought it in is removed as Remove the mod does (newest first), and what is left of
     livecpk\\<world> goes too -- copying a new version over the old one kept the old one's
     files (a club the new version no longer has kept its kit folder, a stale id file stayed).
+    What the person added to the world or changed in it is kept first (keep_yours; `kept`, a
+    list, gets (world, folder, added, changed) when there was any).
     Only a world Install mods put there is touched; returns notes as uninstall does"""
     olds = installed_as(game.sider_dir, world)
     d = os.path.join(game.livecpk_dir, world)
     marked = os.path.exists(os.path.join(d, ".modstudio"))
     notes = []
     keep_edited(game, [world], log)
+    where, added, changed = keep_yours(game, world, olds, log)
+    if where and kept is not None:
+        kept.append((world, where, added, changed))
     for rec in reversed(olds):
         log("removing the older %s (%s)" % (world, rec.get("name")))
         notes += uninstall(game, ini, rec, log=log, kept=True)
     if (olds or marked) and os.path.isdir(d):
-        shutil.rmtree(d)
+        shutil.rmtree(long_path(d))
         log("livecpk\\%s: what was left of the older one deleted" % world)
     return notes
 
@@ -1015,7 +1778,7 @@ def uninstall(game, ini, rec, log=lambda t: None, kept=False):
                 log("sider.ini: %s = %s removed" % (key, value))
                 break
     for rel in rec.get("created", []):
-        p = os.path.join(sd, rel)
+        p = long_path(os.path.join(sd, rel))          # a deep file of a world (B400)
         try:
             os.remove(p)
         except OSError:
@@ -1023,7 +1786,7 @@ def uninstall(game, ini, rec, log=lambda t: None, kept=False):
                 notes.append("could not delete %s" % rel)
     for rel, copy in rec.get("replaced", []):
         try:
-            shutil.copy2(os.path.join(sd, copy), os.path.join(sd, rel))
+            shutil.copy2(long_path(os.path.join(sd, copy)), long_path(os.path.join(sd, rel)))
         except OSError:
             notes.append("could not put back %s" % rel)
     # empty folders the mod made
@@ -1031,10 +1794,16 @@ def uninstall(game, ini, rec, log=lambda t: None, kept=False):
         d = os.path.join(sd, rel)
         while d.startswith(sd) and len(d) > len(sd):
             try:
-                os.rmdir(d)
+                os.rmdir(long_path(d))
             except OSError:
                 break
             d = os.path.dirname(d)
     rows = [r for r in records(sd) if not (r["name"] == rec["name"] and r["time"] == rec["time"])]
     _save(sd, rows)
+    st = stamps_path(sd, rec)                         # B487: its stamps go with it
+    if st and not any(r.get("stamps") == rec.get("stamps") for r in rows):
+        try:
+            os.remove(st)
+        except OSError:
+            pass
     return notes

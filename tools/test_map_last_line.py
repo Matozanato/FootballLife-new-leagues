@@ -8,6 +8,10 @@ Checked without the game: a new or changed line switches the club's other lines 
 that keeps one line per club (and not on one that keeps them all), the warning marks the earlier
 line as unused, Import kits replaces the line in effect, and a world zip carries the kit of the
 line in effect (installer.borrowed_kits).
+
+B321 (Tysonche35 04.11.): Import kits over the line a Build wrote for a made kit kept the line's
+"FL26 Mod Studio:" comment, and the next Build took that line out as its own. Now the imported
+line is the user's: the Build after it keeps it and makes no kit for the club.
 """
 import json, os, sys, tempfile
 
@@ -16,7 +20,8 @@ sys.path.insert(0, HERE)
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from modstudio import servers as S, installer
 from modstudio.mapfile import MapFile, Row
-from modstudio.pages import content as C
+from modstudio.pages import content as C, kits as K
+import lbservers
 
 N = 0
 
@@ -89,6 +94,25 @@ def main():
         f.write('319, "Modpack\\Game leagues\\Arezzo"\n319, "Serie C\\Arezzo"\n# 328, "X"\n')
     got = installer.borrowed_kits(path, "_FL26M2400E", [319, 328], [])
     ok("borrowed_kits: the last line of 319, nothing for the switched-off 328", got == [(319, "Serie C\\Arezzo")])
+
+    # B321: Import kits over a line a Build wrote
+    lib = os.path.join(tmp, "kit-server")
+    os.makedirs(os.path.join(lib, "Serbian Second League", "FK Dinamo Vranje"))
+    path = os.path.join(lib, "map.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write('72774, "_FL26Mine\\Serbian Second League\\13"   # FL26 Mod Studio: Serbian Second League/13 made\n')
+    t = Tab(kits, path)
+    K.take_line(t.mf.rows()[0], "Serbian Second League\\FK Dinamo Vranje")
+    t.mf.save()
+    line = open(path, encoding="utf-8").read().strip()
+    ok("the imported line has the new folder and no comment of ours (%s)" % line,
+       "FK Dinamo Vranje" in line and lbservers.TAG not in line)
+    ok("the next Build counts it as the user's kit", 72774 in lbservers._yours(tmp, "kit-server"))
+    lbservers._map(path, [(1, '1, "x"   %s test' % lbservers.TAG)], lambda *a: None, "kits")
+    ok("and keeps the line", line in open(path, encoding="utf-8").read())
+    r = Row(["5", "a"], comment="Arezzo")
+    K.take_line(r, "b")
+    ok("a comment of the user's own stays", r.comment == "Arezzo" and r.fields[1] == "b")
 
     # the text in every language
     for lang in ("es", "fr", "hr", "pt"):

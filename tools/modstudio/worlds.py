@@ -27,6 +27,7 @@ touched by delete: the world can be built again from it.
 
 Nothing here knows Qt; pages/roots.py asks and pages/restore.py puts back.
 """
+import bigjson
 import codecs, json, os, re, shutil, time
 
 from . import backups, installer as I
@@ -297,29 +298,30 @@ def backups_of(sider_dir):
     return sorted(out, key=lambda x: x[1].get("time", ""), reverse=True)
 
 
-def long_path(p):
-    r"""B189 (SladeBR 21.10.): p as a Windows path past MAX_PATH. A world backup goes under
-    SiderAddons\ModStudio\backups\worlds\<world>\<time> edited\files\..., and with the game in
-    Program Files a scoreboard of a pack there is 275 characters: Windows stops at 260 unless long
-    paths are on, and Make it editable said it could not find the path. \\?\ lifts the limit"""
-    if os.name != "nt":
-        return p
-    p = os.path.abspath(p)
-    if p.startswith('\\\\?\\'):
-        return p
-    if p.startswith('\\\\'):
-        return '\\\\?\\UNC\\' + p[2:]
-    return '\\\\?\\' + p
+long_path = backups.long_path          # B189; in backups.py since B400 (Install mods uses it too)
 
 
 def size_of(folder):
+    """the bytes of the files under folder. The sizes come with the folder listings (os.scandir):
+    asking for each file again (os.walk + getsize) took a world backup of 40,000 files several
+    seconds, with Python's lock taken from the window all the while (the UI tour, 11.11.)"""
     n = 0
-    for dp, _dn, fn in os.walk(long_path(folder)):
-        for f in fn:
-            try:
-                n += os.path.getsize(os.path.join(dp, f))
-            except OSError:
-                pass
+    todo = [long_path(folder)]
+    while todo:
+        try:
+            with os.scandir(todo.pop()) as it:
+                for e in it:
+                    try:
+                        if e.is_dir(follow_symlinks=False) and not e.is_junction():
+                            todo.append(e.path)
+                        elif e.is_symlink():
+                            n += os.path.getsize(e.path)      # the file it points at, as before
+                        else:
+                            n += e.stat(follow_symlinks=False).st_size
+                    except OSError:
+                        pass
+        except OSError:
+            pass
     return n
 
 
@@ -360,6 +362,14 @@ def edited_world(game, world):
     return bool(world) and os.path.exists(os.path.join(game.livecpk_dir, world, EDITED))
 
 
+ROOM_SPARE = 200 << 20                 # left free on the disk after a world's copy
+TELL_EVERY = 64 << 20                  # the megabytes copied are told this often
+
+
+def _mb(n):
+    return "%.1f GB" % (n / (1 << 30)) if n >= 1 << 30 else "%d MB" % (n >> 20)
+
+
 def backup(game, world, kind="edited", log=lambda t: None):
     """a copy of all of `world` into a world backup, the world staying where it is: its folder, its
     folders in the content servers' libraries, and the map files, sider.ini and modules\\fl26world.txt
@@ -370,16 +380,44 @@ def backup(game, world, kind="edited", log=lambda t: None):
     sd = game.sider_dir
     if not is_world(world) or not os.path.isdir(os.path.join(game.livecpk_dir, world)):
         raise WorldError("There is no world %s in %s." % (world, game.livecpk_dir))
+    rels = [os.path.join("livecpk", world)]
+    rels += [os.path.join("content", lib, world) for lib in _libs(game)
+             if os.path.isdir(os.path.join(game.content_dir, lib, world))]
+    # B431 (Void, 12.11.): "Working" for hours with nothing to tell a copy of 10 GB from a window
+    # that stands still, and no word when the disk has no room for it. The room is asked for
+    # first, and the megabytes copied are told as they go
+    total = sum(size_of(os.path.join(sd, rel)) for rel in rels)
+    at = worlds_home(sd)
+    while at and not os.path.isdir(at) and os.path.dirname(at) != at:
+        at = os.path.dirname(at)
+    try:
+        free = shutil.disk_usage(at).free
+    except OSError:
+        free = None
+    if free is not None and free < total + ROOM_SPARE:
+        from .i18n import _
+        raise WorldError(_("Not enough room for the copy of %s: it takes %s, and the disk of %s has %s free.")
+                         % (world, _mb(total), os.path.splitdrive(os.path.abspath(at))[0] or at, _mb(free)))
+    done = [0, 0]
+
+    def copy(src, dst):
+        shutil.copy2(src, dst)
+        try:
+            done[0] += os.path.getsize(dst)
+        except OSError:
+            pass
+        if done[0] - done[1] >= TELL_EVERY:
+            done[1] = done[0]
+            from .i18n import _          # Z1 D17 (20.11.2026): the bar stayed English in every language
+            log(_("copying %s: %s of %s") % (world, _mb(done[0]), _mb(total)))
     folder = _new_backup(sd, world, kind)
     info = {"kind": kind, "world": world, "time": time.strftime("%Y%m%d-%H%M%S"), "t": time.time(),
             "copied": [], "texts": []}
     _save_info(folder, info)
     try:
-        rels = [os.path.join("livecpk", world)]
-        rels += [os.path.join("content", lib, world) for lib in _libs(game)
-                 if os.path.isdir(os.path.join(game.content_dir, lib, world))]
         for rel in rels:
-            shutil.copytree(long_path(os.path.join(sd, rel)), long_path(os.path.join(folder, "files", rel)))
+            shutil.copytree(long_path(os.path.join(sd, rel)), long_path(os.path.join(folder, "files", rel)),
+                            copy_function=copy)
             info["copied"].append(rel)
             _save_info(folder, info)
             log("copied into the backup: %s" % rel)
@@ -406,13 +444,43 @@ def make_editable(game, world, log=lambda t: None):
     if not I.ready_world(game, world):
         raise WorldError("%s is not a ready world from a zip." % world)
     with open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-        plan = json.load(f)
+        plan = bigjson.load(f)
     folder = backup(game, world, "edited", log)
     import lbservers
     lbservers.restamp(plan, game.sider_dir, root, log)
+    # B480: the plan freed by a thread of its own, in small steps: freed here, as this returned,
+    # it kept Python's lock 3.1 s and the window stood still (the exe test of beta4o, GigaPack)
+    from . import letgo
+    letgo.drop(plan)
+    del plan
     os.replace(os.path.join(root, ".modstudio"), os.path.join(root, EDITED))
+    keep_ledger(root, world, log)
     log("%s: made editable (the backup: %s)" % (world, folder))
     return folder
+
+
+def keep_ledger(root, world, log=lambda t: None):
+    """17.11.2026 (idledger.py): the id ledger the world's zip brought goes into this PC's history of
+    the world's versions (idledger.store_save, under its lineage and number): the next Build of the
+    world keeps its ids and an export of it says whether careers of that version go on in it. A
+    ledger that cannot be read or kept is said in the log; making the world editable goes on"""
+    import idledger
+    try:
+        led = idledger.load(os.path.join(root, idledger.LEDGER), world)
+    except idledger.LedgerError as e:
+        log("%s: its id ledger is not kept: %s" % (world, e))
+        return False
+    if led is None:
+        return False
+    if os.path.isfile(idledger.store_file(led)):
+        return False
+    try:
+        path = idledger.store_save(led)
+    except (OSError, idledger.LedgerError) as e:     # a test zip's ledger is never kept (store_save)
+        log("%s: its id ledger is not kept: %s" % (world, e))
+        return False
+    log("%s: the ids of %s are kept for the next Build (%s)" % (world, led.get("version"), path))
+    return True
 
 
 def _put_copy_back(game, folder, info, log):
@@ -910,7 +978,7 @@ def rename_recipe_copy(copies_dir, old, new):
         os.remove(a)
         return b
     with open(a, encoding="utf-8") as f:
-        r = json.load(f)
+        r = bigjson.load(f)
     if r.get("world") == old:
         r["world"] = new
     with open(b + ".tmp", "w", encoding="utf-8") as f:

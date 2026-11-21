@@ -20,10 +20,13 @@ def ok(name, cond):
 
 def main(base):
     good = B.formations(base)[0]["label"]
-    ok("'161' is not a formation of these tables", B.formation_club(base, "161") is None)
+    # the pack's '161'; a number is a club whose tactics give the formation, and FL26 2.2 and
+    # FL 2027 have tactics for club 161 -- then a number of a club these tables do not have
+    bad = next(x for x in ("161", "99161", "999161") if B.formation_club(base, x) is None)
+    ok("'%s' is not a formation of these tables" % bad, B.formation_club(base, bad) is None)
     recipe = {"world": "_FL26B105",
-              "leagues": [{"name": "Liga 2", "country": "Albania", "clubs": 10, "legs": 2, "formation": "161",
-                           "club_formations": ["", "161", good]},
+              "leagues": [{"name": "Liga 2", "country": "Albania", "clubs": 10, "legs": 2, "formation": bad,
+                           "club_formations": ["", bad, good]},
                           {"name": "Liga Bona", "country": "Andorra", "clubs": 10, "legs": 2, "formation": good}]}
     pl = B.plan(recipe, base)
     a, b = pl["leagues"]
@@ -31,10 +34,10 @@ def main(base):
     ok("the unknown league formation goes", a["formation"] == "")
     ok("the unknown club formation goes, the known one stays", a["club_formations"] == ["", "", good])
     ok("another league's formation stays", b["formation"] == good)
-    notes = [t for t in pl["skipped"] if "161" in t]
+    notes = [t for t in pl["skipped"] if bad in t]
     ok("the notes name the league and the formation (%d)" % len(notes),
        len(notes) == 2 and all(t.startswith("Liga 2:") for t in notes))
-    ok("the plan's description shows them", "no formation '161'" in B.describe(pl))
+    ok("the plan's description shows them", "no formation '%s'" % bad in B.describe(pl))
     print("test_unknown_formation: ok (%d)" % N)
 
 

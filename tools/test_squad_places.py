@@ -35,6 +35,8 @@ def main():
     ok("never below 22", B.squad_size(27927, 5000) == B.SQUAD_FIT == 22)
     src = open(os.path.join(HERE, "leaguebuilder.py"), encoding="utf-8").read()
     sites = re.findall(r"(?m)^( +)import lbplayers\n(.*)\n", src)
+    # use_game's import only sets the FL27 rating switch (lbplayers.EXACT), no squad is made there
+    sites = [s for s in sites if not s[1].strip().startswith("lbplayers.EXACT = ")]
     ok("every Build step hands its squad size on (run3's 30 for the Modpack too)",
        sites and all(nxt.strip().startswith(("lbplayers.SQUAD = SQUAD", "SQUAD = lbplayers.SQUAD = squad_of("))
                      for _i, nxt in sites))      # the second: use_squad, the world's 30-35 (0.2.5)

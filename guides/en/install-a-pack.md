@@ -6,7 +6,7 @@
 
 | You have | What to click |
 |---|---|
-| a `.zip` world (Modpack, Europack, a friend's world) | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → **Install the world**. There is no Build: it is in the game when it says **Ready to play**. Then start a NEW Master League. [Way A](#way-a-a-ready-world-one-zip) |
+| a `.zip` world (Modpack, Europack, a friend's world) | **2. My world** → **+ Add...** → **Choose a file...** → **Install the world**. There is no Build: it is in the game when it says **Ready to play**. Then start a NEW Master League. [Way A](#way-a-a-ready-world-one-zip) |
 | a `.fl26pack` league package | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → tab **Build** → **Build and install**. Then start a NEW Master League. [Way C](#way-c-a-league-package-fl26pack) |
 | nothing, I want to pick leagues myself | [Make your own leagues and packs](make-your-own-leagues.md) |
 
@@ -109,26 +109,31 @@ step by step**.
 **A2.** Click **2. My world**, then **+ Add...** (on the right, next to the tabs).
 
 **A3.** Click **Choose a file...** and pick the zip. (Or drag the zip onto that window.)
-A green line starts with `Found: a world zip`. Click **Add**: the page **Import your world**
-opens with the zip.
+A green line starts with `Found: a world zip`. Click **Install the world**: the page **Import your
+world** opens with the zip, looks inside it (a big Modpack takes a minute or two) and installs it
+with all its parts at once. You click nothing on that page: go on with the questions in **A5**.
 
 (Two other ways to the same page: **1. Home → Import a world zip**, or **2. My world → More ▾ →
-Import a world zip**, then pick the zip.)
+Import a world zip**, then pick the zip. These two do not install at once: you see **A4** first and
+click **Install the world** yourself. Take one of them to install a world without its kits.)
 
-**A4. You should see:** one line saying what it is, for example `a ready world to play
+**A4. You should see** (only on the two other ways): one line saying what it is, for example `a ready world to play
 (_FL26Modpack)`, or `a newer version of the world _FL26Modpack you have` when you have an older
-one, and under it how many leagues are inside. The parts (the world, kits, scoreboards ...) are
+one (`an older version ... than the one you have` or `the same version` when it is not newer, `another
+version` when Mod Studio cannot tell: a folder, or a world installed with an older Mod Studio), and under it how many leagues are inside. The parts (the world, kits, scoreboards ...) are
 under **More options: which parts, name, order of the content folders, map lines**, all ticked.
 Leave them so. (To install it without the kits, untick the kits there.)
 
-**A5.** Click **Install the world**. If an older version of the same world is installed (an
-earlier Modpack), it asks to replace it: say **Yes**. The older one is taken out first, so
+**A5.** On the two other ways, click **Install the world** (from **+ Add...** it starts by itself).
+If a version of the same world is installed (an
+earlier Modpack), it asks to replace it: say **Yes**. The one you had is taken out first, so
 nothing of it stays behind; your saves are not touched. Wait until it says it is done. Mod Studio
 installs its modules (the ones of this version), copies the world, puts its world file where the
 modules read it, and puts the world in the game.
 
 **You should see:** `✓ Ready to play: press Start the game and start a new Master League`, and a window **Ready to play** with a list of ticks (the world, the
-modules, the face pack ...). If it says **Almost ready** instead, it lists what to fix.
+modules, the face pack ...). If it says **Almost ready** instead, it lists what to fix. If you had
+added files to the world you had, or changed some, both also say the folder they are kept in.
 
 In **2. My world** the world now has a green card that says **● IN THE GAME NOW**, with the tag
 **From zip**.

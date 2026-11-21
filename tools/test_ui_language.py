@@ -152,7 +152,7 @@ def texts_of(root):
     """(kind, text) of what is visible in root now"""
     from PySide6.QtWidgets import (QAbstractButton, QComboBox, QGroupBox, QLabel, QTabBar, QTableWidget,
                                    QTreeWidget, QAbstractItemView, QHeaderView)
-    from PySide6.QtCore import Qt
+    from PySide6.QtCore import QAbstractListModel, Qt
     from modstudio.ui import Stat
     out = []
     for w in root.findChildren(QLabel):
@@ -177,7 +177,7 @@ def texts_of(root):
         if not w.isVisible() or w.model() is None:
             continue
         m = w.model()
-        for orient, n, hv in ((Qt.Horizontal, m.columnCount(), getattr(w, "horizontalHeader", None)),
+        for orient, n, hv in ((Qt.Horizontal, 1 if isinstance(m, QAbstractListModel) else m.columnCount(), getattr(w, "horizontalHeader", None)),
                               (Qt.Vertical, m.rowCount(), getattr(w, "verticalHeader", None))):
             if orient == Qt.Vertical and not isinstance(w, QTableWidget):
                 continue
@@ -298,6 +298,22 @@ def run():
     sv, mv = w.stats["sider"], w.stats["modules"]
     ok("the state boxes show Sider's version and the modules: %r, %r" % (sv.text(), mv.text()),
        "7.3.3" in sv.text() and re.search(r"35\s*/\s*36", mv.text()))
+    # a module missing while a job runs: the header waits for the job (a world zip between its
+    # install and its switch showed NOT READY, 2 missing, in red for a minute, 11.11.) and looks
+    # again when the job is over
+    all_well = checks.modules_state
+    checks.modules_state = lambda g: {"missing": ["fl26regions.lua"], "changed": [], "off": [], "left_off": [], "total": 36}
+    w.busy(True, "a job")
+    w.update_header()
+    ok("a job runs and a module is missing: the header waits (%r, %r)" % (w.h_ready.text(), mv.text()),
+       w.h_ready.property("state") != "err" and mv.text() == "…")
+    w.busy(False)
+    settle(qa, 0.1)
+    ok("the job is over: the header says what is missing (%r, %r)" % (w.h_ready.text(), mv.text()),
+       w.h_ready.property("state") == "err" and "1" in mv.text())
+    checks.modules_state = all_well
+    w.update_header()
+    settle(qa, 0.1)
     for s in (sv, mv):
         need = s.val.fontMetrics().horizontalAdvance(s.text())
         ok("%r fits its box at 1360 x 820 (%d of %d px)" % (s.text(), need, s.val.width()), need <= s.val.width())
@@ -324,6 +340,16 @@ def run():
     ok("that part is unticked and Install is off", it.checkState(0) == Qt.Unchecked and not page.go.isEnabled())
     for kind, text in texts_of(w):
         judge.look("Install (world in the way)", kind, text)
+    # B379 (09.11.): a zip whose world is for the other game, with content folders beside it: the
+    # world stays out, so the rest of it is no use either -- Install off, not "installed"
+    wg = I.Part("world", os.path.join(T, "zip", "_FL26Other"), "_FL26Other")
+    wg.blocked = wg.wrong_game = True
+    wg.install = False
+    wg.warnings.insert(0, "_FL26Other is a world for FL26.")
+    extra = I.Part("root", os.path.join(T, "zip", "content"), "content")
+    page.looked([wg, extra])
+    settle(qa, 0.1)
+    ok("B379: a world of the other game with content beside it: Install is off", not page.go.isEnabled())
     # every menu's actions: the top bar's, the bar's sections, the pages'
     for m in w.findChildren(QMenu):
         for a in m.actions():

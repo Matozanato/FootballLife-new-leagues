@@ -71,7 +71,7 @@ def main():
         for v in ("p1", "g1"):
             os.makedirs(os.path.join(lend, v))
             open(os.path.join(lend, v, "config.txt"), "w").write(
-                "Collar=7   ; 1 to 130\nKitFile=u0101%s\nKitFile_srm=u0101%s_srm\nBackNumbersFile=u0101%s_back\n"
+                "Collar=7   ; 1 to 130\nTightKit=1   ; 0=Off, 1=On\nKitFile=u0101%s\nKitFile_srm=u0101%s_srm\nBackNumbersFile=u0101%s_back\n"
                 "ChestNumbersFile=\nLegNumbersFile=u0101%s_leg\nNameFontFile=u0101%s_name\n"
                 "ShirtColor1=#000000\n" % ((v,) * 5))
             for s in K.NUMBER_FILES:
@@ -94,6 +94,8 @@ def main():
         ok("config: the donor's values kept, texture names and colour ours, no _srm line",
            "Collar=7   ; 1 to 130" in cfg and "KitFile=u72001p1\n" in cfg and "_srm" not in cfg
            and "BackNumbersFile=u72001p1_back" in cfg and "ShirtColor1=#c81414" in cfg)
+        ok("config: a tight donor kit still gives a shirt worn out (TightKit=0, the walkout tuck)",
+           "TightKit=0   ; 0=Off, 1=On" in cfg and "TightKit=1" not in cfg)
 
         # B214: numbers that stand out from the shirt. Three library kits with real number
         # textures: dark blue (the first by name, as Aarhus), grey, white
@@ -141,9 +143,20 @@ def main():
         bare = os.path.join(t, "out", "Bare")
         K.make_kit({"p1": pics["p1"]}, 72002, bare)
         cfg = open(os.path.join(bare, "p1", "config.txt")).read()
-        ok("make_kit without a donor: default config, no number files named",
-           "KitFile=u72002p1" in cfg and "BackNumbersFile=\n" in cfg
-           and sorted(os.listdir(os.path.join(bare, "p1"))) == ["config.txt", "u72002p1.ftex"])
+        # Reddit 13.11.: a kit drawn with no kit to lend numbers had none; it gets Mod Studio's own
+        import kitnumbers
+        ok("make_kit without a donor: our own numbers and name font, named in the config",
+           "KitFile=u72002p1" in cfg and "BackNumbersFile=u72002p1_back" in cfg and "NameFontFile=u72002p1_name" in cfg
+           and "LegNumbersFile=u72002p1_leg" in cfg and "NameY=12" in cfg and "BackNumberSize=25" in cfg
+           and sorted(os.listdir(os.path.join(bare, "p1"))) == ["config.txt", "u72002p1.ftex", "u72002p1_back.ftex",
+                                                                 "u72002p1_leg.ftex", "u72002p1_name.ftex"])
+        back = K.ftex_image(os.path.join(bare, "p1", "u72002p1_back.ftex"))
+        name = K.ftex_image(os.path.join(bare, "p1", "u72002p1_name.ftex"))
+        ok("its numbers are 2048 x 256, the name font 2048 x 512, ten digits and the letters to Z",
+           back.size == (2048, 256) and name.size == (2048, 512) and back.split()[3].getbbox()[0] < 60
+           and back.split()[3].getbbox()[2] > 1850 and name.split()[3].getbbox()[3] > 460)
+        ok("white on a dark shirt, dark on a light one",
+           kitnumbers.ink("#101060") == kitnumbers.LIGHT and kitnumbers.ink("#f4f4f4") == kitnumbers.DARK)
 
         # kits.py: place() makes a picture folder into a kit; is_kit_folder() finds it
         try:

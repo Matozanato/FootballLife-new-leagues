@@ -1,7 +1,7 @@
 """python test_checkratings.py -- checkratings.py, the hard check of a built world's player ratings
 (step 2 before a world zip goes out; B64: NewLife 1.5b5 and the Europe Modpack eu1 shipped Ryan
 Sessegnon at ~100 instead of ~75). Small made-up worlds in a temporary folder, no game needed:
-the overall on Sessegnon's real abilities (r10 and eu1), a clean world passes, a new club's 95
+the overall (the game's formula) on Sessegnon's real abilities (r10 and eu1), a clean world passes, a new club's 95
 fails rule A, the same player on the stars list passes, a rewritten game player (the plan's
 edits, where B64 was) and an added player are held to it, a game player left as shipped is not,
 and against an older world a rise of more than 8 fails rule B -- an id now naming someone else,
@@ -97,8 +97,10 @@ def main():
         # the overall, on Sessegnon's real abilities
         r10 = C.overall(int.from_bytes(record(114021, "Ryan Sessegnon", "LB", 0, SESS_R10), "little"))
         eu1 = C.overall(int.from_bytes(record(114021, "Ryan Sessegnon", "LB", 0, SESS_EU1), "little"))
-        ok("Sessegnon in r10 is about 75 (%d)" % r10, 73 <= r10 <= 78)
-        ok("Sessegnon in eu1 is 95 or more (%d)" % eu1, eu1 >= 95)
+        # the game's formula (lbrating): 79 and 98 with Weak Foot Accuracy at its least; testers
+        # saw about 75 and about 100
+        ok("Sessegnon in r10 is the game's 79 (%d)" % r10, r10 == 79)
+        ok("Sessegnon in eu1 is the game's 98 (%d)" % eu1, eu1 == 98)
         ok("an ordinary player is far below 90",
            C.overall(int.from_bytes(record(1, "A", "CMF", 70), "little")) < 75)
 
@@ -184,8 +186,8 @@ def main():
                                          (200021, "Moved Keeper", "GK", 70, NEW_CLUB,
                                           dict((n, 70) for n, _b in E.ABILITIES))])
         passed, fails, text = run(new, old=old, stars=stars, max_ovr=101)
-        ok("rule B: Sessegnon +20 against r10 fails", not passed and fails["b"] == [114021])
-        ok("rule B: the report says how much", "was 76, +20" in text)
+        ok("rule B: Sessegnon +19 against r10 fails", not passed and fails["b"] == [114021])
+        ok("rule B: the report says how much", "was 79, +19" in text)
         ok("rule B: an id now naming someone else is skipped", 200020 not in fails["b"]
            and "1 ids now name someone else" in text)
         ok("rule B: a move to keeper is not a rise", 200021 not in fails["b"])

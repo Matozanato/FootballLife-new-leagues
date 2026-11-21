@@ -64,8 +64,8 @@ What this does
      sort orders the list by points, which is the world ranking's own order (0x1413222e0).
      The team array, its count, the world count and the empty id are read from the patched
      code at init (fl26caps moves the array). Built and checked by gen3.py.
-  7. Labels: five strings of our own in text category 0x1a (ids 0x2ac..0x2b0: UEFA, CONMEBOL,
-     CONCACAF, AFC, CAF), added to livecpk/root/bra/string/all.str by mkstr.py.
+  7. Labels: strings of our own in text category 0x1a (ids 0x2ac..0x2b0: UEFA, CONMEBOL,
+     CONCACAF, AFC, CAF; 0x2b7 OFC, 21.11.), written into the world by lbcwcmenu.py.
 
 Confederations come from the world file's confed line (fl26world.txt, written by Mod Studio
 from Country.bin +5): 2 UEFA, 3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC. Without that
@@ -73,9 +73,10 @@ line nothing is installed.
 
 Mod Studio (feature/cwc32): in the pack, but it works only when the world file has the cwc32
 line (Leagues > More > Club World Cup). That Build also puts into the world's livecpk root the
-flows (ML/MLMainManu.json, League/LeagueMainMenu.json with the leaguerankna/as/af events,
-Common/CmnLeagueRankingNA/AS/AF.json) and every language's string/all.str with our texts
-(cat 0x1a 0x2ac..0x2b6) -- tools/lbcwcmenu.py.
+flows (ML/MLMainManu.json, League/LeagueMainMenu.json with the leaguerankna/as/af/oc events,
+Common/CmnLeagueRankingNA/AS/AF/OC.json) and every language's string/all.str with our texts
+(cat 0x1a 0x2ac..0x2b8) -- tools/lbcwcmenu.py. FL27 (21.11.): every site below is the same in
+FL_2027.exe (checked against the file), so the module is the same for both games.
 
 All or nothing: every site is read first; if one differs, nothing is written.
 --]]
@@ -96,19 +97,27 @@ local UNITS = {
     entry = 0x528, spath = 0x5a0, sname = 0x600, factory = 0x660 },
   { path = "Common/CmnLeagueRankingAF", name = "RankingTeam::CreateObjectAF", confed = 5,
     entry = 0x550, spath = 0x5c0, sname = 0x620, factory = 0x680 },
+  -- 2026-11-21: OFC (the Club World Cup's OFC place goes by this ranking). 0x750..0x7f0 was free.
+  { path = "Common/CmnLeagueRankingOC", name = "RankingTeam::CreateObjectOC", confed = 7,
+    entry = 0x750, spath = 0x780, sname = 0x7a0, factory = 0x7c0 },
 }
--- factories 640/660/680: mov dword [page+0], 6/3/5 ; jmp 0x140b107e0
--- 6a0 reg2: call 0x140a95d80 ; 0x140e9fc90(page + 10/38/500/528/550) ; ret
--- (built and checked with capstone, gen2.py, 2026-11-17). The old reg stub at 440 is unused.
+-- factories 640/660/680/7c0: mov dword [page+0], 6/3/5/7 ; jmp 0x140b107e0
+-- 1300 reg2: call 0x140a95d80 ; 0x140e9fc90(page + 10/38/500/528/550/750) ; ret
+-- (built and checked with capstone, gen2.py 2026-11-17; the OFC factory and the six-unit reg2
+-- 2026-11-21, by a generator that gives the old 640 and 6a0 stubs byte for byte). The reg2 of
+-- five units at 6a0 ran into the button names at 720 with a sixth; the old stubs at 440 and 6a0
+-- are not written any more.
 local NEW_CODE = {
   [0x640] = "c705b6f9ffff06000000ff2500000000e007b14001000000",
   [0x660] = "c70596f9ffff03000000ff2500000000e007b14001000000",
   [0x680] = "c70576f9ffff05000000ff2500000000e007b14001000000",
-  [0x6a0] = "4883ec2848b8805da94001000000ffd0488d0d59f9ffff48b890fce94001000000ffd0488d0d6ef9ffff"
-         .. "48b890fce94001000000ffd0488d0d23feffff48b890fce94001000000ffd0488d0d38feffff48b890"
-         .. "fce94001000000ffd0488d0d4dfeffff48b890fce94001000000ffd04883c428c3",
+  [0x7c0] = "c70536f8ffff07000000ff2500000000e007b14001000000",
+  [0x1300] = "4883ec2848b8805da94001000000ffd0488d0df9ecffff48b890fce94001000000ffd0488d0d0eedffff"
+          .. "48b890fce94001000000ffd0488d0dc3f1ffff48b890fce94001000000ffd0488d0dd8f1ffff48b890"
+          .. "fce94001000000ffd0488d0dedf1ffff48b890fce94001000000ffd0488d0ddaf3ffff48b890fce940"
+          .. "01000000ffd04883c428c3",
 }
-local REG2 = 0x6a0
+local REG2 = 0x1300
 local TABLE, CODE = 0x100, 0x300
 local F_ALL, FILTER, RENUM, COUNT, REG = 0x300, 0x360, 0x3d0, 0x420, 0x440
 -- National Ranking is the same RankingTeam screen (0x140b10850 = CreateObject with r9b = 1):
@@ -156,9 +165,10 @@ local SITES = {
 --   test eax,eax ; je go ; mov edx,eax ; go: jmp qword 0x140e54710
 local TITLE, TITLE_TAB = 0x1400, 0x1440
 local TITLE_HEX = "8b05faebffff83f80777114c8d1d2e000000418b048385c0740289c2ff25000000001047e54001000000"
-local TITLE_IDS = { [2] = 0x1a02b1, [4] = 0x1a02b2, [6] = 0x1a02b3, [3] = 0x1a02b4, [5] = 0x1a02b5 }
+local TITLE_IDS = { [2] = 0x1a02b1, [4] = 0x1a02b2, [6] = 0x1a02b3, [3] = 0x1a02b4, [5] = 0x1a02b5,
+                    [7] = 0x1a02b8 }   -- OFC (21.11.): 0x2b7 its button, 0x2b8 "Ranking OFC"
 local BTN_TABLE, BTN_COUNT = 0x1426add20, 0x34   -- the game's ML button table
-local BTN_COPY = 0xc00                           -- its copy in the page (57 x 16 bytes)
+local BTN_COPY = 0xc00                           -- its copy in the page (58 x 16 bytes, to 0xfa0)
 -- Labels: our own strings in text category 0x1a (livecpk all.str, mkstr.py): UEFA 0x2ac,
 -- CONMEBOL 0x2ad, CONCACAF 0x2ae, AFC 0x2af, CAF 0x2b0.
 local BTN_NEW = {
@@ -167,12 +177,16 @@ local BTN_NEW = {
   { id = 92, text = 0x2ae, cat = 0x1a, name = "leaguerankna", at = 0x720 },  -- CONCACAF
   { id = 96, text = 0x2af, cat = 0x1a, name = "leaguerankas", at = 0x730 },  -- AFC (not 93: see below)
   { id = 94, text = 0x2b0, cat = 0x1a, name = "leaguerankaf", at = 0x740 },  -- CAF
+  { id = 97, text = 0x2b7, cat = 0x1a, name = "leaguerankoc", at = 0x7e0 },  -- OFC (21.11.)
 }
 -- Our ids must be ones the game does not test by id (2026-11-20): AFC was 93, and the ML
 -- button availability switch (0x140f0f9c0, ids 3..110) sends 93 to the case that locks a
 -- button until [block+0x17b5788] bit 31 is set -- with 3, 18, 37..47: locked in the first
 -- season. 96 falls to every default: availability (0x140f0f9c0), enabled (0x140b86e60, ids
 -- 9..121) and the "new" mark (0x140f10980, ids 6..109); not in the button table nor a category.
+-- OFC (2026-11-21): 97, checked the same way on FL_2027.exe (the three switches' tables read
+-- out): default in all three, not in the button table, not a page's category. 95 would not do
+-- (the availability switch has a case of its own for it).
 local BTN_RETEXT = { [86] = { 0x2ac, 0x1a } }   -- the game's 86 in the copy: "UEFA"
 
 -- 6. the clubs past the world ranking (gen3.py, checked with capstone, 2026-11-17)
@@ -202,7 +216,7 @@ local CAT_RANK = 91
 local PAGE_A, PAGE_B, PAGES, PSTRIDE = 0x1426ae2e0, 0x1426ae420, 7, 0x2c
 local COPY_A, COPY_B = 0x880, 0xa00
 -- 2026-11-17: Club Ranking (88) and National Ranking (89) left out, only the CWC ones
-local RANK_PAGE = { CAT_RANK, 86, 87, 92, 96, 94 }
+local RANK_PAGE = { CAT_RANK, 86, 87, 92, 96, 94, 97 }   -- 6 buttons: the page shows up to 7
 local BTN_SITES = {
   { va = 0x140b86a30, old = "4c8d0de972b201", op = "4c8d0d", copy = BTN_COPY, why = "lookup by id: lea r9,[table]" },
   { va = 0x140b86a4a, old = "83f834",         cnt = "83f8",  why = "lookup by id: cmp eax,0x34" },
@@ -233,13 +247,14 @@ local DATA_PAGE = 5   -- index of the Data page (category 7) in both tables
 -- 0x140c8db50 makes an object of every node and links each to the node its parent names.
 -- Every tree has Data = ToData (compeinfo, teaminfo, and clubrank in three of them).
 -- The slot goes to LG_WRAP: the original, its nodes copied to LG_BUF, LG_NODES appended
--- (Ranking under ToData + its five buttons), count + 6, LG_BUF returned. More than 32 nodes:
+-- (Ranking under ToData + its six buttons), count + 7, LG_BUF returned (+ 6 and 0x1e0 bytes until
+-- the OFC node, 21.11.). More than 32 nodes:
 -- left as they were. The buttons send their names to the flow: the League flow
 -- (livecpk League/LeagueMainMenu.json) has leaguerankeu/sa as shipped, plus na/as/af of ours.
 local LG_SLOT, LG_SLOT_OLD = 0x14271bc90, "f007c94001000000"
 local LG_WRAP, LG_NODES = 0x1600, 0x1700
 local LG_WRAP_HEX = "5356574883ec204889cb48b8f007c94001000000ffd0448b8b9c0000004183f92077294889c6488d3dd309"
-                 .. "0000574489c96bc950f3a4488d35c3000000b9e0010000f3a45883839c000000064883c4205f5e5bc3"
+                 .. "0000574489c96bc950f3a4488d35c3000000b930020000f3a45883839c000000074883c4205f5e5bc3"
 -- Back from a screen, 0x140c8e2e0 rebuilds the menu on a page one level up (Data, not
 -- Ranking) with the cursor index of the button pressed ([this+0xa8]); an index past the page's
 -- end read a null at 0x140c8e456 (crash after CAF, index 4, 2026-11-17). 0x140c8e420 goes to
@@ -254,6 +269,7 @@ local LG_TREE = {   -- flag, text, id, name, parent
   { 1, 0x1a02ae, 92, "leaguerankna", "ToRanking" },   -- CONCACAF
   { 1, 0x1a02af, 93, "leaguerankas", "ToRanking" },   -- AFC
   { 1, 0x1a02b0, 94, "leaguerankaf", "ToRanking" },   -- CAF
+  { 1, 0x1a02b7, 97, "leaguerankoc", "ToRanking" },   -- OFC (21.11.)
 }
 local REG_DONE = 0x1436f5149   -- byte: the game's screen registration has run
 
@@ -458,9 +474,9 @@ function m.init(ctx)
     for _, u in ipairs(UNITS) do reg(page + u.entry) end
     log("fl26contrank: screens registered late (the game's registration had already run)")
   end
-  log(string.format("fl26contrank: stubs at 0x%x; %d countries (UEFA %d, CONMEBOL %d, CONCACAF %d, AFC %d, CAF %d); "
-                    .. "ML Data page 60 61 30 90 88 89 + Ranking (91): 86 87 92 96 94 -> EU/SA/NA/AS/AF (%s, %s, ...); titles 'Ranking <confed>'; League Mode Data + Ranking (vtable 0x14271bc90 -> 0x%x); National resets filter; clubs past the world ranking added (teams +0x%x, count +0x%x, world count +0x%x, empty id at 0x%x)", cave, n,
-                    per[2] or 0, per[4] or 0, per[6] or 0, per[3] or 0, per[5] or 0, UNITS[1].path, UNITS[2].path, cave + LG_WRAP,
+  log(string.format("fl26contrank: stubs at 0x%x; %d countries (UEFA %d, CONMEBOL %d, CONCACAF %d, AFC %d, CAF %d, OFC %d); "
+                    .. "ML Data page 60 61 30 90 88 89 + Ranking (91): 86 87 92 96 94 97 -> EU/SA/NA/AS/AF/OC (%s, %s, ...); titles 'Ranking <confed>'; League Mode Data + Ranking (vtable 0x14271bc90 -> 0x%x); National resets filter; clubs past the world ranking added (teams +0x%x, count +0x%x, world count +0x%x, empty id at 0x%x)", cave, n,
+                    per[2] or 0, per[4] or 0, per[6] or 0, per[3] or 0, per[5] or 0, per[7] or 0, UNITS[1].path, UNITS[2].path, cave + LG_WRAP,
                     disp[1], disp[2], disp[3], d_sent))
   m.cave = cave
 end

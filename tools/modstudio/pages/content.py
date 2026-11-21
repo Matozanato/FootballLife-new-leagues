@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QCompleter, QDialog, QDialo
 from .. import servers as S, theme
 from ..i18n import _
 from ..mapfile import Row
-from ..ui import Page, section, hint, row, ask, error, info, denied
+from ..ui import Page, section, hint, row, ask, error, info, denied, run_job
 
 ROW = Qt.UserRole
 
@@ -100,7 +100,7 @@ class RowDialog(QDialog):
                 vals.append("")
             vals[i] = v
         self.widgets = []
-        lib = view.library_items()
+        lib = view.library_items(wait=True)
         for i, c in enumerate(m.cols):
             v = vals[i] if i < len(vals) else ""
             w = self.widget_for(c, v, lib)
@@ -646,7 +646,8 @@ class ServerView(QWidget):
     def __init__(self, app, key, extra_tabs=(), about=True):
         super().__init__()
         self.app, self.server = app, S.BY_KEY[key]
-        self._lib = None
+        self._lib = None                    # None: not read yet
+        self._lib_job = self._lib_again = False
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         # 0.2.4: a page with its own one-line hint keeps the server's details in the status tooltip
@@ -687,15 +688,54 @@ class ServerView(QWidget):
     def folder(self):
         return self.server.path(self.content_dir())
 
-    def library_items(self):
+    def library_items(self, wait=False):
+        """the items of the library as last read. Reading it walks every folder of the server (a
+        kit server of 14,000 folders: 5 s from a cold disk), so it is read off the window's thread
+        and the lists fill again when it is in (0.3.1; the UI tour, 11.11.: Kits stood still 4-5 s
+        each time it was opened). wait: read it now when there is none yet (a dialog that picks
+        from it)"""
+        if not self.server.library:
+            return []
         if self._lib is None:
-            self._lib = S.library(self.folder(), self.server.library) if self.server.library else []
-        return self._lib
+            if wait:
+                self._lib = S.library(self.folder(), self.server.library)
+            else:
+                self._read_library()
+        return self._lib or []
 
     def library_set(self):
+        """the library's items as the maps write them, or None while it is not known (no library,
+        or not read yet: a line is not called "not found" before the library is in)"""
         if not self.server.library:
             return None
-        return {S.norm_item(p) for p in self.library_items()}
+        items = self.library_items()
+        if self._lib is None:
+            return None
+        return {S.norm_item(p) for p in items}
+
+    def _read_library(self):
+        if not self.server.library:
+            return
+        if self._lib_job:
+            self._lib_again = True          # asked again while a read runs: one more after it
+            return
+        self._lib_job = True
+        folder, kind = self.folder(), self.server.library
+
+        def over(items):
+            self._lib_job = False
+            if items is not None and items != self._lib:
+                self._lib = items
+                for t in self.map_tabs:
+                    t.fill()
+                if self.lib_tab and self.tabs.currentWidget() is self.lib_tab:
+                    self.lib_tab.fill()
+                self._say_state()
+            if self._lib_again:
+                self._lib_again = False
+                self._read_library()
+
+        run_job(lambda _progress: S.library(folder, kind), over, lambda _tb: over(None))
 
     def uses(self):
         out = {}
@@ -738,7 +778,7 @@ class ServerView(QWidget):
             return
         self.tabs.setEnabled(True)
         if force or not self.loaded or not self.dirty():
-            self._lib = None
+            self._read_library()            # what is on disk now, in the background
             for t in self.map_tabs:
                 t.load()
             if self.settings_tab:
@@ -746,6 +786,10 @@ class ServerView(QWidget):
             if self.lib_tab and self.tabs.currentWidget() is self.lib_tab:
                 self.lib_tab.fill()
             self.loaded = True
+        self._say_state()
+
+    def _say_state(self):
+        """the status line: in the game or not, and how much the library holds"""
         e, on = self.module_state()
         exists = os.path.exists(os.path.join(self.app.game.modules_dir, self.module()))
         # 0.2.4: the line says it in a player's words; the module's file name is in its tooltip
@@ -809,7 +853,11 @@ class ServerPage(Page):
         self.view = ServerView(app, self.server, self.extra_tabs(), about=not self.hint)
         self.outer.addWidget(self.view, 1)
         app.bus.game_changed.connect(lambda: self.view.refresh(force=True))
-        app.bus.ini_changed.connect(lambda: self.view.refresh())
+        # B480: behind another page it is read again when it is opened (shown() -> refresh): every
+        # sider.ini save read all five servers' maps and filled their lists on the window's thread,
+        # 0.9-1.3 s with the GigaPack's 4,500 kits (the exe test of beta4o: the end of Install, Make
+        # it editable, Build and install). What it reads and shows is the same, read later
+        app.bus.ini_changed.connect(lambda: self.view.refresh() if self.isVisible() else None)
         if project(app) is not None:
             project(app).tables_changed.connect(lambda: [t.fill() for t in self.view.map_tabs])
 

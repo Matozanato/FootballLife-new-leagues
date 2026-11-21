@@ -10,9 +10,11 @@
 > [Contributing](../../README.md#contributing)). Fixes and new features are both welcome. A
 > separate fork is for when you want to take the project somewhere of your own.
 
-Mod Studio is MIT licensed (see `LICENSE`). Fork it, rename it, change it, ship it: no
-permission needed. Keep the licence file and the copyright line, and say in your README that
-your fork is based on FL Mod Studio. That is all the licence asks.
+Mod Studio is under the FL Mod Studio License (see `LICENSE`). Fork it, rename it, change it,
+share it: no permission needed. Do not sell it, and do not remove or hide the "Powered by FL
+ModStudio" mark. Keep the licence file and the copyright line, and say in your README that your
+fork is based on FL Mod Studio and what you changed. Versions up to 0.3.0 and the parts our
+contributors shared under MIT stay under MIT (`LICENSE-MIT`).
 
 This page is the map: what lives where, how to run and build it, and how to add the usual
 things (a page, a recipe key, a module, a translation). The details are in the chapters:

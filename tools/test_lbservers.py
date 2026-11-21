@@ -147,8 +147,14 @@ def main():
               "club_crests": ["", "", "blue.png", "", ""]}]}
         made = S.to_make(pm, w)
         ok("kits made for a club with colours and one with only a crest",
-           [(m[0], m[3]) for m in made] == [(911, "stripes #ff0000 #ffffff #ffffff"), (912, "plain #0000c8 #ffffff #ffffff")])
-        ok("no kit for a game club, a club with a drawn badge only, or no crest", {m[0] for m in made} == {911, 912})
+           [(m[0], m[3]) for m in made if m[0] != 913] == [(911, "stripes #ff0000 #ffffff #ffffff"),
+                                                           (912, "plain #0000c8 #ffffff #ffffff")])
+        import kitpatterns
+        green = [m for m in made if m[0] == 913]
+        ok("a club with a drawn badge only: colours picked by its name, no crest on the kit",
+           len(green) == 1 and green[0][3] == kitpatterns.generated_home("Green") and green[0][5] is None
+           and green[0][6] == "Green")
+        ok("no kit for a game club or a club with no crest", {m[0] for m in made} == {911, 912, 913})
         kit(b, r"Lib\Numbers")
         for s in ("_back", "_leg", "_name"):
             put(os.path.join(b, S.KITS, "Lib", "Numbers", "p1", "u1p1%s.ftex" % s), "x")
@@ -162,6 +168,17 @@ def main():
         km = lines(os.path.join(b, S.KITS, "map.txt"))
         ok("map lines for the made kits", any(l.startswith('911, "My world\\Liga\\Red"') for l in km)
            and any(l.startswith('912, "My world\\Liga\\Blue"') for l in km))
+        greenk = os.path.join(b, S.KITS, "My world", "Liga", "Green")
+        ok("a badge-only club's kits wait for a Build (a Switch on stays quick, B104)",
+           not os.path.isdir(greenk) and not any(l.startswith("913,") for l in km)
+           and any("get kits at the next Build" in l for l in log))
+        log = []
+        S.write(pm, b, log=log.append, root=w, redraw=True)
+        km = lines(os.path.join(b, S.KITS, "map.txt"))
+        ok("... and are made at the Build: home, away, third, goalkeeper and a map line",
+           all(os.path.isfile(os.path.join(greenk, v, "u913%s.ftex" % v)) for v in ("p1", "p2", "p3", "g1"))
+           and any(l.startswith('913, "My world\\Liga\\Green"') for l in km)
+           and any("(1 new or changed)" in l for l in log))
         log = []
         S.write(pm, b, log=log.append, root=w)
         ok("second run makes nothing again", any("(0 new or changed)" in l for l in log))
@@ -198,6 +215,28 @@ def main():
         S.write(pm, b, log=log.append, root=w, redraw=True)
         ok("a kit of drawing 2: drawn again at a Build", any("(1 new or changed)" in l for l in log)
            and open(os.path.join(red, "kitmaker.txt"), encoding="utf-8").read().strip() != two)
+        # our test 06.11.: a world built after this one (_FL26Comb150) sorts first in the library;
+        # its made kits lend no numbers, and a kit stamped when made kits lent is kept at a Switch
+        # on (it was drawn again, 779 kits, 597 s), drawn again at a Build
+        oth = os.path.join(lib, "Another world", "Liga", "Red")
+        kit(b, r"Another world\Liga\Red")
+        for s in ("_back", "_leg", "_name"):
+            put(os.path.join(oth, "p1", "u7p1%s.ftex" % s), "x")
+        put(os.path.join(oth, "kitmaker.txt"), "a stamp\n")
+        ok("a made kit of another world lends no numbers", oth not in S.numbers_kits(lib, "My world")
+           and S.numbers_kits(lib, "My world", made=True)[0] == oth)
+        was = S._stamps(m911[3], m911[4], m911[5], S.numbers_kits(lib, "My world", made=True), lib,
+                        seed=m911[6], third=m911[7])[0]
+        put(os.path.join(red, "kitmaker.txt"), was + "\n")
+        log = []
+        S.write(pm, b, log=log.append, root=w)
+        ok("a kit stamped when made kits lent numbers: kept at a Switch on",
+           any("(0 new or changed)" in l for l in log))
+        log = []
+        S.write(pm, b, log=log.append, root=w, redraw=True)
+        ok("a kit stamped when made kits lent numbers: drawn again at a Build",
+           any("(1 new or changed)" in l for l in log))
+        shutil.rmtree(os.path.join(lib, "Another world"))
         with open(os.path.join(b, S.KITS, "map.txt"), "a", encoding="utf-8") as f:
             f.write('912, "Mine\\Blue"\n911, "Gone\\Red"\n')
         os.makedirs(os.path.join(b, S.KITS, "Mine", "Blue"))
@@ -448,6 +487,18 @@ def main():
         ok("B166: an older copy whose file is newer than the package's stays", S._copy(src, dst) == "kept")
         os.utime(os.path.join(dst, "p1", "u1p1.ftex"), (t - 3600, t - 3600))
         ok("B166: an older copy older than the package: the package's", S._copy(src, dst) == "copied")
+        # B367: a kit Mod Studio drew (kitmaker.txt, no copy record), newer than the package's,
+        # is the club's stand-in, not the player's: the package's kit takes its place
+        shutil.rmtree(dst)
+        put(os.path.join(dst, "p1", "u1p1.ftex"), "drawn from colours")
+        put(os.path.join(dst, "kitmaker.txt"), "stamp")
+        os.utime(os.path.join(dst, "p1", "u1p1.ftex"), (t + 3600, t + 3600))
+        said = []
+        ok("B367: a drawn kit gives way to the package's", S._copy(src, dst, said.append) == "copied"
+           and open(os.path.join(dst, "p1", "u1p1.ftex")).read() == "a newer kit of the package"
+           and not os.path.exists(os.path.join(dst, "kitmaker.txt")) and said)
+        put(os.path.join(dst, "p1", "u1p1.ftex"), "put in by hand over the package's kit")
+        ok("B367: that copy changed by hand stays", S._copy(src, dst) == "kept")
         # a made kit (kitmaker) changed by hand: not drawn over when its colours change
         red = os.path.join(b, S.KITS, "My world", "Liga", "Red")
         st = os.path.getmtime(os.path.join(red, "kitmaker.txt"))

@@ -35,6 +35,18 @@ T_NAME, T_NAME_LEN = 0x170, 0x46
 T_ABBR, T_ABBR_LEN = 0x372, 3
 
 CID_MAX, REG_MAX = 255, 600
+# The caps set's cidwide step (tools/cidwide.py) gives the id a high byte: with it in the game a
+# world may use ids up to 1023 (mkleague.CID_LIMIT - 1). The pool still starts at 130 and runs
+# up through 255 first, so a world that fits under 256 gets the very same ids either way.
+CID_NARROW, CID_WIDE_MAX = 255, M.CID_LIMIT - 1
+
+
+def set_cid_wide(on):
+    """ids past 255 for this process: on when the game's caps set has the cidwide step
+    (leaguebuilder.use_game), off otherwise"""
+    global CID_MAX
+    M.CID_WIDE = bool(on)
+    CID_MAX = CID_WIDE_MAX if on else CID_NARROW
 
 # Competition ids below 130 that the exe treats like any other (limits branch, 2026-10-11:
 # every compare, branch and table on a competition id in .trace read statically; none of
@@ -182,7 +194,7 @@ def main():
                              % (id_from, top_id))
         top_id = top_alt = id_from - 1
 
-    used_cid = {comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)}
+    used_cid = {M.comp_cid(comp, i * M.COMP) for i in range(len(comp) // M.COMP)}
     used_reg = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
                 for i in range(len(regs) // M.REG)}
     cids = [c for c in cid_pool(cid_from) if c not in used_cid][:nleague]

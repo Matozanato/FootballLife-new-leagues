@@ -19,11 +19,14 @@ Two invariants the generator enforces, both discovered from the code rather than
 
 Output: patches/<set>.json and sider/fl26caps.lua (self-contained, ready to install).
 """
+
 import json, os, struct, sys
 from capstone import *
 from capstone.x86 import *
 import bisect
-import calwiden, callindex, datecave, flpaths, impscan
+import calwiden, callindex, cidwide, datecave, flpaths, impscan, pk32, standings
+import regions
+import regions as regstep  # main() has a local `regions` (mlcopy's)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -32,7 +35,8 @@ H = lambda s: int(s, 16) if isinstance(s, str) else s
 
 d, secname, sva, ro, rsz = callindex.code_section()
 off_of = lambda va: ro + (va - sva)
-md = Cs(CS_ARCH_X86, CS_MODE_64); md.detail = True
+md = Cs(CS_ARCH_X86, CS_MODE_64)
+md.detail = True
 
 CHUNK = H(LAYOUT["block"]["memcpy_chunk_sites"][0]["chunk"])
 TAIL = H(LAYOUT["block"]["memcpy_chunk_sites"][0]["tail"])
@@ -40,18 +44,20 @@ SIZE_OLD = H(LAYOUT["block"]["size_old"])
 
 
 def insn_at(va):
-    for ins in md.disasm(d[off_of(va):off_of(va) + 16], va):
+    for ins in md.disasm(d[off_of(va) : off_of(va) + 16], va):
         return ins
     raise SystemExit("could not decode an instruction at %x" % va)
 
 
 def field_offset(ins, value):
     """byte offset of the unique little-endian dword `value` inside the instruction"""
-    want = (value & 0xffffffff).to_bytes(4, "little")
-    hits = [i for i in range(len(ins.bytes) - 3) if bytes(ins.bytes[i:i + 4]) == want]
+    want = (value & 0xFFFFFFFF).to_bytes(4, "little")
+    hits = [i for i in range(len(ins.bytes) - 3) if bytes(ins.bytes[i : i + 4]) == want]
     if len(hits) != 1:
-        raise SystemExit("%x: expected exactly one copy of %08x in %s, found %d"
-                         % (ins.address, value, ins.bytes.hex(), len(hits)))
+        raise SystemExit(
+            "%x: expected exactly one copy of %08x in %s, found %d"
+            % (ins.address, value, ins.bytes.hex(), len(hits))
+        )
     return hits[0]
 
 
@@ -62,16 +68,102 @@ def patch_dword(va, old_value, new_value, why):
     if not (-0x80000000 <= new_value < 0x80000000):
         raise SystemExit("%x: %x does not fit in the 32-bit field" % (va, new_value))
     old = bytes(ins.bytes)
-    new = old[:k] + (new_value & 0xffffffff).to_bytes(4, "little") + old[k + 4:]
-    return {"va": "0x%x" % va, "old": old.hex(), "new": new.hex(), "why": why,
-            "asm": "%s %s" % (ins.mnemonic, ins.op_str)}
+    new = old[:k] + (new_value & 0xFFFFFFFF).to_bytes(4, "little") + old[k + 4 :]
+    return {
+        "va": "0x%x" % va,
+        "old": old.hex(),
+        "new": new.hex(),
+        "why": why,
+        "asm": "%s %s" % (ins.mnemonic, ins.op_str),
+    }
 
 
 def align(n, a):
     return (n + a - 1) // a * a
 
 
-SLOTS32 = False           # --slots32 on the command line; see stride_of()
+def patch_field(va, at, old_value, new_value, why):
+    """rewrite the 4-byte field at a known byte offset of the instruction at va
+
+    patch_dword locates the field by searching the encoding for the unique copy of the
+    value; the lower tail comes from tailscan, which already decoded the instruction and
+    recorded where the operand is (`at`), and 306 operands include pairs that differ by
+    one byte (0x186cdb4 and 0x186cdb8 in one function), so searching would be a guess
+    where the decoder has already answered.
+    """
+    ins = insn_at(va)
+    old = bytes(ins.bytes)
+    if old[at : at + 4] != (old_value & 0xFFFFFFFF).to_bytes(4, "little"):
+        raise SystemExit(
+            "%x: no %08x at byte %d of %s" % (va, old_value, at, old.hex())
+        )
+    if not (-0x80000000 <= new_value < 0x80000000):
+        raise SystemExit("%x: %x does not fit in the 32-bit field" % (va, new_value))
+    new = old[:at] + (new_value & 0xFFFFFFFF).to_bytes(4, "little") + old[at + 4 :]
+    return {
+        "va": "0x%x" % va,
+        "old": old.hex(),
+        "new": new.hex(),
+        "why": why,
+        "asm": "%s %s" % (ins.mnemonic, ins.op_str),
+    }
+
+
+LOWER_TAIL = LAYOUT["block"].get("lower_tail")
+
+
+def lower_tail_sites(key="sites"):
+    if not LOWER_TAIL:
+        return []
+    return json.load(open(os.path.join(ROOT, LOWER_TAIL["sites_file"]))).get(key, [])
+
+
+# The lower tail moves by a multiple of this.  64 keeps every alignment inside the span
+# (a 16-byte movaps on a field of it would fault at an 8-byte delta); 8, 16 and 24 are the
+# scales of the operands that carry an offset divided (lowertail.scaled), and each has to
+# divide the delta to move by a whole number.  lcm(64, 24) = 192.
+LOWER_TAIL_ALIGN = 0xC0
+
+
+def lower_tail_patches(base_new):
+    """move every operand that names an offset in the lower tail by one delta
+
+    One delta for all of them, because the span moves as one piece and its internal
+    layout does not change; that is also why no field here needs the `field_growth`
+    treatment the widened records get.
+    """
+    start = H(LOWER_TAIL["start"])
+    delta = base_new - start
+    out = []
+    for s in lower_tail_sites():
+        va, old = H(s["va"]), H(s["value"])
+        out.append(
+            patch_field(
+                va,
+                s["at"],
+                old,
+                old + delta,
+                "lower tail block+0x%x: 0x%x -> 0x%x (%s)"
+                % (old, old, old + delta, s["text"]),
+            )
+        )
+    for s in lower_tail_sites("scaled"):
+        va, old, scale = H(s["va"]), H(s["value"]), s["scale"]
+        assert delta % scale == 0, "lower tail delta 0x%x is no multiple of %d" % (delta, scale)
+        out.append(
+            patch_field(
+                va,
+                s["at"],
+                old,
+                old + delta // scale,
+                "lower tail block+0x%x, carried as 0x%x * %d: 0x%x -> 0x%x (%s)"
+                % (old * scale, old, scale, old, old + delta // scale, s["text"]),
+            )
+        )
+    return out
+
+
+SLOTS32 = False  # --slots32 on the command line; see stride_of()
 
 
 def stride_of(name):
@@ -94,17 +186,31 @@ def field_growth(name, field):
     A field at or past the end of the old slot array moves by the growth; anything before
     it stays.  For the fixture record exactly one field qualifies, the count at +0x204.
     """
-    a = LAYOUT["arrays"].get(name)          # names like "teams:dummy" are not arrays
+    a = LAYOUT["arrays"].get(name)  # names like "teams:dummy" are not arrays
     if not a or not (SLOTS32 and "stride_new" in a):
         return 0
-    return H(a["stride_new"]) - H(a["stride"]) if field and field >= H(a["count_off"]) else 0
+    return (
+        H(a["stride_new"]) - H(a["stride"])
+        if field and field >= H(a["count_off"])
+        else 0
+    )
 
 
-def plan_layout(relocate, belt=False, calendar=None):
+def plan_layout(relocate, belt=False, calendar=None, lower_tail=None):
     """place the relocated arrays after the old block end; return (new_size, bases)
 
     With `belt`, the upper belt (layout.json block.upper_belt) goes after them as one
     piece, and bases["belt"] is where its first byte lands.
+
+    With `lower_tail` (default: whenever the player array grows past it), the span the
+    block keeps above the shipped player array (layout.json block.lower_tail) goes
+    FIRST, right where the player array ends, and bases["lower_tail"] is its base.  It
+    has to move at all because the array grows in place from +0: at 30001 records the
+    array ends at 0xadf4bc and everything above it is the block's own memory; past that
+    the array covers the dummy record, the group set and the rest of the tail, and the
+    game reads its structures out of player bytes (the Edit crash of 2026-10-27).  First,
+    because it is the piece the array displaced, and placing it before the arrays keeps
+    one rule instead of two: everything the plan moves lands above player_end.
 
     With `calendar` (how many match ids a day is to hold), the calendar's whole unit goes
     FIRST, before the arrays, and bases["calendar"] is where it lands.  The unit, not the
@@ -123,8 +229,24 @@ def plan_layout(relocate, belt=False, calendar=None):
     our own zeroed memory instead of off the end of the allocation.  A read only -- if a
     stale *write* is ever found, the pad hides it and must be reconsidered.
     """
-    cursor = align(SIZE_OLD, 16)
+    # The player array starts at +0 and cannot be relocated: when its cap grows past the old
+    # block end, everything the plan relocates must start after its end, or the two overlap.
+    players = LAYOUT["arrays"].get("players")
+    player_end = 0
+    if players:
+        player_end = align(
+            H(players["base_old"]) + players["cap_new"] * stride_of("players"), 16
+        )
+    cursor = max(align(SIZE_OLD, 16), player_end)
     bases = {}
+    if lower_tail is None:
+        lower_tail = bool(LOWER_TAIL) and player_end > H(LOWER_TAIL["start"])
+    if lower_tail:
+        # the first place past the cursor where the delta is a multiple of LOWER_TAIL_ALIGN
+        start = H(LOWER_TAIL["start"])
+        cursor += (start - cursor) % LOWER_TAIL_ALIGN
+        bases["lower_tail"] = cursor
+        cursor = align(cursor + H(LOWER_TAIL["end"]) - start, 16)
     if calendar:
         _, stride, _, _, _ = calwiden.shape(calendar)
         unit = calwiden.OLD_UNIT + calwiden.DAYS * (stride - calwiden.OLD_STRIDE)
@@ -139,38 +261,54 @@ def plan_layout(relocate, belt=False, calendar=None):
         bases["belt"] = cursor
         cursor = align(cursor + H(b["end"]) - H(b["start"]), 16)
     pad = H(LAYOUT["block"].get("tail_pad", "0x0"))
-    growth = align(cursor - SIZE_OLD + pad, CHUNK)   # keep (size - tail) % chunk == 0
+    growth = align(cursor - SIZE_OLD + pad, CHUNK)  # keep (size - tail) % chunk == 0
     new_size = SIZE_OLD + growth
     assert (new_size - TAIL) % CHUNK == 0, "block size broke the memcpy invariant"
     for name, b in bases.items():
-        if name in ("belt", "calendar"):
-            continue                      # sized from their own shape, not from an array
+        if name in ("belt", "calendar", "lower_tail"):
+            continue  # sized from their own shape, not from an array
         a = LAYOUT["arrays"][name]
         end = b + a["cap_new"] * stride_of(name)
-        assert end <= new_size, ("%s runs 0x%x bytes past the end of the grown block"
-                                 % (name, end - new_size))
+        assert end <= new_size, "%s runs 0x%x bytes past the end of the grown block" % (
+            name,
+            end - new_size,
+        )
     return new_size, bases
 
 
 def block_patches(new_size):
     out = []
     for s in LAYOUT["block"]["size_sites"]:
-        out.append(patch_dword(H(s["va"]), SIZE_OLD, new_size,
-                               "edit block size: %s" % s["role"]))
+        out.append(
+            patch_dword(
+                H(s["va"]), SIZE_OLD, new_size, "edit block size: %s" % s["role"]
+            )
+        )
     for s in LAYOUT["block"]["memcpy_chunk_sites"]:
         old_chunks = (SIZE_OLD - TAIL) // CHUNK
         new_chunks = (new_size - TAIL) // CHUNK
-        out.append(patch_dword(H(s["va"]), old_chunks, new_chunks,
-                               "%d -> %d chunks of 0x%x: %s"
-                               % (old_chunks, new_chunks, CHUNK, s["role"])))
+        out.append(
+            patch_dword(
+                H(s["va"]),
+                old_chunks,
+                new_chunks,
+                "%d -> %d chunks of 0x%x: %s"
+                % (old_chunks, new_chunks, CHUNK, s["role"]),
+            )
+        )
     return out
 
 
 def array_patches(name, base_new, attrib):
     """rewrite every attributed reference to one array's base by the same delta"""
     a = LAYOUT["arrays"][name]
-    return shift_patches(name, base_new - H(a["base_old"]), attrib,
-                         a.get("extra_sites", []), base_new=base_new)
+    return shift_patches(
+        name,
+        base_new - H(a["base_old"]),
+        attrib,
+        a.get("extra_sites", []),
+        base_new=base_new,
+    )
 
 
 # A `biased` site is a reference to a block array stored pre-biased by the *mode copy's*
@@ -208,11 +346,18 @@ def shift_patches(name, delta, attrib, extra=(), base_new=None):
     """move every attributed reference to `name` (an array, a dummy, a count, a region)"""
     out = []
     for s in attrib:
-        if s["array"] != name or s["kind"] not in ("edit", "edit-pattern", "edit-manual", "biased", "imm", "imm-scaled"):
+        if s["array"] != name or s["kind"] not in (
+            "edit",
+            "edit-pattern",
+            "edit-manual",
+            "biased",
+            "imm",
+            "imm-scaled",
+        ):
             continue
         va, old_value = H(s["va"]), H(s["operand"])
         if old_value >= 1 << 63:
-            old_value -= 1 << 64          # attrib stores a negative disp sign-extended
+            old_value -= 1 << 64  # attrib stores a negative disp sign-extended
         off, field = s.get("offset"), s.get("field") or 0
         if off is not None and old_value not in (off, off + field):
             # a derived pointer: `cmp word ptr [rcx], ax` after `lea rcx, [rsi + base]`,
@@ -231,21 +376,39 @@ def shift_patches(name, delta, attrib, extra=(), base_new=None):
             if cb is not None:
                 new_value = base_new - cb
                 note = " [copy A: block 0x%x - copy 0x%x]" % (base_new, cb)
-        out.append(patch_dword(va, old_value, new_value,
-                               "%s %s: 0x%x -> 0x%x (%s %s)%s"
-                               % (name, s["kind"], old_value, new_value,
-                                  s["mnemonic"], s["text"], note)))
+        out.append(
+            patch_dword(
+                va,
+                old_value,
+                new_value,
+                "%s %s: 0x%x -> 0x%x (%s %s)%s"
+                % (
+                    name,
+                    s["kind"],
+                    old_value,
+                    new_value,
+                    s["mnemonic"],
+                    s["text"],
+                    note,
+                ),
+            )
+        )
     # Sites the attribution files under a different array by value: the match table's
     # id lookup (0x1414bc560) bounds its binary search with the calendar base, because
     # the shipped table runs 0x80 bytes into the calendar.  Such an end pointer moves
     # with the array it bounds, by the same delta.
     for s in extra:
         va, old_value = H(s["va"]), H(s["operand"])
-        out.append(patch_dword(va, old_value, old_value + delta,
-                               "%s extra: 0x%x -> 0x%x (%s)"
-                               % (name, old_value, old_value + delta, s["why"])))
+        out.append(
+            patch_dword(
+                va,
+                old_value,
+                old_value + delta,
+                "%s extra: 0x%x -> 0x%x (%s)"
+                % (name, old_value, old_value + delta, s["why"]),
+            )
+        )
     return out
-
 
 
 def copy_delta():
@@ -258,7 +421,8 @@ def copy_delta():
     end_new = H(c["teams"]) + cap_new * stride
     assert end_old == H(c["coaches"]), (
         "the copy is not packed the way layout.json says: teams end at 0x%x, coaches "
-        "begin at 0x%x" % (end_old, H(c["coaches"])))
+        "begin at 0x%x" % (end_old, H(c["coaches"]))
+    )
     return align(end_new - end_old, 32)
 
 
@@ -278,9 +442,14 @@ def copy_patches(delta):
         if va in seen:
             raise SystemExit("%s: two copy fields change in one instruction" % s["va"])
         seen.add(va)
-        out.append(patch_dword(va, old, old + delta,
-                               "copy %s: 0x%x -> 0x%x (%s)"
-                               % (s["name"], old, old + delta, s["text"])))
+        out.append(
+            patch_dword(
+                va,
+                old,
+                old + delta,
+                "copy %s: 0x%x -> 0x%x (%s)" % (s["name"], old, old + delta, s["text"]),
+            )
+        )
     return out
 
 
@@ -288,8 +457,12 @@ def copy_patches(delta):
 # copy, whose team array is 750 records long and is not being moved, so raising it there
 # would overrun the copy.  Raising it everywhere else lets the block hold more teams while
 # the copy simply never sees one past the 750th.
-COPY_CODE = [(0x140af30f0, 0x140af3f00), (0x140afd660, 0x140afd800),
-             (0x1413fea10, 0x1413fef00), (0x1414007c0, 0x141402300)]
+COPY_CODE = [
+    (0x140AF30F0, 0x140AF3F00),
+    (0x140AFD660, 0x140AFD800),
+    (0x1413FEA10, 0x1413FEF00),
+    (0x1414007C0, 0x141402300),
+]
 
 
 def in_copy_code(va):
@@ -297,9 +470,20 @@ def in_copy_code(va):
 
 
 # The copy functions, in address order, so a site can be attributed to the one it sits in.
-COPY_FUNCS = [0x140af30f0, 0x140afd660, 0x1413fea10, 0x1413feda0, 0x1414007c0,
-              0x141400940, 0x141400bb0, 0x141401060, 0x1414013a0, 0x1414016b0,
-              0x141401c10, 0x141402100]
+COPY_FUNCS = [
+    0x140AF30F0,
+    0x140AFD660,
+    0x1413FEA10,
+    0x1413FEDA0,
+    0x1414007C0,
+    0x141400940,
+    0x141400BB0,
+    0x141401060,
+    0x1414013A0,
+    0x1414016B0,
+    0x141401C10,
+    0x141402100,
+]
 
 
 def enclosing(va):
@@ -355,7 +539,7 @@ def check_cap_completeness(patches):
     emitted = {H(p["va"]) for p in patches}
     region_sites = set()
     for c in LAYOUT.get("copy", {}).values():
-        for r in (c.get("regions", []) if isinstance(c, dict) else []):
+        for r in c.get("regions", []) if isinstance(c, dict) else []:
             region_sites |= {H(x["va"]) for x in r.get("count_sites", [])}
     starts = sorted(callindex.starts())
     bad, loops = [], 0
@@ -371,17 +555,29 @@ def check_cap_completeness(patches):
             f = starts[k]
             end = starts[k + 1] if k + 1 < len(starts) else raised + 0x10
             prev = None
-            for ins in md.disasm(d[off_of(f):off_of(end)], f):
+            for ins in md.disasm(d[off_of(f) : off_of(end)], f):
                 # the back edge is a conditional jump home; the test that feeds it is the
                 # instruction before it, and the jump lands between the raised site and here
-                if (prev is not None and ins.group(X86_GRP_JUMP)
-                        and ins.operands and ins.operands[0].type == X86_OP_IMM
-                        and raised <= ins.operands[0].imm <= prev.address
-                        and prev.address not in known
-                        and any(o.type == X86_OP_IMM and o.imm in caps
-                                for o in prev.operands)):
-                    bad.append((prev.address, f, name, a["cap_old"],
-                                "%s %s" % (prev.mnemonic, prev.op_str)))
+                if (
+                    prev is not None
+                    and ins.group(X86_GRP_JUMP)
+                    and ins.operands
+                    and ins.operands[0].type == X86_OP_IMM
+                    and raised <= ins.operands[0].imm <= prev.address
+                    and prev.address not in known
+                    and any(
+                        o.type == X86_OP_IMM and o.imm in caps for o in prev.operands
+                    )
+                ):
+                    bad.append(
+                        (
+                            prev.address,
+                            f,
+                            name,
+                            a["cap_old"],
+                            "%s %s" % (prev.mnemonic, prev.op_str),
+                        )
+                    )
                 prev = ins
             loops += 1
     bad = sorted(set(bad))
@@ -391,12 +587,20 @@ def check_cap_completeness(patches):
             "old cap:\n%s\n"
             "Half a raised loop is worse than none -- the index may start past the old cap "
             "while the walk still ends there.  Add each to patches/layout.json "
-            "arrays.<array>.extra_cap_sites, or record it there with \"hold\": true and why "
+            'arrays.<array>.extra_cap_sites, or record it there with "hold": true and why '
             "it must keep the old count."
-            % (len(bad), "\n".join("  0x%x  in 0x%x  %-12s %-6d %s" % (va, f, n, c, t)
-                                    for va, f, n, c, t in bad)))
-    print("   cap back edges: %d raised site(s) swept across %d array(s), none left behind"
-          % (loops, len(CAP_CHECKS)))
+            % (
+                len(bad),
+                "\n".join(
+                    "  0x%x  in 0x%x  %-12s %-6d %s" % (va, f, n, c, t)
+                    for va, f, n, c, t in bad
+                ),
+            )
+        )
+    print(
+        "   cap back edges: %d raised site(s) swept across %d array(s), none left behind"
+        % (loops, len(CAP_CHECKS))
+    )
 
 
 def cap_patches(name, skip_copy=False, on_block=(), release=()):
@@ -432,28 +636,37 @@ def cap_patches(name, skip_copy=False, on_block=(), release=()):
     for s in a.get("extra_cap_sites", []):
         co = H(s["from"]) if "from" in s else cap_old
         if s["va"] not in vas:
-            vas[s["va"]] = dict(s, text="%s 0x%x (extra)" % (s["mnemonic"], co), _from=co)
+            vas[s["va"]] = dict(
+                s, text="%s 0x%x (extra)" % (s["mnemonic"], co), _from=co
+            )
         else:
             # a site the walk already found, but layout.json knows something the walk does
             # not: that it counts a different array, or that it must never be raised
-            vas[s["va"]].update({k: v for k, v in s.items()
-                                 if k in ("hold", "hold_why")})
+            vas[s["va"]].update(
+                {k: v for k, v in s.items() if k in ("hold", "hold_why")}
+            )
             if "from" in s:
                 vas[s["va"]]["_from"] = co
     # Sites named in layout.json's hold_sites are never raised: loop bounds inside the copy
     # code that measure the copy's own arrays (750 teams, 750 coaches, 13000 matches), which
     # keep their shipped layout.  Raising 0x1413fea8f made the League-mode copy write coach
     # memory into block rows 750..1599 as teams.
-    hold = {s["va"]: s["why"] for arr in LAYOUT["arrays"].values()
-            for s in arr.get("hold_sites", []) if s["va"] not in release}
+    hold = {
+        s["va"]: s["why"]
+        for arr in LAYOUT["arrays"].values()
+        for s in arr.get("hold_sites", [])
+        if s["va"] not in release
+    }
     out, held = [], 0
     for va in sorted(vas, key=lambda v: int(v, 16)):
         if va in hold:
             print("            %s left at %d: %s" % (va, cap_old, hold[va][:80]))
             continue
         if vas[va].get("hold") and va not in release:
-            print("            %s left alone: %s"
-                  % (va, (vas[va].get("hold_why") or vas[va].get("why", ""))[:100]))
+            print(
+                "            %s left alone: %s"
+                % (va, (vas[va].get("hold_why") or vas[va].get("why", ""))[:100])
+            )
             continue
         if skip_copy and in_copy_code(H(va)) and enclosing(H(va)) not in on_block:
             held += 1
@@ -463,15 +676,26 @@ def cap_patches(name, skip_copy=False, on_block=(), release=()):
         # both have to move.  Look for the count the site actually encodes rather than
         # assuming the first form, and carry the same off-by-one into the new value.
         bias = 0
-        want = (co & 0xffffffff).to_bytes(4, "little")
+        want = (co & 0xFFFFFFFF).to_bytes(4, "little")
         if bytes(insn_at(H(va)).bytes).count(want) != 1:
-            alt = (co - 1) & 0xffffffff
+            alt = (co - 1) & 0xFFFFFFFF
             if bytes(insn_at(H(va)).bytes).count(alt.to_bytes(4, "little")) == 1:
                 bias = -1
-        out.append(patch_dword(H(va), co + bias, cap_new + bias,
-                               "%s cap: %d -> %d (%s)%s"
-                               % (name, co, cap_new, vas[va]["text"],
-                                  ", written as <= cap - 1" if bias else "")))
+        out.append(
+            patch_dword(
+                H(va),
+                co + bias,
+                cap_new + bias,
+                "%s cap: %d -> %d (%s)%s"
+                % (
+                    name,
+                    co,
+                    cap_new,
+                    vas[va]["text"],
+                    ", written as <= cap - 1" if bias else "",
+                ),
+            )
+        )
     CAP_CHECKS.append((name, set(vas), list(out)))
     return out, both, held
 
@@ -513,7 +737,13 @@ SETS = {
     # count fields), so the player cap can go to 0xd0b0ec / 0x17c = 35991 (350 squads of
     # 23).  Pass --player-cap N to pick the cap; the generator refuses one that would
     # reach the dummies.  Attribution for regulations is complete (no review-* sites).
-    "teams-coaches-regs-players-dates-matches": ["teams", "coaches", "regulations", "rec596", "matchflags"],
+    "teams-coaches-regs-players-dates-matches": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+    ],
     # ... and the belt above the players -- the dummy triple, the count block, the fixture
     # table and the unnamed fields around it (layout.json block.upper_belt) -- moves as one
     # piece to the end of the grown block.  The dummies and the counts keep their role as
@@ -522,44 +752,74 @@ SETS = {
     # rec596 is relocated, so the player array may now run up to the season calendar at
     # 0x16038a8: 0x16038a8 / 0x17c = 60745 players, far past the ~46k that 800 new clubs
     # need.  The cap still has to be 17 mod 32 (the mode copy's memcpy tails).
-    "teams-coaches-regs-players-dates-matches-upper": ["teams", "coaches", "regulations", "rec596", "matchflags"],
+    "teams-coaches-regs-players-dates-matches-upper": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+    ],
     # ... and the Master League save carries the whole match table.  A season is saved
     # from mode copy A, whose own tables keep the caps its constructor hard-codes;
     # block -> A stops there, so every record past the 13000th is dropped from the save
     # and a season whose competitions used them loads back empty.  This grows the copy's
     # table to the block's cap: the fields above it move, the object grows, the three
     # counts follow.
-    "teams-coaches-regs-players-dates-matches-upper-mlcopy": ["teams", "coaches", "regulations", "rec596", "matchflags"],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+    ],
     # ... and the fixture table is full.  Measured 2026-09-16 on a running 39-league season:
     # all 2000 of its records are in use by 56 competitions and it has already overflowed --
     # our own regulation 143 starts at record 1997 and gets three rounds of a 38-round
     # season.  A record is one ROUND of one competition, so every competition costs as many
     # records as it has match days.  This takes the table out of the upper belt, relocates it
     # on its own and raises it to 6000.  See findings.md, "The fixture table is full".
-    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures":
-        ["teams", "coaches", "regulations", "rec596", "matchflags", "fixtures"],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "fixtures",
+    ],
     # ... and a calendar day is full.  A day holds 280 match ids and the scheduler at
     # 0x141350290 drops the rest without a word; caltab.py puts the 39-league world at 277
     # on its busiest day, so the next league costs matches nobody is told about.  This
     # widens the day to 792 ids and moves the calendar -- both the block's and the mode
     # copy's, by the same distance, which is what keeps their shared copier honest.
     # See docs/calendar-widening.md and tools/calwiden.py.
-    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar":
-        ["teams", "coaches", "regulations", "rec596", "matchflags", "fixtures"],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "fixtures",
+    ],
 }
-UPPER_SETS = {"teams-coaches-regs-players-dates-matches-upper",
-              "teams-coaches-regs-players-dates-matches-upper-mlcopy",
-              "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
-              "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
-MLCOPY_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy",
-               "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
-               "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
+UPPER_SETS = {
+    "teams-coaches-regs-players-dates-matches-upper",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar",
+}
+MLCOPY_SETS = {
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar",
+}
 # Sets that widen the calendar day.  CALENDAR_IDS is how many match ids a day then holds;
 # calwiden.shape() rounds it up to the next stride the mode copy's copier can step by.
 # `--calendar-ids N` asks for another size (calwiden.py lists the strides: 536, 792, 1048,
 # 1304 ...).  792 is what ships; any other size moves the fields past the calendar, so the
 # modules that read them by block offset need the values this prints (see modules.md).
-CALENDAR_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
+CALENDAR_SETS = {
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"
+}
 CALENDAR_IDS = 792
 # set in main(): whether this set moves copy A's own table bases, which is what makes a
 # pre-biased displacement need the two-base form rather than the block delta
@@ -568,7 +828,7 @@ MLCOPY_MOVED = {}
 
 # The first block field above the player array once teams, regulations and coaches have
 # moved out: the team dummy record at 0xd0b0ec (see docs/findings.md, dummy triple).
-PLAYERS_HARD_END = 0xd0b0ec
+PLAYERS_HARD_END = 0xD0B0EC
 
 # The mode copy's players (plan.md 3.3).  A season does not carry the block's 0x17c-byte
 # player records: it carries a packed 0x9c-byte form of each, in a global table BH1
@@ -589,71 +849,157 @@ PLAYERS_HARD_END = 0xd0b0ec
 # empty; it is grown the same way.  The last group is the block's own 30001 loops the
 # walk never reached: its constructors, destructors and id lookups, two per-index side
 # tables allocated on their own (30001 x 8 and 30001 x 4), and a 2400-player copy.
-PACKED = 0x9c
+PACKED = 0x9C
 COPY_PLAYER_SITES = [
     # va, old, new as a function of cap, what
     # the packed table BH1 and its owners
-    (0x140afc129, 0x7531, lambda c: c, "BH1 allocation (0x140afc110)"),
-    (0x140afc279, 0x7531, lambda c: c, "BH1 allocation (0x140afc270)"),
-    (0x140b0ee16, 0x7531, lambda c: c, "BH1 allocation (0x140b0ee00)"),
-    (0x140b0eee7, 0x7531, lambda c: c, "BH1 allocation (0x140b0eee0)"),
-    (0x1412e4b7f, 0x7531, lambda c: c, "BH1 allocation inside the packer"),
-    (0x1412e4bce, 0x7531, lambda c: c, "packer 0x1412e4b50: dummy switch"),
-    (0x140af2441, 0x7531, lambda c: c, "A -> block: BH1 adopted with this count"),
-    (0x1412e5f2f, 0xadf4c4, lambda c: 8 + c * 0x17c, "unpacker 0x1412e5eb0: vector allocation"),
-    (0x1412e5f51, 0x7531, lambda c: c, "unpacker: vector count"),
-    (0x1412e5f6d, 0x7531, lambda c: c, "unpacker: records constructed"),
-    (0x1412e5fa0, 0x7531, lambda c: c, "unpacker: index bound"),
-    (0x1412e62b3, 0x7531, lambda c: c, "unpacker: dummy switch in the block fill"),
-    (0x1412e62d2, 0x7531, lambda c: c, "unpacker: block fill bound"),
+    (0x140AFC129, 0x7531, lambda c: c, "BH1 allocation (0x140afc110)"),
+    (0x140AFC279, 0x7531, lambda c: c, "BH1 allocation (0x140afc270)"),
+    (0x140B0EE16, 0x7531, lambda c: c, "BH1 allocation (0x140b0ee00)"),
+    (0x140B0EEE7, 0x7531, lambda c: c, "BH1 allocation (0x140b0eee0)"),
+    (0x1412E4B7F, 0x7531, lambda c: c, "BH1 allocation inside the packer"),
+    (0x1412E4BCE, 0x7531, lambda c: c, "packer 0x1412e4b50: dummy switch"),
+    (0x140AF2441, 0x7531, lambda c: c, "A -> block: BH1 adopted with this count"),
+    (
+        0x1412E5F2F,
+        0xADF4C4,
+        lambda c: 8 + c * 0x17C,
+        "unpacker 0x1412e5eb0: vector allocation",
+    ),
+    (0x1412E5F51, 0x7531, lambda c: c, "unpacker: vector count"),
+    (0x1412E5F6D, 0x7531, lambda c: c, "unpacker: records constructed"),
+    (0x1412E5FA0, 0x7531, lambda c: c, "unpacker: index bound"),
+    (0x1412E62B3, 0x7531, lambda c: c, "unpacker: dummy switch in the block fill"),
+    (0x1412E62D2, 0x7531, lambda c: c, "unpacker: block fill bound"),
     # copy object A: the packed table at +0x11403b8, the object size, the compressor
-    (0x14140142e, 0x4769dc, lambda c: c * PACKED, "A: packed table length at +0x11403a8"),
-    (0x1414015e4, 0x8ed3, lambda c: (c * PACKED) >> 7, "A: packed table memcpy chunks"),
-    (0x14140085b, 0x4769dc, lambda c: c * PACKED, "A: bytes given to the compressor FL1"),
-    (0x141400966, 0x4769dc, lambda c: c * PACKED, "A: uncompressed-length test on load"),
-    (0x141400a3f, 0x8ed3, lambda c: (c * PACKED) >> 7, "A: decompressed table memcpy chunks"),
-    (0x141400b6e, 0x15b6d94, lambda c: 0x11403b8 + c * PACKED, "A: object size ceiling for a compressed copy"),
-    (0x141400b7c, 0x15b6d94, lambda c: 0x11403b8 + c * PACKED, "A: object size"),
-    (0x141400ba0, 0x15b6d94, lambda c: 0x11403b8 + c * PACKED, "A: object size (constant getter)"),
+    (
+        0x14140142E,
+        0x4769DC,
+        lambda c: c * PACKED,
+        "A: packed table length at +0x11403a8",
+    ),
+    (0x1414015E4, 0x8ED3, lambda c: (c * PACKED) >> 7, "A: packed table memcpy chunks"),
+    (
+        0x14140085B,
+        0x4769DC,
+        lambda c: c * PACKED,
+        "A: bytes given to the compressor FL1",
+    ),
+    (
+        0x141400966,
+        0x4769DC,
+        lambda c: c * PACKED,
+        "A: uncompressed-length test on load",
+    ),
+    (
+        0x141400A3F,
+        0x8ED3,
+        lambda c: (c * PACKED) >> 7,
+        "A: decompressed table memcpy chunks",
+    ),
+    (
+        0x141400B6E,
+        0x15B6D94,
+        lambda c: 0x11403B8 + c * PACKED,
+        "A: object size ceiling for a compressed copy",
+    ),
+    (0x141400B7C, 0x15B6D94, lambda c: 0x11403B8 + c * PACKED, "A: object size"),
+    (
+        0x141400BA0,
+        0x15B6D94,
+        lambda c: 0x11403B8 + c * PACKED,
+        "A: object size (constant getter)",
+    ),
     # copy object A: the fallback vector of full records
-    (0x141401463, 0xadf4c4, lambda c: 8 + c * 0x17c, "A fallback: vector allocation"),
+    (0x141401463, 0xADF4C4, lambda c: 8 + c * 0x17C, "A fallback: vector allocation"),
     (0x141401483, 0x7531, lambda c: c, "A fallback: vector count"),
-    (0x14140149f, 0x7531, lambda c: c, "A fallback: records constructed"),
-    (0x1414014cd, 0x7531, lambda c: c, "A fallback: dummy switch in the fill loop"),
-    (0x1414014f3, 0x7531, lambda c: c, "A fallback: fill loop bound"),
-    (0x1414014fb, 0xadf4bc, lambda c: c * 0x17c, "A fallback: table length at +0x11403a8"),
-    (0x141401508, 0x15be9, lambda c: (c * 0x17c) >> 7, "A fallback: memcpy chunks"),
+    (0x14140149F, 0x7531, lambda c: c, "A fallback: records constructed"),
+    (0x1414014CD, 0x7531, lambda c: c, "A fallback: dummy switch in the fill loop"),
+    (0x1414014F3, 0x7531, lambda c: c, "A fallback: fill loop bound"),
+    (
+        0x1414014FB,
+        0xADF4BC,
+        lambda c: c * 0x17C,
+        "A fallback: table length at +0x11403a8",
+    ),
+    (0x141401508, 0x15BE9, lambda c: (c * 0x17C) >> 7, "A fallback: memcpy chunks"),
     # copy object B: 30000 records at +0xee53d0
-    (0x140af23cf, 0x7530, lambda c: c - 1, "B -> block: BH1 adopted with this count"),
-    (0x140afda04, 0x8ed2, lambda c: ((c - 1) * PACKED) >> 7, "B: packed table memcpy chunks"),
-    (0x1413fea01, 0x135bd10, lambda c: 0xee53d0 + (c - 1) * PACKED, "B: object size"),
-    (0x140afd87b, 0xadf348, lambda c: 8 + (c - 1) * 0x17c, "B fallback: vector allocation"),
-    (0x140afd8a1, 0x7530, lambda c: c - 1, "B fallback: vector count"),
-    (0x140afd8bd, 0x7530, lambda c: c - 1, "B fallback: records constructed"),
-    (0x140afd8ed, 0x7531, lambda c: c, "B fallback: dummy switch in the fill loop"),
-    (0x140afd913, 0x7530, lambda c: c - 1, "B fallback: fill loop bound"),
-    (0x140afd91e, 0x15be6, lambda c: ((c - 1) * 0x17c) >> 7, "B fallback: memcpy chunks"),
+    (0x140AF23CF, 0x7530, lambda c: c - 1, "B -> block: BH1 adopted with this count"),
+    (
+        0x140AFDA04,
+        0x8ED2,
+        lambda c: ((c - 1) * PACKED) >> 7,
+        "B: packed table memcpy chunks",
+    ),
+    (0x1413FEA01, 0x135BD10, lambda c: 0xEE53D0 + (c - 1) * PACKED, "B: object size"),
+    (
+        0x140AFD87B,
+        0xADF348,
+        lambda c: 8 + (c - 1) * 0x17C,
+        "B fallback: vector allocation",
+    ),
+    (0x140AFD8A1, 0x7530, lambda c: c - 1, "B fallback: vector count"),
+    (0x140AFD8BD, 0x7530, lambda c: c - 1, "B fallback: records constructed"),
+    (0x140AFD8ED, 0x7531, lambda c: c, "B fallback: dummy switch in the fill loop"),
+    (0x140AFD913, 0x7530, lambda c: c - 1, "B fallback: fill loop bound"),
+    (
+        0x140AFD91E,
+        0x15BE6,
+        lambda c: ((c - 1) * 0x17C) >> 7,
+        "B fallback: memcpy chunks",
+    ),
     # the block's own 30001s the attribution walk never reached
-    (0x140af3702, 0x7531, lambda c: c, "accessor 0x140af3680: dummy switch"),
-    (0x1414bba00, 0x7531, lambda c: c, "block constructor 0x1414bb9f0: records constructed"),
-    (0x1414bbe82, 0x7531, lambda c: c, "block constructor 0x1414bbe60: records constructed"),
-    (0x1414ba61f, 0x7531, lambda c: c, "block destructor: records destroyed"),
-    (0x142495060, 0x7531, lambda c: c, "block destructor 0x142495050: records destroyed"),
-    (0x1414bb2ce, 0x7531, lambda c: c, "lookup 0x1414bb2a0: index bound"),
-    (0x1414bca10, 0x7531, lambda c: c, "lookup 0x1414bca10: index bound"),
-    (0x1414bc0d5, 0x7531, lambda c: c, "lookup 0x1414bc0a0: search bound"),
-    (0x140fc18f4, 0x7531, lambda c: c, "walk 0x140fc16a0: index bound"),
-    (0x1413fc4d1, 0x7531, lambda c: c, "2400-player copy 0x1413fc480: dummy switch"),
-    (0x1413206cf, 0x3a988, lambda c: c * 8, "side table 0x1413206c0: allocation (8 per index)"),
-    (0x1413206eb, 0x7531, lambda c: c, "side table 0x1413206c0: entries cleared"),
-    (0x1413210cf, 0x1d4c4, lambda c: c * 4, "side table 0x1413210c0: allocation (4 per index)"),
-    (0x1413210f0, 0x7531, lambda c: c, "side table 0x1413210c0: entries cleared"),
+    (0x140AF3702, 0x7531, lambda c: c, "accessor 0x140af3680: dummy switch"),
+    (
+        0x1414BBA00,
+        0x7531,
+        lambda c: c,
+        "block constructor 0x1414bb9f0: records constructed",
+    ),
+    (
+        0x1414BBE82,
+        0x7531,
+        lambda c: c,
+        "block constructor 0x1414bbe60: records constructed",
+    ),
+    (0x1414BA61F, 0x7531, lambda c: c, "block destructor: records destroyed"),
+    (
+        0x142495060,
+        0x7531,
+        lambda c: c,
+        "block destructor 0x142495050: records destroyed",
+    ),
+    # these two load the bound with `mov eax, imm32` but compare it as `cmp dx, ax`: only its
+    # low word counts, so 123825 (0x1e3b1) let no index past 0xe3b1 through, and players
+    # 58290..65535 of the copy came back as the dummy -- an empty squad slot, and a new ML
+    # died at 0x1415032f0 (2026-11-05).  The index is a word anyway: past 0xffff, no bound.
+    (0x1414BB2CE, 0x7531, lambda c: min(c, 0xFFFF), "lookup 0x1414bb2a0: index bound"),
+    (0x1414BCA10, 0x7531, lambda c: min(c, 0xFFFF), "lookup 0x1414bca10: index bound"),
+    (0x1414BC0D5, 0x7531, lambda c: c, "lookup 0x1414bc0a0: search bound"),
+    (0x140FC18F4, 0x7531, lambda c: c, "walk 0x140fc16a0: index bound"),
+    (0x1413FC4D1, 0x7531, lambda c: c, "2400-player copy 0x1413fc480: dummy switch"),
+    (
+        0x1413206CF,
+        0x3A988,
+        lambda c: c * 8,
+        "side table 0x1413206c0: allocation (8 per index)",
+    ),
+    (0x1413206EB, 0x7531, lambda c: c, "side table 0x1413206c0: entries cleared"),
+    (
+        0x1413210CF,
+        0x1D4C4,
+        lambda c: c * 4,
+        "side table 0x1413210c0: allocation (4 per index)",
+    ),
+    (0x1413210F0, 0x7531, lambda c: c, "side table 0x1413210c0: entries cleared"),
 ]
-COPY_PLAYER_SETS = ["teams-coaches-regs-players-dates-matches",
-                    "teams-coaches-regs-players-dates-matches-upper",
-                    "teams-coaches-regs-players-dates-matches-upper-mlcopy",
-                    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
-                    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"]
+COPY_PLAYER_SETS = [
+    "teams-coaches-regs-players-dates-matches",
+    "teams-coaches-regs-players-dates-matches-upper",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar",
+]
 # what the fixed memcpy tails need of the cap (see above)
 COPY_PLAYER_CAP_MOD = (32, 17)
 
@@ -662,16 +1008,24 @@ def copy_player_patches(cap, taken):
     """taken: vas already patched by the cap walk, to be left alone"""
     m, r = COPY_PLAYER_CAP_MOD
     if cap % m != r:
-        raise SystemExit("--player-cap %d: the mode copy's memcpy tails need cap = %d mod %d; "
-                         "the nearest below is %d" % (cap, r, m, cap - (cap - r) % m))
+        raise SystemExit(
+            "--player-cap %d: the mode copy's memcpy tails need cap = %d mod %d; "
+            "the nearest below is %d" % (cap, r, m, cap - (cap - r) % m)
+        )
     out = []
     for va, old, new, what in COPY_PLAYER_SITES:
         if "0x%x" % va in taken:
             continue
-        out.append(patch_dword(va, old, new(cap),
-                               "mode-copy players, %s: 0x%x -> 0x%x"
-                               % (what, old, new(cap))))
+        out.append(
+            patch_dword(
+                va,
+                old,
+                new(cap),
+                "mode-copy players, %s: 0x%x -> 0x%x" % (what, old, new(cap)),
+            )
+        )
     return out
+
 
 # The mode copy's own tables (layout.json copy.mlcopy).  Copy A carries a copy of every
 # array the block has, each at the cap its constructor hard-codes, and a season is saved
@@ -696,8 +1050,8 @@ def grow_field(p, old_value, growth):
     ins = insn_at(H(p["va"]))
     k = field_offset(ins, old_value)
     new = bytearray.fromhex(p["new"])
-    cur = int.from_bytes(new[k:k + 4], "little")
-    new[k:k + 4] = ((cur + growth) & 0xffffffff).to_bytes(4, "little")
+    cur = int.from_bytes(new[k : k + 4], "little")
+    new[k : k + 4] = ((cur + growth) & 0xFFFFFFFF).to_bytes(4, "little")
     p["new"] = new.hex()
     p["why"] += "; mlcopy: 0x%x -> 0x%x" % (cur, cur + growth)
 
@@ -706,6 +1060,11 @@ def grow_field(p, old_value, growth):
 # calendar unit becomes.  The copy carries the same unit as the block at +0xa8d4a0, and
 # mlcopy already relocates it; growing it there is what keeps the two sides alike.
 CALENDAR_GROWTH = 0
+# Set by main() for a -standings set: (tables, header entries).  Copy A's standings slot
+# (+0xcaf24c, 0x39a8f0 bytes as shipped) then holds the header and every table of the live pool
+# (standings.py), and mlcopy grows it like the calendar unit: one region, every copy A field
+# above it moves.
+STANDINGS = None
 
 
 def mlcopy_regions():
@@ -716,34 +1075,79 @@ def mlcopy_regions():
     if CALENDAR_GROWTH:
         base, end = calwiden.COPY_BASE, calwiden.COPY_BASE + calwiden.OLD_UNIT
         if end not in fields:
-            raise SystemExit("the copy's calendar unit ends at 0x%x, which is not a copy A "
-                             "field -- the unit is not 0x%x bytes here"
-                             % (end, calwiden.OLD_UNIT))
-        out.append({"name": "calendar", "array": None, "base": base,
-                    "stride": calwiden.OLD_STRIDE, "cap_old": calwiden.DAYS,
-                    "cap_new": calwiden.DAYS, "ends_at": "0x%x" % end,
-                    "growth": CALENDAR_GROWTH, "count_sites": []})
+            raise SystemExit(
+                "the copy's calendar unit ends at 0x%x, which is not a copy A "
+                "field -- the unit is not 0x%x bytes here" % (end, calwiden.OLD_UNIT)
+            )
+        out.append(
+            {
+                "name": "calendar",
+                "array": None,
+                "base": base,
+                "stride": calwiden.OLD_STRIDE,
+                "cap_old": calwiden.DAYS,
+                "cap_new": calwiden.DAYS,
+                "ends_at": "0x%x" % end,
+                "growth": CALENDAR_GROWTH,
+                "count_sites": [],
+            }
+        )
+    if STANDINGS:
+        t, n = STANDINGS
+        base, end = standings.COPY_A, standings.COPY_A_NEXT
+        if base not in fields or end not in fields or end - base != standings.SLOT:
+            raise SystemExit(
+                "copy A's standings slot is not 0x%x..0x%x (0x%x bytes) here"
+                % (base, end, standings.SLOT)
+            )
+        out.append(
+            {
+                "name": "standings",
+                "array": None,
+                "base": base,
+                "stride": standings.STRIDE,
+                "cap_old": 595,
+                "cap_new": t,
+                "ends_at": "0x%x" % end,
+                "growth": standings.slot_growth(t, n),
+                "count_sites": [],
+            }
+        )
     for r in m["regions"]:
         a = LAYOUT["arrays"][r["array"]]
         cap_old, cap_new = a["cap_old"], a["cap_new"]
         base, stride, end = H(r["base"]), H(r["stride"]), H(r["ends_at"])
         if base + cap_old * stride != end:
-            raise SystemExit("mlcopy region %s: 0x%x + %d * 0x%x is 0x%x, not the 0x%x the "
-                             "next field begins at" % (r["name"], base, cap_old, stride,
-                                                       base + cap_old * stride, end))
+            raise SystemExit(
+                "mlcopy region %s: 0x%x + %d * 0x%x is 0x%x, not the 0x%x the "
+                "next field begins at"
+                % (r["name"], base, cap_old, stride, base + cap_old * stride, end)
+            )
         if end not in fields:
-            raise SystemExit("mlcopy region %s ends at 0x%x, which is not a copy A field"
-                             % (r["name"], end))
-        out.append(dict(r, cap_old=cap_old, cap_new=cap_new, base=base, stride=stride,
-                        growth=(cap_new - cap_old) * stride))
+            raise SystemExit(
+                "mlcopy region %s ends at 0x%x, which is not a copy A field"
+                % (r["name"], end)
+            )
+        out.append(
+            dict(
+                r,
+                cap_old=cap_old,
+                cap_new=cap_new,
+                base=base,
+                stride=stride,
+                growth=(cap_new - cap_old) * stride,
+            )
+        )
     out.sort(key=lambda r: r["base"])
     return out
 
 
 def mlcopy_shift(regions):
     """field offset -> how far it moves (the growths of every region below it)"""
+
     def shift(v):
         return sum(r["growth"] for r in regions if r["base"] < v)
+
     return shift
 
 
@@ -755,8 +1159,11 @@ def mlcopy_check_fields(fields):
     function and to a different object.
     """
     import bisect, copyfields
+
     m = LAYOUT["copy"]["mlcopy"]
-    md2 = Cs(CS_ARCH_X86, CS_MODE_64); md2.detail = True; md2.skipdata = True
+    md2 = Cs(CS_ARCH_X86, CS_MODE_64)
+    md2.detail = True
+    md2.skipdata = True
     starts = sorted(callindex.starts())
     walked = set()
     for fn in m["field_funcs"]:
@@ -767,8 +1174,10 @@ def mlcopy_check_fields(fields):
                 walked.add(H(s["value"]))
     missing = walked - fields
     if missing:
-        raise SystemExit("copy.mlcopy.fields lacks %s (found by copyfields.walk)"
-                         % ", ".join("0x%x" % v for v in sorted(missing)))
+        raise SystemExit(
+            "copy.mlcopy.fields lacks %s (found by copyfields.walk)"
+            % ", ".join("0x%x" % v for v in sorted(missing))
+        )
     return md2
 
 
@@ -789,11 +1198,17 @@ def mlcopy_patches(patches):
 
     # no offset we are about to rewrite may double as a block offset someone attributed
     att = json.load(open(os.path.join(ROOT, "patches", "attrib.json")))
-    clash = [s for s in att if H(s["operand"]) in moving
-             and not s["kind"].startswith(("copy", "size-manual"))]
+    clash = [
+        s
+        for s in att
+        if H(s["operand"]) in moving
+        and not s["kind"].startswith(("copy", "size-manual"))
+    ]
     if clash:
-        raise SystemExit("mlcopy: %d attributed block sites carry a copy A field offset, "
-                         "e.g. %s %s" % (len(clash), clash[0]["va"], clash[0]["text"]))
+        raise SystemExit(
+            "mlcopy: %d attributed block sites carry a copy A field offset, "
+            "e.g. %s %s" % (len(clash), clash[0]["va"], clash[0]["text"])
+        )
 
     by_va = {p["va"]: p for p in patches}
     out, composed, moved = [], 0, {}
@@ -809,8 +1224,14 @@ def mlcopy_patches(patches):
             grow_field(by_va[key], value, delta)
             composed += 1
         else:
-            out.append(patch_dword(va, value, value + delta,
-                                   "mlcopy %s: 0x%x -> 0x%x" % (what, value, value + delta)))
+            out.append(
+                patch_dword(
+                    va,
+                    value,
+                    value + delta,
+                    "mlcopy %s: 0x%x -> 0x%x" % (what, value, value + delta),
+                )
+            )
 
     # every displacement or immediate in the copy A code that is one of its moving fields
     starts = sorted(callindex.starts())
@@ -819,7 +1240,7 @@ def mlcopy_patches(patches):
         fns = [f for f in starts if a <= f < b]
         for i, f in enumerate(fns):
             end = fns[i + 1] if i + 1 < len(fns) else b
-            for ins in md2.disasm(d[off_of(f):off_of(end)], f):
+            for ins in md2.disasm(d[off_of(f) : off_of(end)], f):
                 if ins.id == 0:
                     continue
                 try:
@@ -827,17 +1248,24 @@ def mlcopy_patches(patches):
                 except CsError:
                     continue
                 for op in ops:
-                    if op.type == X86_OP_MEM and op.mem.base != X86_REG_RIP \
-                            and op.mem.disp in moving:
+                    if (
+                        op.type == X86_OP_MEM
+                        and op.mem.base != X86_REG_RIP
+                        and op.mem.disp in moving
+                    ):
                         move(ins.address, op.mem.disp, "A field (disp)")
                     elif op.type == X86_OP_IMM and op.imm in moving:
                         move(ins.address, op.imm, "A field (imm)")
     # the callers that reach a field of A from outside the copy code
     for s in m["outside_sites"]:
         if H(s["operand"]) not in fields:
-            raise SystemExit("mlcopy outside site %s: 0x%x is not a listed field"
-                             % (s["va"], H(s["operand"])))
-        move(H(s["va"]), H(s["operand"]), "A field from %s (%s)" % (s["func"], s["why"]))
+            raise SystemExit(
+                "mlcopy outside site %s: 0x%x is not a listed field"
+                % (s["va"], H(s["operand"]))
+            )
+        move(
+            H(s["va"]), H(s["operand"]), "A field from %s (%s)" % (s["func"], s["why"])
+        )
 
     # the object size: the players part raised it already, this raises it again
     size_old = H(c["size"])
@@ -846,9 +1274,14 @@ def mlcopy_patches(patches):
             grow_field(by_va[va], size_old, total)
             composed += 1
         else:
-            out.append(patch_dword(H(va), size_old, size_old + total,
-                                   "mlcopy A: object size 0x%x -> 0x%x"
-                                   % (size_old, size_old + total)))
+            out.append(
+                patch_dword(
+                    H(va),
+                    size_old,
+                    size_old + total,
+                    "mlcopy A: object size 0x%x -> 0x%x" % (size_old, size_old + total),
+                )
+            )
 
     # the record counts the copy code keeps for each of its own tables.
     #
@@ -861,20 +1294,37 @@ def mlcopy_patches(patches):
         for s in r["count_sites"]:
             per = s.get("per", 1)
             if r["cap_old"] % per or r["cap_new"] % per:
-                raise SystemExit("mlcopy %s: count site %s handles %d records a pass, which "
-                                 "divides neither %d nor %d"
-                                 % (r["name"], s["va"], per, r["cap_old"], r["cap_new"]))
+                raise SystemExit(
+                    "mlcopy %s: count site %s handles %d records a pass, which "
+                    "divides neither %d nor %d"
+                    % (r["name"], s["va"], per, r["cap_old"], r["cap_new"])
+                )
             co, cn = r["cap_old"] // per, r["cap_new"] // per
             if s["va"] in by_va:
-                have = int.from_bytes(bytes.fromhex(by_va[s["va"]]["new"])[-4:], "little")
+                have = int.from_bytes(
+                    bytes.fromhex(by_va[s["va"]]["new"])[-4:], "little"
+                )
                 if have != cn:
-                    raise SystemExit("mlcopy count site %s is already patched, but to %d, "
-                                     "not %d" % (s["va"], have, cn))
+                    raise SystemExit(
+                        "mlcopy count site %s is already patched, but to %d, "
+                        "not %d" % (s["va"], have, cn)
+                    )
                 continue
-            out.append(patch_dword(H(s["va"]), co, cn,
-                                   "mlcopy %s: %s: %d -> %d%s"
-                                   % (r["name"], s["why"], co, cn,
-                                      " (passes, %d records each)" % per if per != 1 else "")))
+            out.append(
+                patch_dword(
+                    H(s["va"]),
+                    co,
+                    cn,
+                    "mlcopy %s: %s: %d -> %d%s"
+                    % (
+                        r["name"],
+                        s["why"],
+                        co,
+                        cn,
+                        " (passes, %d records each)" % per if per != 1 else "",
+                    ),
+                )
+            )
     return out, composed, moved, regions, total
 
 
@@ -895,12 +1345,14 @@ def check_copy_fields(patches):
     """
     if not MLCOPY_MOVED:
         return
-    allow = {H(a["va"]): a for a in LAYOUT["copy"]["mlcopy"].get("field_scan_allow", [])}
+    allow = {
+        H(a["va"]): a for a in LAYOUT["copy"]["mlcopy"].get("field_scan_allow", [])
+    }
     patched = {H(p["va"]) for p in patches}
     starts = sorted(callindex.starts())
     bad = []
     for value in sorted(MLCOPY_MOVED):
-        want = (value & 0xffffffff).to_bytes(4, "little")
+        want = (value & 0xFFFFFFFF).to_bytes(4, "little")
         i = d.find(want)
         while i >= 0:
             va = sva + (i - ro)
@@ -908,15 +1360,23 @@ def check_copy_fields(patches):
             if k >= 0:
                 f = starts[k]
                 end = starts[k + 1] if k + 1 < len(starts) else va + 0x10
-                for ins in md.disasm(d[off_of(f):off_of(end)], f):
+                for ins in md.disasm(d[off_of(f) : off_of(end)], f):
                     if not (ins.address <= va < ins.address + ins.size):
                         continue
-                    ops = [o for o in ins.operands
-                           if (o.type == X86_OP_MEM and o.mem.base != X86_REG_RIP
-                               and o.mem.disp == value)
-                           or (o.type == X86_OP_IMM and o.imm == value)]
+                    ops = [
+                        o
+                        for o in ins.operands
+                        if (
+                            o.type == X86_OP_MEM
+                            and o.mem.base != X86_REG_RIP
+                            and o.mem.disp == value
+                        )
+                        or (o.type == X86_OP_IMM and o.imm == value)
+                    ]
                     if ops and ins.address not in patched and ins.address not in allow:
-                        bad.append((value, ins.address, "%s %s" % (ins.mnemonic, ins.op_str)))
+                        bad.append(
+                            (value, ins.address, "%s %s" % (ins.mnemonic, ins.op_str))
+                        )
                     break
             i = d.find(want, i + 1)
     if bad:
@@ -924,10 +1384,15 @@ def check_copy_fields(patches):
             "%d site(s) still carry a copy A field offset mlcopy moved:\n%s\n"
             "Patch them (patches/layout.json copy.mlcopy.outside_sites) or, if they belong "
             "to variant B, name them in copy.mlcopy.field_scan_allow with the reason."
-            % (len(bad), "\n".join("  0x%x  %-34s (0x%x)" % (va, t, v)
-                                     for v, va, t in bad)))
-    print("   copy A field offsets: every occurrence of %d moved fields is patched or allowed"
-          % len(MLCOPY_MOVED))
+            % (
+                len(bad),
+                "\n".join("  0x%x  %-34s (0x%x)" % (va, t, v) for v, va, t in bad),
+            )
+        )
+    print(
+        "   copy A field offsets: every occurrence of %d moved fields is patched or allowed"
+        % len(MLCOPY_MOVED)
+    )
 
 
 def check_biased(patches):
@@ -958,7 +1423,7 @@ def check_biased(patches):
             o, n = bytes.fromhex(p["old"]), bytes.fromhex(p["new"])
             k = next(i for i in range(len(o)) if o[i] != n[i])
             k = min(k, len(o) - 4)
-            sites[va] = int.from_bytes(n[k:k + 4], "little")
+            sites[va] = int.from_bytes(n[k : k + 4], "little")
     for fn, sites in sorted(seen.items()):
         vals = set(sites.values())
         if len(vals) > 1:
@@ -966,21 +1431,31 @@ def check_biased(patches):
                 "biased sites in 0x%x disagree: %s. A pre-biased displacement encodes "
                 "block_base_new - copy_base_new, which is one constant per copy function; "
                 "a site carrying the block delta alone is the mlcopy load-path bug."
-                % (fn, ", ".join("%s=0x%x" % ("0x%x" % v, c)
-                                 for v, c in sorted(sites.items()))))
+                % (
+                    fn,
+                    ", ".join(
+                        "%s=0x%x" % ("0x%x" % v, c) for v, c in sorted(sites.items())
+                    ),
+                )
+            )
         if sites:
-            print("   biased sites in 0x%x: %d, all 0x%x" % (fn, len(sites), vals.pop()))
+            print(
+                "   biased sites in 0x%x: %d, all 0x%x" % (fn, len(sites), vals.pop())
+            )
 
 
 def mlcopy_released():
-    return [v for r in LAYOUT["copy"]["mlcopy"]["regions"]
-            for v in r.get("released_hold_sites", [])]
+    return [
+        v
+        for r in LAYOUT["copy"]["mlcopy"]["regions"]
+        for v in r.get("released_hold_sites", [])
+    ]
 
 
 # The date-template switch: a byte per regulation id 1..175 at DATE_CASES picks a case,
 # and case 5 is the one the ten big leagues (ids 17-22, 50, 99, 116, 118) share -- a
 # 38-round league calendar.  Free ids are in case 62, which returns nothing.
-DATE_CASES, DATE_CASE_LEAGUE, DATE_CASE_EMPTY = 0x1415802e8, 5, 62
+DATE_CASES, DATE_CASE_LEAGUE, DATE_CASE_EMPTY = 0x1415802E8, 5, 62
 DATE_KEYS = [11]
 
 
@@ -995,15 +1470,22 @@ def date_patches(keys):
     out = []
     for k in keys:
         if not 1 <= k <= 175:
-            raise SystemExit("--date-keys: regulation %d is outside the date table "
-                             "(1..175), so no case byte exists to patch. Spread mode "
-                             "(--date-offsets) is the only route to an id above 175." % k)
+            raise SystemExit(
+                "--date-keys: regulation %d is outside the date table "
+                "(1..175), so no case byte exists to patch. Spread mode "
+                "(--date-offsets) is the only route to an id above 175." % k
+            )
         va = DATE_CASES + k - 1
         cur = d[off_of(va)]
-        out.append({"va": "0x%x" % va, "old": "%02x" % cur,
-                    "new": "%02x" % DATE_CASE_LEAGUE,
-                    "why": "fixture dates: regulation %d takes the big-league calendar" % k,
-                    "asm": "jump-table byte"})
+        out.append(
+            {
+                "va": "0x%x" % va,
+                "old": "%02x" % cur,
+                "new": "%02x" % DATE_CASE_LEAGUE,
+                "why": "fixture dates: regulation %d takes the big-league calendar" % k,
+                "asm": "jump-table byte",
+            }
+        )
     return out
 
 
@@ -1020,15 +1502,22 @@ def cup_patches(keys):
     out = []
     for k in keys:
         if not 1 <= k <= 175:
-            raise SystemExit("--cup-keys: regulation %d is outside the date table "
-                             "(1..175), so no case byte exists to patch" % k)
-        out.append({"va": "0x%x" % (DATE_CASES + k - 1),
-                    "old": "%02x" % DATE_CASE_EMPTY,
-                    "new": "%02x" % DATE_CASE_CUP16,
-                    "why": "fixture dates: regulation %d takes the 16-team domestic cup "
-                           "calendar (the one the Belgian Croky Cup uses)" % k,
-                    "asm": "jump-table byte"})
+            raise SystemExit(
+                "--cup-keys: regulation %d is outside the date table "
+                "(1..175), so no case byte exists to patch" % k
+            )
+        out.append(
+            {
+                "va": "0x%x" % (DATE_CASES + k - 1),
+                "old": "%02x" % DATE_CASE_EMPTY,
+                "new": "%02x" % DATE_CASE_CUP16,
+                "why": "fixture dates: regulation %d takes the 16-team domestic cup "
+                "calendar (the one the Belgian Croky Cup uses)" % k,
+                "asm": "jump-table byte",
+            }
+        )
     return out
+
 
 # the sets that raise caps as well as relocating, and which arrays they raise
 CAPPED = {
@@ -1040,14 +1529,55 @@ CAPPED = {
     "teams-coaches-dates": ["teams", "coaches"],
     "teams-coaches-players-dates": ["teams", "coaches", "players"],
     "teams-coaches-dates-matches": ["teams", "coaches", "rec596", "matchflags"],
-    "teams-coaches-players-dates-matches": ["teams", "coaches", "rec596", "matchflags", "players"],
-    "teams-coaches-regs-players-dates-matches": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
-    "teams-coaches-regs-players-dates-matches-upper": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
-    "teams-coaches-regs-players-dates-matches-upper-mlcopy": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
-    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures":
-        ["teams", "coaches", "regulations", "rec596", "matchflags", "players", "fixtures"],
-    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar":
-        ["teams", "coaches", "regulations", "rec596", "matchflags", "players", "fixtures"],
+    "teams-coaches-players-dates-matches": [
+        "teams",
+        "coaches",
+        "rec596",
+        "matchflags",
+        "players",
+    ],
+    "teams-coaches-regs-players-dates-matches": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "players",
+    ],
+    "teams-coaches-regs-players-dates-matches-upper": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "players",
+    ],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "players",
+    ],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "players",
+        "fixtures",
+    ],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar": [
+        "teams",
+        "coaches",
+        "regulations",
+        "rec596",
+        "matchflags",
+        "players",
+        "fixtures",
+    ],
 }
 
 
@@ -1069,14 +1599,14 @@ CAPPED = {
 # move and are not listed.  The four inside the belt move with it in the -upper sets.
 DTOR_FUNCLETS = [
     # member,                base site,    old offset, count site,   old count
-    ("teams",                0x14249508d, 0xadf4bc,   0x14249509b, 0x2ee),
-    ("regulations",          0x1424950c1, 0xc12e9c,   0x1424950cf, 0x12c),
-    ("coaches",              0x1424950f5, 0xc4ca0c,   0x142495103, 0x514),
-    ("rec596",               0x142495196, 0xe9ff08,   0x1424951a4, 0x32c8),
-    ("teams:dummy",          0x142495120, 0xd0b0ec,   None,         None),
-    ("regulations:dummy",    0x142495133, 0xd0b77c,   None,         None),
-    ("fixtures",             0x14249514f, 0xd65f64,   0x14249515d, 0x7d0),
-    ("upper2",               0x14249517a, 0xe9fee0,   None,         None),
+    ("teams", 0x14249508D, 0xADF4BC, 0x14249509B, 0x2EE),
+    ("regulations", 0x1424950C1, 0xC12E9C, 0x1424950CF, 0x12C),
+    ("coaches", 0x1424950F5, 0xC4CA0C, 0x142495103, 0x514),
+    ("rec596", 0x142495196, 0xE9FF08, 0x1424951A4, 0x32C8),
+    ("teams:dummy", 0x142495120, 0xD0B0EC, None, None),
+    ("regulations:dummy", 0x142495133, 0xD0B77C, None, None),
+    ("fixtures", 0x14249514F, 0xD65F64, 0x14249515D, 0x7D0),
+    ("upper2", 0x14249517A, 0xE9FEE0, None, None),
 ]
 
 
@@ -1093,20 +1623,36 @@ def dtor_funclet_patches(bases, belt_shift, capped):
             delta = bases[member] - base_old
         elif array in bases and ":" not in member:
             delta = bases[array] - base_old
-        elif belt_shift and base_old >= H(LAYOUT["block"]["upper_belt"]["start"])                 and base_old < H(LAYOUT["block"]["upper_belt"]["end"]):
+        elif (
+            belt_shift
+            and base_old >= H(LAYOUT["block"]["upper_belt"]["start"])
+            and base_old < H(LAYOUT["block"]["upper_belt"]["end"])
+        ):
             delta = belt_shift
         else:
             delta = 0
         if delta:
-            out.append(patch_dword(base_va, base_old, base_old + delta,
-                                   "unwind funclet %s: 0x%x -> 0x%x (destroys the member "
-                                   "where it now lives)" % (member, base_old, base_old + delta)))
+            out.append(
+                patch_dword(
+                    base_va,
+                    base_old,
+                    base_old + delta,
+                    "unwind funclet %s: 0x%x -> 0x%x (destroys the member "
+                    "where it now lives)" % (member, base_old, base_old + delta),
+                )
+            )
         if count_va is not None and array in capped:
             cap_new = LAYOUT["arrays"][array]["cap_new"]
             if cap_new != count_old:
-                out.append(patch_dword(count_va, count_old, cap_new,
-                                       "unwind funclet %s: %d -> %d records destroyed"
-                                       % (member, count_old, cap_new)))
+                out.append(
+                    patch_dword(
+                        count_va,
+                        count_old,
+                        cap_new,
+                        "unwind funclet %s: %d -> %d records destroyed"
+                        % (member, count_old, cap_new),
+                    )
+                )
     return out
 
 
@@ -1149,24 +1695,30 @@ def copyb_patches():
     for site in vb["sites"]:
         val = H(site["value"])
         if val <= after:
-            continue                       # at or before the fixture array: it stays
+            continue  # at or before the fixture array: it stays
         va = H(site["va"])
         off = va - 0x140001000 + 0x600
-        ins = next(iter(md.disasm(d[off:off + 16], va)), None)
+        ins = next(iter(md.disasm(d[off : off + 16], va)), None)
         if ins is None or bytes(ins.bytes).hex() != bytes(ins.bytes).hex():
             raise SystemExit("copy B: cannot decode %s" % site["va"])
         raw = bytes(ins.bytes)
         want = struct.pack("<I", val)
         k = raw.find(want)
         if k < 0 or raw.find(want, k + 1) >= 0:
-            raise SystemExit("copy B: %s does not carry %s exactly once"
-                             % (site["va"], site["value"]))
-        out.append({"va": "0x%x" % (va + k),
-                    "old": want.hex(),
-                    "new": struct.pack("<I", val + grow).hex(),
-                    "why": "copy B %s: 0x%x -> 0x%x, the fixture array grew by 0x%x (%s)"
-                           % (site["field"], val, val + grow, grow, site["text"]),
-                    "asm": site["text"]})
+            raise SystemExit(
+                "copy B: %s does not carry %s exactly once"
+                % (site["va"], site["value"])
+            )
+        out.append(
+            {
+                "va": "0x%x" % (va + k),
+                "old": want.hex(),
+                "new": struct.pack("<I", val + grow).hex(),
+                "why": "copy B %s: 0x%x -> 0x%x, the fixture array grew by 0x%x (%s)"
+                % (site["field"], val, val + grow, grow, site["text"]),
+                "asm": site["text"],
+            }
+        )
     return out
 
 
@@ -1192,23 +1744,26 @@ def copyb_patches():
 # The block -> B loops for teams, coaches and regulations also stop at the block's own
 # counts, not at B's caps (the overrun copy A had before mlcopy).  B -> block reads back
 # exactly 750 / 750 / 180 records, so B -> block's mirror is a fixed count as well.
-COPYB_SIZE_SITE = 0x1413fea01             # mov eax, <size> in the getter 0x1413fea00
-COPYB_CAL_OLD = 0x9e50cc
-COPYB_TAIL = 0xee53c0                     # the player part's header; the unit goes here
-COPYB_TAIL_SITES = [                      # (instruction, the B offset it carries)
-    (0x140afd83f, 0xee53c0),   # ctor: mov qword ptr [rsi + 0xee53c0], rdi
-    (0x140afd846, 0xee53d0),   # ctor: lea rbx, [rsi + 0xee53d0]   (BH1 built here)
-    (0x1413fed64, 0xee53c0),   # B -> block: mov eax, dword ptr [rsi + 0xee53c0]
-    (0x1413fed76, 0xee53c4),   # B -> block: mov eax, dword ptr [rsi + 0xee53c4]
-    (0x1413ff12b, 0xee53c0),   # block -> B: mov dword ptr [rsi + 0xee53c0], eax
-    (0x1413ff13c, 0xee53c4),   # block -> B: mov dword ptr [rsi + 0xee53c4], eax
-    (0x140af23b3, 0xee53d0),   # load: lea rax, [rcx + 0xee53d0]
-    (0x140af23ba, 0xee53c8),   # load: mov qword ptr [rcx + 0xee53c8], rax
-    (0x140af23d4, 0xee53c8),   # load: mov rcx, qword ptr [rcx + 0xee53c8]
-    (0x1412e67f9, 0xee53d0),   # save descriptor: mov dword ptr [rdi + 0x180], 0xee53d0
+COPYB_SIZE_SITE = 0x1413FEA01  # mov eax, <size> in the getter 0x1413fea00
+COPYB_CAL_OLD = 0x9E50CC
+COPYB_TAIL = 0xEE53C0  # the player part's header; the unit goes here
+COPYB_TAIL_SITES = [  # (instruction, the B offset it carries)
+    (0x140AFD83F, 0xEE53C0),  # ctor: mov qword ptr [rsi + 0xee53c0], rdi
+    (0x140AFD846, 0xEE53D0),  # ctor: lea rbx, [rsi + 0xee53d0]   (BH1 built here)
+    (0x1413FED64, 0xEE53C0),  # B -> block: mov eax, dword ptr [rsi + 0xee53c0]
+    (0x1413FED76, 0xEE53C4),  # B -> block: mov eax, dword ptr [rsi + 0xee53c4]
+    (0x1413FF12B, 0xEE53C0),  # block -> B: mov dword ptr [rsi + 0xee53c0], eax
+    (0x1413FF13C, 0xEE53C4),  # block -> B: mov dword ptr [rsi + 0xee53c4], eax
+    (0x140AF23B3, 0xEE53D0),  # load: lea rax, [rcx + 0xee53d0]
+    (0x140AF23BA, 0xEE53C8),  # load: mov qword ptr [rcx + 0xee53c8], rax
+    (0x140AF23D4, 0xEE53C8),  # load: mov rcx, qword ptr [rcx + 0xee53c8]
+    (0x1412E67F9, 0xEE53D0),  # save descriptor: mov dword ptr [rdi + 0x180], 0xee53d0
 ]
-COPYB_CLAMPS = [(0x1413fee1f, "teams", 750), (0x1413fee6f, "coaches", 1300),
-                (0x1413feebf, "regulations", 180)]
+COPYB_CLAMPS = [
+    (0x1413FEE1F, "teams", 750),
+    (0x1413FEE6F, "coaches", 1300),
+    (0x1413FEEBF, "regulations", 180),
+]
 
 # Copy S: the third mode copy, the one a Cup save stores (mode 7 at the switch 0x140af3742,
 # [obj+0x260]; ctor 0x140af21c0, S -> block 0x1413fc480, block -> S 0x1413fc800).  Its
@@ -1220,18 +1775,18 @@ COPYB_CLAMPS = [(0x1413fee1f, "teams", 750), (0x1413fee6f, "coaches", 1300),
 # the object, where nothing else lives, and the object grows by it: three leas carry the
 # unit's place, three allocations and the save descriptor carry the size (the exe holds no
 # other 0x5f6ed0; the object's own last fields at +0x5f6ec4 stay where they are).
-COPYS_SIZE_OLD = 0x5f6ed0
-COPYS_CAL_OLD = 0x15d380
+COPYS_SIZE_OLD = 0x5F6ED0
+COPYS_CAL_OLD = 0x15D380
 COPYS_CAL_SITES = [
-    0x140af2298,   # ctor: lea rcx, [rsi + 0x15d380]; call 0x140af1fb0 (unit init)
-    0x1413fc63e,   # S -> block: lea rdx, [r15 + 0x15d380]
-    0x1413fca08,   # block -> S: lea rcx, [rsi + 0x15d380]
+    0x140AF2298,  # ctor: lea rcx, [rsi + 0x15d380]; call 0x140af1fb0 (unit init)
+    0x1413FC63E,  # S -> block: lea rdx, [r15 + 0x15d380]
+    0x1413FCA08,  # block -> S: lea rcx, [rsi + 0x15d380]
 ]
 COPYS_SIZE_SITES = [
-    0x140af185b,   # new career, mode 7: mov edx, 0x5f6ed0; call operator new 0x1403fb410
-    0x140afc042,   # save path: mov edx, 0x5f6ed0
-    0x140b0ed52,   # save path: mov edx, 0x5f6ed0
-    0x1412e6659,   # save descriptor 0x1412e65b0: mov dword ptr [rbx + 0x180], 0x5f6ed0
+    0x140AF185B,  # new career, mode 7: mov edx, 0x5f6ed0; call operator new 0x1403fb410
+    0x140AFC042,  # save path: mov edx, 0x5f6ed0
+    0x140B0ED52,  # save path: mov edx, 0x5f6ed0
+    0x1412E6659,  # save descriptor 0x1412e65b0: mov dword ptr [rbx + 0x180], 0x5f6ed0
 ]
 # The bytes a Cup save file carries are not the descriptor's: the save header writer
 # 0x1414318a0 asks 0x141409cd0(type) for the payload, a switch over the 50 save types in
@@ -1242,7 +1797,7 @@ COPYS_SIZE_SITES = [
 # is never written and a load gets the ctor's empty one back (measured 14.10.: the file
 # stayed 6,256,289 bytes with the four sites above patched).
 COPYS_HEADER = 0x50
-COPYS_PAYLOAD_SITE = 0x141409d05   # mov r8d, 0x5f6e80
+COPYS_PAYLOAD_SITE = 0x141409D05  # mov r8d, 0x5f6e80
 
 
 # S -> block (0x1413fc480) fills the block's team, coach and regulation tables from the
@@ -1253,10 +1808,10 @@ COPYS_PAYLOAD_SITE = 0x141409d05   # mov r8d, 0x5f6e80
 # team table, no "user's team" for the day's matches, and 0x140adcc40's empty event vector
 # aborted the game (Vicentico 13.10., dump 7512 measured 14.10.).  The save side
 # (0x1413fc800) carries the bases directly and is attributed like any other site.
-COPYS_BIASED = [                           # (instruction, table, the save's table offset)
-    (0x1413fc521, "teams", 0xdead0),       # lea rcx, [r14 + 0xa009ec]  (60 records)
-    (0x1413fc561, "coaches", 0xf7490),     # lea rcx, [r14 + 0xb5557c]  (60 records)
-    (0x1413fc5a1, "regulations", 0x100130),  # lea rcx, [r14 + 0xb12d6c]  (40 records)
+COPYS_BIASED = [  # (instruction, table, the save's table offset)
+    (0x1413FC521, "teams", 0xDEAD0),  # lea rcx, [r14 + 0xa009ec]  (60 records)
+    (0x1413FC561, "coaches", 0xF7490),  # lea rcx, [r14 + 0xb5557c]  (60 records)
+    (0x1413FC5A1, "regulations", 0x100130),  # lea rcx, [r14 + 0xb12d6c]  (40 records)
 ]
 
 
@@ -1267,11 +1822,17 @@ def copys_table_patches(patches):
     for va, name, copy_off in COPYS_BIASED:
         base_old = H(LAYOUT["arrays"][name]["base_old"])
         tag = "%s edit: 0x%x -> " % (name, base_old)
-        news = set(H(p["why"][len(tag):].split()[0]) for p in patches if p["why"].startswith(tag))
+        news = set(
+            H(p["why"][len(tag) :].split()[0])
+            for p in patches
+            if p["why"].startswith(tag)
+        )
         if len(news) != 1:
             if not news:
-                continue                   # the table did not move in this set
-            raise SystemExit("copy S: %s moves to %d different bases" % (name, len(news)))
+                continue  # the table did not move in this set
+            raise SystemExit(
+                "copy S: %s moves to %d different bases" % (name, len(news))
+            )
         base_new = news.pop()
         old, new = base_old - copy_off, base_new - copy_off
         ins = insn_at(va)
@@ -1279,16 +1840,23 @@ def copys_table_patches(patches):
         want = struct.pack("<I", old)
         k = raw.find(want)
         if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
-            raise SystemExit("copy S: 0x%x does not carry 0x%x exactly once (%s %s)"
-                             % (va, old, ins.mnemonic, ins.op_str))
+            raise SystemExit(
+                "copy S: 0x%x does not carry 0x%x exactly once (%s %s)"
+                % (va, old, ins.mnemonic, ins.op_str)
+            )
         if va + k in by_va:
             raise SystemExit("copy S: 0x%x is already patched" % (va + k))
-        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
-                    "new": struct.pack("<I", new).hex(),
-                    "why": "copy S (Cup save) %s biased: 0x%x -> 0x%x, S -> block writes the "
-                           "cup's %s at the moved table [block 0x%x - save 0x%x] (%s %s)"
-                           % (name, old, new, name, base_new, copy_off, ins.mnemonic, ins.op_str),
-                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+        out.append(
+            {
+                "va": "0x%x" % (va + k),
+                "old": want.hex(),
+                "new": struct.pack("<I", new).hex(),
+                "why": "copy S (Cup save) %s biased: 0x%x -> 0x%x, S -> block writes the "
+                "cup's %s at the moved table [block 0x%x - save 0x%x] (%s %s)"
+                % (name, old, new, name, base_new, copy_off, ins.mnemonic, ins.op_str),
+                "asm": "%s %s" % (ins.mnemonic, ins.op_str),
+            }
+        )
     return out
 
 
@@ -1299,31 +1867,58 @@ def copys_calendar_patches(patches, unit_bytes):
     size_new = COPYS_SIZE_OLD + grow
     out = []
     for va, old, new, why in (
-            [(va, COPYS_CAL_OLD, cal_new,
-              "copy S (Cup save) calendar unit: +0x%x -> +0x%x, past the object's end, so the "
-              "widened unit no longer overruns the cup state at +0x1ca080" % (COPYS_CAL_OLD, cal_new))
-             for va in COPYS_CAL_SITES] +
-            [(va, COPYS_SIZE_OLD, size_new,
-              "copy S (Cup save) object: 0x%x -> 0x%x, the calendar unit appended"
-              % (COPYS_SIZE_OLD, size_new))
-             for va in COPYS_SIZE_SITES] +
-            [(COPYS_PAYLOAD_SITE, COPYS_SIZE_OLD - COPYS_HEADER, size_new - COPYS_HEADER,
-              "copy S (Cup save) file payload for the nine cup types: 0x%x -> 0x%x, so the "
-              "appended calendar unit is written and read back"
-              % (COPYS_SIZE_OLD - COPYS_HEADER, size_new - COPYS_HEADER))]):
+        [
+            (
+                va,
+                COPYS_CAL_OLD,
+                cal_new,
+                "copy S (Cup save) calendar unit: +0x%x -> +0x%x, past the object's end, so the "
+                "widened unit no longer overruns the cup state at +0x1ca080"
+                % (COPYS_CAL_OLD, cal_new),
+            )
+            for va in COPYS_CAL_SITES
+        ]
+        + [
+            (
+                va,
+                COPYS_SIZE_OLD,
+                size_new,
+                "copy S (Cup save) object: 0x%x -> 0x%x, the calendar unit appended"
+                % (COPYS_SIZE_OLD, size_new),
+            )
+            for va in COPYS_SIZE_SITES
+        ]
+        + [
+            (
+                COPYS_PAYLOAD_SITE,
+                COPYS_SIZE_OLD - COPYS_HEADER,
+                size_new - COPYS_HEADER,
+                "copy S (Cup save) file payload for the nine cup types: 0x%x -> 0x%x, so the "
+                "appended calendar unit is written and read back"
+                % (COPYS_SIZE_OLD - COPYS_HEADER, size_new - COPYS_HEADER),
+            )
+        ]
+    ):
         ins = insn_at(va)
         raw = bytes(ins.bytes)
         want = struct.pack("<I", old)
         k = raw.find(want)
         if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
-            raise SystemExit("copy S: 0x%x does not carry 0x%x exactly once (%s %s)"
-                             % (va, old, ins.mnemonic, ins.op_str))
+            raise SystemExit(
+                "copy S: 0x%x does not carry 0x%x exactly once (%s %s)"
+                % (va, old, ins.mnemonic, ins.op_str)
+            )
         if va + k in by_va:
             raise SystemExit("copy S: 0x%x is already patched" % (va + k))
-        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
-                    "new": struct.pack("<I", new).hex(),
-                    "why": "%s (%s %s)" % (why, ins.mnemonic, ins.op_str),
-                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+        out.append(
+            {
+                "va": "0x%x" % (va + k),
+                "old": want.hex(),
+                "new": struct.pack("<I", new).hex(),
+                "why": "%s (%s %s)" % (why, ins.mnemonic, ins.op_str),
+                "asm": "%s %s" % (ins.mnemonic, ins.op_str),
+            }
+        )
     return out, cal_new, size_new
 
 
@@ -1331,8 +1926,10 @@ def copyb_calendar_patches(patches, unit_bytes):
     by_va = {H(p["va"]): p for p in patches}
     size_p = by_va.get(COPYB_SIZE_SITE)
     if size_p is None:
-        raise SystemExit("copy B: the object size at 0x%x is not patched by the players part"
-                         % COPYB_SIZE_SITE)
+        raise SystemExit(
+            "copy B: the object size at 0x%x is not patched by the players part"
+            % COPYB_SIZE_SITE
+        )
     size_old = int.from_bytes(bytes.fromhex(size_p["new"])[:4], "little")
     grow = align(unit_bytes, 0x10)
     cal_new = COPYB_TAIL
@@ -1340,57 +1937,86 @@ def copyb_calendar_patches(patches, unit_bytes):
     new = bytearray.fromhex(size_p["new"])
     new[:4] = size_new.to_bytes(4, "little")
     size_p["new"] = new.hex()
-    size_p["why"] += ("; copy B calendar unit inside the saved prefix, player part up by "
-                      "0x%x: 0x%x -> 0x%x" % (grow, size_old, size_new))
+    size_p["why"] += (
+        "; copy B calendar unit inside the saved prefix, player part up by "
+        "0x%x: 0x%x -> 0x%x" % (grow, size_old, size_new)
+    )
     out = []
     vb = LAYOUT["copy"]["variant_b"]
     sites = [s for s in vb["sites"] if H(s["value"]) == COPYB_CAL_OLD]
     if len(sites) != 3:
-        raise SystemExit("copy B: expected 3 calendar sites in copy.variant_b.sites, found %d"
-                         % len(sites))
+        raise SystemExit(
+            "copy B: expected 3 calendar sites in copy.variant_b.sites, found %d"
+            % len(sites)
+        )
     for s in sites:
         va = H(s["va"])
         want = struct.pack("<I", COPYB_CAL_OLD)
-        k = d[off_of(va):off_of(va) + 16].find(want)
+        k = d[off_of(va) : off_of(va) + 16].find(want)
         if k < 0:
-            raise SystemExit("copy B: %s does not carry 0x%x" % (s["va"], COPYB_CAL_OLD))
+            raise SystemExit(
+                "copy B: %s does not carry 0x%x" % (s["va"], COPYB_CAL_OLD)
+            )
         if va + k in by_va:
             raise SystemExit("copy B: %s is already patched" % s["va"])
-        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
-                    "new": struct.pack("<I", cal_new).hex(),
-                    "why": "copy B calendar unit: +0x%x -> +0x%x, where the player part "
-                           "began, inside what a Cup save stores (%s)"
-                           % (COPYB_CAL_OLD, cal_new, s["text"]),
-                    "asm": s["text"]})
+        out.append(
+            {
+                "va": "0x%x" % (va + k),
+                "old": want.hex(),
+                "new": struct.pack("<I", cal_new).hex(),
+                "why": "copy B calendar unit: +0x%x -> +0x%x, where the player part "
+                "began, inside what a Cup save stores (%s)"
+                % (COPYB_CAL_OLD, cal_new, s["text"]),
+                "asm": s["text"],
+            }
+        )
     for va, val in COPYB_TAIL_SITES:
         ins = insn_at(va)
         raw = bytes(ins.bytes)
         want = struct.pack("<I", val)
         k = raw.find(want)
         if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
-            raise SystemExit("copy B: 0x%x does not carry 0x%x exactly once (%s %s)"
-                             % (va, val, ins.mnemonic, ins.op_str))
+            raise SystemExit(
+                "copy B: 0x%x does not carry 0x%x exactly once (%s %s)"
+                % (va, val, ins.mnemonic, ins.op_str)
+            )
         if va + k in by_va:
             raise SystemExit("copy B: 0x%x is already patched" % (va + k))
-        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
-                    "new": struct.pack("<I", val + grow).hex(),
-                    "why": "copy B player part up by the calendar unit: +0x%x -> +0x%x (%s %s)"
-                           % (val, val + grow, ins.mnemonic, ins.op_str),
-                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+        out.append(
+            {
+                "va": "0x%x" % (va + k),
+                "old": want.hex(),
+                "new": struct.pack("<I", val + grow).hex(),
+                "why": "copy B player part up by the calendar unit: +0x%x -> +0x%x (%s %s)"
+                % (val, val + grow, ins.mnemonic, ins.op_str),
+                "asm": "%s %s" % (ins.mnemonic, ins.op_str),
+            }
+        )
     for va, name, cap in COPYB_CLAMPS:
         ins = insn_at(va)
         raw = bytes(ins.bytes)
         if ins.mnemonic != "cmp" or raw[:2] != b"\x3b\xbb" or len(raw) != 6:
-            raise SystemExit("copy B: 0x%x is not `cmp edi, dword ptr [rbx + disp32]`" % va)
-        clamp = b"\x81\xff" + struct.pack("<I", cap)          # cmp edi, imm32
+            raise SystemExit(
+                "copy B: 0x%x is not `cmp edi, dword ptr [rbx + disp32]`" % va
+            )
+        clamp = b"\x81\xff" + struct.pack("<I", cap)  # cmp edi, imm32
         p = by_va.get(va)
-        why = ("copy B %s: block -> B stops at B's %d records, not at the block's count "
-               "(cmp edi, %d)" % (name, cap, cap))
+        why = (
+            "copy B %s: block -> B stops at B's %d records, not at the block's count "
+            "(cmp edi, %d)" % (name, cap, cap)
+        )
         if p is not None:
             p["new"], p["why"] = clamp.hex(), why + "; replaces: " + p["why"]
         else:
-            out.append({"va": "0x%x" % va, "old": raw.hex(), "new": clamp.hex(), "why": why,
-                        "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+            out.append(
+                {
+                    "va": "0x%x" % va,
+                    "old": raw.hex(),
+                    "new": clamp.hex(),
+                    "why": why,
+                    "asm": "%s %s" % (ins.mnemonic, ins.op_str),
+                }
+            )
     return out, cal_new, size_new
 
 
@@ -1631,22 +2257,186 @@ def copyb_table_patches(patches, unit_bytes, bases):
     _compose(by_va, COPYB_SIZE_SITE, size_old, size_old + grow,
              "copy B fixtures: 0x%x -> 0x%x" % (size_old, size_old + grow))
     return out, new, size_old + grow
+def pk32_patches(patches):
+    """the pk32 step (pk32.py), checked against the set it joins: its bytes must not touch any
+    patch already in it, and the bounds it relies on must already follow the player cap"""
+    cap = LAYOUT["arrays"]["players"]["cap_new"]
+    if cap <= 0xFFFC:
+        raise SystemExit(
+            "-pk32: the player cap is %d; the fixes only mean something past 65532" % cap
+        )
+    by_va = {int(p["va"], 16): p for p in patches}
+    for va in pk32.CAP_SITES:
+        p = by_va.get(va)
+        if p is None or bytes.fromhex(p["new"])[-4:] != cap.to_bytes(4, "little"):
+            raise SystemExit(
+                "-pk32: 0x%x does not follow the player cap %d in this set" % (va, cap)
+            )
+
+    def read(va, n):
+        if not sva <= va < sva + rsz:
+            raise SystemExit("-pk32: 0x%x is outside %s" % (va, secname))
+        return d[off_of(va) : off_of(va) + n]
+
+    pk = pk32.patches(read, in_code=lambda va: va < datecave.IMAGE_END)
+    spans = [(int(p["va"], 16), len(p["old"]) // 2, p["va"]) for p in patches]
+    for q in pk:
+        a = int(q["va"], 16)
+        b = a + len(q["old"]) // 2
+        for s, n, v in spans:
+            if s < b and a < s + n:
+                raise SystemExit("-pk32: %s overlaps the set's patch at %s" % (q["va"], v))
+    page = pk32.CAVE & ~0xFFF
+    taken = [p["va"] for p in patches if int(p["va"], 16) & ~0xFFF == page]
+    if taken:
+        raise SystemExit("-pk32: the cave page 0x%x is already used by %s" % (page, taken[0]))
+    return pk
+
+
+def standings_patches(patches):
+    """the standings step (standings.py), checked against the set it joins: no byte of it may
+    touch a patch already in it, and its page must be its own"""
+    t, n = STANDINGS
+
+    def read(va, k):
+        if not sva <= va < sva + rsz:
+            raise SystemExit("-standings: 0x%x is outside %s" % (va, secname))
+        return d[off_of(va) : off_of(va) + k]
+
+    st = standings.patches(read, t, n, in_code=lambda va: va < datecave.IMAGE_END)
+    spans = [(int(p["va"], 16), len(p["old"]) // 2, p["va"]) for p in patches]
+    for q in st:
+        a = int(q["va"], 16)
+        b = a + len(q["old"]) // 2
+        for s, k, v in spans:
+            if s < b and a < s + k:
+                raise SystemExit(
+                    "-standings: %s overlaps the set's patch at %s" % (q["va"], v)
+                )
+    page = standings.CAVE & ~0xFFF
+    taken = [p["va"] for p in patches if int(p["va"], 16) & ~0xFFF == page]
+    if taken:
+        raise SystemExit(
+            "-standings: the cave page 0x%x is already used by %s" % (page, taken[0])
+        )
+    return st
+
+
+def calls_to(fns):
+    """{fn: [va of every direct call rel32 / jmp rel32 to fn in the code section]} -- a byte scan,
+    so a hit inside another instruction only adds callers (cidwide then refuses, never passes)"""
+    want = set(fns)
+    out = {f: [] for f in fns}
+    code = d[ro : ro + rsz]
+    for op in (b"\xe8", b"\xe9"):
+        i = code.find(op)
+        while 0 <= i <= len(code) - 5:
+            t = sva + i + 5 + struct.unpack_from("<i", code, i + 1)[0]
+            if t in want:
+                out[t].append(sva + i)
+            i = code.find(op, i + 1)
+    return out
+
+
+def cidwide_patches(patches):
+    """the cidwide step (cidwide.py), checked against the set it joins: no byte of it may touch a
+    patch already there, its cave page must be its own, and the map helpers it widens must have
+    only the census's callers in this exe"""
+
+    def read(va, n):
+        if not sva <= va < sva + rsz:
+            raise SystemExit("-cidwide: 0x%x is outside %s" % (va, secname))
+        return d[off_of(va) : off_of(va) + n]
+
+    callers = calls_to(list(cidwide.MAP_HELPERS))
+    cw = cidwide.patches(read, in_code=lambda va: va < datecave.IMAGE_END,
+                         calls_to=lambda fn: callers[fn])
+    spans = [(int(p["va"], 16), len(p["old"]) // 2, p["va"]) for p in patches]
+    for q in cw:
+        a = int(q["va"], 16)
+        b = a + len(q["old"]) // 2
+        for s, n, v in spans:
+            if s < b and a < s + n:
+                raise SystemExit("-cidwide: %s overlaps the set's patch at %s" % (q["va"], v))
+    page = cidwide.CAVE & ~0xFFF
+    taken = [p["va"] for p in patches if int(p["va"], 16) & ~0xFFF == page]
+    if taken:
+        raise SystemExit("-cidwide: the cave page 0x%x is already used by %s" % (page, taken[0]))
+    return cw
+
+
+def regions_patches(patches):
+    """the regions step (regions.py), checked against the set it joins: no byte of it may touch
+    a patch already in it. It has no cave and no page of its own."""
+
+    def read(va, k):
+        if not sva <= va < sva + rsz:
+            raise SystemExit("-regions: 0x%x is outside %s" % (va, secname))
+        return d[off_of(va) : off_of(va) + k]
+
+    rg = regions.patches(read, in_code=lambda va: va < datecave.IMAGE_END)
+    regions.check_overlap(rg, patches)
+    return rg
 
 
 def main():
-    global MLCOPY_ON, SLOTS32, CALENDAR_GROWTH, CALENDAR_IDS
+    global MLCOPY_ON, SLOTS32, CALENDAR_GROWTH, CALENDAR_IDS, STANDINGS
     which = sys.argv[1] if len(sys.argv) > 1 else "block"
+    # <set>[-pk32][-standings]-regions: regions (countries) 0..255 instead of fl26reg128's
+    # 0..127 -- fl26reg128's 44 sites with the parser reading all eight bits of Competition.bin
+    # +3 (regions.py); fl26reg128 then finds them done. Last in the name.
+    REG = which.endswith("-regions")
+    if REG:
+        which = which[: -len("-regions")]
+    # <set>-pk32: the same set plus the player-index fixes for a cap past 65535 (pk32.py):
+    # the id lookup returns the real index, the 17 allocator sites clamp every index from
+    # 0xfffd up to the word 0xffff, and the selected-player feed resolves such a word by id.
+    # Optional and last in the name; written as its own <set>-pk32... files.
+    # <set>[-pk32]-cidwide: the same set plus competition ids up to 1023 (cidwide.py): the
+    # census, the regulation builder, Select Team and EDIT read the id's high byte (Competition
+    # +7, Regulation +0x910, Entry +0xb). Optional, after -pk32 when both are asked for.
+    CIDWIDE = which.endswith("-cidwide")
+    if CIDWIDE:
+        which = which[: -len("-cidwide")]
+    # <set>[-pk32]-standings: the standings pool moved to the top of a grown object and raised
+    # to --standings-tables T (2400), the season header to --standings-header N (1024), copy A's
+    # slot grown to match (standings.py). Replaces fl26hdr255. Last in the name.
+    STD = which.endswith("-standings")
+    if STD:
+        which = which[: -len("-standings")]
+        a = sys.argv
+        t = int(a[a.index("--standings-tables") + 1]) if "--standings-tables" in a else standings.DEFAULT_T
+        n = int(a[a.index("--standings-header") + 1]) if "--standings-header" in a else standings.DEFAULT_N
+        standings.check(t, n)
+        STANDINGS = (t, n)
+    PK32 = which.endswith("-pk32")
+    if PK32:
+        which = which[: -len("-pk32")]
     MLCOPY_ON = which in MLCOPY_SETS
+    # --calendar-elem4 (u32 match ids, M2): a day's match ids become dwords; calwiden lays the
+    # day out for 4-byte ids and calelem.py rewrites every access to them. Experimental like
+    # --slots32: written as <set>.elem4 and kept off the install copy without --install-copy.
+    ELEM4 = "--calendar-elem4" in sys.argv
+    if ELEM4:
+        if which not in CALENDAR_SETS:
+            raise SystemExit("--calendar-elem4 only means something for the -calendar set")
+        calwiden.ELEM = 4
     if "--calendar-ids" in sys.argv:
         if which not in CALENDAR_SETS:
-            raise SystemExit("--calendar-ids only means something for the -calendar set")
+            raise SystemExit(
+                "--calendar-ids only means something for the -calendar set"
+            )
         CALENDAR_IDS = int(sys.argv[sys.argv.index("--calendar-ids") + 1])
         if CALENDAR_IDS <= 280:
-            raise SystemExit("--calendar-ids %d: the shipped day already holds 280" % CALENDAR_IDS)
-        real = calwiden.shape(CALENDAR_IDS)[2] // 2
+            raise SystemExit(
+                "--calendar-ids %d: the shipped day already holds 280" % CALENDAR_IDS
+            )
+        real = calwiden.shape(CALENDAR_IDS)[2] // calwiden.ELEM
         if real != CALENDAR_IDS:
-            print("--calendar-ids %d: the copier steps in 0x80-byte blocks, so a day holds %d"
-                  % (CALENDAR_IDS, real))
+            print(
+                "--calendar-ids %d: the copier steps in 0x80-byte blocks, so a day holds %d"
+                % (CALENDAR_IDS, real)
+            )
     if which in CALENDAR_SETS:
         # mlcopy has to know before it plans the copy: the copy's calendar unit grows by
         # exactly what the block's does, and every copy field above it moves by that much.
@@ -1656,12 +2446,78 @@ def main():
     if which not in SETS:
         raise SystemExit("unknown set %r; known: %s" % (which, ", ".join(SETS)))
     relocate = SETS[which]
+    # --fl27: the same set with the FL 2027 caps (layout.json fl27), written beside the FL26
+    # one as <set>.fl27 instead of over it
+    FL27 = "--fl27" in sys.argv
+    name = which + "-pk32" if PK32 else which
+    if STD:
+        if which not in MLCOPY_SETS:
+            raise SystemExit("-standings: copy A's slot grows through mlcopy; %s has none" % which)
+        name += "-standings"
+        if STANDINGS != (standings.DEFAULT_T, standings.DEFAULT_N):
+            name += ".t%d.h%d" % STANDINGS
+    if CIDWIDE:
+        name += "-cidwide"
+    if REG:
+        name += "-regions"
+    out_name = name + ".fl27" if FL27 else name
+    if ELEM4:
+        out_name += ".elem4"
+    if FL27:
+        caps = LAYOUT["fl27"]["caps"]
+        for name in ("teams", "coaches", "regulations"):
+            LAYOUT["arrays"][name]["cap_new"] = caps[name]
+        if "--player-cap" not in sys.argv:
+            sys.argv += ["--player-cap", str(caps["players"])]
+        os.environ["FL26_BIG_PLAYERS"] = "1"
+        print("FL27 caps: %s" % ", ".join("%s %d" % kv for kv in sorted(caps.items())))
+    # --caps teams=8000,coaches=10000: other caps than layout.json's for teams, coaches or
+    # regulations (a pack of ~150 countries needs ~8000 clubs). A team key keeps its index in
+    # 14 bits, 0x3ffd-0x3fff taken (0x1414bca80), so teams stay below 16381. Written beside
+    # the set as <set>.<name><N>...
+    if "--caps" in sys.argv:
+        for kv in sys.argv[sys.argv.index("--caps") + 1].split(","):
+            name, n = kv.split("=")
+            if name not in ("teams", "coaches", "regulations"):
+                raise SystemExit("--caps: %s? teams, coaches or regulations" % name)
+            if name == "teams" and not 0 < int(n) <= 0x3FFC:
+                raise SystemExit("--caps teams=%s: a team key's index is 14 bits" % n)
+            LAYOUT["arrays"][name]["cap_new"] = int(n)
+            out_name += ".%s%d" % (name, int(n))
+            print("%s cap %d" % (name, int(n)))
+    # --match-cap N: the match table (and its byte of flags a match) past the u16 wall, for the
+    # u32 match ids of the limits branch (step M4: fl26match hands out ids from 65536 up, so a
+    # site that still cuts the id to 16 bits misses). Every cap site is a 32-bit compare or
+    # move; written beside the set as <set>.m<N>.
+    if "--match-cap" in sys.argv:
+        mcap = int(sys.argv[sys.argv.index("--match-cap") + 1])
+        if not ELEM4:
+            raise SystemExit("--match-cap: ids past 65535 need the u32 day lists (--calendar-elem4)")
+        for name in ("rec596", "matchflags"):
+            LAYOUT["arrays"][name]["cap_new"] = mcap
+        calwiden.MATCH32 = True
+        out_name += ".m%d" % mcap
+        print("match cap %d" % mcap)
+    # --fixture-cap N: the fixture rounds (one 0x208 record per round of a competition, one
+    # table for the whole world; 8000 ship in the FL27 sets). A pack of ~150 countries needs
+    # ~28-30k. Written beside the set as <set>.f<N>.
+    if "--fixture-cap" in sys.argv:
+        fcap = int(sys.argv[sys.argv.index("--fixture-cap") + 1])
+        if not 0 < fcap <= 32767:
+            raise SystemExit("--fixture-cap %d: kept below 32768 (a round's index may travel as a signed word)" % fcap)
+        LAYOUT["arrays"]["fixtures"]["cap_new"] = fcap
+        out_name += ".f%d" % fcap
+        print("fixture cap %d" % fcap)
     if "--player-cap" in sys.argv:
         # the player array grows in place, so its cap is bounded by whatever still sits
         # above it: the regulation array unless that is relocated too, else the dummies
         cap = int(sys.argv[sys.argv.index("--player-cap") + 1])
         pl = LAYOUT["arrays"]["players"]
-        ceiling = PLAYERS_HARD_END if "regulations" in relocate else H(LAYOUT["arrays"]["regulations"]["base_old"])
+        ceiling = (
+            PLAYERS_HARD_END
+            if "regulations" in relocate
+            else H(LAYOUT["arrays"]["regulations"]["base_old"])
+        )
         if which in UPPER_SETS:
             ceiling = H(LAYOUT["block"]["upper_belt"]["players_ceiling"])
         if which in CALENDAR_SETS:
@@ -1673,19 +2529,45 @@ def main():
             # where the unit ends.  So the whole 0x6cd00 the calendar vacates is free and
             # nothing beyond it is.
             ceiling = calwiden.OLD_BASE + calwiden.OLD_UNIT
-        if cap * H(pl["stride"]) > ceiling:
-            raise SystemExit("--player-cap %d: %d x 0x%x = 0x%x reaches 0x%x; the most "
-                             "that fits is %d" % (cap, cap, H(pl["stride"]),
-                                                  cap * H(pl["stride"]), ceiling,
-                                                  ceiling // H(pl["stride"])))
+        if (
+            cap * H(pl["stride"]) > ceiling
+            and os.environ.get("FL26_BIG_PLAYERS") != "1"
+        ):
+            raise SystemExit(
+                "--player-cap %d: %d x 0x%x = 0x%x reaches 0x%x; the most "
+                "that fits is %d"
+                % (
+                    cap,
+                    cap,
+                    H(pl["stride"]),
+                    cap * H(pl["stride"]),
+                    ceiling,
+                    ceiling // H(pl["stride"]),
+                )
+            )
         pl["cap_new"] = cap
         print("player cap for this set: %d (ceiling 0x%x)" % (cap, ceiling))
     # every set reserves room for everything the plan will relocate, so that the block
     # size is identical across phases and a crash can only come from the relocation itself
     plan = ["teams"] + [n for n in relocate if n != "teams"]
-    new_size, bases = plan_layout(plan, belt=which in UPPER_SETS,
-                                  calendar=CALENDAR_IDS if which in CALENDAR_SETS else None)
+    new_size, bases = plan_layout(
+        plan,
+        belt=which in UPPER_SETS,
+        calendar=CALENDAR_IDS if which in CALENDAR_SETS else None,
+    )
     patches = block_patches(new_size)
+    if "lower_tail" in bases:
+        lt = lower_tail_patches(bases["lower_tail"])
+        patches += lt
+        print(
+            "lower tail: %d sites moved by +0x%x, block+0x%x -> block+0x%x"
+            % (
+                len(lt),
+                bases["lower_tail"] - H(LOWER_TAIL["start"]),
+                H(LOWER_TAIL["start"]),
+                bases["lower_tail"],
+            )
+        )
     delta = 0
     if which in ("copy-move", "teams-1600"):
         delta = copy_delta()
@@ -1705,23 +2587,33 @@ def main():
             att0 = json.load(open(os.path.join(ROOT, "patches", "attrib.json")))
             on_block = block_funcs(array_patches(name, bases[name], att0))
             if on_block:
-                print("%s: copy functions that actually work on the block: %s"
-                      % (name, ", ".join("0x%x" % f for f in sorted(on_block))))
+                print(
+                    "%s: copy functions that actually work on the block: %s"
+                    % (name, ", ".join("0x%x" % f for f in sorted(on_block)))
+                )
         release = mlcopy_released() if which in MLCOPY_SETS else ()
-        caps, both, held = cap_patches(name, skip_copy=skip, on_block=on_block, release=release)
+        caps, both, held = cap_patches(
+            name, skip_copy=skip, on_block=on_block, release=release
+        )
         patches += caps
         a = LAYOUT["arrays"][name]
-        print("%s caps: %d sites raised %d -> %d (%d found by both the attribution walk "
-              "and the copy scan)" % (name, len(caps), a["cap_old"], a["cap_new"], both))
+        print(
+            "%s caps: %d sites raised %d -> %d (%d found by both the attribution walk "
+            "and the copy scan)" % (name, len(caps), a["cap_old"], a["cap_new"], both)
+        )
         if held:
-            print("            %d left at %d because they are inside the copy code, whose "
-                  "%s array is not moving" % (held, a["cap_old"], name))
+            print(
+                "            %d left at %d because they are inside the copy code, whose "
+                "%s array is not moving" % (held, a["cap_old"], name)
+            )
     if which in COPY_PLAYER_SETS:
         cap = LAYOUT["arrays"]["players"]["cap_new"]
         extra = copy_player_patches(cap, {p["va"] for p in patches})
         patches += extra
-        print("mode-copy players: %d sites grown to %d records (%d already raised by the walk)"
-              % (len(extra), cap, len(COPY_PLAYER_SITES) - len(extra)))
+        print(
+            "mode-copy players: %d sites grown to %d records (%d already raised by the walk)"
+            % (len(extra), cap, len(COPY_PLAYER_SITES) - len(extra))
+        )
     mlcopy = None
     if which in MLCOPY_SETS:
         extra, composed, moved, regions, total = mlcopy_patches(patches)
@@ -1732,42 +2624,77 @@ def main():
         for p in patches:
             if p["va"] == LAYOUT["copy"]["size_sites"][1]:
                 size_new = int.from_bytes(bytes.fromhex(p["new"])[-4:], "little")
-        print("mode copy A: %d regions grown, object 0x%x -> 0x%x (+0x%x)"
-              % (len(regions), H(LAYOUT["copy"]["size"]), size_new, total))
+        print(
+            "mode copy A: %d regions grown, object 0x%x -> 0x%x (+0x%x)"
+            % (len(regions), H(LAYOUT["copy"]["size"]), size_new, total)
+        )
         for r in regions:
-            print("   %-12s +0x%-8x %5d -> %-5d x 0x%-5x  grows 0x%-8x  ends 0x%x"
-                  % (r["name"], r["base"], r["cap_old"], r["cap_new"], r["stride"],
-                     r["growth"], H(r["ends_at"])))
-        print("   %d new patches, %d composed onto earlier patches, %d fields at %d sites"
-              % (len(extra), composed, len(moved), sum(len(v) for v in moved.values())))
-        mlcopy = {"growth_total": "0x%x" % total,
-                  "copy_size_new": "0x%x" % size_new,
-                  "regions": [{"name": r["name"], "base": "0x%x" % r["base"],
-                               "cap_old": r["cap_old"], "cap_new": r["cap_new"],
-                               "stride": "0x%x" % r["stride"], "growth": "0x%x" % r["growth"],
-                               "base_new": "0x%x" % (r["base"] + mlcopy_shift(regions)(r["base"]))}
-                              for r in regions],
-                  "fields_moved": {"0x%x" % k: ["0x%x" % v for v in vs]
-                                   for k, vs in sorted(moved.items())}}
+            print(
+                "   %-12s +0x%-8x %5d -> %-5d x 0x%-5x  grows 0x%-8x  ends 0x%x"
+                % (
+                    r["name"],
+                    r["base"],
+                    r["cap_old"],
+                    r["cap_new"],
+                    r["stride"],
+                    r["growth"],
+                    H(r["ends_at"]),
+                )
+            )
+        print(
+            "   %d new patches, %d composed onto earlier patches, %d fields at %d sites"
+            % (len(extra), composed, len(moved), sum(len(v) for v in moved.values()))
+        )
+        mlcopy = {
+            "growth_total": "0x%x" % total,
+            "copy_size_new": "0x%x" % size_new,
+            "regions": [
+                {
+                    "name": r["name"],
+                    "base": "0x%x" % r["base"],
+                    "cap_old": r["cap_old"],
+                    "cap_new": r["cap_new"],
+                    "stride": "0x%x" % r["stride"],
+                    "growth": "0x%x" % r["growth"],
+                    "base_new": "0x%x" % (r["base"] + mlcopy_shift(regions)(r["base"])),
+                }
+                for r in regions
+            ],
+            "fields_moved": {
+                "0x%x" % k: ["0x%x" % v for v in vs] for k, vs in sorted(moved.items())
+            },
+        }
     calendar = None
     if which in CALENDAR_SETS:
         info, cal = calwiden.build(CALENDAR_IDS, bases["calendar"])
         patches += cal
-        print("calendar: a day holds %d ids (stride %s), %d patches; the unit goes to "
-              "+0x%x, 0x%x bytes of it, grown by %d"
-              % (info["ids_per_day"], info["stride"], info["patches"], bases["calendar"],
-                 info["unit_bytes"], info["unit_growth"]))
-        print("   %d of those sites reach the unit's trailing part by its own block offset "
-              "(tailscan.py); the copy's unit grew by the same %d through mlcopy"
-              % (info["tail_sites"], info["unit_growth"]))
+        print(
+            "calendar: a day holds %d ids (stride %s), %d patches; the unit goes to "
+            "+0x%x, 0x%x bytes of it, grown by %d"
+            % (
+                info["ids_per_day"],
+                info["stride"],
+                info["patches"],
+                bases["calendar"],
+                info["unit_bytes"],
+                info["unit_growth"],
+            )
+        )
+        print(
+            "   %d of those sites reach the unit's trailing part by its own block offset "
+            "(tailscan.py); the copy's unit grew by the same %d through mlcopy"
+            % (info["tail_sites"], info["unit_growth"])
+        )
         # The four fields past the 365 days (today, the date, the controller schedules and the
         # schedule owner) sit right after the calendar.  fl26caps moves the game's own reads of
         # them; the modules that read them by block offset are built for the shipped 792 and
         # need these values for any other size (modules.md, "Constants that depend on the set").
         today = bases["calendar"] + calwiden.DAYS * int(info["stride"], 16)
-        print("   module constants for this layout: fl26swiss TODAY_OFF 0x%x, fl26join TODAY_OFF "
-              "0x%x, fl26ctlguard controller table block+0x%x, owner handle block+0x%x"
-              % (today, today + 8, today + 0xc, today + 0x10))
+        print(
+            "   module constants for this layout: fl26swiss TODAY_OFF 0x%x, fl26join TODAY_OFF "
+            "0x%x, fl26ctlguard controller table block+0x%x, owner handle block+0x%x"
+            % (today, today + 8, today + 0xC, today + 0x10)
+        )
         calendar = info
     if relocate:
         att = json.load(open(os.path.join(ROOT, "patches", "attrib.json")))
@@ -1775,11 +2702,17 @@ def main():
         # shift, or every one of its references would be moved twice.  The match is on the
         # whole name: `teams:dummy` is its own array and stays in the belt even when
         # `teams` is relocated.
-        members = ([m for m in LAYOUT["block"]["upper_belt"]["members"] if m not in relocate]
-                   if which in UPPER_SETS else [])
-        unresolved = [s for s in att
-                      if (s["array"].split(":")[0] in relocate or s["array"] in members)
-                      and s["kind"].startswith("review")]
+        members = (
+            [m for m in LAYOUT["block"]["upper_belt"]["members"] if m not in relocate]
+            if which in UPPER_SETS
+            else []
+        )
+        unresolved = [
+            s
+            for s in att
+            if (s["array"].split(":")[0] in relocate or s["array"] in members)
+            and s["kind"].startswith("review")
+        ]
         for name in relocate:
             patches += array_patches(name, bases[name], att)
         shift = 0
@@ -1790,17 +2723,26 @@ def main():
                 n = len(patches)
                 extra = LAYOUT["arrays"].get(name, {}).get("extra_sites", [])
                 patches += shift_patches(name, shift, att, extra)
-                print("   belt %-18s %4d sites moved by +0x%x" % (name, len(patches) - n, shift))
-        funclets = dtor_funclet_patches(bases, shift if members else 0,
-                                        CAPPED.get(which, []))
+                print(
+                    "   belt %-18s %4d sites moved by +0x%x"
+                    % (name, len(patches) - n, shift)
+                )
+        funclets = dtor_funclet_patches(
+            bases, shift if members else 0, CAPPED.get(which, [])
+        )
         patches += funclets
         print("block constructor unwind funclets: %d sites" % len(funclets))
         if unresolved:
-            print("REFUSING to emit %s: %d sites for %s are still unattributed."
-                  % (which, len(unresolved), ", ".join(relocate + members))
-                  + "\nResolve them in patches/attrib-manual.json first; see docs/plan.md 0.1.")
+            print(
+                "REFUSING to emit %s: %d sites for %s are still unattributed."
+                % (which, len(unresolved), ", ".join(relocate + members))
+                + "\nResolve them in patches/attrib-manual.json first; see docs/plan.md 0.1."
+            )
             for s in unresolved[:10]:
-                print("   %s  fn %s  %s %s" % (s["va"], s["func"], s["mnemonic"], s["text"]))
+                print(
+                    "   %s  fn %s  %s %s"
+                    % (s["va"], s["func"], s["mnemonic"], s["text"])
+                )
             return 1
 
     spread = None
@@ -1818,16 +2760,19 @@ def main():
             keys = [int(k) for k in a[a.index("--date-keys") + 1].split(",")]
         else:
             keys = DATE_KEYS
-            print("WARNING: no --date-keys given, so only %s will be dated. Every "
-                  "other league's matches will carry no date and never be "
-                  "scheduled." % ", ".join(str(k) for k in keys))
+            print(
+                "WARNING: no --date-keys given, so only %s will be dated. Every "
+                "other league's matches will carry no date and never be "
+                "scheduled." % ", ".join(str(k) for k in keys)
+            )
         if "--cup-keys" in a:
             cupkeys[:] = [int(k) for k in a[a.index("--cup-keys") + 1].split(",")]
             clash = sorted(set(cupkeys) & set(keys))
             if clash:
-                raise SystemExit("--cup-keys: %s are already league date keys; one id "
-                                 "cannot take two calendars"
-                                 % ", ".join(str(k) for k in clash))
+                raise SystemExit(
+                    "--cup-keys: %s are already league date keys; one id "
+                    "cannot take two calendars" % ", ".join(str(k) for k in clash)
+                )
 
         if "--date-offsets" in a:
             # spread mode: the stub in datecave.py.  Two forms.  A bare list of shifts
@@ -1844,12 +2789,16 @@ def main():
                     spread[int(k)] = int(o)
                 missing = [k for k in keys if k not in spread]
                 if missing:
-                    raise SystemExit("--date-offsets: no shift given for %s"
-                                     % ", ".join(str(k) for k in missing))
+                    raise SystemExit(
+                        "--date-offsets: no shift given for %s"
+                        % ", ".join(str(k) for k in missing)
+                    )
                 extra = [k for k in spread if k not in keys]
                 if extra:
-                    raise SystemExit("--date-offsets: %s are not in --date-keys"
-                                     % ", ".join(str(k) for k in extra))
+                    raise SystemExit(
+                        "--date-offsets: %s are not in --date-keys"
+                        % ", ".join(str(k) for k in extra)
+                    )
             else:
                 offs = [int(o) for o in arg.split(",")]
                 spread = {k: offs[i % len(offs)] for i, k in enumerate(keys)}
@@ -1863,9 +2812,11 @@ def main():
                 spread[k] = datecave.cup()
             patches += datecave.patches(spread, d, off_of)
             if cupkeys:
-                print("cups: %d regulation(s) given the 16-team knockout calendar "
-                      "through the date stub: %s"
-                      % (len(cupkeys), ", ".join(str(k) for k in cupkeys)))
+                print(
+                    "cups: %d regulation(s) given the 16-team knockout calendar "
+                    "through the date stub: %s"
+                    % (len(cupkeys), ", ".join(str(k) for k in cupkeys))
+                )
         else:
             patches += date_patches(keys)
             if cupkeys:
@@ -1873,15 +2824,19 @@ def main():
                 # 1..175 only -- and a cup down there will not generate.  Kept because it
                 # is what proved that, but it is not a route to a working cup.
                 patches += cup_patches(cupkeys)
-                print("cups: %d regulation(s) given the 16-team knockout calendar by "
-                      "case byte (ids 1..175 only, and no cup there has ever played): %s"
-                      % (len(cupkeys), ", ".join(str(k) for k in cupkeys)))
+                print(
+                    "cups: %d regulation(s) given the 16-team knockout calendar by "
+                    "case byte (ids 1..175 only, and no cup there has ever played): %s"
+                    % (len(cupkeys), ", ".join(str(k) for k in cupkeys))
+                )
 
     if SLOTS32:
         g2b = g2b_patches()
         patches += g2b
-        print("slots32: %d fixture-record immediates (stride, count field, slot clamp)"
-              % len(g2b))
+        print(
+            "slots32: %d fixture-record immediates (stride, count field, slot clamp)"
+            % len(g2b)
+        )
         cb = copyb_patches()
         patches += cb
         print("slots32: %d mode-copy variant B offsets shifted" % len(cb))
@@ -1901,8 +2856,10 @@ def main():
     ct = copys_table_patches(patches)
     patches += ct
     if ct:
-        print("copy S (Cup save): %d biased table destinations moved (%s)"
-              % (len(ct), ", ".join(name for _, name, _ in COPYS_BIASED)))
+        print(
+            "copy S (Cup save): %d biased table destinations moved (%s)"
+            % (len(ct), ", ".join(name for _, name, _ in COPYS_BIASED))
+        )
 
     if calendar:
         cb, cal_b, size_b = copyb_calendar_patches(patches, calendar["unit_bytes"])
@@ -1928,9 +2885,65 @@ def main():
                   % (len(ct), tb["teams"], tb["coaches"], tb["regulations"], tb["fixtures"], size_b))
         cs, cal_s, size_s = copys_calendar_patches(patches, calendar["unit_bytes"])
         patches += cs
-        calendar["copy_s_unit"], calendar["copy_s_size"] = "0x%x" % cal_s, "0x%x" % size_s
-        print("copy S (Cup save): calendar unit at +0x%x, object 0x%x -> 0x%x, file payload "
-              "0x%x (%d patches)" % (cal_s, COPYS_SIZE_OLD, size_s, size_s - COPYS_HEADER, len(cs)))
+        calendar["copy_s_unit"], calendar["copy_s_size"] = (
+            "0x%x" % cal_s,
+            "0x%x" % size_s,
+        )
+        print(
+            "copy S (Cup save): calendar unit at +0x%x, object 0x%x -> 0x%x, file payload "
+            "0x%x (%d patches)"
+            % (cal_s, COPYS_SIZE_OLD, size_s, size_s - COPYS_HEADER, len(cs))
+        )
+
+    if PK32:
+        pk = pk32_patches(patches)
+        patches += pk
+        print(
+            "pk32: %d patches (id lookup 3, allocator clamps %d, selected-player stub + %d feeds "
+            "at 0x%x)"
+            % (len(pk), len(pk32.CLAMP_SITES), len(pk32.FEEDS), pk32.CAVE)
+        )
+
+    if STD:
+        st = standings_patches(patches)
+        patches += st
+        si = standings.info(*STANDINGS)
+        print(
+            "standings: %d patches -- %d tables at +%s (object %s), header %d entries; copy A "
+            "slot +%s (all %d tables), copies B and S %d tables behind the header at +%s; cave 0x%x"
+            % (
+                len(st),
+                si["tables"],
+                si["table_base"],
+                si["object_size"],
+                si["header"],
+                si["copy_a_slot_growth"],
+                si["tables"],
+                si["copy_bs_tables"],
+                si["copy_base"],
+                standings.CAVE,
+            )
+        )
+        print(
+            "   module constants: fl26swiss/fl26join read the table base (0x14158df94), the table "
+            "count (0x14158f383) and the header count (0x1414fd4e5) from the patched code"
+        )
+
+    if CIDWIDE:
+        cw = cidwide_patches(patches)
+        patches += cw
+        print(
+            "cidwide: %d patches (%d in place, %d caves at 0x%x): competition ids up to %d"
+            % (len(cw), len(cidwide.INPLACE), len(cidwide.CAVES), cidwide.CAVE, cidwide.CID_LIMIT - 1)
+        )
+
+    if REG:
+        rg = regions_patches(patches)
+        patches += rg
+        print(
+            "regions: %d patches -- fl26reg128's 44 sites, the parser reading Competition.bin +3 "
+            "as ror8(b, 3): regions 0..%d" % (len(rg), regstep.TOP_REGION)
+        )
 
     seen = {}
     for p in patches:
@@ -1943,60 +2956,114 @@ def main():
 
     if SLOTS32:
         which = which + "-slots32"
-    meta = {"set": which, "block_size_old": "0x%x" % SIZE_OLD,
-            "date_keys": keys if "-dates" in which else None,
-            "cup_keys": cupkeys or None,
-            "date_offsets": spread,
-            "block_size_new": "0x%x" % new_size,
-            "bases_new": {k: "0x%x" % v for k, v in bases.items()},
-            "relocated": relocate, "patches": patches}
+    if PK32:
+        which = which + "-pk32"
+    if STD:
+        which = which + "-standings"
+    if CIDWIDE:
+        which = which + "-cidwide"
+    if REG:
+        which = which + "-regions"
+    meta = {
+        "set": which,
+        "block_size_old": "0x%x" % SIZE_OLD,
+        "date_keys": keys if "-dates" in which else None,
+        "cup_keys": cupkeys or None,
+        "date_offsets": spread,
+        "block_size_new": "0x%x" % new_size,
+        "bases_new": {k: "0x%x" % v for k, v in bases.items()},
+        "relocated": relocate,
+        "patches": patches,
+    }
     if delta:
         meta["copy_shift"] = "0x%x" % delta
         meta["copy_size_new"] = "0x%x" % (H(LAYOUT["copy"]["size"]) + delta)
     if mlcopy:
         meta["mlcopy"] = mlcopy
+    if STD:
+        meta["standings"] = standings.info(*STANDINGS)
+    if REG:
+        meta["regions"] = regstep.info()
     if calendar:
         meta["calendar"] = calendar
-    out = os.path.join(ROOT, "patches", which + ".json")
+    if FL27:
+        meta["game"] = "fl27"
+    out = os.path.join(ROOT, "patches", out_name + ".json")
     json.dump(meta, open(out, "w"), indent=1)
-    print("%s: %d patches, block 0x%x -> 0x%x (+%d bytes)"
-          % (which, len(patches), SIZE_OLD, new_size, new_size - SIZE_OLD))
+    print(
+        "%s: %d patches, block 0x%x -> 0x%x (+%d bytes)"
+        % (which, len(patches), SIZE_OLD, new_size, new_size - SIZE_OLD)
+    )
     for k, v in bases.items():
         if k in relocate:
             print("   %s array moves to +0x%x" % (k, v))
         elif k == "belt":
             print("   upper belt moves to +0x%x" % v)
+        elif k == "lower_tail":
+            print("   lower tail moves to +0x%x" % v)
     print("wrote", out)
 
     tpl = open(os.path.join(ROOT, "sider", "fl26caps.template.lua")).read()
     rows = "\n".join(
         '  {va=0x%s, old="%s", new="%s", why=%s},'
         % (p["va"][2:], p["old"], p["new"], json.dumps(p["why"]))
-        for p in patches)
+        for p in patches
+    )
     # Patches past the image (the date stub's page) need that page to exist before the
     # verify pass reads it; the template reserves every page listed here first.
-    pages = sorted({int(p["va"], 16) & ~0xfff for p in patches
-                    if int(p["va"], 16) >= datecave.IMAGE_END})
-    lua = (tpl.replace("--[[SET]]", which)
-              .replace("--[[PATCHES]]", rows)
-              .replace("--[[PAGES]]", ", ".join("0x%x" % pg for pg in pages))
-              .replace("--[[SUMMARY]]", "block 0x%x -> 0x%x, %d patches"
-                       % (SIZE_OLD, new_size, len(patches))))
+    pages = sorted(
+        {
+            int(p["va"], 16) & ~0xFFF
+            for p in patches
+            if int(p["va"], 16) >= datecave.IMAGE_END
+        }
+    )
+    # Caps: what the set holds, for Mod Studio (leaguebuilder.installed_caps reads this line
+    # off the installed fl26caps.lua instead of a number of its own per game): an array's
+    # cap_new if the set raises it, else the game's own
+    steps = which.split("-")
+
+    def holds(name, raised):
+        a = LAYOUT["arrays"][name]
+        return a["cap_new"] if raised else a["cap_old"]
+
+    caps_line = "teams=%d coaches=%d regulations=%d players=%d pk32=%d" % (
+        holds("teams", "teams" in relocate),
+        holds("coaches", "coaches" in relocate),
+        holds("regulations", "regulations" in relocate),
+        holds("players", "players" in steps or "--player-cap" in sys.argv),
+        1 if PK32 else 0,
+    )
+    lua = (
+        tpl.replace("--[[SET]]", out_name)
+        .replace("--[[CAPS]]", caps_line)
+        .replace("--[[PATCHES]]", rows)
+        .replace("--[[PAGES]]", ", ".join("0x%x" % pg for pg in pages))
+        .replace(
+            "--[[SUMMARY]]",
+            "block 0x%x -> 0x%x, %d patches" % (SIZE_OLD, new_size, len(patches)),
+        )
+    )
     # Two files, deliberately. fl26caps.<set>.lua keeps every set that has been generated,
     # so one does not silently overwrite another; fl26caps.lua is the copy to install, and
     # is always the set generated last. The installed module in the game folder must match
     # it -- diff them before a run rather than trusting that it does.
-    keep = os.path.join(ROOT, "sider", "fl26caps.%s.lua" % which)
+    keep = os.path.join(ROOT, "sider", "fl26caps.%s.lua" % out_name)
     open(keep, "w").write(lua)
     print("wrote", keep)
-    lp = os.path.join(ROOT, "sider", "fl26caps.lua")
-    if SLOTS32 and "--install-copy" not in sys.argv:
+    # the FL27 install copy is its own file: Mod Studio puts it in place of fl26caps.lua
+    # only in an FL_2027.exe folder
+    lp = os.path.join(ROOT, "sider", "fl26caps.fl27.lua" if FL27 else "fl26caps.lua")
+    if (SLOTS32 or ELEM4) and "--install-copy" not in sys.argv:
         # An experimental set must not take the install copy's place.  It has done so
         # three times: generate a -slots32 set to look at it, and the file the game is
         # told to load now holds a block of a different size than the season running
         # against it.  Pass --install-copy to mean it.
-        print("kept  ", lp, "(unchanged: %s is experimental, pass --install-copy to overwrite)"
-              % which)
+        print(
+            "kept  ",
+            lp,
+            "(unchanged: %s is experimental, pass --install-copy to overwrite)" % which,
+        )
     else:
         open(lp, "w").write(lua)
         print("wrote", lp, "(this is the copy to install)")

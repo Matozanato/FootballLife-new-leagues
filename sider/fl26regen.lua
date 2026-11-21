@@ -34,6 +34,11 @@ save loader (0x1412e5eb0):
     load at 30,023, whether or not the other parts are used. With fl26appcap.lua (listed
     BEFORE this module) the table holds 65,000 records and the cap is 64,999.
 
+  * capture mode, for making the face pool's portraits (tools/facemini.py): only when
+    modules\fl26regen_capture.txt is there at the start. "player <id> face <k>" in it draws that
+    player with pack face k (the DLL reads the file every 100 ms and answers in
+    fl26regen_capture.ack); his real face is hidden and his portrait is face k's. Never shipped.
+
 FLAGS: 1 = new names, 2 = new potential; 3 = both.
 
 Log: the DLL keeps a small text log; this loader drains it into sider.log every so often.
@@ -49,6 +54,7 @@ local FACES = true        -- hide the real face and portrait of a regen
 local DEBUG = false       -- log the first face/portrait file names seen
 
 local dll_log, dll_stats, dll_is, dll_face, dll_faces, logbuf, statbuf
+local dll_cap_id, dll_cap_face  -- capture mode only
 local nfaces = 0
 local ncopies = 0
 local ticks = 0
@@ -89,6 +95,16 @@ function m.rewrite(ctx, filename)
   if not id then id = filename:match(PORTRAIT); what = "portrait" end
   if not id then return nil end
   if DEBUG and seen < 80 then seen = seen + 1; log("fl26regen: [debug] " .. filename) end
+  if dll_cap_id then
+    -- capture mode: the chosen player shows the capture face, never his own model or picture
+    local c = tonumber(dll_cap_id())
+    if c > 0 and tonumber(id) == c then
+      if what == "face" then return (filename:gsub(FACE, "face" .. sep .. "real" .. sep .. "regen" .. sep, 1)) end
+      local k = tonumber(dll_cap_face())
+      if k < 0 then return nil end
+      return (filename:gsub(PORTRAIT, "symbol" .. sep .. "player" .. sep .. "regen" .. sep .. k .. ".dds", 1))
+    end
+  end
   if dll_is(tonumber(id)) == 0 then
     -- a new player of the world: only his portrait, the pack face is in his appearance data
     if what == "face" or nfaces == 0 then return nil end
@@ -210,6 +226,7 @@ function m.init(ctx)
     typedef int  (*fl26_regen_faces_t)(void);
     typedef int  (*fl26_regen_new_t)(uint32_t, uint32_t, int);
     typedef int  (*fl26_regen_copy_t)(uint32_t, uint32_t);
+    typedef int  (*fl26_regen_capture_watch_t)(const char*, const char*);
   ]])
   local sep = string.char(92)
   local dllpath = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26regen.dll"
@@ -246,6 +263,25 @@ function m.init(ctx)
                      or "fl26regen: no face pack (" .. pack .. "), regens keep the generic face")
       local pnew = ffi.C.GetProcAddress(h, "fl26_regen_new")
       if nfaces > 0 and pnew ~= nil then new_players(ffi.cast("fl26_regen_new_t", pnew), dllpath) end
+      -- capture mode (tools/facemini.py): only with modules\fl26regen_capture.txt there now
+      local captxt = dllpath:gsub("fl26regen%.dll$", "fl26regen_capture.txt")
+      local cf = nfaces > 0 and io.open(ansi_path(captxt), "r")
+      local pw = ffi.C.GetProcAddress(h, "fl26_regen_capture_watch")
+      local pci = ffi.C.GetProcAddress(h, "fl26_regen_capture_id")
+      local pcf = ffi.C.GetProcAddress(h, "fl26_regen_capture_face")
+      if cf then
+        cf:close()
+        if pw ~= nil and pci ~= nil and pcf ~= nil then
+          local ack = dllpath:gsub("fl26regen%.dll$", "fl26regen_capture.ack")
+          if tonumber(ffi.cast("fl26_regen_capture_watch_t", pw)(ansi_path(captxt), ansi_path(ack))) == 1 then
+            dll_cap_id = ffi.cast("fl26_regen_faces_t", pci)
+            dll_cap_face = ffi.cast("fl26_regen_faces_t", pcf)
+            log("fl26regen: CAPTURE MODE (" .. captxt .. "): delete that file and restart for a normal game")
+          end
+        else
+          log("fl26regen: " .. captxt .. " is there but this DLL has no capture mode")
+        end
+      end
     end
     local pcopy = ffi.C.GetProcAddress(h, "fl26_regen_copy")
     if pfa ~= nil and pcopy ~= nil then

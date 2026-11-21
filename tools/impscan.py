@@ -33,7 +33,7 @@ guessed at.
 """
 import bisect, json, os, re, struct, sys
 from capstone import *
-from capstone.x86 import X86_OP_MEM
+from capstone.x86 import X86_OP_IMM, X86_OP_MEM
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flpaths
@@ -144,6 +144,12 @@ def reached(seg, imp_va, door, want, const, limit=0x400):
         if ins.address + ins.size > want:
             for op in ins.operands:
                 if op.type == X86_OP_MEM and op.mem.disp == const:
+                    return ins
+                # the block base can also come as an operand of its own: `add r13,
+                # 0x16705a8` in 0x144adf700 (the January pass) built the lower tail's
+                # address that way, kept the shipped offset and read the 120k
+                # player table as its count
+                if op.type == X86_OP_IMM and op.imm == const:
                     return ins
             return None
         if ins.mnemonic == "int3":

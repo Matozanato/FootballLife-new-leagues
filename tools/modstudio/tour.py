@@ -20,6 +20,9 @@ from . import theme
 from .i18n import _
 
 TOUR = "0.2.4"          # the version whose tour the settings remember; a new one shows its own
+# B398 (10.11.): the first card said "Welcome to Mod Studio 0.2.4" in 0.3.0 too; its title has no
+# version now. TOUR stays "0.2.4": it is what settings "tour" holds for everyone who saw the tour,
+# and another value would show it to them again at their next start
 
 
 def steps(app):
@@ -27,7 +30,7 @@ def steps(app):
     not there (a section renamed later) points at nothing instead of failing"""
     nb, nh = getattr(app, "nav_buttons", {}), getattr(app, "nav_heads", {})
     return [
-        (_("Welcome to Mod Studio 0.2.4"),
+        (_("Welcome to FL Mod Studio"),
          _("The window has a new look, and things moved. This short tour shows where everything is now: "
            "ten steps, one minute. Nothing is changed while it runs. Help > Quick tour shows it again."), None),
         (_("Language"),
@@ -85,15 +88,16 @@ def modpack_steps(app):
          _("Click 2. My world. Your worlds are there, as cards."), nb.get("World")),
         (_("+ Add..."),
          _("Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that "
-           "window). A green line says Found: a world zip. Click Add."),
+           "window). A green line says Found: a world zip. Click Install the world."),
          lambda: getattr(getattr(app, "my_world", None), "add_btn", None), _my_world),
         (_("Wait while it looks inside"),
          _("The page Import your world opens and looks inside the zip. A big Modpack takes a minute or two. "
            "Then it says what it is (a ready world to play) and how many leagues it has."), None),
         (_("Install the world"),
-         _("Click Install the world. If an older Modpack is installed, it asks to replace it: Yes (your "
-           "saves are not touched). Mod Studio copies the world, puts its modules in the game and switches "
-           "the world on: no Build needed. Wait for the window Ready to play."), None),
+         # 16.11.: + Add...'s button is Install the world now, and the page installs at once (auto)
+         _("It installs the world by itself, nothing more to click. If an older Modpack is installed, it asks "
+           "to replace it: Yes (your saves are not touched). Mod Studio copies the world, puts its modules "
+           "in the game and switches the world on: no Build needed. Wait for the window Ready to play."), None),
         (_("Start the game"),
          _("Click Start the game and start a NEW Master League: an old career does not get the new "
            "leagues."), getattr(app, "play_btn", None)),

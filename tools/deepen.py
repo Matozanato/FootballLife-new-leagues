@@ -79,7 +79,7 @@ def comp_index(comp):
     out = {}
     for i in range(len(comp) // M.COMP):
         r = comp[i * M.COMP:(i + 1) * M.COMP]
-        out[r[M.CID_OFF]] = (i, r[M.CODE_OFF:].split(b"\0")[0].decode("latin1"), r[M.REGION_OFF])
+        out[M.comp_cid(r)] = (i, r[M.CODE_OFF:].split(b"\0")[0].decode("latin1"), r[M.REGION_OFF])
     return out
 
 
@@ -111,7 +111,7 @@ def set_u16(r, off, v):
 def describe(regs, comp, rid):
     ci, ri = comp_index(comp), reg_index(regs)
     r = row(regs, ri[rid])
-    code, region = ci.get(r[M.R_CID], (0, "?", 0))[1:]
+    code, region = ci.get(M.reg_cid(r), (0, "?", 0))[1:]
     return ("reg %-4d %-22s region %3d tier %d clubs %2d  above=%-4s below=%-4s"
             % (rid, code, region, M.get_tier(r), r[M.R_TEAMS] & 0x3f,
                u16(r, R_ABOVE) or "-", u16(r, R_BELOW) or "-"))
@@ -210,8 +210,8 @@ def main(argv):
     if u16(parent, R_BELOW):
         raise SystemExit("regulation %d already relegates into %d" % (below, u16(parent, R_BELOW)))
 
-    pcomp_i, pcode, pregion = ci[parent[M.R_CID]]
-    ccomp_i, ccode, cregion = ci[child[M.R_CID]]
+    pcomp_i, pcode, pregion = ci[M.reg_cid(parent)]
+    ccomp_i, ccode, cregion = ci[M.reg_cid(child)]
     print("parent: " + describe(regs, comp, below))
     print("child : " + describe(regs, comp, league))
 

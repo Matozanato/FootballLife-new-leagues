@@ -20,6 +20,11 @@ def _(s):
 
 
 def tr(line):
+    if "\n" in line:
+        # Z3 D17 (20.11.2026): a text of many lines (Check the plan's whole summary is one) is
+        # translated line by line -- a rule's ^ and $ held only for its first and last line, so
+        # most of the plan stayed English in every language
+        return "\n".join(tr(part) for part in line.split("\n"))
     for pat, rep in RULES:
         line = re.sub(pat, rep, line)
     return line
