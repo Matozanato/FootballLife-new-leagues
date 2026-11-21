@@ -139,30 +139,44 @@ class Package:
         """add [(name, RGBA image)] to texture `tex`, each in a cell of its own below the pictures
         already there (the atlas grows downwards; nothing already in the package moves).  `cell`
         is the side of a cell in pixels -- by default the size of the first picture."""
-        from PIL import Image
+        cell = self.picture_cell_size() if cell is None else cell
+        return self.add_argb_pictures([
+            (name, image.convert('RGBA').resize((cell, cell)).tobytes('raw', 'ARGB'))
+            for name, image in items
+        ], tex, cell)
+
+    def picture_cell_size(self):
+        r = min(self.pictures(), key=lambda p: p[1])[2]
+        return (r[3] + 1) // 2 - r[1] // 2
+
+    def add_argb_pictures(self, items, tex=0, cell=None):
+        """Append square ARGB tiles while preserving every row of the original atlas."""
         have = {nm for nm, _, _ in self.pictures()}
         clash = [nm for nm, _ in items if nm in have]
         if clash:
             raise ValueError("already in the package: %s" % ", ".join(clash))
-        atlas = self.image(tex)
-        pics = self.pictures()
-        if cell is None:
-            r = min(pics, key=lambda p: p[1])[2]
-            cell = (r[3] + 1) // 2 - r[1] // 2
-        cols = max(1, atlas.width // cell)
+        texture = self.txdt(tex)
+        width, height = struct.unpack_from('>HH', texture, 0x10)
+        if texture[0x17] != 0x15:
+            raise ValueError('expected a 32-bit ARGB texture')
+        cell = self.picture_cell_size() if cell is None else cell
+        if not 0 < cell <= width or any(len(tile) != 4 * cell * cell for _, tile in items):
+            raise ValueError('invalid ARGB tile dimensions')
+        cols = width // cell
         rows = -(-len(items) // cols)
-        top = atlas.height
-        big = Image.new("RGBA", (atlas.width, top + rows * cell), (255, 255, 255, 0))
-        big.paste(atlas, (0, 0))
+        pixels = bytearray(texture[0x40:0x40 + width * height * 4])
+        pixels += b'\0\xff\xff\xff' * (width * rows * cell)
         count, table = self.u32(0x24), self.u32(0x28)
         rects = bytes(self.txp[table:table + 10 * count])
         entries = [(h, idx, so) for (h, idx, so) in
                    (struct.unpack_from(">III", self.txp, self.u32(self.u32(0x2c) + 0x18) + 12 * k)
                     for k in range(self.u32(self.u32(0x2c) + 0x10)))]
         names = b""
-        for k, (nm, im) in enumerate(items):
-            x, y = (k % cols) * cell, top + (k // cols) * cell
-            big.paste(im.convert("RGBA").resize((cell, cell)) if im.size != (cell, cell) else im.convert("RGBA"), (x, y))
+        for k, (nm, tile) in enumerate(items):
+            x, y = (k % cols) * cell, height + (k // cols) * cell
+            for line in range(cell):
+                dst, src = 4 * ((y + line) * width + x), 4 * line * cell
+                pixels[dst:dst + 4 * cell] = tile[src:src + 4 * cell]
             rects += struct.pack(">5H", tex, 2 * x + 1, 2 * y + 1, 2 * (x + cell) - 1, 2 * (y + cell) - 1)
             entries.append((namehash(nm), count + k, len(names)))   # name offset fixed up below
             names += nm.encode("latin1") + b"\0"
@@ -211,15 +225,13 @@ class Package:
                 struct.pack_into(">I", self.txp, ptr + 8, self.u32(ptr + 8) + shift)
         struct.pack_into(">III", self.txp, 0x24, count + len(items), table_at, namp_at)
         # the grown atlas, stored as it is, at the end; the old block goes if it was the last
-        t = bytearray(self.txdt(tex)[:0x40])
+        t = bytearray(texture[:0x40])
         _, oldsize, oldat = self.textures()[tex]
         if oldat + oldsize >= len(self.txp) - 16:
             del self.txp[oldat:]
-        struct.pack_into(">HH", t, 0x10, big.width, big.height)
-        r, g, b_, a_ = big.split()
-        px = Image.merge("RGBA", (a_, r, g, b_)).tobytes()          # ARGB byte order
-        struct.pack_into(">I", t, 0x0c, 0x40 + len(px))
-        block = struct.pack(">II", 0x40 + len(px), 0) + bytes(t) + px
+        struct.pack_into(">HH", t, 0x10, width, height + rows * cell)
+        struct.pack_into(">I", t, 0x0c, 0x40 + len(pixels))
+        block = struct.pack(">II", 0x40 + len(pixels), 0) + bytes(t) + pixels
         self.txp = align(self.txp, 16)
         block_at = len(self.txp)
         self.txp += block

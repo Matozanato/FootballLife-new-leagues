@@ -10663,6 +10663,7 @@ def install_modules(game, log=print, settle=2.0):
     roots = os.path.join(pack, "livecpk")
     for r in sorted(os.listdir(roots)) if os.path.isdir(roots) else []:
         install_root(game, os.path.join(roots, r), log)
+    install_playoff_display(game, log, pack)
     dlls = sorted(f for f in os.listdir(src) if f.lower().endswith(".dll"))
     if dlls:
         if settle:
@@ -10675,6 +10676,72 @@ def install_modules(game, log=print, settle=2.0):
             raise BuildError(msg)
         log("modules: all %d DLLs in place" % len(dlls))
     return changed
+
+
+def install_playoff_display(game, log=print, pack=None):
+    """Generate the display-only FL27 override and put its root ahead of the world."""
+    from pathlib import Path
+    import lbpack
+    import mkplayoffbitmap as bitmap
+
+    ini, old = ini_lines(game)
+    sider = Path(ini).parent
+    root_path = r".\livecpk\%s" % bitmap.ROOT
+    root_line = 'cpk.root = "%s"' % root_path
+    module_line = 'lua.module = "%s.lua"' % bitmap.MODULE
+
+    def is_ours(line):
+        line = line.strip().lstrip(";#").strip()
+        key, _, value = line.partition("=")
+        return (module_of(line)[0] == bitmap.MODULE
+                or (key.strip().lower() == "cpk.root"
+                    and value.split(";", 1)[0].strip().strip('"').replace("/", "\\").lower()
+                    == root_path.lower()))
+
+    lines = [line for line in old if not is_ours(line)]
+    if bitmap.supported(flpaths.game_exe(game)):
+        try:
+            source = Path(pack or pack_dir()) / lbpack.FL27_PLAYOFF_DIR
+            files = {sider / "modules" / f: (source / f).read_bytes()
+                     for f in ("fl27playoff.lua", "fl27playoff.dll")}
+            asset = sider / "livecpk" / bitmap.ROOT / bitmap.PART
+            stock = bitmap.stock_part(Path(game))
+            generated = bitmap.make(stock)
+            for line in lines:
+                key, _, value = line.partition("=")
+                if key.strip().lower() != "cpk.root":
+                    continue
+                path = re.fullmatch(r'\s*"([^"]+)"\s*(?:;.*)?', value)
+                if not path:
+                    raise ValueError("unrecognized LiveCPK root")
+                root = sider / path[1]
+                try:
+                    with (root / bitmap.PART).open("rb") as item:
+                        override = item.read(max(len(stock), len(generated)) + 1)
+                except FileNotFoundError:
+                    continue
+                if override not in (stock, generated):
+                    raise ValueError("conflicting promotion icon in %s" % root)
+            files[asset] = generated
+            for target, data in files.items():
+                if target.exists():
+                    if target.read_bytes() == data:
+                        continue
+                    keep_before(str(target), "Install the FL27 playoff indicators", str(sider))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            first_root = next((i for i, line in enumerate(lines)
+                               if line.partition("=")[0].strip().lower() == "cpk.root"), len(lines))
+            lines.insert(first_root, root_line)
+            lines.append(module_line)
+            if lines != old:
+                log("FL27 playoff arrows enabled for FL27 27.1.1")
+        except (OSError, ValueError, BuildError) as e:
+            log("FL27 playoff arrows left off (%s)" % e)
+    if lines != old:
+        keep_before(ini, "Configure FL27 playoff indicators", str(sider))
+        with open(ini, "w", encoding="utf-8", newline="\r\n") as f:
+            f.write("\n".join(lines) + "\n")
 
 
 def install_root(game, src, log=print):
@@ -10771,6 +10838,7 @@ def switch_on(world, game, log=print, redraw=False):
     commonlib_leagues(game, world, wf, log)
     import lbtrophies                    # Game content > Trophies: FL26's Entrance.lua shows them
     lbtrophies.switch_on(siderdir.find(game), world, root, log, keep_before)
+    install_playoff_display(game, log)
     missing = modules_missing(game)
     if missing:
         log("NOTE: sider.ini does not load %s -- those parts of the world will not work"
