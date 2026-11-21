@@ -101,6 +101,7 @@ PREBUILT = ["fl26match"]
 # is checked against the pool (facepool.pool_problems) and the build stops on anything else.
 FACES = os.environ.get("FL26_REGEN_FACES") or None
 FACE_ROOT = "FL26 Regen Faces"            # the livecpk root of the portraits (install_modules)
+FL27_PLAYOFF_DIR = "fl27playoff"
 
 
 def face_pack(out, log=print):
@@ -242,14 +243,19 @@ def build(out, log=print):
             shutil.copy2(source(FL27[m]), os.path.join(mods, m + ".fl27.lua"))
     env = dict(os.environ, ZIG=ZIG)
     sh = shutil.which("sh") or r"C:\Program Files\Git\bin\sh.exe"
-    for name, script in DLLS.items():
-        dst = os.path.join(mods, name + ".dll")
+    playoff = os.path.join(out, FL27_PLAYOFF_DIR)
+    os.makedirs(playoff)
+    shutil.copy2(os.path.join(REPO, "sider", "experimental", "fl27playoff.lua"), playoff)
+    native = [(mods, name, script) for name, script in DLLS.items()]
+    native.append((playoff, "fl27playoff", "build-playoff.sh"))
+    for folder, name, script in native:
+        dst = os.path.join(folder, name + ".dll")
         r = subprocess.run([sh, os.path.join(HERE, "native", script), dst.replace("\\", "/")],
                            env=env, capture_output=True, text=True)
         if r.returncode or not os.path.exists(dst):
             raise SystemExit("%s failed:\n%s%s" % (script, r.stdout, r.stderr))
         for junk in (name + ".lib", name + ".pdb"):
-            p = os.path.join(mods, junk)
+            p = os.path.join(folder, junk)
             if os.path.exists(p):
                 os.remove(p)
     for name in PREBUILT:

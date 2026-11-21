@@ -107,14 +107,22 @@ def crilayla(src):
     return bytes(head) + bytes(dest)
 
 
-def toc(f):
+def toc(f, max_metadata=None):
     """(content base, [row]) of an open .cpk"""
-    hdr = f.read(16)
-    cpk = utf_parse(f.read(struct.unpack("<Q", hdr[8:16])[0] + 8))[0]
+    def metadata():
+        hdr = f.read(16)
+        size = struct.unpack("<Q", hdr[8:16])[0] + 8
+        if max_metadata is not None and size > max_metadata:
+            raise ValueError("CPK metadata exceeds the read limit")
+        data = f.read(size)
+        if len(data) != size:
+            raise ValueError("truncated CPK metadata")
+        return utf_parse(data)
+
+    cpk = metadata()[0]
     t_off, ca = cpk["TocOffset"], cpk.get("ContentOffset", 0)
     f.seek(t_off)
-    t = f.read(16)
-    return (min(t_off, ca) if ca else t_off), utf_parse(f.read(struct.unpack("<Q", t[8:16])[0] + 8))
+    return (min(t_off, ca) if ca else t_off), metadata()
 
 
 def path_of(r):
