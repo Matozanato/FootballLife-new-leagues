@@ -165,9 +165,14 @@ local BTN_NEW = {
   { id = 87, text = 0x2ad, cat = 0x1a, name = "leagueranksa", at = 0x0e0 },  -- CONMEBOL
   { id = 91, text = 0x2b6, cat = 0x1a },  -- "Ranking Copa de Clubes" / "Ranking CWC": a category, no name
   { id = 92, text = 0x2ae, cat = 0x1a, name = "leaguerankna", at = 0x720 },  -- CONCACAF
-  { id = 93, text = 0x2af, cat = 0x1a, name = "leaguerankas", at = 0x730 },  -- AFC
+  { id = 96, text = 0x2af, cat = 0x1a, name = "leaguerankas", at = 0x730 },  -- AFC (not 93: see below)
   { id = 94, text = 0x2b0, cat = 0x1a, name = "leaguerankaf", at = 0x740 },  -- CAF
 }
+-- Our ids must be ones the game does not test by id (2026-11-20): AFC was 93, and the ML
+-- button availability switch (0x140f0f9c0, ids 3..110) sends 93 to the case that locks a
+-- button until [block+0x17b5788] bit 31 is set -- with 3, 18, 37..47: locked in the first
+-- season. 96 falls to every default: availability (0x140f0f9c0), enabled (0x140b86e60, ids
+-- 9..121) and the "new" mark (0x140f10980, ids 6..109); not in the button table nor a category.
 local BTN_RETEXT = { [86] = { 0x2ac, 0x1a } }   -- the game's 86 in the copy: "UEFA"
 
 -- 6. the clubs past the world ranking (gen3.py, checked with capstone, 2026-11-17)
@@ -197,7 +202,7 @@ local CAT_RANK = 91
 local PAGE_A, PAGE_B, PAGES, PSTRIDE = 0x1426ae2e0, 0x1426ae420, 7, 0x2c
 local COPY_A, COPY_B = 0x880, 0xa00
 -- 2026-11-17: Club Ranking (88) and National Ranking (89) left out, only the CWC ones
-local RANK_PAGE = { CAT_RANK, 86, 87, 92, 93, 94 }
+local RANK_PAGE = { CAT_RANK, 86, 87, 92, 96, 94 }
 local BTN_SITES = {
   { va = 0x140b86a30, old = "4c8d0de972b201", op = "4c8d0d", copy = BTN_COPY, why = "lookup by id: lea r9,[table]" },
   { va = 0x140b86a4a, old = "83f834",         cnt = "83f8",  why = "lookup by id: cmp eax,0x34" },
@@ -454,7 +459,7 @@ function m.init(ctx)
     log("fl26contrank: screens registered late (the game's registration had already run)")
   end
   log(string.format("fl26contrank: stubs at 0x%x; %d countries (UEFA %d, CONMEBOL %d, CONCACAF %d, AFC %d, CAF %d); "
-                    .. "ML Data page 60 61 30 90 88 89 + Ranking (91): 86 87 92 93 94 -> EU/SA/NA/AS/AF (%s, %s, ...); titles 'Ranking <confed>'; League Mode Data + Ranking (vtable 0x14271bc90 -> 0x%x); National resets filter; clubs past the world ranking added (teams +0x%x, count +0x%x, world count +0x%x, empty id at 0x%x)", cave, n,
+                    .. "ML Data page 60 61 30 90 88 89 + Ranking (91): 86 87 92 96 94 -> EU/SA/NA/AS/AF (%s, %s, ...); titles 'Ranking <confed>'; League Mode Data + Ranking (vtable 0x14271bc90 -> 0x%x); National resets filter; clubs past the world ranking added (teams +0x%x, count +0x%x, world count +0x%x, empty id at 0x%x)", cave, n,
                     per[2] or 0, per[4] or 0, per[6] or 0, per[3] or 0, per[5] or 0, UNITS[1].path, UNITS[2].path, cave + LG_WRAP,
                     disp[1], disp[2], disp[3], d_sent))
   m.cave = cave

@@ -79,6 +79,31 @@ the window) and hands them back with the ranking (`fl26_cwc_champions`, `fl26_cw
 Its cycle comes from the same cwc32 line (`fl26_cwc_every`). Without fl26cwc.dll, or with a
 confederation it cannot fill, the old access list stands in.
 
+**Which matches give points (2026-11-18).** The DLL knows the ids that are the same in every
+world: the game's Champions League (2-4), Europa League (5, 6), Libertadores (8-10) and AFC
+Champions League (15, 16), and the Conference League with the two play-offs (186-189, fixed by
+mkuecl / mkeuropo). Everything else Mod Studio builds -- the UEFA qualifying rounds, the
+Sudamericana and its first stage and play-off, the Libertadores phases 1 and 2, the CAF, AFC and
+CONCACAF cups of its own -- takes the first free ids of each world (`free_comp_ids`), so the
+Build writes them on a world file line (`leaguebuilder.cwc_points_lines`, with the cwc32 line only):
+
+```
+cwcpts 255=uq 256=uq 257=usq ... 309=gr 310=- 311=sgr 312=s 313=-
+```
+
+`u` UEFA (its own scoring), `s` a secondary cup (half), `q` a qualifying or preliminary round
+(half), `g` a group stage, `r` one regulation per group or tie (`reg + 1024 * k`), `-` none of
+them. The cup's confederation and kind come from its `fl26world.CCUPS` number (6 CAF Champions
+League, 7 Confederation Cup, 8 ACL Two, 9 Sudamericana, 13 CONCACAF, 14 OFC, 15 AFC Challenge
+League; 7, 8, 9 and 15 secondary), the CONMEBOL helpers from their `cup_ids` keys, the UEFA
+rounds from the qround lines (competition 10 the Champions League, 11 and 12 secondary).
+fl26cwc.lua hands the line to `fl26_cwc_comps`. A regulation not on it gives no points; a world
+file without the line (a Build of before 18.11.) gives points for the game's ids only, so the
+world has to be built again. Until then the DLL had one world's ids written in (255..260,
+277..288, 309..313); in another world those could be a league or a national cup, and every match
+of it would have counted as continental. The ledger keeps the points a match was given, so the
+change counts from the matches played after it.
+
 ### The final's title and trophy (fl26cwctitle, 2026-11-18)
 
 Winning the final gave no Master League title and no trophy ceremony. Both came from the

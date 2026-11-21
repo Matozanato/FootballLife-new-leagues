@@ -11727,8 +11727,11 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
  * 2..175 as the leagues, so a cup of ours (mkcup.py, id 176 and up) got its draw and not one
  * date, and was never played (CUPT world, 2026-09-28: regulations 197 and 198, 20 records, all
  * undated). It is a copy of a shipped cup with the same bracket, so it takes that cup's dates:
- * the world file's `dates <ours> like=<shipped>` lines (fl26_swiss_datelike). */
-#define MAX_DATELIKE 32
+ * the world file's `dates <ours> like=<shipped>` lines (fl26_swiss_datelike).
+ * 128 since 2026-11-20: a world of 73 leagues had 35 lines, and with 32 the last three were
+ * dropped without a word -- the Supercopa do Brasil (a game league's super cup, the last line)
+ * had its clubs and its match, and no date, so it was never played. */
+#define MAX_DATELIKE 128
 static uint16_t g_dlike[MAX_DATELIKE][2]; static int g_ndlike = 0;
 
 /* Optional day shift for `dates <ours> like=<shipped> shift=<days>`.
@@ -11883,7 +11886,11 @@ __declspec(dllexport) int fl26_swiss_dateshift(const uint16_t* v, int n)
 __declspec(dllexport) int fl26_swiss_datelike(const uint16_t* v, int n)
 {
   if ((!v && n) || n < 0) return -1;
-  if (n > MAX_DATELIKE) n = MAX_DATELIKE;
+  if (n > MAX_DATELIKE) {
+    logf("fl26swiss: %d dates line(s), only %d taken -- the cups of the last %d are not dated and will not be played",
+         n, MAX_DATELIKE, n - MAX_DATELIKE);
+    n = MAX_DATELIKE;
+  }
   int k = 0;
   for (int i = 0; i < n; i++)
     /* ours (176 and up), or a shipped cup a `season` line moved to August-May (164 like 122) */

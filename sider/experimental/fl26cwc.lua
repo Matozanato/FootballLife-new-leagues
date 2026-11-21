@@ -17,6 +17,9 @@ local FIRST_CWC_YEAR = 2029
 local RESET_DAY = 153
 local EVERY = 4
 local KO, IC, ICCID = 0, 0, 0   -- cwc32 ko= ic= iccid=: rows put into careers saved before the Build
+-- cwcpts <reg>=<kind> ...: this world's ids of the continental rounds that give ranking points
+-- (Mod Studio gives its own cups the first free ids of each world); nil = the game's cups only
+local PTS = nil
 -- Mod Studio's Club World Cup option writes the cycle into the world file:
 --   cwc32 ko=<reg> every=<years> first=<year> ic=<reg> iccid=<cid>
 -- and that line wins over the two numbers above (fl26swiss draws the cup on the same cycle)
@@ -36,6 +39,8 @@ local function read_cycle(ctx)
       IC = tonumber(rest:match("ic=(%d+)") or 0) or 0
       ICCID = tonumber(rest:match("iccid=(%d+)") or 0) or 0
     end
+    local pts = line:match("^%s*cwcpts%s+(.-)%s*$")
+    if pts then PTS = pts end
   end
   f:close()
   return on
@@ -92,6 +97,7 @@ function m.init(ctx)
     typedef int (*fl26_cwc_install_t)(int, int);
     typedef int (*fl26_cwc_every_t)(int);
     typedef int (*fl26_cwc_oldsaves_t)(int, int, int);
+    typedef int (*fl26_cwc_comps_t)(const char*);
     typedef int (*fl26_cwc_buf_t)(char*, int);
     typedef int (*fl26_cwc_report_t)(const char*);
   ]])
@@ -122,6 +128,18 @@ function m.init(ctx)
   if oldsaves and KO > 0 then
     oldsaves(KO, IC, ICCID)
     log(string.format("fl26cwc: careers saved before the Club World Cup Build get its rows (knockout %d, Intercontinental %d of competition %d)", KO, IC, ICCID))
+  end
+  local comps = fn("fl26_cwc_comps_t", "fl26_cwc_comps")
+  if comps then
+    local n = tonumber(comps(PTS or ""))
+    if PTS then
+      log(string.format("fl26cwc: %d continental round(s) of this world give ranking points (cwcpts line)", n))
+    else
+      log("fl26cwc: the world file has no cwcpts line (a Build of before 18.11.): only the game's own " ..
+          "continental cups give ranking points -- Build the world again")
+    end
+  else
+    log("fl26cwc: modules\\fl26cwc.dll has no fl26_cwc_comps (an older build): the ids written in it stand")
   end
   local r = tonumber(inst(FIRST_CWC_YEAR, RESET_DAY))
   log(string.format("fl26cwc: the ranking's cycle: every %d year(s) from %d (day %d)", EVERY, FIRST_CWC_YEAR, RESET_DAY))

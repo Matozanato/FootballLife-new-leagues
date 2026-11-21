@@ -161,33 +161,40 @@ static int stamp(int y, int dy) { return y * 400 + dy; }   /* comparable dates *
 /* ---------------------------------------------------------------- the competitions */
 enum { F_UEFA = 1, F_SEC = 2, F_QUAL = 4, F_GROUP = 8, F_LP = 16, F_UKO = 32, F_REP = 64 };
 typedef struct { uint16_t base; uint8_t f; } comp_t;
-/* this world's ids (fl26world.txt ccup / lpre / qround lines; the game's own 2..16) */
-static const comp_t COMPS[] = {
-  /* UEFA Champions League: qualifying 255 256, play-off 2, league phase 3, knockout 4 */
-  { 255, F_UEFA | F_QUAL }, { 256, F_UEFA | F_QUAL }, { 2, F_UEFA | F_QUAL },
-  { 3, F_UEFA | F_GROUP | F_LP | F_REP }, { 4, F_UEFA | F_UKO },
-  /* Europa League */
-  { 257, F_UEFA | F_SEC | F_QUAL }, { 258, F_UEFA | F_SEC | F_QUAL }, { 188, F_UEFA | F_SEC | F_QUAL },
-  { 5, F_UEFA | F_SEC | F_GROUP | F_LP | F_REP }, { 6, F_UEFA | F_SEC | F_UKO },
-  /* Conference League */
-  { 259, F_UEFA | F_SEC | F_QUAL }, { 260, F_UEFA | F_SEC | F_QUAL }, { 189, F_UEFA | F_SEC | F_QUAL },
-  { 186, F_UEFA | F_SEC | F_GROUP | F_LP | F_REP }, { 187, F_UEFA | F_SEC | F_UKO },
-  /* Libertadores: preliminary 282 283, qualifying 8, groups 9, knockout 10 */
-  { 282, F_QUAL }, { 283, F_QUAL }, { 8, F_QUAL }, { 9, F_GROUP | F_REP }, { 10, 0 },
-  /* Sudamericana: first stage 277 (one reg per tie), groups 278, knockout play-off 281, knockout 279 */
-  { 277, F_SEC | F_QUAL | F_REP }, { 278, F_SEC | F_GROUP | F_REP }, { 281, F_SEC }, { 279, F_SEC },
-  /* AFC Champions League Elite 15 16, ACL Two 285 286, Challenge League 287 288 */
+/* The ids that are the same in every world: the game's own cups and the Conference League with
+   the two play-offs (Mod Studio's mkuecl / mkeuropo give them fixed ids). */
+static const comp_t GAME_COMPS[] = {
+  /* UEFA Champions League: play-off 2, league phase 3, knockout 4 */
+  { 2, F_UEFA | F_QUAL }, { 3, F_UEFA | F_GROUP | F_LP | F_REP }, { 4, F_UEFA | F_UKO },
+  /* Europa League: play-off 188, league phase 5, knockout 6 */
+  { 188, F_UEFA | F_SEC | F_QUAL }, { 5, F_UEFA | F_SEC | F_GROUP | F_LP | F_REP }, { 6, F_UEFA | F_SEC | F_UKO },
+  /* Conference League: play-off 189, league phase 186, knockout 187 */
+  { 189, F_UEFA | F_SEC | F_QUAL }, { 186, F_UEFA | F_SEC | F_GROUP | F_LP | F_REP }, { 187, F_UEFA | F_SEC | F_UKO },
+  /* Libertadores: qualifying 8, groups 9, knockout 10 */
+  { 8, F_QUAL }, { 9, F_GROUP | F_REP }, { 10, 0 },
+  /* AFC Champions League Elite: 15, 16 */
   { 15, F_GROUP | F_REP }, { 16, 0 },
-  { 285, F_SEC | F_GROUP | F_REP }, { 286, F_SEC }, { 287, F_SEC | F_GROUP | F_REP }, { 288, F_SEC },
-  /* CAF Champions League 309 310, Confederation Cup 311 312 */
-  { 309, F_GROUP | F_REP }, { 310, 0 }, { 311, F_SEC | F_GROUP | F_REP }, { 312, F_SEC },
-  /* CONCACAF Champions Cup: a knockout */
-  { 313, 0 },
 };
+/* The rest is the world's: Mod Studio gives the qualifying rounds, the Sudamericana, the CAF,
+   AFC and CONCACAF cups of its own the first free ids of each world. Until 18.11. they were
+   written in here as one world's (255..260, 277..288, 309..313), and in another world those ids
+   could be a league or a national cup, whose every match would then give continental points.
+   Now the Build writes them on the world file's line
+     cwcpts <reg>=<kind> ...   (u UEFA, s secondary, q qualifying, g group stage, r replicas, - none)
+   and fl26cwc.lua hands its text over (fl26_cwc_comps). No line: the game's ids alone. */
+#define COMPS_MAX 96
+static comp_t COMPS[COMPS_MAX];
+static int g_ncomps;
+static void comps_reset(void)
+{
+  g_ncomps = 0;
+  for (size_t i = 0; i < sizeof GAME_COMPS / sizeof GAME_COMPS[0]; i++) COMPS[g_ncomps++] = GAME_COMPS[i];
+}
 static int comp_of(unsigned reg)
 {
   unsigned b = reg & 0x3ff, k = reg >> 10;
-  for (int i = 0; i < (int)(sizeof COMPS / sizeof COMPS[0]); i++)
+  if (!g_ncomps) comps_reset();
+  for (int i = 0; i < g_ncomps; i++)
     if (COMPS[i].base == b) return (k == 0 || (COMPS[i].f & F_REP)) ? i : -1;
   return -1;
 }
@@ -1190,6 +1197,35 @@ __declspec(dllexport) int fl26_cwc_every(int every)
 {
   if (every >= 1 && every <= 8) g_every = every;
   return g_every;
+}
+/* the world file's cwcpts line, after the word (fl26cwc.lua): "255=uq 309=gr 310=- ...", this
+   world's continental rounds next to the game's own. Returns how many were taken; a game id
+   or one already given is skipped. Called before fl26_cwc_install (no thread reads COMPS yet). */
+__declspec(dllexport) int fl26_cwc_comps(const char* text)
+{
+  if (!g_cs_ok) { InitializeCriticalSection(&g_cs); InitializeCriticalSection(&g_lk); g_cs_ok = 1; }
+  comps_reset();
+  int took = 0, fixed = g_ncomps;
+  const char* p = text ? text : "";
+  while (*p) {
+    while (*p == ' ' || *p == '\t') p++;
+    if (!*p) break;
+    unsigned reg = 0; int digits = 0;
+    while (*p >= '0' && *p <= '9') { reg = reg * 10 + (unsigned)(*p++ - '0'); digits++; }
+    if (!digits || *p != '=') { while (*p && *p != ' ' && *p != '\t') p++; continue; }
+    p++;
+    uint8_t f = 0;
+    for (; *p && *p != ' ' && *p != '\t'; p++)
+      f |= *p == 'u' ? F_UEFA : *p == 's' ? F_SEC : *p == 'q' ? F_QUAL : *p == 'g' ? F_GROUP : *p == 'r' ? F_REP : 0;
+    if (reg == 0 || reg >= 1024) continue;
+    int dup = 0;
+    for (int i = 0; i < g_ncomps; i++) if (COMPS[i].base == reg) dup = 1;
+    if (dup || g_ncomps >= COMPS_MAX) { plog("cwcpts: regulation %u skipped (%s)", reg, dup ? "already known" : "list full"); continue; }
+    COMPS[g_ncomps].base = (uint16_t)reg; COMPS[g_ncomps].f = f; g_ncomps++;
+    took++;
+  }
+  plog("cwcpts: %d continental round(s) of this world give points, next to the game's %d", took, fixed);
+  return took;
 }
 /* a few lines for the overlay */
 __declspec(dllexport) int fl26_cwc_status(char* out, int cap)

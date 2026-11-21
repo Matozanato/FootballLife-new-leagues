@@ -1221,6 +1221,51 @@ def club_world_cup(pl, root, db, log=print):
     return ["cwc32 ko=%d every=%d first=%d ic=%d iccid=%d" % (ko, cfg["every"], cfg["first"], ic_reg, ic_cid)]
 
 
+# The confederation ranking (fl26cwc.dll) gives points for the continental cups' matches. The
+# game's own cups (Champions League 2-4, Europa League 5-6, Libertadores 8-10, AFC Champions League
+# 15-16) and the Conference League with the two play-offs (186-189, fixed by mkuecl / mkeuropo)
+# have the same ids in every world and are in the DLL. Everything else Build makes takes the first
+# free ids of the world (free_comp_ids), so the cwcpts line tells the DLL which regulation is which:
+#   cwcpts <reg>=<kind> ...   kind letters: u UEFA, s a secondary cup, q a qualifying or
+#   preliminary round, g a group stage, r one regulation per group or tie (reg + 1024 * k); "-" none
+# A regulation not on the line gives no points (until 18.11. the DLL had one world's ids written
+# in, and in another world they could be a league's or a national cup's).
+CWC_SECONDARY = {7, 8, 9, 15}    # fl26world.CCUPS: CAF Confederation Cup, ACL Two, Sudamericana, AFC Challenge League
+CWC_CONTINENTAL = {c for c, _n, _code, _conf, _fill in fl26world.CCUPS}
+
+
+def cwc_points_lines(pl, qlines):
+    """the world file's cwcpts line (with the Club World Cup of 32 only): this world's ids of the
+    continental rounds that give ranking points"""
+    if not pl.get("club_world_cup"):
+        return []
+    kinds = {}
+
+    def put(reg, kind):
+        if isinstance(reg, int) and 0 < reg < 1024:
+            kinds[reg] = kind or "-"
+    for q in qlines or []:                       # qround lines: (competition 10..12, round, regulation)
+        put(q[2], "uq" if q[0] == 10 else "usq")
+    for c in pl.get("ccups") or []:
+        if c.get("number") not in CWC_CONTINENTAL:
+            continue
+        s = "s" if c["number"] in CWC_SECONDARY else ""
+        if c.get("groups"):
+            put(c.get("reg"), s + "gr")
+        put(c.get("ko"), s)
+        put(c.get("pre_reg"), s + "qr")
+    ids = pl.get("cup_ids") or {}
+    if pl.get("suda_first"):
+        put(pl["suda_first"].get("reg"), "sqr")                       # the Sudamericana's first stage
+        put((ids.get("conmebol:" + SPO_CODE) or {}).get("reg"), "sr")  # and its play-off
+    if pl.get("libq"):                                                  # the Libertadores' phases 1 and 2
+        for f in ("reg", "reg2"):
+            put((ids.get("conmebol:" + LIBQ_CODE) or {}).get(f), "qr")
+    if not kinds:
+        return []
+    return ["cwcpts " + " ".join("%d=%s" % (r, kinds[r]) for r in sorted(kinds))]
+
+
 def is_plan(r):
     """whether a json read as a recipe is a built world's leaguebuilder-plan.json: the plan has
     the ids Build gave (free_ids, and a rid for every league), a recipe never does"""
@@ -5599,7 +5644,7 @@ def build(pl, base, game, replace=False, log=print):
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
-                          + fans + cwc_lines
+                          + fans + cwc_lines + (cwc_points_lines(pl, qlines) if cwc_lines else [])
                           + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines)
     pl.pop("prev_cup_ids", None)      # this Build's own are in cup_ids; the old ones must not pile up
