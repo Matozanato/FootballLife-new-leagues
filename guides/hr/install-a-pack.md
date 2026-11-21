@@ -8,6 +8,7 @@
 |---|---|
 | `.zip` svijeta (Modpack, Europack, svijet od prijatelja) | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Instaliraj svijet**. Nema Builda: svijet je u igri kad piše **Spremno za igru**. Onda pokreni NOVU Master Ligu. [Način A](#način-a-gotov-svijet-jedan-zip) |
 | `.fl26pack` paket liga | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Dodaj** → kartica **Gradnja** → **Izgradi i instaliraj**. Onda pokreni NOVU Master Ligu. [Način C](#način-c-paket-liga-fl26pack) |
+| `GigaPack-1.0.zip` (GigaPack, gotov svijet samo za Football Life 2027) | To je zip svijeta: isto kao prvi redak, ili **1. Početna** → **Uvezi zip svijeta** → **Instaliraj svijet**. Ne raspakiravaj ga. Preuzimanja, md5 i svi koraci: [GigaPack](../../docs/gigapack.md) (na engleskom) |
 | ništa, želim sam izabrati lige | [Napravi svoje lige i pakete](make-your-own-leagues.md) |
 
 Prvi put u Mod Studiju? Prvo jednom odradi korake 1 do 3 ispod.
@@ -43,7 +44,7 @@ Pogledaj traku dolje: nema prozora Football Lifea, nema launchera.
 ## Korak 2. Skini Mod Studio
 
 1. Otvori [zadnje izdanje](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest).
-2. Pod **Assets** klikni `FL26ModStudio-<version>.zip` (npr. `FL26ModStudio-0.3.0.zip`).
+2. Pod **Assets** klikni `FL26ModStudio-<version>.zip` (npr. `FL26ModStudio-0.4.0.zip`).
    Isti zip vrijedi za Football Life 2026 i Football Life 2027.
 3. Desni klik na skinuti zip → **Extract All...** → izaberi mapu, npr.
    `Documents\FL26 Mod Studio` → **Extract**.
@@ -155,7 +156,7 @@ taj prozor.)
 
 **C3. Trebaš vidjeti:** zeleni red `Pronađeno: paket liga "..."` s brojem liga i klubova, i
 njegove lige na popisu, svaka označena kvačicom. Makni kvačicu ligi koju ne želiš. Ispod popisa:
-koliko će natjecanja imati tvoj svijet (igra ima mjesta za 255) i da ništa ne ulazi u igru do
+koliko će natjecanja imati tvoj svijet (ID-evi do 255 u FL26, do 1023 u FL27) i da ništa ne ulazi u igru do
 **Izgradi i instaliraj**. Klikni **Dodaj**.
 
 (Drugi putovi: **2. Moj svijet → Više ▾ → Paketi liga → Dodaj paket...**, ili **Datoteka → Dodaj

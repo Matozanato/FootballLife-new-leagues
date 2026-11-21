@@ -399,7 +399,7 @@ Sve na ovoj stranici je u [Igrači u punim uputama](mod-studio-guide.md#igrači)
 |---|---|
 | Novih klubova ukupno (oko 1.500): broj u redu `Novi klubovi u tvom svijetu: X od Y koliko igra prima.` | Stranica NewLife Database: **Dodaj u svoj svijet** ostaje siv. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
 | 10 do 32 kluba u ligi | NewLife Database: siva liga, `liga ima 10 do 32 klubova`. Kartica Klubovi: `Liga ima od 10 do 32 klubova.` |
-| Novih liga po svijetu: nema stalnog broja. Svaka liga i kup uzima jedno od 255 igrinih natjecanja; **2. Moj svijet** pokazuje koliko ih je zauzeto (**NATJECANJA**). Naš testni svijet igra 86 novih liga. | Build: `error: <n> leagues, but the game has room for <m> ...` |
+| Novih liga po svijetu: nema stalnog broja. Svaka liga i kup uzima jedan ID natjecanja: ID-evi natjecanja idu do 255 u FL26, a do 1023 u FL27 kad su instalirani moduli iz 0.4.0 (**1. Početna → Instaliraj sada**); **2. Moj svijet** pokazuje koliko ih je zauzeto (**NATJECANJA**). Naš testni svijet igra 86 novih liga. | Build: `error: <n> leagues, but the game has room for <m> ...` |
 | Jedna liga ispod jedne lige | Popis **Rang**: sivo. Build: `... are all under ...; the game follows one link down from a league ...` |
 | Rangovi do 7. | Build: `error: <league>: division 8 -- the rank field stops at 7`. |
 | 2 lige s podjelom po svijetu; jedna podjela ili Apertura/Clausura po državi | Build: `error: at most 2 split leagues for now ...`, `... only one league of a country can be split or Apertura/Clausura`. |

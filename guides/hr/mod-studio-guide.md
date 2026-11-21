@@ -2,7 +2,7 @@
 
 > [English](../en/mod-studio-guide.md) · **hrvatski** · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
-> **Počinješ s 0.3.0 ili si upravo ažurirao?** [Brzi početak za 0.3.0 (FL26 i FL27)](quick-start-0.3.0.md).
+> **Počinješ s 0.4.0 ili si upravo ažurirao?** [Brzi početak za 0.4.0 (FL26 i FL27)](quick-start-0.4.0.md) · starije: [brzi početak za 0.3.0](quick-start-0.3.0.md).
 >
 > **Prvi put u Mod Studiju?** Dva vodiča korak po korak, svaki klik redom: [Instaliraj gotov paket](install-a-pack.md)
 > (netko ti je dao svijet, modpack ili `.fl26pack`) · [Napravi svoje lige i pakete](make-your-own-leagues.md)
@@ -128,16 +128,27 @@ Na vrhu prozora, slijeva nadesno:
 | **4. Alati** ▾ | **Lua moduli**, **Mape sadržaja**, **Profili**, **Točke vraćanja**, **Dijagnostika** |
 | **5. Postavke** | Mapa igre, Sider mapa, jezik, karijere u Master ligi, tablice igre |
 
-Trenutačna navigacija: Kupovi i Trofeji čuvaju izmjene tijekom navigacije. Apply ih upisuje u recept; Discard učitava trenutačne vrijednosti projekta. Predsezonski turniri ostaju izvan Kupova, u Lige → Više.
+**Kupovi i Pehari.** Na **2. Moj svijet → Kupovi** i na **3. Sadržaj igre → Pehari** tvoje
+izmjene čekaju dok ideš na druge stranice. **Primijeni** ih sprema u tvoj svijet, **Odbaci
+promjene** ih vraća, a **Izgradi i instaliraj** ih stavlja u igru. Ako zatvoriš Mod Studio s
+neprimijenjenim izmjenama, prvo pita. Predsezonski turniri nisu na **Kupovi**: oni su u **Lige →
+Više → Predsezonski turniri**.
 
-- **Game Countries**: `Moj svijet → Kupovi → Game Countries`.
-- **Our Countries**: `Moj svijet → Kupovi → Our Countries`.
-- **Competitions**: `Moj svijet → Kupovi → Continental → Natjecanja`.
-- **Qualification**: `Moj svijet → Kupovi → Continental → Qualification`.
-- **UEFA Ranking / First-season clubs**: `Moj svijet → Kupovi → Continental → UEFA → Qualification`.
-- **Trofeji**: `GAME CONTENT → TROPHIES`.
+- Ligaški kup, i superkup gdje ga igra nema, za prve lige same igre: **2. Moj svijet → Kupovi → Game
+  Countries**.
+- Nacionalni kup, superkup i ligaški kup tvojih liga (isto kao u **Uredi ligu...**): **2. Moj
+  svijet → Kupovi → Our Countries**.
+- Kontinentalna natjecanja (ime i logo): **2. Moj svijet → Kupovi → Continental → Natjecanja**.
+- Njihova mjesta: **2. Moj svijet → Kupovi → Continental → Kvalifikacije**.
+- **UEFA poredak...** i **Klubovi prve sezone...**: **2. Moj svijet → Kupovi → Continental**,
+  odaberi **UEFA** u **Konfederacija**, pa **Kvalifikacije**.
+- Pehari: **3. Sadržaj igre → Pehari** (i **Kupovi → Više → Pehari**).
 
-Moderne CONMEBOL trake vizualno su provjerene u FL27: Bolivija ima tri plava i četiri narančasta mjesta. Ponašanje u FL26 nije neovisno provjereno u igri. Dark/Light amblemi prolaze automatske testove, ali prikaz u igri još nije potpuno provjeren. Neobavezna polja `continental_emblems` čuvaju postojeće svjetove. Bez modernog načina grade se klasični Libertadores i klasična Sudamericana, kao prije 0.2.5.
+**CONMEBOL.** U **Kupovi → Continental**, s **CONMEBOL** u **Konfederacija**, **Enable
+Libertadores new format, Sudamericana and Recopa Sudamericana** uključuje moderna natjecanja.
+Isključeno, svijet gradi klasični Libertadores i klasičnu Copa Sudamericanu. Kontinentalno
+natjecanje može imati i **Dark Mode Logo** i **Light Mode Logo**, za tamnu i svijetlu pozadinu;
+prazno zadržava postojeći logo.
 
 **Datoteka** ima **Novi svijet**, **Otvori svijet...**, **Spremi svoj svijet kao...**, **Izmjene u
 ovom svijetu...** (sve što tvoj svijet mijenja u igri na jednom popisu; odaberi retke i stisni
@@ -151,8 +162,8 @@ ovom svijetu...** (sve što tvoj svijet mijenja u igri na jednom popisu; odaberi
 **2. Moj svijet** je mjesto za tvoje svjetove. **Svijet** je mapa sadržaja s imenom `_FL26...`
 koja drži nove lige, klubove i igrače; igra čita jedan po jedan (poglavlje 8).
 
-**Na vrhu**: **NATJECANJA** (koliko natjecanja, liga i kupova zajedno, ima svijet u igri; igra
-ima mjesta za 255), **NOVE DRŽAVE** (koliko država dodaje; mjesta za 99), podsjetnik da **izmjene
+**Na vrhu**: **NATJECANJA** (koliko natjecanja, liga i kupova zajedno, ima svijet u igri, i koliko ih može imati:
+ID-evi natjecanja idu do 255 u FL26, a do 1023 u FL27 kad su instalirani moduli iz 0.4.0 (**1. Početna → Instaliraj sada**)), **NOVE DRŽAVE** (koliko država dodaje; mjesta za 99), podsjetnik da **izmjene
 traže novu Master League** i stanje otvorenog svijeta. **▾ Svjetovi** sklopi red kartica da
 napravi mjesta, i opet ga pokaže.
 
@@ -445,7 +456,7 @@ u 2. fazi, 6 u 1. fazi, 12 u skupinama Sudamericane, 32 u njenoj prvoj fazi). Is
 
 **Imena natjecanja** (Lige → Više): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Konfederacijski kup, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na *Lige* (odaberi ligu iz igre).
 
-**ID-evi natjecanja** (Lige → Više): svako natjecanje svijeta u igri, lige i kupovi, s njegovim ID-om. Igra ima mjesta za 255; Moj svijet pokazuje koliko ih je zauzeto.
+**ID-evi natjecanja** (Lige → Više): svako natjecanje svijeta u igri, lige i kupovi, s njegovim ID-om. Nova liga ili kup uzima slobodan ID od 130 naviše: ID-evi natjecanja idu do 255 u FL26, a do 1023 u FL27 kad su instalirani moduli iz 0.4.0 (**1. Početna → Instaliraj sada**). Moj svijet pokazuje koliko ih je zauzeto.
 
 **Poredak liga** (Lige → Više): poredak država u Select Teamu Master Lige i na popisu momčadi Kick Off / Edit. *Po kontinentima* je poredak igre (Europa, Amerike, Azija, pa Afrika, svaki od A do Ž). *Sve države od A do Ž* stavi ih sve u jedan abecedni niz, a *Moj poredak* ti da da ih složiš kako god želiš (povlačenjem ili Gore / Dolje). Lige jedne države ostaju zajedno, prvi rang prvi, a klupska natjecanja, skupine "Other" i Classic Teams dolaze iza država. Njemačka, SAD i Japan su u Select Teamu u skupinama "Other", pa se pomiču samo u Kick Offu. Nakon toga ponovno izgradi svijet.
 
@@ -765,7 +776,7 @@ svijet s novim ligama već ima novi format.
 
 | | |
 |---|---|
-| Novih liga po svijetu | Nema stalnog broja. Svaka liga, kup i superkup svijeta uzima jedno od 255 igrinih natjecanja (sama igra koristi oko 90); **2. Moj svijet** pokazuje koliko ih je zauzeto. Naš testni svijet igra 86 novih liga. |
+| Novih liga po svijetu | Nema stalnog broja. Svaka liga, kup i superkup svijeta uzima jedan ID natjecanja: ID-evi natjecanja idu do 255 u FL26, a do 1023 u FL27 kad su instalirani moduli iz 0.4.0 (**1. Početna → Instaliraj sada**). Sama igra koristi oko 90; **2. Moj svijet** pokazuje koliko ih je zauzeto. Naš testni svijet igra 86 novih liga. |
 | Novih država | 99 |
 | Klubova po ligi | 10 – 32: do 28 klubova se sretne 1 do 4 puta, 29 do 32 jednom (liga igra najviše 54 kola). 29 do 32 je novo i još nije odigrano kroz cijelu sezonu u igri |
 | Novih klubova ukupno | oko 1.500 (redak na dnu stranice NewLife Database kaže koliko ih stane u tvoju igru) |

@@ -8,6 +8,7 @@
 |---|---|
 | um mundo em `.zip` (Modpack, Europack, o mundo de um amigo) | **2. Meu mundo** → **+ Adicionar...** → **Escolher um arquivo...** → **Instalar o mundo**. Não tem Build: ele está no jogo quando aparece **Pronto para jogar**. Depois comece uma Master League NOVA. [Caminho A](#caminho-a-um-mundo-pronto-um-zip) |
 | um pacote de liga `.fl26pack` | **2. Meu mundo** → **+ Adicionar...** → **Escolher um arquivo...** → **Adicionar** → aba **Construção** → **Construir e instalar**. Depois comece uma Master League NOVA. [Caminho C](#caminho-c-um-pacote-de-liga-fl26pack) |
+| `GigaPack-1.0.zip` (GigaPack, um mundo pronto só para o Football Life 2027) | É um zip de mundo: o mesmo que a primeira linha, ou **1. Início** → **Importar um zip de mundo** → **Instalar o mundo**. Não descompacte. Downloads, md5 e todos os passos: [GigaPack](../../docs/gigapack.md) (em inglês) |
 | nada, quero escolher as ligas eu mesmo | [Criar suas próprias ligas e pacotes](make-your-own-leagues.md) |
 
 Primeira vez no Mod Studio? Faça antes os passos 1 a 3 abaixo, uma vez só.
@@ -44,7 +45,7 @@ quando o jogo inicia. Olhe a barra de tarefas: nenhuma janela do Football Life, 
 ## Passo 2. Baixe o Mod Studio
 
 1. Abra a [versão mais recente](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest).
-2. Em **Assets**, clique em `FL26ModStudio-<version>.zip` (por exemplo `FL26ModStudio-0.3.0.zip`).
+2. Em **Assets**, clique em `FL26ModStudio-<version>.zip` (por exemplo `FL26ModStudio-0.4.0.zip`).
    É o mesmo download para Football Life 2026 e Football Life 2027.
 3. Clique com o botão direito no zip baixado → **Extrair Tudo...** → escolha uma pasta, por
    exemplo `Documents\FL26 Mod Studio` → **Extrair**.
@@ -166,7 +167,7 @@ para essa janela.)
 
 **C3. Você deve ver:** uma linha verde `Encontrado: pacote de campeonatos "..."` com quantas
 ligas e clubes ele tem, e as ligas dele numa lista, cada uma marcada. Desmarque uma liga que você
-não quer. Embaixo da lista: quantas competições o seu mundo vai ter (o jogo tem lugar para 255),
+não quer. Embaixo da lista: quantas competições o seu mundo vai ter (ids até 255 no FL26, até 1023 no FL27),
 e que nada chega ao jogo antes de **Construir e instalar**. Clique em **Adicionar**.
 
 (Os outros caminhos: **2. Meu mundo → Mais ▾ → Pacotes de campeonatos → Adicionar um

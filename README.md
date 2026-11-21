@@ -93,10 +93,11 @@ the bottom of this page.
 
 ## Guides
 
-**Just updated to 0.3.0, or starting with FL27?** [Quick start for 0.3.0](guides/en/quick-start-0.3.0.md)
-([hrvatski](guides/hr/quick-start-0.3.0.md) · [español](guides/es/quick-start-0.3.0.md) ·
-[português](guides/pt/quick-start-0.3.0.md) · [français](guides/fr/quick-start-0.3.0.md)): update, FL26 or
-FL27, NewLife 1.6b4, and where the new things are.
+**Just updated to 0.4.0, or want GigaPack?** [Quick start for 0.4.0](guides/en/quick-start-0.4.0.md)
+([hrvatski](guides/hr/quick-start-0.4.0.md) · [español](guides/es/quick-start-0.4.0.md) ·
+[português](guides/pt/quick-start-0.4.0.md) · [français](guides/fr/quick-start-0.4.0.md)): before you update,
+the update, GigaPack, and where the new things are. Older: [quick start for 0.3.0](guides/en/quick-start-0.3.0.md)
+(update from 0.2.5.1, FL26 or FL27, NewLife 1.6b4).
 
 Step by step, every click in order:
 

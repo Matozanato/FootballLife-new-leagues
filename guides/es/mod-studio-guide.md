@@ -2,7 +2,7 @@
 
 > [English](../en/mod-studio-guide.md) · [hrvatski](../hr/mod-studio-guide.md) · **español** · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
-> **¿Empiezas con 0.3.0 o acabas de actualizar?** [Inicio rápido de 0.3.0 (FL26 y FL27)](quick-start-0.3.0.md).
+> **¿Empiezas con 0.4.0 o acabas de actualizar?** [Inicio rápido de 0.4.0 (FL26 y FL27)](quick-start-0.4.0.md) · anterior: [inicio rápido de 0.3.0](quick-start-0.3.0.md).
 >
 > **¿Primera vez con Mod Studio?** Dos guías paso a paso, cada clic en orden: [Instalar un paquete listo](install-a-pack.md)
 > (alguien te dio un mundo, un modpack o un `.fl26pack`) · [Crear tus propias ligas y paquetes](make-your-own-leagues.md)
@@ -141,16 +141,28 @@ Arriba en la ventana, de izquierda a derecha:
 | **4. Herramientas** ▾ | **Módulos Lua**, **Carpetas de contenido**, **Perfiles**, **Puntos de restauración**, **Diagnóstico** |
 | **5. Ajustes** | Carpeta del juego, carpeta de Sider, idioma, carreras de Master League, las tablas del juego |
 
-Navegación actual: Copas y Trofeos conservan los cambios pendientes al navegar. Aplicar los incorpora a la receta; Descartar restaura los valores actuales del proyecto. Los torneos de pretemporada siguen fuera de Copas, en Ligas → Más.
+**Copas y Trofeos.** En **2. Mi mundo → Copas** y en **3. Contenido del juego → Trofeos** tus
+cambios esperan mientras vas a otras páginas. **Aplicar** los guarda en tu mundo, **Descartar
+cambios** los deshace, y **Construir e instalar** los lleva al juego. Si cierras Mod Studio con
+cambios sin aplicar, antes te pregunta. Los torneos de pretemporada no están en **Copas**: están
+en **Ligas → Más → Torneos de pretemporada**.
 
-- **Game Countries**: `Mi mundo → Copas → Países del juego`.
-- **Our Countries**: `Mi mundo → Copas → Nuestros países`.
-- **Competitions**: `Mi mundo → Copas → Continental → Competiciones`.
-- **Qualification**: `Mi mundo → Copas → Continental → Clasificación`.
-- **UEFA Ranking / First-season clubs**: `Mi mundo → Copas → Continental → UEFA → Clasificación`.
-- **Trofeos**: `GAME CONTENT → TROPHIES`.
+- Una copa de la liga, y una supercopa donde el juego no tiene, para las primeras divisiones del propio juego:
+  **2. Mi mundo → Copas → Países del juego**.
+- La copa nacional, la supercopa y la copa de la liga de tus propias ligas (lo mismo que en
+  **Editar liga...**): **2. Mi mundo → Copas → Nuestros países**.
+- Competiciones continentales (nombre y logo): **2. Mi mundo → Copas → Continental →
+  Competiciones**.
+- Sus plazas: **2. Mi mundo → Copas → Continental → Clasificación**.
+- **Ranking UEFA...** y **Clubes de la primera temporada...**: **2. Mi mundo → Copas →
+  Continental**, elige **UEFA** en **Confederación**, luego **Clasificación**.
+- Trofeos: **3. Contenido del juego → Trofeos** (también **Copas → Más → Trofeos**).
 
-Las franjas de CONMEBOL moderna se verificaron visualmente en FL27: Bolivia muestra tres posiciones azules y cuatro naranjas. No se ha verificado independientemente su comportamiento dentro de FL26. Los emblemas continentales Dark/Light superan pruebas automáticas, pero su representación en el juego no está completamente verificada. Los campos opcionales `continental_emblems` mantienen la compatibilidad con mundos existentes. Sin modo moderno se generan la Libertadores clásica y la Sudamericana clásica, como antes de 0.2.5.
+**CONMEBOL.** En **Copas → Continental**, con **CONMEBOL** en **Confederación**, **Activar nuevo
+formato de Libertadores, Sudamericana y Recopa Sudamericana** enciende las competiciones modernas.
+Apagado, el mundo construye la Libertadores clásica y la Copa Sudamericana clásica. Una
+competición continental también puede tener un **Logo para modo oscuro** y un **Logo para modo
+claro**, para fondos oscuros y claros; vacío, se queda el logo existente.
 
 **Archivo** tiene **Mundo nuevo**, **Abrir un mundo...**, **Guardar tu mundo como...**,
 **Cambios en este mundo...** (todo lo que tu mundo cambia en el juego en una sola lista; elige
@@ -166,7 +178,7 @@ Studio**.
 `_FL26...` que contiene ligas, clubes y jugadores nuevos; el juego lee uno cada vez (sección 8).
 
 **Arriba**: **COMPETICIONES** (cuántas competiciones tiene el mundo del juego, ligas y copas
-juntas; el juego tiene sitio para 255), **PAÍSES NUEVOS** (cuántos países añade; hay sitio para
+juntas, y cuántas puede tener: los ids de competición llegan hasta 255 en FL26, y hasta 1023 en FL27 con los módulos de 0.4.0 instalados (**1. Inicio → Instalar ahora**)), **PAÍSES NUEVOS** (cuántos países añade; hay sitio para
 99), un aviso de que **los cambios necesitan una Master League nueva**, y el estado del mundo
 abierto. **▾ Mundos** pliega la fila de tarjetas para dejar sitio, y la vuelve a mostrar.
 
@@ -492,7 +504,7 @@ las plazas frente al cupo que necesita Build (26 plazas de grupos de Libertadore
 
 **Nombres de las competiciones** (Ligas → Más): un nombre y un logo nuevos para las copas, supercopas y competiciones continentales del juego -- la FA Cup, la Champions League, la Libertadores ... -- y para las copas continentales que construye el mundo (CAF Champions League, Copa Confederación, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, Supercopa CAF). Todas las fases de la competición reciben el nombre. Vacío: el del juego. Las ligas del juego se renombran en *Ligas* (elige una liga del juego).
 
-**IDs de competiciones** (Ligas → Más): todas las competiciones del mundo del juego, ligas y copas, con su id. El juego tiene sitio para 255; Mi mundo muestra cuántas se usan.
+**IDs de competiciones** (Ligas → Más): todas las competiciones del mundo del juego, ligas y copas, con su id. Una liga o copa nueva toma un id libre desde 130: los ids de competición llegan hasta 255 en FL26, y hasta 1023 en FL27 con los módulos de 0.4.0 instalados (**1. Inicio → Instalar ahora**). Mi mundo muestra cuántas se usan.
 
 **Orden de las ligas** (Ligas → Más): el orden de los países en Select Team de la Master League y en la lista de equipos de Kick Off / Edit. *Por continente* es el orden del juego (Europa, las Américas, Asia y luego África, cada uno de la A a la Z). *Todos los países de la A a la Z* los pone a todos en una sola serie alfabética, y *Mi propio orden* te deja ordenarlos como quieras (arrastrando, o con Subir / Bajar). Las ligas de un país van juntas, primera división primero, y las competiciones de clubes, los grupos "Other" y Classic Teams van después de los países. Alemania, EE. UU. y Japón están en los grupos "Other" de Select Team, así que solo se mueven en Kick Off. Después vuelve a construir el mundo.
 
@@ -843,7 +855,7 @@ un mundo con ligas nuevas: un mundo con ligas nuevas ya tiene el formato nuevo.
 
 | | |
 |---|---|
-| Ligas nuevas por mundo | Sin número fijo. Cada liga, copa y supercopa del mundo ocupa una de las 255 competiciones del juego (el propio juego usa unas 90); **2. Mi mundo** muestra cuántas se usan. Nuestro mundo de prueba juega 86 ligas nuevas. |
+| Ligas nuevas por mundo | Sin número fijo. Cada liga, copa y supercopa del mundo ocupa un id de competición: los ids de competición llegan hasta 255 en FL26, y hasta 1023 en FL27 con los módulos de 0.4.0 instalados (**1. Inicio → Instalar ahora**). El propio juego usa unas 90; **2. Mi mundo** muestra cuántas se usan. Nuestro mundo de prueba juega 86 ligas nuevas. |
 | Países nuevos | 99 |
 | Clubes por liga | 10 – 32: hasta 28 clubes se enfrentan de 1 a 4 veces, de 29 a 32 una sola vez (una liga juega 54 jornadas como máximo). De 29 a 32 es nuevo y aún no se ha jugado una temporada entera en el juego |
 | Clubes nuevos en total | unos 1500 (la línea de abajo de la página NewLife Database dice cuántos caben en tu juego) |

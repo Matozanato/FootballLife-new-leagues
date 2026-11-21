@@ -409,7 +409,7 @@ Everything on this page is in [Players in the full guide](mod-studio-guide.md#pl
 |---|---|
 | New clubs in all (about 1,500): the number on the line `New clubs in your world: X of the Y the game takes.` | NewLife Database page: **Add to your world** stays grey. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
 | 10 to 32 clubs in a league | NewLife Database: grey league, `a league takes 10 to 32 clubs`. Clubs tab: `A league has 10 to 32 clubs.` |
-| New leagues per world: no fixed number. Each league and cup takes one of the game's 255 competitions; **2. My world** shows how many are used (**COMPETITIONS**). Our test world plays 86 new leagues. | Build: `error: <n> leagues, but the game has room for <m> ...` |
+| New leagues per world: no fixed number. Each league and cup takes one competition id: competition ids go up to 255 in FL26, and up to 1023 in FL27 once 0.4.0's modules are installed (**1. Home → Install now**); **2. My world** shows how many are used (**COMPETITIONS**). Our test world plays 86 new leagues. | Build: `error: <n> leagues, but the game has room for <m> ...` |
 | One league under one league | **Division** list: grey. Build: `... are all under ...; the game follows one link down from a league ...` |
 | Divisions down to the 7th | Build: `error: <league>: division 8 -- the rank field stops at 7`. |
 | 2 split leagues per world; one split or Apertura/Clausura per country | Build: `error: at most 2 split leagues for now ...`, `... only one league of a country can be split or Apertura/Clausura`. |
