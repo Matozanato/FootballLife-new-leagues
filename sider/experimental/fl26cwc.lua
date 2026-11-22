@@ -10,11 +10,12 @@ F8 writes every club's points and every entry to SiderAddons\fl26cwc-report.txt.
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi).
 --]]
 
--- The ranking resets right before every Club World Cup of four years: on day RESET_DAY
--- (0-based day of the year; 153 = the day fl26swiss starts the 32-club CWC) of FIRST_CWC_YEAR,
--- FIRST_CWC_YEAR + 4, ... Before the first one, everything since the start of the career counts.
+-- The ranking resets right after every Club World Cup's draw: the cup of FIRST_CWC_YEAR,
+-- FIRST_CWC_YEAR + EVERY, ... is drawn from it on day 332 of the year before (fl26swiss, late
+-- November), so the reset is day RESET_DAY (0-based; 333 = the day after the draw) of that year
+-- before. Before the first one, everything since the start of the career counts.
 local FIRST_CWC_YEAR = 2029
-local RESET_DAY = 153
+local RESET_DAY = 333
 local EVERY = 4
 local KO, IC, ICCID = 0, 0, 0   -- cwc32 ko= ic= iccid=: rows put into careers saved before the Build
 -- cwcpts <reg>=<kind> ...: this world's ids of the continental rounds that give ranking points
@@ -142,7 +143,7 @@ function m.init(ctx)
     log("fl26cwc: modules\\fl26cwc.dll has no fl26_cwc_comps (an older build): the ids written in it stand")
   end
   local r = tonumber(inst(FIRST_CWC_YEAR, RESET_DAY))
-  log(string.format("fl26cwc: the ranking's cycle: every %d year(s) from %d (day %d)", EVERY, FIRST_CWC_YEAR, RESET_DAY))
+  log(string.format("fl26cwc: the ranking's cycle: every %d year(s), reset on day %d of %d (the day after the draw)", EVERY, RESET_DAY, FIRST_CWC_YEAR - 1))
   drain()
   log(string.format("fl26cwc: %s (lists %s, saves %s)", r % 2 == 1 and "ranking installed" or "NOT installed",
                     math.floor(r / 2) % 2 == 1 and "yes" or "no", math.floor(r / 4) % 2 == 1 and "yes" or "no"))

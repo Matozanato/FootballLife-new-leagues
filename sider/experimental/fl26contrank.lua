@@ -309,6 +309,87 @@ local function rel32(from_end, to)
   return u32(d)
 end
 
+-- 10. Become a Legend (2026-11-21, FL_2027.exe; found through the RTTI of MainMenuBLData). The BL
+-- main menu is made of pages like the ML one, with tables of its own: buttons at 0x1426ba790 (35
+-- entries, no 87 and no category 91), pages at 0x1426bab60 (7, one table: no [menu+0xa0] choice),
+-- root 1 | 2 108 6 4 7 8 (7th slot free), Data page (index 5) 7 | 60 61 30 90 88 89 as in ML.
+-- Only three instructions read them (a scan of every rip-relative disp32 into the two tables):
+-- the lookup by id (MainMenuBLData vtable slot 2, 0x140bbe800), the mailbox scan (MainMenuBL slot
+-- 52, 0x140bbef20) and the tree builder call (0x140bbdd7a..0x140bbdd8a, the same builder
+-- 0x140cd0bb0). Its enabled switch (slot 1, 0x140bbe880, ids 9..121) sends 86..97 to its default,
+-- the availability and "new" switches are the ML ones. So the same copies as for ML, at page
+-- +0x1a00 (buttons, 41 x 16) and +0x1cc0 (8 pages); the BL flow (BL/BLMainMenu.json, shipped with
+-- 12_leaguerankeu and 23_leagueranksa) gets the other events from lbcwcmenu.py. A mismatch leaves
+-- only the BL menu alone.
+local BL = {
+  btn = 0x1426ba790, count = 0x23, pages = 0x1426bab60, btn_copy = 0x1a00, page_copy = 0x1cc0,
+  sites = {
+    { va = 0x140bbe800, old = "4c8d0d89bfaf01", op = "4c8d0d", copy = "btn", why = "BL lookup by id: lea r9,[table]" },
+    { va = 0x140bbe81a, old = "83f823",         cnt = "83f8",  why = "BL lookup by id: cmp eax,0x23" },
+    { va = 0x140bbef32, old = "488d3d57b8af01", op = "488d3d", copy = "btn", why = "BL mailbox scan: lea rdi,[table]" },
+    { va = 0x140bbef65, old = "83fb23",         cnt = "83fb",  why = "BL mailbox scan: cmp ebx,0x23" },
+    { va = 0x140bbdd7a, old = "41b807000000",   pages = true,  why = "BL menu: mov r8d,7 (pages)" },
+    { va = 0x140bbdd80, old = "488d15d9cdaf01", op = "488d15", copy = "page", why = "BL menu: lea rdx,[pages]" },
+    { va = 0x1426bab60, old = "0100000002000000" .. "6c000000060000000400000007000000080000000000000000",
+      why = "BL root page: 1 | 2 108 6 4 7 8, 7th slot free" },
+    { va = 0x1426bac3c, old = "070000003c0000003d0000001e0000005a0000005800000059000000" .. "00000000",
+      why = "BL Data page: 7 | 60 61 30 90 88 89, 7th slot free" },
+  },
+}
+
+-- the BL menu into the page at <cave> (after m.init's own sites are written); a log line either way
+function m.bl_menu(cave)
+  for _, s in ipairs(BL.sites) do
+    local got = memory.read(s.va, #s.old / 2)
+    if got ~= unhex(s.old) then
+      log(string.format("fl26contrank: %x is %s, expected %s (%s) -- no ranking in the Become a Legend menu",
+                        s.va, tohex(got), s.old, s.why))
+      return false
+    end
+  end
+  local at = { btn = BL.btn_copy, page = BL.page_copy }
+  local lea = {}
+  for _, s in ipairs(BL.sites) do
+    if s.op then
+      lea[s.va] = rel32(s.va + 7, cave + at[s.copy])
+      if not lea[s.va] then
+        log(string.format("fl26contrank: page 0x%x is out of reach of %x -- no ranking in the Become a Legend menu", cave, s.va))
+        return false
+      end
+    end
+  end
+  local page = ffi.cast("uint8_t*", cave)
+  local btns = memory.read(BL.btn, BL.count * 16)
+  ffi.copy(page + BL.btn_copy, btns, #btns)
+  for k = 0, BL.count - 1 do
+    local e = BL.btn_copy + 16 * k
+    local t = BTN_RETEXT[page[e] + 256 * page[e + 1]]
+    if t then
+      ffi.copy(page + e + 4, string.char(t[1] % 256, math.floor(t[1] / 256), t[2] % 256,
+               math.floor(t[2] / 256)), 4)
+    end
+  end
+  for k, b in ipairs(BTN_NEW) do
+    local name = b.name and (cave + b.at) or 0    -- the ML copy's names: written by m.init
+    ffi.copy(page + BL.btn_copy + #btns + 16 * (k - 1), u32(b.id) .. string.char(b.text % 256,
+             math.floor(b.text / 256), b.cat % 256, math.floor(b.cat / 256)) .. u64(name), 16)
+  end
+  local pages = memory.read(BL.pages, PAGES * PSTRIDE)
+  ffi.copy(page + BL.page_copy, pages, #pages)
+  ffi.copy(page + BL.page_copy + DATA_PAGE * PSTRIDE + 4 + 6 * 4, u32(CAT_RANK), 4)
+  local rp = ""
+  for _, id in ipairs(RANK_PAGE) do rp = rp .. u32(id) end
+  ffi.copy(page + BL.page_copy + PAGES * PSTRIDE, rp, #rp)
+  for _, s in ipairs(BL.sites) do
+    if s.op then memory.write(s.va, unhex(s.op) .. lea[s.va])
+    elseif s.cnt then memory.write(s.va, unhex(s.cnt) .. string.char(BL.count + #BTN_NEW))
+    elseif s.pages then memory.write(s.va, unhex("41b8") .. u32(PAGES + 1)) end
+  end
+  log(string.format("fl26contrank: Become a Legend Data page 60 61 30 90 88 89 + Ranking (91), buttons at 0x%x, pages at 0x%x",
+                    cave + BL.btn_copy, cave + BL.page_copy))
+  return true
+end
+
 -- confed <country>:<code>,... from the world file
 local function read_confed(ctx)
   local sep = string.char(92)
@@ -511,6 +592,7 @@ function m.init(ctx)
                     per[2] or 0, per[4] or 0, per[6] or 0, per[3] or 0, per[5] or 0, per[7] or 0, UNITS[1].path, UNITS[2].path, cave + LG_WRAP,
                     disp[1], disp[2], disp[3], d_sent, slot9 == 1 and 9 or 7))
   m.cave = cave
+  m.bl_menu(cave)
 end
 
 return m

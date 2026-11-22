@@ -236,6 +236,38 @@ else:
             assert not writes(i, "edx"), (hex(ret), hex(i.address), i.op_str)
     print("CUR_SITES: 0x1412fd680's four lookups of [rsp+0x28] listed")
 
+    # POST_FNS: 0x1412fd680 whole (one .pdata entry, no chained fragment), and the after-match handlers
+    # it hands [rsp+0x28] to (by pointer, `lea rdx, [rsp+0x28]`) or that read the context themselves
+    body = SRC[SRC.index("static const fnr_t POST_FNS[]"):]
+    post = [(int(a, 16), int(b, 16)) for a, b in re.findall(r"\{(0x[0-9a-f]+),(0x[0-9a-f]+)\}", body[:body.index("};")])]
+    assert post == [(0x12fd680, 0x12fe5d0)], post
+    rf = []
+    for vaddr, sz, raw in secs:
+        blob = data[raw:raw + sz]
+        for i in range(0, sz - 11, 12):
+            b0, e0, u0 = struct.unpack_from("<3I", blob, i)
+            if b0 == 0x12fd680 and e0 == 0x12fe5d0:
+                rf.append(vaddr + i)
+    assert rf, "no .pdata entry 0x12fd680..0x12fe5d0"
+    assert read(0x1412fd727, 7) == bytes.fromhex("4981c760590300"), "0x1412fd727: add r15, 0x35960"
+    for call, fn in ((0x1412fe2c8, 0x14133dfc0), (0x1412fe36d, 0x14132add0), (0x1412fe3e1, 0x1413365d0),
+                     (0x1412fe224, 0x14134edc0)):
+        assert call_to(call) == fn, (hex(call), hex(fn))
+    for at in (0x1412fe2c0, 0x1412fe365):
+        assert read(at, 5) == bytes.fromhex("488d542428"), "%x: lea rdx, [rsp + 0x28]" % at
+    print("POST_FNS: 0x1412fd680 and its after-match handlers")
+
+    # TODAY_FNS: the readers of today's calendar list; today's date where fl26match reads it
+    body = SRC[SRC.index("static const fnr_t TODAY_FNS[]"):]
+    today = [(int(a, 16), int(b, 16)) for a, b in re.findall(r"\{(0x[0-9a-f]+),(0x[0-9a-f]+)\}", body[:body.index("};")])]
+    assert today == sorted(today) and all(a < b for a, b in today), "TODAY_FNS not sorted"
+    def in_today(va): return any(a <= va - base < b for a, b in today)
+    for va in (0x14134bd52, 0x141333ba3, 0x1412f8ee0, 0x141304810, 0x1413007d0):
+        assert in_today(va), hex(va)
+    assert not in_today(0x141546e78), "0x141546c70 (a competition's slots) must keep its own pick"
+    assert read(0x1415765f2, 8) == bytes.fromhex("8b82242a64018903"), "0x1415765e0: mov eax, [rdx+0x1642a24]; mov [rbx], eax"
+    print("TODAY_FNS: %d ranges, today's date at 0x1415765f2" % len(today))
+
     # nothing else patches a site byte; no site is a PAGE_WIDE or PICK site
     spans = [(va, va + n) for va, n, _, _ in SITES]
     hit = []

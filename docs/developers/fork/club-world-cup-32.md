@@ -35,8 +35,15 @@ knockout matches played, and the July teardown was clean.
   the recipe.
 - **Every four years.** It plays every season (mid-December); the real one is every four years
   in summer.
-- **Calendar.** Its days are fixed and are not checked against the league and continental
-  calendars of the world.
+- **Calendar.** Its days are not checked against the league and continental calendars of the
+  world. Since 2026-11-22 they are checked against the national-team days (`cwc_plan` in
+  fl26swiss.c, from B254's `nt_day`: the qualifiers' windows every year, a tournament in its own
+  year): the seven two-day rounds of the template (153/154 ... 177/178) stay where they are when no
+  national-team day is within the span or a day either side, otherwise the whole cup moves clear
+  of them (rounds 4, then 3 days apart, days 152..179: 2 June, two days after the Champions League final, to 29 June; the July rollover is day 181), otherwise each round takes the first two
+  free days. Log: "Club World Cup -- national-team days: ... rounds on ..." and B254's new
+  "window days:" line. A Become a Legend player called up had a national-team match among the
+  rounds. Not checked in the game yet.
 - The game's own clubs pools (the only Africa and Oceania clubs it has) go into the fourth pot.
 
 ## In Mod Studio (branch feature/cwc32)
@@ -81,14 +88,17 @@ continental cup of the four seasons before the cup (titles of T-4 .. T-1 for a c
 of T; the confederation is the club's country's, from the world file's confed line): the game's
 Champions League (4), Libertadores (10) and AFC Champions League (16) knockouts and every cup of
 ours the league champions go to. A club with two titles is in once; the places left go to the
-best of the confederation ranking. No limit per country. Pots of eight in list order: UEFA 1-4
+best of the confederation ranking. Ties of points are broken by the game's world Club Ranking position, then the club id (2026-11-21; before, the field's qsort and the screen's sort each left ties in their own order, so a tied 12th UEFA place could differ from the screen): fl26cwc's list has that order, the confederation screens take it as their sort key and the pots follow it. No limit per country. Pots of eight in list order: UEFA 1-4
 and CONMEBOL 1-4, UEFA 5-12, then the other sixteen by points.
 
 The titles and the ranking are fl26cwc.dll's (tools/cwcrank, now in the pack: build-cwc.sh,
 sider/experimental/fl26cwc.lua): fl26swiss tells it every winner at the teardowns and at the
 draw (`fl26_cwc_champion`), it keeps them in each save's ledger (`K_CHAMP`, six years whatever
 the window) and hands them back with the ranking (`fl26_cwc_champions`, `fl26_cwc_ranking`).
-Its cycle comes from the same cwc32 line (`fl26_cwc_every`). Without fl26cwc.dll the old access
+Its cycle comes from the same cwc32 line (`fl26_cwc_every`). The ranking's window resets the day
+after each draw (day 333 of T-1 for the cup of T; until 2026-11-21 it was day 153 of T, after the
+draw, which left the draw year's continental points out of the next cup's ranking), so the draw
+reads the whole window and everything played after it counts for the next cup. Without fl26cwc.dll the old access
 list stands in.
 
 **A confederation that cannot fill its places (the user's rule, 2026-11-21).** A world without a
@@ -173,6 +183,18 @@ knockout being a regulation the exe has never heard of; `sider/experimental/fl26
   regulation 1 and its replicas (1025 ... 8193 in a Mod Studio world, not the 1071 ... 8239 of the
   pack's notes) -> `Groupstage`.
 
+- **The Intercontinental (2026-11-21, FL27).** Its final (regulation `ic=` of the cwc32 line) had
+  no ceremony either: the table's one Club World Cup pair goes to the knockout, and the
+  Intercontinental's id is in no pair. The lookup's "not found" (`mov eax,0xd9; jmp` at
+  `0x141e55284`, r8w the tournament looked for) becomes `jmp [0x141e552c4]`, a pointer kept in the
+  int3 padding after the function, into a VirtualAlloc'd stub: `0xb0` for the Intercontinental,
+  `0xd9` for any other id, then back to `0x141e55292`. `0xb0` is the game's own Club World Cup
+  ceremony, so no scene is needed (a cinematics module that maps the id plays its own); `trophy=0`
+  keeps it off. Its `+0x78` link is cleared like the knockout's. Its dates (`ic_dates`): the
+  shipped regulation 1's records came back as day 348 round `0x2e` kind 0 (first leg), day 349 round `0x2e`
+  kind 1 (second leg), 352 `0x35` and `0x36` kind 2, so the calendar showed a home-and-away
+  semi-final with no opponent; every record is kind 2 now. Not checked in the game yet.
+
 The scene itself (which cup, which stadium dressing) is the cinematic pack's and Sider's
 (`cinematics.lua` of the SP patch, or FL26's `Entrance.lua` through Leagues > More > Trophies):
 the knockout's tournament id has to be mapped there like the other ids of competition 1.
@@ -183,13 +205,13 @@ Everything the confederation rankings need now comes with the Club World Cup opt
 installed by hand any more.
 
 - **Modules (the pack).** `sider/experimental/fl26contrank.lua` (the ranking screens, the
-  "Ranking CWC" submenu in Master League > Data and League Mode > Data, the screen titles, the
+  "Ranking CWC" submenu in Master League > Data, League Mode > Data and Become a Legend > Data, the screen titles, the
   clubs past the world ranking) and `fl26cwc.lua`/`fl26cwc.dll` (the points). Both are in
   `lbpack.ORDER`, fl26contrank before fl26cwc, and both do nothing unless the world file has a
   `cwc32` line: a world without the cup keeps the game's menus.
 - **The world.** The Build (`leaguebuilder.build`, right after `club_world_cup`) calls
   `tools/lbcwcmenu.py`, which writes into the world's livecpk root:
-  `common/script/flow/ML/MLMainManu.json` and `League/LeagueMainMenu.json` with the events
+  `common/script/flow/ML/MLMainManu.json`, `League/LeagueMainMenu.json` and `BL/BLMainMenu.json` with the events
   `leaguerankna/as/af` added (`leaguerankeu/sa` too when missing), `Common/CmnLeagueRanking{NA,AS,AF}.json`
   (copies of the game's EU unit) and `<lang>/string/all.str` for all 18 languages with the texts of
   category 0x1a 0x2ac..0x2b6 (UEFA .. CAF, "Ranking <confed>", "Ranking Copa de Clubes" in
@@ -238,6 +260,28 @@ extra stub's tail from +0x159 to +0x184, so fl26cwc turned down the whole hook (
 fl26contrank's stub is not the one expected"), and its trampolines at cave+0x1300/0x1310 were under
 the new six-unit reg2 stub (0x1300..0x1387). fl26cwc now looks for the tail in the stub's first
 0x400 bytes, and its trampolines are at cave+0x1480 (the column) and +0x1490 (the header).
+
+**Become a Legend (2026-11-21, not yet tested in the game).** Until now the cup was made and
+tested in Master League and League Mode only. The cup itself (fl26swiss, fl26match, fl26cwctitle)
+does not look at the mode; three things did:
+
+- **The ledger.** fl26cwc took only `ML0000000N` and `LG0000000N` as saves; BAL saves to
+  `BL0000000N` (its own three slots), so a BAL career's points were never written beside the save
+  and were gone after a load. `save_name` takes `BL` too (`BL0000000N.fl26cwc`).
+- **The menu.** BAL has a menu class of its own, `MainMenuBLData` (vtable 0x1426bb158, found by its
+  RTTI), page-based like ML's, with tables of its own: buttons at 0x1426ba790 (35 entries, no 87,
+  no category 91), one page table at 0x1426bab60 (no `[menu+0xa0]` choice), root
+  `1 | 2 108 6 4 7 8` with the 7th slot free and the Data page (index 5) `7 | 60 61 30 90 88 89` as
+  in ML. A scan of every rip-relative disp32 into the two tables finds three readers only: the
+  lookup by id (slot 2, 0x140bbe800, `cmp eax,0x23`), the mailbox scan (0x140bbef20, `cmp ebx,0x23`)
+  and the tree builder call (0x140bbdd7a `mov r8d,7`, 0x140bbdd80 `lea rdx`, builder 0x140cd0bb0 as
+  ML's). Its enabled switch (slot 1, 0x140bbe880) sends 86..97 to its default. fl26contrank's
+  `m.bl_menu` makes the ML copies for it at page +0x1a00 (buttons) and +0x1cc0 (pages); a mismatch
+  leaves only the BAL menu alone (log "no ranking in the Become a Legend menu").
+- **The flow.** `BL/BLMainMenu.json` ships `12_leaguerankeu` and `23_leagueranksa`; lbcwcmenu adds
+  `leaguerankna/as/af/oc` to it as to the ML and League flows.
+
+The title of the final in a BAL career (the player's history, not the coach's) is not checked.
 
 Known, not done: Copy B's match table fix (League Mode) is in the FL26 caps set only; FL27's
 sets (patches/*.fl27*.json) have not been made again with it.

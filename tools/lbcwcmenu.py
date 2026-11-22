@@ -6,6 +6,7 @@ line). What they need from the game's files goes into the world built with the C
 
   common/script/flow/ML/MLMainManu.json        the ML menu flow + events leaguerankna/as/af/oc
   common/script/flow/League/LeagueMainMenu.json the League Mode menu flow, the same events
+  common/script/flow/BL/BLMainMenu.json         the Become a Legend menu flow, the same events (21.11.)
   common/script/flow/Common/CmnLeagueRanking{NA,AS,AF,OC}.json
                                                copies of the game's CmnLeagueRankingEU.json
   <lang>/string/all.str                        every language's texts + ours in category 0x1a:
@@ -30,7 +31,7 @@ FLOW = "common/script/flow/"
 EVENTS = [("leaguerankeu", "Common/CmnLeagueRankingEU"), ("leagueranksa", "Common/CmnLeagueRankingSA"),
           ("leaguerankna", "Common/CmnLeagueRankingNA"), ("leaguerankas", "Common/CmnLeagueRankingAS"),
           ("leaguerankaf", "Common/CmnLeagueRankingAF"), ("leaguerankoc", "Common/CmnLeagueRankingOC")]
-MENUS = ["ML/MLMainManu.json", "League/LeagueMainMenu.json"]
+MENUS = ["ML/MLMainManu.json", "League/LeagueMainMenu.json", "BL/BLMainMenu.json"]
 UNIT_SRC = "Common/CmnLeagueRankingEU.json"
 UNITS = ["Common/CmnLeagueRankingNA.json", "Common/CmnLeagueRankingAS.json", "Common/CmnLeagueRankingAF.json",
          "Common/CmnLeagueRankingOC.json"]

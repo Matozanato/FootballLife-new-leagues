@@ -4456,7 +4456,39 @@ static int cwc_points(uint32_t c, int nrk)
   for (int i = 0; i < nrk; i++) if (g_cwrk_id[i] == c >> 14) return g_cwrk_q[i];
   return 0;
 }
+/* the club's place in fl26cwc's ranking (its order breaks ties of points by the world Club
+   Ranking, then the id: 2026-11-21); a club out of the ranking after all of it */
+static int cwc_rank_pos(uint32_t c, int nrk)
+{
+  for (int i = 0; i < nrk; i++) if (g_cwrk_id[i] == c >> 14) return i;
+  return nrk;
+}
 static int cwc_confed_of(void* blk, uint32_t c) { return confed_of(team_country(blk, c)); }
+/* the game's world Club Ranking (block + lay_ranking(): 750 entries of 16 bytes {u32 club, u32
+   world position, u16 points, u16 points}, the count right after them at +0x2ee0), sorted by
+   position into g_wrk; how many */
+#define CWC_WRK_MAX 750
+typedef struct { uint32_t club, pos; } cwcwrk_t;
+static cwcwrk_t g_wrk[CWC_WRK_MAX];
+static int cwc_wrk_cmp(const void* a, const void* b)
+{
+  uint32_t x = ((const cwcwrk_t*)a)->pos, y = ((const cwcwrk_t*)b)->pos;
+  return x < y ? -1 : x > y;
+}
+static int cwc_world_rank(void* blk)
+{
+  if (!blk) return 0;
+  const unsigned char* r = (const unsigned char*)blk + lay_ranking();
+  uint32_t cnt = *(const uint32_t*)(r + 16 * CWC_WRK_MAX);
+  if (cnt > CWC_WRK_MAX) cnt = CWC_WRK_MAX;
+  int n = 0;
+  for (uint32_t i = 0; i < cnt; i++) {
+    uint32_t c = *(const uint32_t*)(r + 16 * i), pos = *(const uint32_t*)(r + 16 * i + 4);
+    if (c >> 14) { g_wrk[n].club = c; g_wrk[n].pos = pos; n++; }
+  }
+  qsort(g_wrk, (size_t)n, sizeof g_wrk[0], cwc_wrk_cmp);
+  return n;
+}
 /* 1 and the field in g_cwc (CWC_N clubs, in pot order), 0 when it cannot be made this way */
 static int cwc_quota_field(int play_year, u32vec* offered)
 {
@@ -4511,6 +4543,24 @@ static int cwc_quota_field(int play_year, u32vec* offered)
              g_cwrk_q[i] / 4, g_cwrk_q[i] % 4 * 25);
       }
     }
+    /* the ranking short of this confederation's clubs (the user's rule, 2026-11-21; a BAL career's
+       first season: the Libertadores and the CONCACAF cup start in February, so by the draw on day
+       332 not one of their matches had been played -- CONMEBOL 0 of 6, CONCACAF 0 of 4, and the
+       10 places went to UEFA clubs 13..22 of the ranking, three of them in six groups): the best
+       of this confederation in the game's own world Club Ranking. Only what is still missing then
+       goes to the best of the whole ranking. */
+    if (conf != CWC_OFC && np[q] < want) {
+      int nw = cwc_world_rank(blk);
+      for (int i = 0; i < nw && np[q] < want; i++) {
+        uint32_t c = canon_club(g_wrk[i].club);
+        if (!(c >> 14) || cwc_confed_of(blk, c) != conf || has_club(g_cwc, n, c)) continue;
+        if (cwc_add(&n, c)) {
+          part[q][np[q]++] = c;
+          logf("fl26swiss:   %s %2d: world Club Ranking %u -> %08x (the confederation ranking short of its clubs)",
+               CWC_QUOTA[q].name, np[q], (unsigned)g_wrk[i].pos, c);
+        }
+      }
+    }
     if (np[q] < want && conf == CWC_OFC) {
       to_afc = want - np[q];
       logf("fl26swiss: Club World Cup -- OFC: no club of it in the ranking for %d place(s): they go to the AFC", to_afc);
@@ -4547,10 +4597,11 @@ static int cwc_quota_field(int play_year, u32vec* offered)
     logf("fl26swiss: Club World Cup -- %u of %u clubs by confederation; the old access list picks the field", n, CWC_N);
     return 0;
   }
-  /* pots (user, 17.11.): pot 1 = UEFA 1-4 + CONMEBOL 1-4; pots 2-4 = every other club by points */
+  /* pots (user, 17.11.): pot 1 = UEFA 1-4 + CONMEBOL 1-4; pots 2-4 = every other club by points
+     (in the ranking's order, which breaks ties; clubs out of it keep the order they came in) */
   for (int q = 0; q < CWC_NQ; q++)                  /* each confederation's best first */
     for (int a = 1; a < np[q]; a++)
-      for (int b = a; b > 0 && cwc_points(part[q][b], nrk) > cwc_points(part[q][b - 1], nrk); b--) {
+      for (int b = a; b > 0 && cwc_rank_pos(part[q][b], nrk) < cwc_rank_pos(part[q][b - 1], nrk); b--) {
         uint32_t t = part[q][b]; part[q][b] = part[q][b - 1]; part[q][b - 1] = t;
       }
   static uint32_t rest[CWC_N]; int nr = 0, k = 0;
@@ -4567,7 +4618,7 @@ static int cwc_quota_field(int play_year, u32vec* offered)
     if (!there && nr < CWC_N) rest[nr++] = g_cwc[i];
   }
   for (int a = 1; a < nr; a++)
-    for (int b = a; b > 0 && cwc_points(rest[b], nrk) > cwc_points(rest[b - 1], nrk); b--) {
+    for (int b = a; b > 0 && cwc_rank_pos(rest[b], nrk) < cwc_rank_pos(rest[b - 1], nrk); b--) {
       uint32_t t = rest[b]; rest[b] = rest[b - 1]; rest[b - 1] = t;
     }
   for (int i = 0; i < nr && k < CWC_N; i++) out[k++] = rest[i];
@@ -4582,6 +4633,75 @@ static int cwc_quota_field(int play_year, u32vec* offered)
 
 static int pot_draw(const uint32_t* field, const int* key, unsigned n, int groups,
                     uint32_t grp[][8], int* tries);
+
+/* The Club World Cup's group draw (FIFA 2025's rule; 21.11.2026: pot_draw kept only countries
+ * apart, and a draw gave groups C and G three UEFA clubs each and group A two CONMEBOL clubs):
+ * one club of every pot in each group, at most two UEFA clubs in a group and at most one of every
+ * other confederation, and no two clubs of one country (key). A confederation with more clubs
+ * than that allows (extras of a world short of clubs) may have ceil(clubs / 8) in a group. conf 0
+ * (unknown) has no limit. The whole draw is searched (backtracking across the pots), groups and the
+ * order inside a pot shuffled, so it stays a draw. 1 with grp set; 0 when no such draw was found
+ * within the node budget. */
+typedef struct {
+  const uint32_t* field; const int* key; const int* conf;
+  int lim[16], cnt[CWC_GROUPS][16], order[CWC_N], countries;
+  uint32_t grp[CWC_GROUPS][8]; int kg[CWC_GROUPS][8];
+  long nodes;
+} cwcdraw_t;
+#define CWC_DRAW_NODES 400000L
+static int cwc_draw_place(cwcdraw_t* d, int s)
+{
+  if (s == CWC_N) return 1;
+  if (++d->nodes > CWC_DRAW_NODES) return 0;
+  int e = d->order[s], pot = s / CWC_GROUPS, cf = d->conf[e];
+  unsigned gs[CWC_GROUPS];
+  for (int g = 0; g < CWC_GROUPS; g++) gs[g] = (unsigned)g;
+  for (unsigned x = CWC_GROUPS - 1; x > 0; x--) {
+    unsigned j = q_rand(x + 1), t = gs[x]; gs[x] = gs[j]; gs[j] = t;
+  }
+  for (int o = 0; o < CWC_GROUPS; o++) {
+    int g = (int)gs[o], bad = 0;
+    if (d->grp[g][pot]) continue;                  /* this pot's club of that group already drawn */
+    if (cf > 0 && cf < 16 && d->cnt[g][cf] >= d->lim[cf]) continue;
+    for (int q = 0; q < pot && d->countries && !bad; q++) bad = d->kg[g][q] == d->key[e];
+    if (bad) continue;
+    d->grp[g][pot] = d->field[e]; d->kg[g][pot] = d->key[e];
+    if (cf > 0 && cf < 16) d->cnt[g][cf]++;
+    if (cwc_draw_place(d, s + 1)) return 1;
+    d->grp[g][pot] = 0;
+    if (cf > 0 && cf < 16) d->cnt[g][cf]--;
+    if (d->nodes > CWC_DRAW_NODES) return 0;
+  }
+  return 0;
+}
+/* countries: 1 keep countries apart too. Returns 1 and fills grp, or 0. */
+static int cwc_draw(const uint32_t* field, const int* key, const int* conf, int countries,
+                    uint32_t grp[CWC_GROUPS][8], long* nodes)
+{
+  static cwcdraw_t d;
+  memset(&d, 0, sizeof d);
+  d.field = field; d.key = key; d.conf = conf; d.countries = countries;
+  int total[16] = { 0 };
+  for (int i = 0; i < CWC_N; i++) if (conf[i] > 0 && conf[i] < 16) total[conf[i]]++;
+  for (int c = 0; c < 16; c++) {
+    int lim = c == 2 ? 2 : 1;                        /* 2 = UEFA (confed_of) */
+    int need = (total[c] + CWC_GROUPS - 1) / CWC_GROUPS;
+    d.lim[c] = need > lim ? need : lim;
+  }
+  for (int pot = 0; pot < CWC_N / CWC_GROUPS; pot++) {   /* each pot in a random order */
+    int* o = d.order + pot * CWC_GROUPS;
+    for (int i = 0; i < CWC_GROUPS; i++) o[i] = pot * CWC_GROUPS + i;
+    for (unsigned x = CWC_GROUPS - 1; x > 0; x--) {
+      unsigned j = q_rand(x + 1); int t = o[x]; o[x] = o[j]; o[j] = t;
+    }
+  }
+  for (int i = 0; i < CWC_N; i++) if (!field[i]) return 0;     /* 0 marks an empty place */
+  int ok = cwc_draw_place(&d, 0);
+  *nodes = d.nodes;
+  if (ok) memcpy(grp, d.grp, sizeof d.grp);
+  return ok;
+}
+
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
 {
   unsigned char* rec = get_rec(CWC_REG);
@@ -4650,16 +4770,39 @@ drawn:
   run_flush();
   /* The game's group draw deals the entry order out pot by pot in order (17.11.: the groups came
      out as the ranking), so the groups are drawn here: one club of each pot in every group, the
-     group picked at random, clubs of one country kept apart where a draw allows it (pot_draw, the
-     Sudamericana's), and each group's list handed to the game. */
+     group picked at random, at most two UEFA clubs and one of every other confederation in a
+     group, clubs of one country kept apart (cwc_draw); without a confederation for the clubs, or
+     when no such draw exists, the countries alone (pot_draw, the Sudamericana's). Each group's
+     list is handed to the game. */
   {
-    uint32_t grp[8][8]; int key[CWC_N], tries = 0;
+    uint32_t grp[8][8]; int key[CWC_N], conf[CWC_N], tries = 0;
     unsigned char* own = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
     void* blk = own ? *(void**)(own + 0x48) : 0;
-    for (int i = 0; i < CWC_N; i++) key[i] = blk ? club_key(blk, g_cwc[i], i) : 3000 + i;
-    int best = pot_draw(g_cwc, key, CWC_N, CWC_GROUPS, grp, &tries);
-    logf("fl26swiss: Club World Cup -- groups drawn from the pots: %d same-country pair(s) after %d draw(s)",
-         best, tries);
+    for (int i = 0; i < CWC_N; i++) {
+      key[i] = blk ? club_key(blk, g_cwc[i], i) : 3000 + i;
+      conf[i] = blk && g_confed_n ? cwc_confed_of(blk, g_cwc[i]) : 0;
+    }
+    long nodes = 0;
+    if (blk && g_confed_n && cwc_draw(g_cwc, key, conf, 1, grp, &nodes))
+      logf("fl26swiss: Club World Cup -- groups drawn from the pots by confederation (at most 2 UEFA, 1 of any other) "
+           "and country, %ld step(s)", nodes);
+    else if (blk && g_confed_n && cwc_draw(g_cwc, key, conf, 0, grp, &nodes))
+      logf("fl26swiss: Club World Cup -- groups drawn from the pots by confederation; no draw keeps every country "
+           "apart as well (%ld step(s))", nodes);
+    else {
+      int best = pot_draw(g_cwc, key, CWC_N, CWC_GROUPS, grp, &tries);
+      logf("fl26swiss: Club World Cup -- %s; groups drawn by country: %d same-country pair(s) after %d draw(s)",
+           blk && g_confed_n ? "no draw keeps the confederations apart" : "no confederation line", best, tries);
+    }
+    for (int g = 0; g < CWC_GROUPS; g++) {
+      int c[16] = { 0 }, worst = 0;
+      for (int pot = 0; pot < 4; pot++) {
+        int cf = 0;
+        for (int i = 0; i < CWC_N; i++) if (g_cwc[i] == grp[g][pot]) cf = conf[i];
+        if (cf > 0 && cf < 16 && ++c[cf] > (cf == 2 ? 2 : 1)) worst = cf;
+      }
+      if (worst) logf("fl26swiss: Club World Cup -- group %c holds %d clubs of confederation %d", 'A' + g, c[worst], worst);
+    }
     for (int g = 0; g < CWC_GROUPS; g++) {
       u32vec gv = { grp[g], grp[g] + 4, grp[g] + 4 };
       ((setclr_fn)(uintptr_t)g_tramp_setcl)(cwc_rep(g), &gv, 1);
@@ -4692,6 +4835,35 @@ drawn:
   return ok;
 }
 
+/* The Intercontinental started and given its matches. 21.11.2026 (FL27): handed to register_all
+ * alone it was filled, dated (348..352) and listed, and the game went past it -- no match was
+ * ever made. The game's caller of set_clubs(1) starts regulation 1 after it (0x141590420), not
+ * ours, so nothing started 710; as our straight knockouts (ccup_fill_one), the stage is started
+ * first and then registered. */
+static void ic_start(const char* why)
+{
+  start_stage(0, g_ic_reg);
+  uint16_t ids[1] = { g_ic_reg };
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { ids, ids + 1, ids + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  logf("fl26swiss: Intercontinental -- reg %u %s, started and handed to register_all on day %d: %d match record(s)",
+       (unsigned)g_ic_reg, why, today(), ccup_matches(g_ic_reg));
+}
+/* from the day loop: a career saved between the fill (day 332) and the cup (348) by a module that
+ * only registered it holds its four clubs and no match -- started now, once a day, until the eve
+ * of its first day */
+static void ic_keep(void)
+{
+  static int tried = -1;
+  int d = today();
+  if (!g_ic_reg || d < 333 || d > 347 || tried == d || !ic_world()) return;
+  unsigned char* ic = get_rec(g_ic_reg);
+  if (!ic || rec_count(ic) != 4) return;
+  tried = d;
+  if (ccup_matches(g_ic_reg) != 0) return;
+  ic_start("holds its clubs but no match");
+}
 /* The game hands regulation 1 its four entrants (day 332). With Mod Studio's Intercontinental
  * (ic_world) they go there every year, as the old cup had them (cwc_game_champions: our CAF
  * champion, our continental champions), and it is started at once; the 32-club draw is made
@@ -4704,19 +4876,17 @@ static char ic_fill(u32vec* list, uint64_t flag)
   if (y >= 0 && done_year == y && ic && rec_count(ic)) {   /* a save of before it, loaded: fill again */
     logf("fl26swiss: Intercontinental -- offered again on day %d; already filled this season (reg %u holds %u)",
          today(), (unsigned)g_ic_reg, ic ? rec_count(ic) : 0);
+    if (ccup_matches(g_ic_reg) == 0) ic_start("already filled, no match");
     return 1;
   }
   char ok = ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_ic_reg, list, flag);
   run_flush();
   done_year = y;
-  uint16_t ids[1] = { g_ic_reg };
-  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { ids, ids + 1, ids + 1 };
-  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
-  run_flush();
-  logf("fl26swiss: Intercontinental -- day %d: reg %u now %u club(s) (%08x %08x %08x %08x), handed to register_all",
+  logf("fl26swiss: Intercontinental -- day %d: reg %u now %u club(s) (%08x %08x %08x %08x)",
        today(), (unsigned)g_ic_reg, ic ? rec_count(ic) : 0,
        list->e - list->b > 0 ? list->b[0] : 0, list->e - list->b > 1 ? list->b[1] : 0,
        list->e - list->b > 2 ? list->b[2] : 0, list->e - list->b > 3 ? list->b[3] : 0);
+  ic_start("filled");
   return ok;
 }
 static char cwc_handoff(uint64_t id, u32vec* list, uint64_t flag)
@@ -4798,16 +4968,94 @@ static uint64_t ic_dates(uint16_t id, uint64_t reg, void* vec)
   uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | CWC_REG, vec);
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
-  const date_t* r = (const date_t*)v->b;
+  date_t* r = (date_t*)v->b;
   static int said = -1;
   int y = cwc_play_year();
-  if (said != y) {
-    said = y;
+  int tell = said != y;
+  said = y;
+  /* 21.11.2026 (FL27): the calendar showed the semi-final as home and away with no opponent. In a
+     world with the cup of 32, regulation 1 is its group stage, and the records it gives back are
+     not marked as single matches the way the shipped knockout's are. Every Intercontinental round
+     is one match: kind 2, as the one-match pre-rounds are dated (lpre). */
+  for (size_t i = 0; i < have; i++) {
+    if (tell) logf("fl26swiss: Intercontinental -- reg %u borrowed record %u: day %u round %#x kind %u%s", (unsigned)id,
+                   (unsigned)i, r[i].day, r[i].round, r[i].kind, r[i].kind != 2 ? " -> kind 2 (one match)" : "");
+    r[i].kind = 2;
+  }
+  if (tell) {
     if (have) logf("fl26swiss: Intercontinental -- reg %u dated as the old Club World Cup: %u date(s), days %u..%u",
                    (unsigned)id, (unsigned)have, r[0].day, r[have - 1].day);
     else logf("fl26swiss: Intercontinental -- reg %u: the game gave no dates", (unsigned)id);
   }
   return rv;
+}
+
+/* 22.11.2026 (BAL): the cup's June days were fixed, and the June international window fell
+ * among them -- a Become a Legend player (or a Master League manager who also runs a national
+ * team, B20) had a national-team match between two Club World Cup rounds, or on the same day.
+ * The days of the game's national-team competitions this year (nt_sample, B254: the qualifiers'
+ * windows every year, a tournament in its own year) now move the cup. The template is seven
+ * rounds of two days (153/154, 157/158 ... 177/178: the groups' three or six days and the
+ * knockout's ten records); the rounds are laid out again, the first that works:
+ *   1. the template as it is, when no national-team day is within its span or a day either side;
+ *   2. the whole cup clear of them: rounds every 4 days, then every 3, starting as near 153 as
+ *      possible, from 152 (2 June: two days' rest after the Champions League final, 149) to 179
+ *      (29 June). The July rollover is on day 181 (1 July, set_clubs from 0x14135c083) and the
+ *      template's last day, 178, is the latest ever checked in the game; 180 is left free;
+ *   3. only no match on a national-team day: each round on the first two free days, rounds 4 or
+ *      at least 3 days apart;
+ *   4. the template as it is (logged).
+ * The groups and the knockout are dated in separate calls, so the plan depends on nothing but
+ * the national-team days, the same for both. */
+static int nt_day(uint32_t d);
+#define CWC_ROUNDS 7
+#define CWC_FIRST  153
+#define CWC_MIN    152
+#define CWC_MAX    179
+static int cwc_clear(int a, int b)        /* no national-team day in a..b */
+{
+  for (int d = a; d <= b; d++) if (d >= 0 && d < 365 && nt_day((uint32_t)d)) return 0;
+  return 1;
+}
+static int cwc_plan(int* s, const char** how)
+{
+  static const int STEPS[2] = { 4, 3 };
+  if (cwc_clear(CWC_FIRST - 1, CWC_FIRST + 4 * (CWC_ROUNDS - 1) + 2)) {
+    for (int j = 0; j < CWC_ROUNDS; j++) s[j] = CWC_FIRST + 4 * j;
+    *how = "the June days, no national-team day near";
+    return 0;
+  }
+  for (int k = 0; k < 2; k++) {
+    int st = STEPS[k], len = st * (CWC_ROUNDS - 1) + 1, best = -1;
+    for (int a = CWC_MIN; a + len <= CWC_MAX; a++)
+      if (cwc_clear(a - 1, a + len + 1) && (best < 0 || abs(a - CWC_FIRST) < abs(best - CWC_FIRST))) best = a;
+    if (best >= 0) {
+      for (int j = 0; j < CWC_ROUNDS; j++) s[j] = best + st * j;
+      *how = st == 4 ? "moved clear of the national-team days, rounds 4 days apart"
+                     : "moved clear of the national-team days, rounds 3 days apart";
+      return 1;
+    }
+  }
+  for (int k = 0; k < 2; k++) {
+    int st = STEPS[k], a = CWC_MIN, ok = 1;
+    for (int j = 0; j < CWC_ROUNDS && ok; j++) {
+      while (a + 1 <= CWC_MAX && !cwc_clear(a, a + 1)) a++;
+      if (a + 1 > CWC_MAX) ok = 0;
+      else { s[j] = a; a += st; }
+    }
+    if (ok) { *how = "no match on a national-team day (some fall between rounds)"; return 2; }
+  }
+  for (int j = 0; j < CWC_ROUNDS; j++) s[j] = CWC_FIRST + 4 * j;
+  *how = "the June days kept: no layout misses the national-team days";
+  return 3;
+}
+/* a template day (153..178) on the plan */
+static uint32_t cwc_move(uint32_t t, const int* s)
+{
+  if (t < CWC_FIRST) return t;
+  uint32_t j = (t - CWC_FIRST) / 4, off = (t - CWC_FIRST) % 4;
+  if (j >= CWC_ROUNDS) return t;
+  return (uint32_t)s[j] + (off ? 1 : 0);
 }
 
 /* dates: borrow the World Cup's records, keep their rounds and kinds, move the days */
@@ -4865,10 +5113,18 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
     for (size_t i = 0; i < have; i++)
       logf("fl26swiss: Club World Cup -- reg %u borrowed record %u: day %u round %u kind %u", (unsigned)id,
            (unsigned)i, r[i].day, r[i].round, r[i].kind);
+  int plan[CWC_ROUNDS]; const char* how = "";
+  int pk = cwc_plan(plan, &how);
   for (size_t i = 0; i < have; i++) {
     size_t k = i * want / have;
-    r[i].day = ko ? CWC_KO_DAYS[k] : CWC_GROUP_DAYS[k];
+    r[i].day = cwc_move(ko ? CWC_KO_DAYS[k] : CWC_GROUP_DAYS[k], plan);
   }
+  { static int pday = -1, ptl = -1, pkind = -1;      /* the plan once a day (and when it changes) */
+    if (pday != today() || ptl != g_timeline || pkind != pk) {
+      pday = today(); ptl = g_timeline; pkind = pk;
+      logf("fl26swiss: Club World Cup -- national-team days: %s; rounds on %d %d %d %d %d %d %d",
+           how, plan[0], plan[1], plan[2], plan[3], plan[4], plan[5], plan[6]);
+    } }
   cont_note(CWC_REG, vec);                         /* reg 1's days, for the leagues that feed it */
   if (!(said & bit))
     logf("fl26swiss: Club World Cup -- reg %u dated: %s days %u..%u (%u records)", (unsigned)id,
@@ -5047,6 +5303,24 @@ static int ccup_tier(const ccup_t* c)
     for (int i = 0; i < n; i++) pre1 |= rk[i] == 1;
   }
   return !own && pre1 ? 0 : 1;
+}
+/* a champions' cup of ours: its winner is a continental champion (the game's Club World Cup in
+   place of an entrant, a title for the Club World Cup of 32, the board's CWC objective). The ccup
+   line's comp= says it when there is one -- the CAF Champions League, the CONCACAF Champions Cup,
+   the OFC Champions League. 21.11.2026 (FL27 world, the user): the AFC Champions League Two (comp 8)
+   and the AFC Challenge League (comp 15) take the champions of the smaller AFC leagues, so
+   ccup_tier() called them champions' cups; their winners took 4 of the 5 AFC places of the Club
+   World Cup of 32 (and the ACL Two's the AFC champion's place in the game's Club World Cup) and the
+   ranking's best (Al-Wasl, Port FC, Yokohama F. Marinos, Al-Jazira) were left out. A cup without
+   comp= (a world built before it) is told by its entries, as before. */
+static int ccup_zcomp(uint16_t ko);
+static int zone_code(unsigned comp);
+static int ccup_champs(const ccup_t* c)
+{
+  if (c->national) return 0;
+  int z = ccup_zcomp(c->ko);
+  if (z >= 0) return zone_code((unsigned)z) == 0;   /* ZONE_CL */
+  return !ccup_tier(c);
 }
 /* the j-th day of a cup's groups or knockout: the knockout's own days when the world file gives them */
 static int ccup_like_ok(const ccup_t* c);
@@ -7315,7 +7589,7 @@ static int ccup_champions(uint32_t* out, int max, uint16_t* cup)
 {
   int n = 0, ad = abs_day();
   for (int k = 0; k < g_nccup && n < max; k++) {
-    if (g_ccup[k].national || ccup_tier(&g_ccup[k])) continue;
+    if (!ccup_champs(&g_ccup[k])) continue;
     cupwin_t* w = cupwin_of(g_ccup[k].ko);
     if (!w || ad < w->day || ad - w->day > 300 || !(w->club >> 14)) continue;
     cup[n] = g_ccup[k].ko; out[n++] = w->club;
@@ -7339,7 +7613,7 @@ static int champ_cups(uint16_t* reg, int max)
   static const uint16_t GAME[3] = { R_UCLKO, R_LIBKO, 16 };
   for (int i = 0; i < 3 && n < max; i++) reg[n++] = GAME[i];
   for (int k = 0; k < g_nccup && n < max; k++)
-    if (!g_ccup[k].national && !ccup_tier(&g_ccup[k])) reg[n++] = g_ccup[k].ko;
+    if (ccup_champs(&g_ccup[k])) reg[n++] = g_ccup[k].ko;
   return n;
 }
 /* every champions' cup with a winner now: told to fl26cwc.dll, which keeps the titles per save */
@@ -10615,6 +10889,11 @@ static void nt_sample(uint64_t reg, void* vec)
   logf("fl26swiss: national teams (B254) -- %d, day %d: %d tournament day(s) and %d window day(s) kept clear;%s",
        yr, t, g_nntday, g_nnqday, buf[0]);
   logf("fl26swiss: national teams (B254) -- (cont.)%s", buf[1]);
+  { char wl[NT_MAX_DAYS * 5 + 8]; size_t wn = 0; wl[0] = 0;     /* the windows' days, in day order */
+    for (int d = 0; d < 365; d++)
+      for (int q = 0; q < g_nnqday; q++)
+        if (g_nqday[q] == d && wn + 6 < sizeof wl) { wn += (size_t)snprintf(wl + wn, sizeof wl - wn, " %d", d); break; }
+    if (g_nnqday) logf("fl26swiss: national teams (B254) -- window days:%s", wl); }
 }
 /* B254: a cup of ours keeps its world-file days (explicit or copied), so a round on a national-team
    day of this year moves off it: a week at a time first (the same weekday, its midweek or weekend
@@ -10708,7 +10987,7 @@ static int gc_feeds(uint16_t id, int g)
   case GC_CWC:
     if (feeds_comp(id, UCL) || feeds_comp(id, UCLQ) || gc_feeds(id, GC_LIB) || gc_feeds(id, GC_AFC)) return 1;
     for (int k = 0; k < g_nccup; k++)                 /* the champions' cups of ours (CAF ...) */
-      if (!g_ccup[k].national && !ccup_tier(&g_ccup[k]) && ccup_feeds(k, id)) return 1;
+      if (ccup_champs(&g_ccup[k]) && ccup_feeds(k, id)) return 1;
     return 0;
   }
   return 0;
@@ -15102,6 +15381,7 @@ char daychk_handler(void* ctx)
   ssum_keep(0);
   lpre_fill_days();
   ccup_fill_days();
+  ic_keep();                                       /* the Intercontinental of a save without its matches */
   calendar_scup_fill_days();
   aug_scup_fill_days();
   uefa_scup_fill_days();                           /* B470: reg 7 when the game left it empty */
@@ -15712,6 +15992,7 @@ static void* mp_child(void* widget, const char* name)
  * (0,125,255), 3 orange (244,78,0), 34 teal (2,163,174), 62 green (0,255,0), 67 amber
  * (255,189,0), 72 red (208,8,8). Without that layout the cell is not found and nothing is done. */
 enum { ZONE_CL, ZONE_EL, ZONE_ECL, ZONE_UP, ZONE_PO, ZONE_DOWN, ZONE_N };
+_Static_assert(ZONE_CL == 0, "ccup_champs compares zone_code with 0");
 static const int ZONE_COLOUR[ZONE_N] = { 70, 3, 34, 62, 67, 72 };
 static const char* const ZONE_NAME[ZONE_N] = { "top continental cup (blue)", "second continental cup (orange)", "third continental cup (teal)", "up", "play-off", "down" };
 #define ZONE_SCALE 1.85f        /* 1.0: a 7 x 14 px block at 1152 wide; at 1920 the rows are 45 px apart and 1.9 drew 43-45 px, the last row 2 px past the table edge (FL27, 2026-11-01); 1.85: 43 px */

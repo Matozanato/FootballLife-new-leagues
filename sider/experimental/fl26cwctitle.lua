@@ -30,13 +30,25 @@ below: SiderAddons\content\cinematics or content\Entrance), or when the cwc32 li
 trophy=0 keeps it off.
 Without a scene the player keeps the game's generic celebration, as before.
 
+The Intercontinental (21.11.2026, FL27: the cwc32 line's ic=, Mod Studio's copy of the shipped
+four-club cup on a regulation of its own). Its final had no title ceremony either: the trophy
+table has one pair for the Club World Cup and it went to the knockout above, and the
+Intercontinental's id is in none. The table's lookup ends at 0x141e55284 with `mov eax,0xd9`
+(not found, r8w the tournament it looked for); those seven bytes become `jmp [0x141e552c4]` (the
+pointer kept in the int3 padding after the function) into a few bytes of our own that answer
+0xb0 -- the Club World Cup trophy, the ceremony the old cup had -- for the Intercontinental and
+0xd9 for every other id, then go back to 0x141e55292. No scene is needed: 0xb0 is the game's own
+ceremony (a cinematics pack that maps the id plays its own). trophy=0 keeps it off too. Its
+next-phase link is cleared as the knockout's is.
+
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Load it after fl26cwc.
 --]]
 
 local m = {}
 local KO, TROPHY = 0, nil         -- TROPHY: nil = look for a scene, true / false = the world file says
+local IC = 0                      -- the Intercontinental's regulation (cwc32 ic=), 0 = none
 local owner_fn, getrec_fn
-local ticks, last_state = 0, nil
+local ticks, last_state = 0, {}
 
 -- a Club World Cup trophy scene: <SiderAddons>\content\<base>\<folder>\<scene file>, base
 -- "cinematics" (cinematics.lua of the SP Football Life patch) or "Entrance" (FL26's Entrance.lua);
@@ -63,6 +75,7 @@ local function read_world(ctx)
     local rest = line:match("^%s*cwc32%s+(.*)$")
     if rest then
       KO = tonumber(rest:match("ko=(%d+)") or 0) or 0
+      IC = tonumber(rest:match("ic=(%d+)") or 0) or 0
       local t = rest:match("trophy=(%d)")
       if t then TROPHY = (t == "1") end
     end
@@ -82,24 +95,28 @@ local function scene_installed(ctx)
   return nil
 end
 
--- the title: the knockout's next-phase link cleared
-local function fix(why)
-  local owner = owner_fn()
-  if owner == nil then return end
-  local blk = ffi.cast("uint8_t**", ffi.cast("uint8_t*", owner) + 0x48)[0]
-  if blk == nil then return end
-  local r = getrec_fn(blk, KO)
+-- the title: the next-phase link of a final cleared (the knockout, the Intercontinental)
+local function fix_one(blk, reg, why)
+  local r = getrec_fn(blk, reg)
   if r == nil or r == blk + 0xd0b77c then return end          -- not in this career
   local nxt = ffi.cast("uint16_t*", r + 0x78)
   if nxt[0] ~= 0xffff then
     local old = tonumber(nxt[0])
     nxt[0] = 0xffff
-    log(string.format("fl26cwctitle: reg %d -- next phase %d cleared, the final gives the title (%s)", KO, old, why))
-    last_state = "cleared"
-  elseif last_state == nil then
-    log(string.format("fl26cwctitle: reg %d -- no next phase already (%s)", KO, why))
-    last_state = "none"
+    log(string.format("fl26cwctitle: reg %d -- next phase %d cleared, the final gives the title (%s)", reg, old, why))
+    last_state[reg] = "cleared"
+  elseif last_state[reg] == nil then
+    log(string.format("fl26cwctitle: reg %d -- no next phase already (%s)", reg, why))
+    last_state[reg] = "none"
   end
+end
+local function fix(why)
+  local owner = owner_fn()
+  if owner == nil then return end
+  local blk = ffi.cast("uint8_t**", ffi.cast("uint8_t*", owner) + 0x48)[0]
+  if blk == nil then return end
+  fix_one(blk, KO, why)
+  if IC > 1 and IC < 1024 and IC ~= KO then fix_one(blk, IC, why) end
 end
 
 -- the ceremony: the shipped Club World Cup trophy pair handed to the knockout
@@ -129,6 +146,73 @@ local function trophy_patch()
   log(string.format("fl26cwctitle: trophy -- the Club World Cup trophy (0xb0) goes to tournament %d instead of 1", KO))
 end
 
+-- the Intercontinental's ceremony: the lookup's "not found" answers 0xb0 for its id
+local MISS_AT, MISS_BACK, MISS_PTR = 0x141e55284, 0x141e55292, 0x141e552c4
+local MISS_ORIG = { 0xb8, 0xd9, 0x00, 0x00, 0x00, 0xeb, 0x07 }
+local function write_code(at, bytes)
+  local old = ffi.new("uint32_t[1]")
+  if ffi.C.fl26cwctitle_VirtualProtect(ffi.cast("void*", at), #bytes, 0x40, old) == 0 then return false end
+  local p = ffi.cast("uint8_t*", at)
+  for i = 1, #bytes do p[i - 1] = bytes[i] end
+  ffi.C.fl26cwctitle_VirtualProtect(ffi.cast("void*", at), #bytes, old[0], old)
+  ffi.C.fl26cwctitle_FlushInstructionCache(ffi.C.fl26cwctitle_GetCurrentProcess(), ffi.cast("void*", at), #bytes)
+  return true
+end
+local function u64_bytes(v)
+  local t = {}
+  for i = 0, 7 do t[#t + 1] = tonumber(bit.band(bit.rshift(v, 8 * i), 0xff)) end
+  return t
+end
+local function ic_trophy_patch()
+  local p = ffi.cast("uint8_t*", MISS_AT)
+  if p[0] == 0xff and p[1] == 0x25 then
+    log("fl26cwctitle: trophy -- the lookup already answers for the Intercontinental")
+    return
+  end
+  for i = 1, #MISS_ORIG do
+    if p[i - 1] ~= MISS_ORIG[i] then
+      log(string.format("fl26cwctitle: trophy -- unexpected bytes at %x (byte %d = %02x): the Intercontinental keeps the generic celebration",
+          MISS_AT, i - 1, p[i - 1]))
+      return
+    end
+  end
+  local pad = ffi.cast("uint8_t*", MISS_PTR)
+  for i = 0, 7 do
+    if pad[i] ~= 0xcc then
+      log(string.format("fl26cwctitle: trophy -- no padding at %x: the Intercontinental keeps the generic celebration", MISS_PTR))
+      return
+    end
+  end
+  local cave = ffi.C.fl26cwctitle_VirtualAlloc(nil, 64, 0x3000, 0x40)
+  if cave == nil then
+    log("fl26cwctitle: trophy -- VirtualAlloc failed: the Intercontinental keeps the generic celebration")
+    return
+  end
+  local code = {
+    0xb8, 0xd9, 0x00, 0x00, 0x00,                                   -- mov eax, 0xd9 (none)
+    0x66, 0x41, 0x81, 0xf8, bit.band(IC, 0xff), bit.rshift(IC, 8),  -- cmp r8w, IC
+    0x75, 0x05,                                                     -- jne +5
+    0xb8, 0xb0, 0x00, 0x00, 0x00,                                   -- mov eax, 0xb0 (Club World Cup)
+    0xff, 0x25, 0x00, 0x00, 0x00, 0x00,                             -- jmp [rip]
+  }
+  for _, b in ipairs(u64_bytes(ffi.cast("uint64_t", MISS_BACK))) do code[#code + 1] = b end
+  local c = ffi.cast("uint8_t*", cave)
+  for i = 1, #code do c[i - 1] = code[i] end
+  ffi.C.fl26cwctitle_FlushInstructionCache(ffi.C.fl26cwctitle_GetCurrentProcess(), cave, #code)
+  -- the pointer first, then the jump that reads it
+  if not write_code(MISS_PTR, u64_bytes(ffi.cast("uint64_t", ffi.cast("uintptr_t", cave)))) then
+    log("fl26cwctitle: trophy -- VirtualProtect failed: the Intercontinental keeps the generic celebration")
+    return
+  end
+  local disp = MISS_PTR - (MISS_AT + 6)
+  if not write_code(MISS_AT, { 0xff, 0x25, bit.band(disp, 0xff), bit.band(bit.rshift(disp, 8), 0xff),
+                               bit.band(bit.rshift(disp, 16), 0xff), bit.band(bit.rshift(disp, 24), 0xff), 0x90 }) then
+    log("fl26cwctitle: trophy -- VirtualProtect failed: the Intercontinental keeps the generic celebration")
+    return
+  end
+  log(string.format("fl26cwctitle: trophy -- the Intercontinental (tournament %d) gets the Club World Cup trophy (0xb0): its final has the ceremony", IC))
+end
+
 function m.set_teams(ctx, home, away)
   fix("before the match")
 end
@@ -152,8 +236,17 @@ function m.init(ctx)
     int fl26cwctitle_VirtualProtect(void*, size_t, uint32_t, uint32_t*) __asm__("VirtualProtect");
     int fl26cwctitle_FlushInstructionCache(void*, void*, size_t) __asm__("FlushInstructionCache");
     void* fl26cwctitle_GetCurrentProcess(void) __asm__("GetCurrentProcess");
+    void* fl26cwctitle_VirtualAlloc(void*, size_t, uint32_t, uint32_t) __asm__("VirtualAlloc");
   ]])
   log("fl26cwctitle: the Club World Cup knockout is reg " .. KO .. "; its final gives the Master League title")
+  if IC > 1 and IC < 1024 and IC ~= KO then
+    log("fl26cwctitle: the Intercontinental is reg " .. IC .. "; its final gives the Master League title")
+    if TROPHY == false then
+      log("fl26cwctitle: trophy -- off (cwc32 trophy=0): the Intercontinental keeps the generic celebration")
+    else
+      ic_trophy_patch()
+    end
+  end
   local scene = scene_installed(ctx)
   if TROPHY == false then
     log("fl26cwctitle: trophy -- off (cwc32 trophy=0): the final keeps the generic celebration")

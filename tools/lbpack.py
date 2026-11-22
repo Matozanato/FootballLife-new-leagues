@@ -48,7 +48,7 @@ ORDER = [
     "fl26seasonend",
     "fl26contrank",       # the confederation ranking screens and menus (on with the world's cwc32 line)
     "fl26cwc",            # the Club World Cup ranking, and the titles the 32-club draw takes (feature/cwc32)
-    "fl26cwctitle",       # the 32-club final gives the ML title; its trophy when a CWC trophy scene is installed
+    "fl26cwctitle",       # the 32-club final and the Intercontinental's give the ML title and the trophy ceremony
 ]
 # Modules that ship as one file (0.2.0, Gu: "quite a lot of separate Lua/DLL modules now"): the
 # small one-fix guards, each still its own file in sider/ to read and change, go out bundled in

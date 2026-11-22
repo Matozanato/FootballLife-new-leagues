@@ -13,9 +13,12 @@
  *   CAF Confederation Cup) give half; qualifying and preliminary rounds give half (both: a quarter).
  *   A knockout match decided on penalties is a draw. Super cups and the Club World Cup give none.
  *   A stage counts when the club's first match in it has been played.
- * The window: everything from the last reset on. The ranking resets right before every Club World
- * Cup: day <reset day> (0-based) of <first CWC year> + 4k, both from fl26cwc.lua. Before the first
- * one everything since the start of the career counts. Clubs with 0 points are left out.
+ * The window: everything from the last reset on. The ranking resets right after every Club World
+ * Cup's draw: the cup of year C (<first CWC year> + every*k, from fl26cwc.lua) is drawn on day 332
+ * of C - 1 (fl26swiss, late November) from this ranking, so the reset is day <reset day> (0-based,
+ * 333: the day after) of C - 1 and the draw still reads the whole window. Everything played from
+ * then on counts for the next cup. Before the first reset everything since the start of the
+ * career counts. Clubs with 0 points are left out.
  *
  * Where the points come from: the game's match table (base and cap read off its walk at
  * 0x1413146e8 / 0x14131471b; stride 0x254; +4 u16 regulation, base = reg & 0x3ff, replicas
@@ -27,7 +30,8 @@
  * and the same in two reads in a row, and every match counts once (the ledger keeps each one).
  *
  * Per save: the ledger is kept beside the save, ML0000000N.fl26cwc (LG0000000N.fl26cwc in League
- * mode). Probe 3 (2026-11-17) showed how the game saves and loads, through ntdll!NtCreateFile (in
+ * mode, BL0000000N.fl26cwc in Become a Legend, 2026-11-21). Probe 3 (2026-11-17) showed how the
+ * game saves and loads, through ntdll!NtCreateFile (in
  * the game the export is apphelp.dll's shim; it is hooked the same way):
  *   save  main thread: reads ML0..ML13 (the slot list), opens <slot>.tmp for writing, writes it,
  *         renames it to <slot>. At the .tmp open the table is read once more on the game's own
@@ -56,7 +60,7 @@
  * gives the filled vector (RankingTeam +0x98/+0xa0: 16-byte entries {u32 club, u32 sort key, u16
  * points, u16 points}) to cwc_rewrite when a filter is set: the points become ours, the clubs with
  * none are dropped (also while nobody has any: the list is then empty, 21.11.2026), and
- * the sort key orders by points. fl26contrank renumbers 1..N after the game's sort. The row has no
+ * the sort key is the club's place in pts_build's order (points, world Club Ranking, id). fl26contrank renumbers 1..N after the game's sort. The row has no
  * points column, so the club's name gets them ("Flamengo  25 pts", see hook_text).
  *
  * Build: gcc -shared -O2 -s -o fl26cwc.dll fl26cwc.c -lkernel32   (msys64 ucrt64)
@@ -242,7 +246,7 @@ static int g_last;                         /* stamp of the ledger's last match *
    (day 181 of 2025, that ledger's matches run into 2026, the table empty right after). */
 static int g_load_by_career;
 static char g_slot[16];                    /* "ML00000000" the ledger belongs to, "" none yet */
-static int g_first_year = 2029, g_reset_day = 153, g_every = 4;   /* g_every: fl26_cwc_every */
+static int g_first_year = 2029, g_reset_day = 333, g_every = 4;   /* g_every: fl26_cwc_every */
 static ULONGLONG g_load_tick;              /* when a load was taken in */
 static int g_empty_seen;                   /* the last read found the table empty */
 
@@ -432,11 +436,13 @@ static void quarantine_now(void)           /* under g_lk */
 /* ---------------------------------------------------------------- points */
 static int cycle_start(int now)            /* stamp of the last reset, 0 = none yet */
 {
+  /* the cup of year c is drawn in late November of c - 1: the reset is the day after its draw */
   int y = now / 400, best = 0;
-  for (int c = g_first_year; c <= y; c += g_every) if (stamp(c, g_reset_day) <= now) best = stamp(c, g_reset_day);
+  for (int c = g_first_year; c - 1 <= y; c += g_every)
+    if (stamp(c - 1, g_reset_day) <= now) best = stamp(c - 1, g_reset_day);
   return best;
 }
-typedef struct { uint32_t id; int q; } pt_t;
+typedef struct { uint32_t id; int q; uint32_t wpos; } pt_t;   /* wpos: world Club Ranking position */
 static pt_t* g_pts; static int g_npts, g_cpts;
 static void pts_add(uint32_t club, int q)
 {
@@ -448,9 +454,34 @@ static void pts_add(uint32_t club, int q)
     if (!n) return;
     g_pts = n; g_cpts = nc;
   }
-  g_pts[g_npts].id = id; g_pts[g_npts].q = q; g_npts++;
+  g_pts[g_npts].id = id; g_pts[g_npts].q = q; g_pts[g_npts].wpos = 0xffffffffu; g_npts++;
 }
-static int pts_cmp(const void* a, const void* b) { return ((const pt_t*)b)->q - ((const pt_t*)a)->q; }
+/* the order (the user, 2026-11-21: Liverpool got UEFA's 12th place on a tie of 12 points while
+   the screen showed PSG 12th -- qsort alone left ties in any order, and the screen's own sort
+   another): points, then the game's world Club Ranking position (a club out of it after every
+   club in it), then the club id. The screens take their order from this list (cwc_rewrite), and
+   fl26swiss's field reads it in this order (fl26_cwc_ranking), so both see the same ranking. */
+static int pts_cmp(const void* a, const void* b)
+{
+  const pt_t* x = (const pt_t*)a; const pt_t* y = (const pt_t*)b;
+  if (x->q != y->q) return y->q - x->q;
+  if (x->wpos != y->wpos) return x->wpos < y->wpos ? -1 : 1;
+  return x->id < y->id ? -1 : x->id > y->id;
+}
+/* the world Club Ranking (block + lay_ranking(): 750 entries of 16 bytes {u32 club, u32 position,
+   u16, u16}, the count at +0x2ee0) -> wpos of the clubs with points */
+static void pts_wpos(unsigned char* b)
+{
+  if (!b) return;
+  const unsigned char* r = b + lay_ranking();
+  uint32_t cnt = *(const uint32_t*)(r + 16 * 750);
+  if (cnt > 750) cnt = 750;
+  for (uint32_t k = 0; k < cnt; k++) {
+    uint32_t id = *(const uint32_t*)(r + 16 * k) >> 14, pos = *(const uint32_t*)(r + 16 * k + 4);
+    if (!id) continue;
+    for (int i = 0; i < g_npts; i++) if (g_pts[i].id == id) { if (pos < g_pts[i].wpos) g_pts[i].wpos = pos; break; }
+  }
+}
 static int g_from;
 static void pts_build(void)                /* the clubs' quarter points in the window, sorted; under g_lk */
 {
@@ -463,14 +494,16 @@ static void pts_build(void)                /* the clubs' quarter points in the w
     if (e->pa) pts_add(e->a, e->pa);
     if (e->kind == K_MATCH && e->pb) pts_add(e->b, e->pb);
   }
+  pts_wpos(block());
   qsort(g_pts, g_npts, sizeof(pt_t), pts_cmp);
 }
-static int pts_of(uint32_t club)
+static int pts_at(uint32_t club)           /* the club's place in g_pts, -1 = none */
 {
   uint32_t id = club >> 14;
-  for (int i = 0; i < g_npts; i++) if (g_pts[i].id == id) return g_pts[i].q;
-  return 0;
+  for (int i = 0; i < g_npts; i++) if (g_pts[i].id == id) return i;
+  return -1;
 }
+static int pts_of(uint32_t club) { int i = pts_at(club); return i < 0 ? 0 : g_pts[i].q; }
 
 /* ---------------------------------------------------------------- the ranking lists */
 static unsigned char* g_cave;
@@ -497,13 +530,13 @@ void cwc_rewrite(unsigned char* self)
     if (end - beg <= 16 * 4000)
       for (; s < w; s += 16) if ((*(uint32_t*)s >> 14) == (c >> 14)) break;
     if (s < w) { if (!dup++) { dup_a = *(uint32_t*)s; dup_b = c; } continue; }
-    int q = pts_of(c);
+    int at = pts_at(c), q = at < 0 ? 0 : g_pts[at].q;
     /* only clubs with points (the user, 2026-11-21): also while nobody has any -- the list is
        then empty (fl26contrank's count and first-rows fixes keep a short list in range) */
     if (q <= 0) continue;
     int shown = q / 4; if (shown > 0xffff) shown = 0xffff;
     if (w != e) memcpy(w, e, 16);
-    *(uint32_t*)(w + 4) = 0x01000000u - (uint32_t)q;
+    *(uint32_t*)(w + 4) = (uint32_t)at + 1;   /* the place in our order (ties broken there), not the points */
     *(uint16_t*)(w + 8) = (uint16_t)shown;
     *(uint16_t*)(w + 10) = (uint16_t)shown;
     w += 16; n++;
@@ -736,14 +769,15 @@ static char g_pending_load[16];            /* a slot read by the loader, taken i
    within 15 s = a load. The played matches in memory at the first read are what is set aside. */
 static char g_rd_slot[16]; static DWORD g_rd_tid; static ULONGLONG g_rd_tick;
 static hset g_cand;
-/* "...\save\ML0000000N" or LG (+ ".tmp"): 1 = the save, 2 = its .tmp, 0 = something else */
+/* "...\save\ML0000000N", LG or BL (Become a Legend) (+ ".tmp"): 1 = the save, 2 = its .tmp, 0 = something else */
 static int save_name(const wchar_t* w, int n, char* slot)
 {
   int i = n;
   while (i > 0 && w[i - 1] != L'\\') i--;
   const wchar_t* b = w + i; int bl = n - i;
   if (bl != 10 && !(bl == 14 && !_wcsnicmp(b + 10, L".tmp", 4))) return 0;
-  if (!((b[0] == L'M' && b[1] == L'L') || (b[0] == L'L' && b[1] == L'G'))) return 0;
+  if (!((b[0] == L'M' && b[1] == L'L') || (b[0] == L'L' && b[1] == L'G') || (b[0] == L'B' && b[1] == L'L')))
+    return 0;
   for (int k = 2; k < 10; k++) if (!iswxdigit(b[k])) return 0;
   if (i < 6 || _wcsnicmp(w + i - 6, L"\\save\\", 6)) return 0;
   for (int k = 0; k < 10; k++) slot[k] = (char)b[k];
@@ -1202,8 +1236,8 @@ __declspec(dllexport) int fl26_cwc_install(int first_year, int reset_day)
   HANDLE t2 = saves ? CreateThread(0, 0, watch_thread, 0, 0, 0) : 0;
   if (t1) CloseHandle(t1);
   if (t2) CloseHandle(t2);
-  plog("installed: match table +0x%x x %u, save folder %s, main thread %lu; resets on day %d of %d + 4k",
-       g_mbase, g_mcap, g_save_dir, g_main_tid, g_reset_day, g_first_year);
+  plog("installed: match table +0x%x x %u, save folder %s, main thread %lu; resets on day %d of %d + %dk",
+       g_mbase, g_mcap, g_save_dir, g_main_tid, g_reset_day, g_first_year - 1, g_every);
   plog("layout: today at block+0x%x, %u regulation rows%s", lay_today(), lay_regcap(),
        lay_ok() ? "" : " (some sites not as expected: the 0.3.0 values stand in)");
   return 1 + 2 * lists + 4 * saves;
@@ -1252,7 +1286,7 @@ __declspec(dllexport) int fl26_cwc_status(char* out, int cap)
   int n = snprintf(out, cap, "slot %s, ledger %d entries, %d club(s) with points, ",
                    g_slot[0] ? g_slot : "(none yet)", g_nled, g_npts);
   if (g_from) n += snprintf(out + n, cap - n, "since day %d of %d", g_from % 400, g_from / 400);
-  else n += snprintf(out + n, cap - n, "since the start (first reset day %d of %d)", g_reset_day, g_first_year);
+  else n += snprintf(out + n, cap - n, "since the start (first reset day %d of %d)", g_reset_day, g_first_year - 1);
   for (int i = 0; i < g_npts && i < 5 && n < cap - 48; i++)
     n += snprintf(out + n, cap - n, "\n  %d. club %u: %d.%02d", i + 1, g_pts[i].id, g_pts[i].q / 4, (g_pts[i].q % 4) * 25);
   LeaveCriticalSection(&g_lk);
