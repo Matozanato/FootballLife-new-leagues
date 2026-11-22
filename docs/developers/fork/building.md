@@ -9,10 +9,12 @@ the frozen program, the version number, and the updater.
 - `pip install PySide6 Pillow capstone markdown pyinstaller`.
   - `markdown` turns the guides into HTML.
   - `pyinstaller` freezes the program.
+  - `cargo` builds the PyO3 diagnostics extension from `mod-manager-rust/`.
   - `py7zr` is optional (7z kit and face packs), but install it before a release: mszip
     names it as a hidden import, and a frozen program without it cannot open `.7z` files.
 - **zig 0.16.0** for the DLLs. Download it for Windows x86_64 from ziglang.org and unpack it
   anywhere. It needs no Visual Studio and no SDK.
+- **Rust stable** for the PyO3 mod-manager extension bundled with the release.
 
 ## The DLLs: zig and `build-*.sh`
 

@@ -1,0 +1,38 @@
+[package]
+name = "fl27mm"
+version = "1.3.2"
+edition = "2021"
+description = "Mod manager for SP Football Life 2027 / Sider: pack order, conflicts, install safety"
+
+[lib]
+name = "fl27mm"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fl27mm"
+path = "src/main.rs"
+
+[workspace]
+members = ["ui/src-tauri", "python"]
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+flate2 = "1.1.11"
+nom = "8.0.0"
+rayon = "1.12.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zlib-rs = "0.6.8"
+# Only used to hand a rendered head back as an image; already vendored for
+# the desktop crate, so this adds nothing new to resolve offline.
+
+# No panic = "abort" here on purpose. Tauri runs each command on the async
+# runtime, and a panicked task is reported to the UI as an error the user can
+# see and retry. Aborting would take the whole window down with it, which is a
+# worse trade than the few hundred kilobytes saved.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

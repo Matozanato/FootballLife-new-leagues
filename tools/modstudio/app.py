@@ -70,7 +70,7 @@ class Bus(QObject):
 def page_groups():
     """(caption, [page classes]) in the order of the left bar; caption "" is a group without a
     caption, None pages that are built but not in the bar (reached from another page)"""
-    from modstudio.pages import overview, roots, modules, install, profiles, restore
+    from modstudio.pages import manager, overview, roots, modules, install, profiles, restore
     from modstudio.pages import content, stadiums, balls, kits, commentary, music, trophies
     from modstudio.pages import builder, players, packages, diagnostics, settings, newlife, leagues, cups
     return [
@@ -79,7 +79,7 @@ def page_groups():
                             packages.Packages, builder.Build, cups.Cups]),
         ("GAME CONTENT", [kits.Kits, stadiums.Stadiums, balls.Balls, commentary.Commentary,
                           music.Music, content.Servers, trophies.Trophies]),
-        ("MANAGE", [install.Install, modules.Modules, roots.Roots, profiles.Profiles, restore.Restore,
+        ("MANAGE", [manager.ModManager, install.Install, modules.Modules, roots.Roots, profiles.Profiles, restore.Restore,
                     diagnostics.Diagnostics, settings.Settings]),
         (None, [builder.NewLeagues]),
     ]
@@ -97,7 +97,8 @@ NAV = [
     # Build page when it sat under More
     ("MY WORLD", False, [("World", "My world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums", "Cups"])]),
     ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Trophies", "Servers")]),
-    ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
+    ("TOOLS", True, [(n, None, [n]) for n in
+                     ("ModManager", "Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
     ("SETTINGS", False, [("Settings", None, ["Settings"])]),
 ]
 TAB_TITLE = {"Build": "Build", "Packages": "League packages",

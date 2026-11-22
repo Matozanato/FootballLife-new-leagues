@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Main window: core APIs plus native folder and file pickers and confirm dialogs.","local":true,"windows":["main"],"permissions":["core:default","dialog:allow-open","dialog:allow-save","dialog:allow-ask","dialog:allow-confirm","dialog:allow-message"]}}

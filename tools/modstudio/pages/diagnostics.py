@@ -55,6 +55,10 @@ class Diagnostics(Page):
         self.world.setObjectName("log")
         self.world.setReadOnly(True)
         self.tabs.addTab(self.world, _("Your world in the game"))
+        self.manager = QPlainTextEdit()
+        self.manager.setObjectName("log")
+        self.manager.setReadOnly(True)
+        self.tabs.addTab(self.manager, _("Rust mod manager"))
         self.outer.addWidget(self.tabs, 1)
         self.rows = []
 
@@ -71,6 +75,7 @@ class Diagnostics(Page):
         def job(progress):
             rows = checks.full(g, ini, recipe)
             world = io.StringIO()
+            manager = self.manager_report(g)
             try:
                 import leaguebuilder as B
                 missing = B.modules_missing(g.folder)
@@ -79,13 +84,13 @@ class Diagnostics(Page):
                 B.check(g.folder, log=lambda t: world.write(t + "\n"))
             except Exception as e:
                 world.write(str(e) + "\n")
-            return rows, world.getvalue()
+            return rows, world.getvalue(), manager
 
         run_job(job, self.done, lambda tb: (self.app.busy(False), self.say(tb.strip().splitlines()[-1], "err")))
 
     def done(self, res):
         self.app.busy(False)
-        rows, world = res
+        rows, world, manager = res
         self.rows = rows or [("ok", "Setup", "No problems found.", None)]
         self.tree.clear()
         for level, area, text, page in self.rows:
@@ -95,10 +100,63 @@ class Diagnostics(Page):
             it.setToolTip(1, _(text))
             self.tree.addTopLevelItem(it)
         self.world.setPlainText(world)
+        self.manager.setPlainText(manager)
         self.show_log()
         n = sum(1 for r in rows if r[0] == "err")
         self.say(_("%d problem(s), %d warning(s).") % (n, len(rows) - n) if rows else _("No problems found."),
                  "err" if n else "warn" if rows else "ok")
+
+    @staticmethod
+    def manager_report(game):
+        from .. import native
+        if not native.available():
+            return _("The Rust manager extension is not installed. Build it with maturin to enable these reports.")
+        if not os.path.isfile(game.ini_path):
+            return _("No sider.ini is available for the Rust manager to inspect.")
+        try:
+            scan = native.scan(game.ini_path, game.sider_dir)
+            verify = native.verify(game.ini_path, game.sider_dir)
+        except (OSError, RuntimeError) as e:
+            return _("Rust manager report failed: %s") % e
+
+        conflicts = None
+        conflict_error = None
+        if os.path.isdir(game.livecpk_dir):
+            try:
+                conflicts = native.conflicts(game.livecpk_dir)
+            except (OSError, RuntimeError) as e:
+                conflict_error = str(e)
+        else:
+            conflict_error = _("No livecpk folder is available.")
+
+        lines = [
+            _("Active packs: %d; active modules: %d") %
+            (len(scan["active_packs"]), len(scan["active_modules"])),
+            _("Disabled packs: %d; disabled modules: %d") %
+            (scan["disabled_packs"], scan["disabled_modules"]),
+            _("Order: %d effective, %d partial, %d fully shadowed") %
+            (verify["effective"], verify["partial"], verify["dead"]),
+        ]
+        lines.extend(_("Missing: %s") % item for item in scan["missing"])
+        lines.extend(_("Duplicate: %s") % item for item in scan["duplicates"])
+        for pack in verify["packs"]:
+            if pack["dead"] or pack["surviving"] < pack["total"]:
+                lines.append(
+                    _("Shadowing: %s (%d/%d files survive)") %
+                    (pack["path"], pack["surviving"], pack["total"])
+                )
+        if conflicts is not None:
+            lines.extend(
+                _("Conflict: %s <-> %s (%d differing files)") % tuple(pair)
+                for pair in conflicts["pairs"][:15]
+            )
+            lines.append(
+                _("Packs scanned: %d; %d differing shared keys; %d identical shared keys") %
+                (conflicts["packs"], conflicts["differing"], conflicts["identical"])
+            )
+        else:
+            lines.append(_("Conflict scan unavailable: %s") % conflict_error)
+        return "\n".join(lines)
 
     def show_log(self):
         g = self.app.game
@@ -131,6 +189,7 @@ class Diagnostics(Page):
         out += ["", "sider.log errors (last game):"]
         out += ["  %s" % t for _n, t in checks.log_problems(g)[-40:]]
         out += ["", self.world.toPlainText()]
+        out += ["", "Rust mod manager:", self.manager.toPlainText()]
         home = os.path.expanduser("~")
         text = "\n".join(out).replace(home, "%USERPROFILE%")
         QGuiApplication.clipboard().setText(text)
