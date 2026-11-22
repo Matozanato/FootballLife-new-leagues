@@ -86,6 +86,26 @@ with tempfile.TemporaryDirectory() as tmp:
     os.remove(os.path.join(dst, "config.ini"))
     ok("B166: a file taken out by hand: stays", S._copy(src, dst) == "kept")
 
+    # GigaPack 1.1 (21.11.): the note names leftovers (_chk.png) the zip did not carry and the new
+    # package does not bring: the folder is still Mod Studio's, the new board goes in
+    shutil.rmtree(dst, ignore_errors=True)
+    shutil.rmtree(src)
+    put(os.path.join(src, "bg.dds"), "old board")
+    put(os.path.join(src, "config.ini"), "x=1")
+    put(os.path.join(src, "_chk.png"), "maker's check image")
+    age(src, 29 * 86400)
+    S._copy(src, dst)
+    os.remove(os.path.join(dst, "_chk.png"))               # the zip left it out
+    zip_install(dst, tmp)
+    os.remove(os.path.join(src, "_chk.png"))
+    put(os.path.join(src, "bg.dds"), "the NEW board, Thunder105")
+    got = S._copy(src, dst)
+    ok("1.1: note names a leftover the zip dropped: the new board goes in -> %s" % got,
+       got == "copied" and open(os.path.join(dst, "bg.dds")).read() == "the NEW board, Thunder105")
+    fresh()
+    os.remove(os.path.join(dst, "config.ini"))
+    ok("1.1: a package file taken out by hand still stays", S._copy(src, dst) == "kept")
+
 
 print("%d failed" % len(fails) if fails else "all passed")
 sys.exit(1 if fails else 0)

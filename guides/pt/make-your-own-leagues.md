@@ -430,7 +430,7 @@ Tudo nesta página está em [Jogadores no guia completo](mod-studio-guide.md#jog
 |---|---|
 | Clubes novos ao todo (cerca de 1.500): o número na linha `Clubes novos no seu mundo: X dos Y que o jogo aceita.` | Página NewLife Database: **Adicionar ao seu mundo** fica cinza. Construção: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
 | De 10 a 32 clubes numa liga | NewLife Database: liga cinza, `um campeonato tem de 10 a 32 clubes`. Aba Clubes: `Um campeonato tem de 10 a 32 clubes.` |
-| Ligas novas por mundo: sem número fixo. Cada liga e cada copa ocupa uma das 255 competições do jogo; **2. Meu mundo** mostra quantas estão em uso (**Competições**). O nosso mundo de teste joga 86 ligas novas. | Construção: `error: <n> leagues, but the game has room for <m> ...` |
+| Ligas novas por mundo: sem número fixo. Cada liga e cada copa ocupa um id de competição: os ids de competição vão até 255 no FL26, e até 1023 no FL27 com os módulos da 0.4.0 instalados (**1. Início → Instalar agora**); **2. Meu mundo** mostra quantas estão em uso (**Competições**). O nosso mundo de teste joga 86 ligas novas. | Construção: `error: <n> leagues, but the game has room for <m> ...` |
 | Uma liga abaixo de uma liga | Lista **Divisão**: cinza. Construção: `... are all under ...; the game follows one link down from a league ...` |
 | Divisões até a 7.ª | Construção: `error: <league>: division 8 -- the rank field stops at 7`. |
 | 2 ligas divididas em dois por mundo; uma divisão em dois ou Apertura/Clausura por país | Construção: `error: at most 2 split leagues for now ...`, `... only one league of a country can be split or Apertura/Clausura`. |

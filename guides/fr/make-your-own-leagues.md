@@ -429,7 +429,7 @@ Tout ce qui concerne cette page est dans [Joueurs dans le guide complet](mod-stu
 |---|---|
 | Nouveaux clubs en tout (environ 1 500) : le nombre sur la ligne `Nouveaux clubs dans votre monde : X sur les Y que le jeu accepte.` | Page NewLife Database : **Ajouter à votre monde** reste grisé. Build : `erreur : <n> new clubs, but the game has room for <m> more (a full squad each)`. |
 | De 10 à 32 clubs dans une ligue | NewLife Database : ligue grise, `une ligue a de 10 à 32 clubs`. Onglet Clubs : `Une ligue a de 10 à 32 clubs.` |
-| Nouvelles ligues par monde : pas de nombre fixe. Chaque ligue et chaque coupe prend une des 255 compétitions du jeu ; **2. Mon monde** montre combien sont utilisées (**COMPÉTITIONS**). Notre monde de test joue 86 nouvelles ligues. | Build : `erreur : <n> leagues, but the game has room for <m> ...` |
+| Nouvelles ligues par monde : pas de nombre fixe. Chaque ligue et chaque coupe prend un id de compétition : les ids de compétition vont jusqu'à 255 dans FL26, et jusqu'à 1023 dans FL27 une fois les modules de 0.4.0 installés (**1. Accueil → Installer maintenant**) ; **2. Mon monde** montre combien sont utilisées (**COMPÉTITIONS**). Notre monde de test joue 86 nouvelles ligues. | Build : `erreur : <n> leagues, but the game has room for <m> ...` |
 | Une ligue sous une ligue | Liste **Division** : grise. Build : `... are all under ...; the game follows one link down from a league ...` |
 | Divisions jusqu'à la 7e | Build : `erreur : <league>: division 8 -- the rank field stops at 7`. |
 | 2 ligues divisées par monde ; une seule division en deux ou Apertura/Clausura par pays | Build : `erreur : at most 2 split leagues for now ...`, `... only one league of a country can be split or Apertura/Clausura`. |
