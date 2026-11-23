@@ -74,7 +74,16 @@ local function read_line(dir)
   local f = io.open(dir .. "fl26world.txt", "r")
   if not f then return nil, "no world file" end
   local out, names = nil, {}
+  local subs, subnames = {}, {}   -- lab 23/11/2026: folders inside a country (confsub / confsubnames)
   for line in f:lines() do
+    local sl = line:match("^%s*confsub%s+slots=([%d:,]+)")
+    if sl then for a, b in sl:gmatch("(%d+):(%d+)") do subs[#subs + 1] = { tonumber(a), tonumber(b) } end end
+    local sn = line:match("^%s*confsubnames%s+(.*)$")
+    if sn then
+      for fo, pa, ci, nm in sn:gmatch("(%d+):(%d+):(%d+):([^|]+)") do
+        subnames[#subnames + 1] = { tonumber(fo), tonumber(pa), tonumber(ci), (nm:gsub("%s+$", "")) }
+      end
+    end
     local rest = line:match("^%s*confgroups%s+(.*)$")
     local nl = line:match("^%s*confnames%s+(.*)$")
     if nl then
@@ -95,6 +104,7 @@ local function read_line(dir)
   f:close()
   if not out then return nil, "no confgroups line in the world file" end
   out.names = names
+  out.subs, out.subnames = subs, subnames
   return out
 end
 
@@ -112,6 +122,7 @@ function m.init(ctx)
     typedef int  (*fl26_confgroups_log_t)(char*, int);
     typedef void (*fl26_confgroups_set_t)(int, int);
     typedef void (*fl26_confgroups_name_t)(int, const char*);
+    typedef void (*fl26_confgroups_fname_t)(int, int, int, const char*);
   ]])
   local sep = string.char(92)
   local dir = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep
@@ -180,6 +191,15 @@ function m.init(ctx)
     for _, e in ipairs(line.emblems) do setemb(e[1], e[2]) end
   elseif #line.emblems > 0 then
     log("confgroups: the confederations' emblems need a newer fl26confgroups.dll -- the rows keep none")
+  end
+  local setfold = fn("fl26_confgroups_fold", "fl26_confgroups_set_t")
+  local setfname = fn("fl26_confgroups_fname", "fl26_confgroups_fname_t")
+  if setfold and setfname then
+    for _, e in ipairs(line.subnames) do setfname(e[1], e[2], e[3], e[4]) end
+    for _, e in ipairs(line.subs) do setfold(e[1], e[2]) end
+    if #line.subs > 0 then log(string.format("confgroups: %d league(s) in %d folder(s)", #line.subs, #line.subnames)) end
+  elseif #line.subs > 0 then
+    log("confgroups: the folders (confsub) need a newer fl26confgroups.dll -- the leagues stay in their country")
   end
   if line.trace then settrace(1, 0) end
   local status = tonumber(install(base))

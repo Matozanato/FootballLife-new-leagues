@@ -232,6 +232,16 @@ static int8_t g_reg[256];                 /* region -> group, -1 none */
 static char g_cname[NCTRY][40];           /* country -> its name (the confnames line) */
 static int g_head[NG] = { HEAD_SLOT, HEAD_SLOT, HEAD_SLOT, HEAD_SLOT, HEAD_SLOT, HEAD_SLOT };
 static int g_emb[NG];                     /* group -> the competition id of its row's emblem, 0 none */
+/* lab 23/11/2026 (Argentina, the user: "Regionais > each region > its zones"): folders inside a country's level of
+   Select Team. `confsub slots=<slot>:<folder>,...` puts a league in a folder; `confsubnames <folder>:<parent>:<cid>:
+   <name>|...` names a folder, its parent (0: the country's level) and its row's emblem (a competition id, 0: its first
+   league's). A folder's row is "+ Name (n)" -- n its leagues, sub-folders' too -- and opens a level of its own under
+   "- Name"; Back goes to the parent's level, the cursor on the folder's row. */
+#define NFOLD 256
+static uint8_t g_sfold[1024];             /* slot -> folder, 0 none */
+static uint8_t g_fpar[NFOLD];             /* folder -> its parent, 0 the country */
+static int g_femb[NFOLD];                 /* folder -> emblem competition id, 0 none */
+static char g_fname[NFOLD][48];
 static int g_tables;
 
 static void tables_init(void)
@@ -275,6 +285,7 @@ typedef struct { char *b, *e, *c; } rvec;
 #define K_GAME  (-1)
 #define K_CTRY  100                        /* + country id */
 #define K_BACK  (-2)
+#define K_FOLD  4096                       /* + folder id */
 typedef struct {
   char* obj;
   rvec master;               /* every row the game built, in its order (owned, game memory) */
@@ -282,6 +293,9 @@ typedef struct {
   uint64_t vis_n;
   int open;                  /* the open group, -1 none (the confederations) */
   int ctry;                  /* the open country of the open group, -1 none (its countries) */
+  int fold;                  /* the open folder of the open country, 0 none (the country's own level) */
+  uint16_t fcnt[NFOLD];      /* leagues under each folder (its sub-folders' too) in the master rows */
+  uint16_t fslot[NFOLD];     /* its first league's slot: the folder row's flag, emblem and League Info */
   int nmem[NG];
   uint16_t ccnt[NCTRY];      /* leagues of each country in the master rows */
   uint16_t cslot[NCTRY];     /* its first league's slot: the country row's flag and League Info */
@@ -309,6 +323,15 @@ static char g_sname[96];
 static uint64_t nrows(const rvec* v) { return v->b ? (uint64_t)(v->e - v->b) / ROW : 0; }
 static int grp_slot(uint32_t s) { return s < 1024 ? g_slot[s] : -1; }
 static int ctry_slot(uint32_t s) { return s < 1024 ? g_sctry[s] : -1; }
+static int fold_slot(uint32_t s) { return s < 1024 ? g_sfold[s] : 0; }
+/* the folder to show at level f for a league in folder x: x itself (0 when x == f: the league's own row), the child of
+   f on x's way up, -1 when x is not under f */
+static int fold_at(int x, int f)
+{
+  if (x == f) return 0;
+  for (int i = 0; i < 16 && x; i++) { if (g_fpar[x] == f) return x; x = g_fpar[x]; }
+  return -1;
+}
 static const char* str_of(const char* s) { return *(const uint64_t*)(s + 0x18) >= 16 ? *(char* const*)s : s; }
 
 static void set_str(char* s, const char* txt, int n)
@@ -396,6 +419,13 @@ static void ts_count(tstate* s)
     s->nmem[g]++;
     if (c >= 0 && !s->ccnt[c]++) s->cslot[c] = (uint16_t)slot;
   }
+  memset(s->fcnt, 0, sizeof s->fcnt);
+  for (uint64_t i = 0; i < nrows(&s->master); i++) {
+    uint32_t slot = *(uint32_t*)(s->master.b + i * ROW);
+    for (int x = fold_slot(slot), k = 0; x && k < 16; x = g_fpar[x], k++)
+      if (!s->fcnt[x]++) s->fslot[x] = (uint16_t)slot;
+  }
+  if (s->fold && (s->ctry < 0 || !s->fcnt[s->fold])) s->fold = 0;
   if (s->open >= 0 && !s->nmem[s->open]) s->open = -1;
   if (s->open < 0 || s->ctry < 0 || !s->ccnt[s->ctry]) s->ctry = -1;
 }
@@ -440,12 +470,22 @@ static void ts_layout(tstate* s)
       s->kind[k++] = (int16_t)(K_CTRY + c);
     }
   } else {
-    push(vis, our_row(s->cslot[s->ctry], "- %s", g_cname[s->ctry]));
+    static uint8_t fdone[NFOLD];
+    memset(fdone, 0, sizeof fdone);
+    if (s->fold) push(vis, our_row(s->fslot[s->fold], "- %s", g_fname[s->fold]));
+    else push(vis, our_row(s->cslot[s->ctry], "- %s", g_cname[s->ctry]));
     s->kind[k++] = K_BACK;
     for (uint64_t i = first; i < n; i++) {
       char* r = s->master.b + i * ROW;
       uint32_t slot = *(uint32_t*)r;
-      if (grp_slot(slot) == s->open && ctry_slot(slot) == s->ctry) { push(vis, r); s->kind[k++] = K_GAME; }
+      if (grp_slot(slot) != s->open || ctry_slot(slot) != s->ctry) continue;
+      int f = fold_at(fold_slot(slot), s->fold);
+      if (f < 0) continue;
+      if (!f) { push(vis, r); s->kind[k++] = K_GAME; continue; }
+      if (fdone[f]) continue;
+      fdone[f] = 1;
+      push(vis, our_row(s->fslot[f], "+ %s (%d)", g_fname[f], s->fcnt[f]));
+      s->kind[k++] = (int16_t)(K_FOLD + f);
     }
   }
   s->vis_b = vis->b;
@@ -526,23 +566,40 @@ static tstate* ts_take(char* t)
 
 static void ts_trace(tstate* s, const char* what)
 {
-  trace("select team %p: %s -- %s%s%s, %llu rows shown, cursor %llu", s->obj, what,
+  trace("select team %p: %s -- %s%s%s%s%s, %llu rows shown, cursor %llu", s->obj, what,
         s->open >= 0 ? GNAME[s->open] : "the confederations", s->ctry >= 0 ? " / " : "",
-        s->ctry >= 0 ? g_cname[s->ctry] : "", (unsigned long long)s->vis_n, (unsigned long long)ts_cur(s->obj));
+        s->ctry >= 0 ? g_cname[s->ctry] : "", s->fold ? " / " : "", s->fold ? g_fname[s->fold] : "",
+        (unsigned long long)s->vis_n, (unsigned long long)ts_cur(s->obj));
 }
 
 /* Confirm on a row of ours: a confederation or a country in, the way back out */
 static void ts_enter(tstate* s, int kind)
 {
+  if (kind == K_BACK && s->ctry >= 0 && s->fold) {       /* a folder: up to its parent */
+    int f = s->fold;
+    s->fold = g_fpar[f];
+    ts_layout(s);
+    ts_cursor(s->obj, (uint64_t)ts_kind_at(s, K_FOLD + f), 1);
+    ts_trace(s, "back");
+    return;
+  }
+  if (kind >= K_FOLD) {
+    s->fold = kind - K_FOLD;
+    ts_layout(s);
+    ts_cursor(s->obj, s->vis_n > 1 ? 1 : 0, 1);
+    ts_trace(s, "in");
+    return;
+  }
   if (kind == K_BACK) {
     int g = s->open, c = s->ctry;
+    s->fold = 0;
     if (c >= 0) { s->ctry = -1; ts_layout(s); ts_cursor(s->obj, (uint64_t)ts_kind_at(s, K_CTRY + c), 1); }
     else { s->open = -1; ts_layout(s); ts_cursor(s->obj, (uint64_t)ts_kind_at(s, g), 1); }
     ts_trace(s, "back");
     return;
   }
-  if (kind >= K_CTRY) s->ctry = kind - K_CTRY;
-  else { s->open = kind; s->ctry = -1; }
+  if (kind >= K_CTRY) { s->ctry = kind - K_CTRY; s->fold = 0; }
+  else { s->open = kind; s->ctry = -1; s->fold = 0; }
   ts_layout(s);
   ts_cursor(s->obj, s->vis_n > 1 ? 1 : 0, 1);
   ts_trace(s, "in");
@@ -553,8 +610,10 @@ static void ts_level_of(tstate* s, uint32_t slot)
 {
   s->open = grp_slot(slot);
   s->ctry = -1;
+  s->fold = 0;
   if (s->open >= 0 && !s->nmem[s->open]) s->open = -1;
   if (s->open >= 0) s->ctry = ctry_slot(slot);
+  if (s->ctry >= 0) s->fold = fold_slot(slot);
 }
 
 /* the level a row of ours stood for, by its text (a list built anew keeps the copies) */
@@ -576,9 +635,22 @@ static int ts_level_of_text(tstate* s, const char* nm, int* focus)
     size_t l = strlen(g_cname[c]);
     if (strncmp(x, g_cname[c], l) || (x[l] != 0 && x[l] != ' ')) continue;
     s->open = grp_slot(slot);
+    s->fold = 0;
     if (nm[0] == '+') { s->ctry = -1; *focus = K_CTRY + c; }
     else { s->ctry = c; *focus = K_BACK; }
     return 1;
+  }
+  for (int f = 1; f < NFOLD; f++) {        /* a folder's row */
+    size_t l = strlen(g_fname[f]);
+    if (!l || strncmp(x, g_fname[f], l) || (x[l] != 0 && x[l] != ' ')) continue;
+    for (uint64_t i = 0; i < nrows(&s->master); i++) {
+      uint32_t slot = *(uint32_t*)(s->master.b + i * ROW);
+      if (fold_at(fold_slot(slot), g_fpar[f]) != f) continue;
+      s->open = grp_slot(slot); s->ctry = ctry_slot(slot);
+      if (nm[0] == '+') { s->fold = g_fpar[f]; *focus = K_FOLD + f; }
+      else { s->fold = f; *focus = K_BACK; }
+      return 1;
+    }
   }
   return 0;
 }
@@ -721,12 +793,13 @@ static void ts_open_for(tstate* s, uint32_t slot)
   int g = grp_slot(slot);
   if (g < 0 || !s->nmem[g]) {
     if (s->open < 0) return;
-    s->open = s->ctry = -1;                /* a row of no group: on the confederations' level */
+    s->open = s->ctry = -1; s->fold = 0;   /* a row of no group: on the confederations' level */
   } else {
-    int c = ctry_slot(slot);
-    if (s->open == g && s->ctry == c) return;
+    int c = ctry_slot(slot), f = c >= 0 ? fold_slot(slot) : 0;
+    if (s->open == g && s->ctry == c && s->fold == f) return;
     s->open = g;
     s->ctry = c;
+    s->fold = f;
   }
   ts_layout(s);
   ts_trace(s, "for the game's own cursor");
@@ -992,6 +1065,17 @@ static void cg_emblem(void* img, void* frame, uint32_t slot, void* path)
   const char* row = (const char*)path - 0x40;
   if (img && frame && is_header(row)) {
     const char* nm = str_of(row + 0x20) + 2;
+    for (int f = 1; f < NFOLD; f++) {      /* lab 23/11/2026: a folder with an emblem of its own */
+      size_t k = strlen(g_fname[f]);
+      if (!g_femb[f] || !k || strncmp(nm, g_fname[f], k) || (nm[k] && nm[k] != ' ')) continue;
+      ((img_show_t)VA(IMG_SHOW))(img, 1, 2);
+      ((img_show_t)VA(IMG_SHOW))(frame, 0, 2);
+      *((unsigned char*)img + 0x1c4) = 1;
+      uint32_t cid = (uint32_t)g_femb[f];
+      uint32_t size = ((img_size_t)VA(IMG_SIZE))(img, &cid);
+      ((img_comp_t)VA(IMG_COMP))(img, cid, size, 0);
+      return;
+    }
     for (int g = 0; g < NG; g++) {
       size_t k = strlen(GNAME[g]);
       if (!g_emb[g] || (uint32_t)g_head[g] != slot || strncmp(nm, GNAME[g], k) || (nm[k] && nm[k] != ' ')) continue;
@@ -1419,6 +1503,18 @@ __declspec(dllexport) void fl26_confgroups_head(int g, int slot)
 __declspec(dllexport) void fl26_confgroups_emblem(int g, int cid)
 {
   if (g >= 0 && g < NG && cid > 0 && cid < 0x10000) g_emb[g] = cid;
+}
+/* lab 23/11/2026: a league's folder (confsub) and a folder's parent, emblem and name (confsubnames) */
+__declspec(dllexport) void fl26_confgroups_fold(int slot, int f)
+{
+  if (slot >= 0 && slot < 1024 && f >= 0 && f < NFOLD) g_sfold[slot] = (uint8_t)f;
+}
+__declspec(dllexport) void fl26_confgroups_fname(int f, int parent, int cid, const char* name)
+{
+  if (f <= 0 || f >= NFOLD || parent < 0 || parent >= NFOLD || parent == f || !name) return;
+  g_fpar[f] = (uint8_t)parent;
+  g_femb[f] = cid > 0 && cid < 0x10000 ? cid : 0;
+  snprintf(g_fname[f], sizeof g_fname[f], "%s", name);
 }
 /* trace=1: modules\fl26confgroups-trace.txt (path: the DLL's folder, UTF-16) */
 __declspec(dllexport) void fl26_confgroups_trace(int on)

@@ -1,0 +1,422 @@
+[
+{
+"fecha": 4,
+"home": "General Lamadrid",
+"away": "Defensores de Cambaceres"
+},
+{
+"fecha": 4,
+"home": "Sacachispas",
+"away": "Atlas"
+},
+{
+"fecha": 4,
+"home": "Central Ballester",
+"away": "Deportivo Paraguayo"
+},
+{
+"fecha": 4,
+"home": "El Porvenir",
+"away": "Mercedes"
+},
+{
+"fecha": 4,
+"home": "Juventud Unida",
+"away": "Claypole"
+},
+{
+"fecha": 4,
+"home": "Leandro N. Alem",
+"away": "Cañuelas"
+},
+{
+"fecha": 4,
+"home": "Central Córdoba (R)",
+"away": "Berazategui"
+},
+{
+"fecha": 4,
+"home": "Luján",
+"away": "Estrella del Sur"
+},
+{
+"fecha": 4,
+"home": "Leones de Rosario",
+"away": "Centro Español"
+},
+{
+"fecha": 4,
+"home": "Muñiz",
+"away": "J. J. de Urquiza"
+},
+{
+"fecha": 4,
+"home": "Victoriano Arenas",
+"away": "Deportivo Español"
+},
+{
+"fecha": 4,
+"home": "Argentino (R)",
+"away": "Yupanqui"
+},
+{
+"fecha": 4,
+"home": "Fenix",
+"away": "Puerto Nuevo"
+},
+{
+"fecha": 4,
+"home": "Sportivo Barracas",
+"away": "Lugano"
+},
+{
+"fecha": 8,
+"home": "General Lamadrid",
+"away": "Victoriano Arenas"
+},
+{
+"fecha": 8,
+"home": "Sacachispas",
+"away": "Deportivo Español"
+},
+{
+"fecha": 8,
+"home": "Argentino de Rosario",
+"away": "Atlas"
+},
+{
+"fecha": 8,
+"home": "El Porvenir",
+"away": "J. J. de Urquiza"
+},
+{
+"fecha": 8,
+"home": "Juventud Unida",
+"away": "Muñiz"
+},
+{
+"fecha": 8,
+"home": "Luján",
+"away": "Lugano"
+},
+{
+"fecha": 8,
+"home": "Central Córdoba (R)",
+"away": "Centro Español"
+},
+{
+"fecha": 8,
+"home": "Mercedes",
+"away": "Claypole"
+},
+{
+"fecha": 8,
+"home": "Estrella del Sur",
+"away": "Cañuelas"
+},
+{
+"fecha": 8,
+"home": "Yupanqui",
+"away": "Puerto Nuevo"
+},
+{
+"fecha": 8,
+"home": "Fénix",
+"away": "Berazategui"
+},
+{
+"fecha": 8,
+"home": "Leandro N. Alem",
+"away": "Central Ballester"
+},
+{
+"fecha": 8,
+"home": "Defensores de Cambaceres",
+"away": "Leones de Rosario"
+},
+{
+"fecha": 8,
+"home": "Sportivo Barracas",
+"away": "Deportivo Paraguayo"
+},
+{
+"fecha": 12,
+"home": "Yupanqui",
+"away": "Estrella del Sur"
+},
+{
+"fecha": 12,
+"home": "Centro Español",
+"away": "Fénix"
+},
+{
+"fecha": 12,
+"home": "General Lamadrid",
+"away": "J. J. de Urquiza"
+},
+{
+"fecha": 12,
+"home": "El Porvenir",
+"away": "Juventud Unida"
+},
+{
+"fecha": 12,
+"home": "Atlas",
+"away": "Berazategui"
+},
+{
+"fecha": 12,
+"home": "Leones de Rosario",
+"away": "Lugano"
+},
+{
+"fecha": 12,
+"home": "Sacachispas",
+"away": "Claypole"
+},
+{
+"fecha": 12,
+"home": "Deportivo Paraguayo",
+"away": "Luján"
+},
+{
+"fecha": 12,
+"home": "Leandro N. Alem",
+"away": "Muñiz"
+},
+{
+"fecha": 12,
+"home": "Puerto Nuevo",
+"away": "Central Ballester"
+},
+{
+"fecha": 12,
+"home": "Victoriano Arenas",
+"away": "Cañuelas"
+},
+{
+"fecha": 12,
+"home": "Argentino de Rosario",
+"away": "Central Córdoba (R)"
+},
+{
+"fecha": 12,
+"home": "Deportivo Español",
+"away": "Mercedes"
+},
+{
+"fecha": 12,
+"home": "Sportivo Barracas",
+"away": "Defensores de Cambaceres"
+},
+{
+"fecha": 20,
+"home": "Lugano",
+"away": "Sportivo Barracas"
+},
+{
+"fecha": 20,
+"home": "Defensores de Cambaceres",
+"away": "General Lamadrid"
+},
+{
+"fecha": 20,
+"home": "Deportivo Español",
+"away": "Victoriano Arenas"
+},
+{
+"fecha": 20,
+"home": "Yupanqui",
+"away": "Argentino de Rosario"
+},
+{
+"fecha": 20,
+"home": "Puerto Nuevo",
+"away": "Fénix"
+},
+{
+"fecha": 20,
+"home": "Cañuelas",
+"away": "Leandro N. Alem"
+},
+{
+"fecha": 20,
+"home": "J. J. de Urquiza",
+"away": "Muñiz"
+},
+{
+"fecha": 20,
+"home": "Mercedes",
+"away": "El Porvenir"
+},
+{
+"fecha": 20,
+"home": "Centro Español",
+"away": "Leones de Rosario"
+},
+{
+"fecha": 20,
+"home": "Estrella del Sur",
+"away": "Luján"
+},
+{
+"fecha": 20,
+"home": "Claypole",
+"away": "Juventud Unida"
+},
+{
+"fecha": 20,
+"home": "Berazategui",
+"away": "Central Córdoba (R)"
+},
+{
+"fecha": 20,
+"home": "Atlas",
+"away": "Sacachispas"
+},
+{
+"fecha": 20,
+"home": "Deportivo Paraguayo",
+"away": "Central Ballester"
+},
+{
+"fecha": 24,
+"home": "Puerto Nuevo",
+"away": "Yupanqui"
+},
+{
+"fecha": 24,
+"home": "Cañuelas",
+"away": "Estrella del Sur"
+},
+{
+"fecha": 24,
+"home": "Central Ballester",
+"away": "Leandro N. Alem"
+},
+{
+"fecha": 24,
+"home": "Victoriano Arenas",
+"away": "General Lamadrid"
+},
+{
+"fecha": 24,
+"home": "Berazategui",
+"away": "Fénix"
+},
+{
+"fecha": 24,
+"home": "Lugano",
+"away": "Luján"
+},
+{
+"fecha": 24,
+"home": "Atlas",
+"away": "Argentino de Rosario"
+},
+{
+"fecha": 24,
+"home": "J. J. de Urquiza",
+"away": "El Porvenir"
+},
+{
+"fecha": 24,
+"home": "Deportivo Paraguayo",
+"away": "Sportivo Barracas"
+},
+{
+"fecha": 24,
+"home": "Deportivo Español",
+"away": "Sacachispas"
+},
+{
+"fecha": 24,
+"home": "Centro Español",
+"away": "Central Córdoba (R)"
+},
+{
+"fecha": 24,
+"home": "Leones de Rosario",
+"away": "Defensores de Cambaceres"
+},
+{
+"fecha": 24,
+"home": "Muñiz",
+"away": "Juventud Unida"
+},
+{
+"fecha": 24,
+"home": "Claypole",
+"away": "Mercedes"
+},
+{
+"fecha": 28,
+"home": "Mercedes",
+"away": "Deportivo Español"
+},
+{
+"fecha": 28,
+"home": "Muñiz",
+"away": "Leandro N. Alem"
+},
+{
+"fecha": 28,
+"home": "Berazategui",
+"away": "Atlas"
+},
+{
+"fecha": 28,
+"home": "Cañuelas",
+"away": "Victoriano Arenas"
+},
+{
+"fecha": 28,
+"home": "Lugano",
+"away": "Leones de Rosario"
+},
+{
+"fecha": 28,
+"home": "Central Ballester",
+"away": "Puerto Nuevo"
+},
+{
+"fecha": 28,
+"home": "Juventud Unida",
+"away": "El Porvenir"
+},
+{
+"fecha": 28,
+"home": "Luján",
+"away": "Deportivo Paraguayo"
+},
+{
+"fecha": 28,
+"home": "Estrella del Sur",
+"away": "Yupanqui"
+},
+{
+"fecha": 28,
+"home": "Central Córdoba (R)",
+"away": "Argentino de Rosario"
+},
+{
+"fecha": 28,
+"home": "Defensores de Cambaceres",
+"away": "Sportivo Barracas"
+},
+{
+"fecha": 28,
+"home": "J. J. de Urquiza",
+"away": "General Lamadrid"
+},
+{
+"fecha": 28,
+"home": "Fénix",
+"away": "Centro Español"
+},
+{
+"fecha": 28,
+"home": "Claypole",
+"away": "Sacachispas"
+}
+]

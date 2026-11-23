@@ -351,6 +351,10 @@ CLUBS_MIN, CLUBS_MAX, LEGS_MAX = 10, 32, 4
 # FL 2027 (use_game) takes leagues of 8 too (mato 07.11.2026: Turkmenistan's Ýokary Liga is eight
 # clubs meeting four times, 28 rounds); FL26 keeps 10 (bug fixes only there)
 CLUBS_MIN_FL26, CLUBS_MIN_FL27 = 10, 8
+# the zones a regional pyramid moves clubs between ("mover": "regional", fl26join) may be smaller: the Argentine
+# Regional's zones of 2 to 4 clubs (23.11.2026, played whole through 2026-2028 in FL 2027); split again in even
+# parts every New Year (the world file's rzones line)
+CLUBS_MIN_ZONE = 2
 ROUNDS_MAX = 54
 # "others": the game's groups of clubs in no league, by the nibble at T_POOL of a club's record
 # (Team.bin: 1 Classic Teams, 2 Other European, 3 Other Asia-Oceania, 6 Other Latin American,
@@ -1488,7 +1492,8 @@ def has_edits(r):
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
                 or r.get("samerica_super_cup_logo") or r.get("samerica_super_cup_first")
                 or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("squad") or r.get("country_order")
-                or r.get("conmebol") or r.get("continental_emblems") or r.get("confederation_logos")) \
+                or r.get("conmebol") or r.get("continental_emblems") or r.get("confederation_logos")
+                or r.get("country_rules")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False or r.get("samerica_super_cup") is False
 
 
@@ -1623,7 +1628,8 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "id_retire", "pack_version", "id_lineage",    # idledger.py: the ids that may go, the version name
                    "id_not_lineages", "id_ledger",   # id_ledger: absolute (idledger.absolute_ledger), review 3
                    "id_tables",       # the zip of the version shared last, for its rows (rowkeep.prev_rows)
-                   "notice")          # the author's words for whoever installs the world's zip (export: NOTICE.txt)
+                   "notice",          # the author's words for whoever installs the world's zip (export: NOTICE.txt)
+                   "country_rules")   # a country's own rules after the build (23.11.2026: ["argentina"], tools/argentina)
 
 
 def is_plan(r):
@@ -2865,7 +2871,7 @@ def prev_swaps(prev):
 
 
 # GitHub #98: groups of one division. fl26chain.c takes at most this many sets, leagues a side
-MAX_GSETS, MAX_GSIDE = 64, 32
+MAX_GSETS, MAX_GSIDE = 64, 96   # lab 20/11/2026: 32 -> 96 (fl26chain MAX_GSIDE), the Argentine Regional's 70 zones
 
 
 def below_of(out, rid):
@@ -2919,6 +2925,14 @@ def group_sets(out, regrow, base, errs, names):
         for p in D:
             p["link"] = True
         if len(U) == 1 and len(D) == 1:
+            continue
+        # lab 21/11/2026 (Argentina): a division moved by fl26join's regional pyramid mover (the world file's
+        # `jline fl26_join_regional` line, "mover": "regional" on each of its leagues) is no set of fl26chain's:
+        # the mover places every club at New Year (zones by region, relegation by filiation, play-offs' results).
+        # The game still follows one link down from a league: the first group keeps it, as in a set
+        if all(q.get("mover") == "regional" for q in D):
+            for q in D[1:]:
+                q["link"] = False
             continue
         what = "%s (groups under %s)" % (", ".join(p["name"] for p in D), ", ".join(label(r) for r in U))
         bad = []
@@ -3640,14 +3654,14 @@ def plan(recipe, base, prev=None):
         name = names[i]
         try:
             n, legs = int(L.get("clubs", 0)), int(L.get("legs", 2))
-            if not CLUBS_MIN <= n <= CLUBS_MAX:
-                raise BuildError("%s: %d clubs -- a league has %d..%d" % (name, n, CLUBS_MIN, CLUBS_MAX))
+            if not clubs_min(L) <= n <= CLUBS_MAX:
+                raise BuildError("%s: %d clubs -- a league has %d..%d" % (name, n, clubs_min(L), CLUBS_MAX))
             if not 1 <= legs <= LEGS_MAX:
                 raise BuildError("%s: clubs meet 1..%d times, not %d" % (name, LEGS_MAX, legs))
             if rounds_of(n) * legs > ROUNDS_MAX:
                 raise BuildError("%s: %d clubs meeting %d times play %d rounds -- a league plays %d at most "
                                  "(%d clubs meet %d times at most)"
-                                 % (name, n, legs, rounds_of(n) * legs, ROUNDS_MAX, n, max_legs(n)))
+                                 % (name, n, legs, rounds_of(n) * legs, ROUNDS_MAX, n, max_legs(n, clubs_min(L))))
             fid = mkflags.by_name(cty, L.get("country", ""))
             if fid is None:
                 raise BuildError("%s: no country called %r in Country.bin" % (name, L.get("country")))
@@ -3675,6 +3689,7 @@ def plan(recipe, base, prev=None):
                  "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
                  "exchange": int(3 if L.get("exchange") is None else L["exchange"]),   # null in an old package
                  "relegate": None if L.get("relegate") in (None, "") else int(L["relegate"]),   # group_sets
+                 "mover": L.get("mover") or None,   # lab 21/11/2026: "regional" -- fl26join moves it (group_sets)
                  "zone_clubs": list(L.get("zone_clubs") or []),   # clubs above that go down into this group
                  # 16.11.2026: clubs of this group that may make room for one of its region (zone_border_problems)
                  "zone_border": copy.deepcopy(L.get("zone_border") or []),
@@ -5325,9 +5340,14 @@ def rounds_of(clubs):
     return clubs if clubs % 2 else clubs - 1
 
 
-def max_legs(clubs):
+def clubs_min(L):
+    """the fewest clubs a league of the recipe may have: CLUBS_MIN, or CLUBS_MIN_ZONE for a zone of a regional pyramid"""
+    return CLUBS_MIN_ZONE if (L or {}).get("mover") == "regional" else CLUBS_MIN
+
+
+def max_legs(clubs, lo=None):
     """how many times `clubs` clubs can meet in a league (ROUNDS_MAX); 0 past CLUBS_MAX"""
-    if not CLUBS_MIN <= clubs <= CLUBS_MAX:
+    if not (CLUBS_MIN if lo is None else lo) <= clubs <= CLUBS_MAX:
         return 0
     return min(LEGS_MAX, ROUNDS_MAX // rounds_of(clubs))
 
@@ -7578,6 +7598,14 @@ def build(pl, base, game, replace=False, log=print):
             pl["rows_kept"] = dict(keep_rows(db, layout, set(game_row) | set(old["clubs"]), ledger.get("version"), log),
                                    of={k: ledger.get(k) for k in ("version", "number", "lineage", "digest")})
     pl.pop("id_ledger", None)             # a path of this PC: not in the world
+    # 23.11.2026: a country's own rules, on the tables and the world file just written (tools/argentina: the
+    # Argentine pyramid's knockouts, phases and New Year mover, its cups, Competition Info's and Select Team's levels)
+    for rules in (pl.get("settings") or {}).get("country_rules") or []:
+        if rules == "argentina":
+            import argentina
+            argentina.apply(pl, tmp, base, log)
+        else:
+            raise BuildError("country_rules: %r -- the rules known are argentina" % (rules,))
     pl.pop("prev_club_keys", None), pl.pop("id_spent", None)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 

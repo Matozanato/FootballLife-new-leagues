@@ -41,6 +41,12 @@ tables (`python tools/fl26world.py --root <world>`), but it only knows `league`,
 | `seasonsum` | `seasonsum 119 parts=168,169` | `leaguebuilder.seasonsum_lines` (a `game_europe` place of Colombia's or the MLS's whole season) | fl26swiss (`fl26_swiss_seasonsum`: the halves' tables added together, `ssum_keep`) |
 | `dates` | `dates 203 like=23` | `leaguebuilder.dates_lines` | fl26swiss (`fl26_swiss_datelike`) |
 | `gsuper` | `gsuper 255 league=67 cup=68 region=18 conf=4` | `leaguebuilder.gsuper_lines` | fl26joindll -> fl26join.dll (`fl26_join_builder_extra`, `_builder_conf`), fl26swiss (`fl26_swiss_calendar_supercups`) |
+| `lphase` | `lphase 49 300 1` | `tools/argentina` | fl26swiss.lua (`fl26_swiss_lphase`): an item of a competition's Competition Info menu ([argentina.md](argentina.md)) |
+| `lpname` | `lpname 300 Final do 1º acesso` | `tools/argentina` | fl26swiss.lua: the item's or a round's name |
+| `sline` | `sline fl26_swiss_tcup 300 ...` | `tools/argentina` | fl26swiss.lua: calls that export of fl26swiss.dll with the numbers |
+| `jline` | `jline fl26_join_regional ...` | `tools/argentina` | fl26joindll.lua: calls that export of fl26join.dll with the numbers |
+| `confsub` | `confsub slots=49:1,40:1` | `tools/argentina` | fl26confgroups.lua (`fl26_confgroups_fold`): Select Team folders inside a country |
+| `confsubnames` | `confsubnames 1:0:0:Primera Nacional` | `tools/argentina` | fl26confgroups.lua (`fl26_confgroups_fname`) |
 | `season` | `season 39 1` | `leaguebuilder.season_lines` | fl26joindll -> fl26join.dll (`fl26_join_season_types`), fl26swiss |
 | `july` | `july 49 205` | `leaguebuilder.july_lines` | fl26swiss (`fl26_swiss_july`) |
 | `rcal` | `rcal 76 211 142 354 21 96 16` | `leaguebuilder.rcal_lines` (`tools/realcal.py`) | fl26swiss (`fl26_swiss_rcal`) |

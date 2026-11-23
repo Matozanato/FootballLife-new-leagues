@@ -96,6 +96,26 @@ local RUNTIME_CONF = { [2] = 1, [3] = 2, [4] = 5, [5] = 6, [6] = 3, [7] = 0 }
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
 -- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
 -- there is no file: the module then keeps the built-in list above.
+-- lab (21/11/2026, from the 0.3.0 lab): `jline <export> <numbers>` -> fl26join.dll's export int f(const uint32_t*, int)
+-- (the regional pyramid mover fl26_join_regional / rflags / rdown / rpool / rshape, the late league fl26_join_rlate)
+local function world_lines(ctx, key)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return {} end
+  local out = {}
+  for line in f:lines() do
+    local name, rest = line:match("^%s*" .. key .. "%s+([%w_]+)%s*(.*)$")
+    if name then
+      local v = {}
+      for x in rest:gmatch("%d+") do v[#v + 1] = tonumber(x) end
+      out[#out + 1] = { name, v }
+    end
+  end
+  f:close()
+  return out
+end
+
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
@@ -445,6 +465,16 @@ function m.init(ctx)
         local k = tonumber(ffi.cast("fl26_join_season_types_t", pst)(sbuf, #SP))
         if k < 0 then log(string.format("fl26joindll: season types NOT set (status %d) -- see fl26join.log", k))
         else log(string.format("fl26joindll: %d region(s) given their season type by the world file", k)) end
+      end
+    end
+    for _, x in ipairs(world_lines(ctx, "jline")) do   -- lab 21/11/2026
+      local fn = ffi.C.GetProcAddress(h, x[1])
+      if fn == nil then log("fl26joindll: jline -- this DLL has no " .. x[1] .. "; the line is not used")
+      else
+        local b = ffi.new("uint32_t[?]", math.max(#x[2], 1))
+        for i, y in ipairs(x[2]) do b[i - 1] = y end
+        local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", fn)(b, #x[2]))
+        log(string.format("fl26joindll: jline %s (%d values) -> %d", x[1], #x[2], k))
       end
     end
     if #CAL > 0 then
