@@ -3,7 +3,7 @@ import json
 import os
 
 from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QImage, QPixmap
+from PySide6.QtGui import QDesktopServices, QImage, QPixmap, QStandardItem
 from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel,
                                QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
                                QSpinBox, QSplitter, QStackedWidget, QTreeWidget, QTreeWidgetItem,
@@ -145,6 +145,140 @@ class _ToolDeck(QWidget):
         self.list.setCurrentRow(index)
 
 
+class _ReportView(QWidget):
+    _MAX_CHILDREN = 1000
+
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        self.summary = QLabel(_("Run an operation to see its results."))
+        self.summary.setObjectName("subtle")
+        self.summary.setWordWrap(True)
+        layout.addWidget(self.summary)
+
+        split = QSplitter(Qt.Horizontal)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels([_("Report"), _("Value")])
+        self.tree.setAlternatingRowColors(True)
+        self.tree.itemSelectionChanged.connect(self._show_details)
+        split.addWidget(self.tree)
+        self.details = QTreeWidget()
+        self.details.setHeaderLabels([_("Selected item details"), _("Value")])
+        self.details.setAlternatingRowColors(True)
+        split.addWidget(self.details)
+        split.setStretchFactor(0, 1)
+        split.setStretchFactor(1, 1)
+        layout.addWidget(split, 1)
+
+        self.raw_toggle = QPushButton(_("Show raw JSON"))
+        self.raw_toggle.setCheckable(True)
+        layout.addWidget(self.raw_toggle, 0, Qt.AlignLeft)
+        self.raw = QPlainTextEdit()
+        self.raw.setObjectName("log")
+        self.raw.setReadOnly(True)
+        self.raw.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.raw.setMaximumHeight(220)
+        self.raw.setVisible(False)
+        self.raw_toggle.toggled.connect(self.raw.setVisible)
+        layout.addWidget(self.raw)
+        self._data = None
+
+    @staticmethod
+    def _value_label(value):
+        if isinstance(value, dict):
+            return _("%(count)d fields") % {"count": len(value)}
+        if isinstance(value, (list, tuple)):
+            return _("%(count)d items") % {"count": len(value)}
+        if isinstance(value, str):
+            if "\n" in value:
+                return _("%(lines)d lines · %(chars)d characters") % {
+                    "lines": len(value.splitlines()), "chars": len(value),
+                }
+            return value if len(value) <= 100 else value[:97] + "..."
+        return str(value)
+
+    def _add_value(self, parent, label, value, depth=0):
+        item = QTreeWidgetItem([str(label), self._value_label(value)])
+        item.setData(0, Qt.UserRole, value)
+        if parent is None:
+            self.tree.addTopLevelItem(item)
+        else:
+            parent.addChild(item)
+        if depth >= 12:
+            return item
+        if isinstance(value, dict):
+            children = list(value.items())
+            for key, child in children[:self._MAX_CHILDREN]:
+                self._add_value(item, key, child, depth + 1)
+            self._add_omitted(item, len(children))
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value[:self._MAX_CHILDREN]):
+                self._add_value(item, "[%d]" % index, child, depth + 1)
+            self._add_omitted(item, len(value))
+        return item
+
+    def _add_omitted(self, parent, total):
+        if total > self._MAX_CHILDREN:
+            parent.addChild(QTreeWidgetItem([
+                _("Additional items"), _("%(count)d not shown") % {"count": total - self._MAX_CHILDREN},
+            ]))
+
+    def set_data(self, value):
+        self._data = value
+        self.tree.clear()
+        if isinstance(value, dict):
+            self.summary.setText(_("%(count)d report fields · select an item to inspect its details")
+                                 % {"count": len(value)})
+            for key, child in list(value.items())[:self._MAX_CHILDREN]:
+                self._add_value(None, key, child)
+            self._add_omitted(self.tree.invisibleRootItem(), len(value))
+        elif isinstance(value, (list, tuple)):
+            self.summary.setText(_("%(count)d results · select an item to inspect its details")
+                                 % {"count": len(value)})
+            for index, child in enumerate(value[:self._MAX_CHILDREN]):
+                self._add_value(None, "[%d]" % index, child)
+            self._add_omitted(self.tree.invisibleRootItem(), len(value))
+        else:
+            self.summary.setText(_("Operation result"))
+            self._add_value(None, _("Result"), value)
+        self.raw.setPlainText(_report(value))
+        self.tree.expandToDepth(1)
+        if self.tree.topLevelItemCount():
+            self.tree.setCurrentItem(self.tree.topLevelItem(0))
+
+    def _show_details(self):
+        items = self.tree.selectedItems()
+        if not items:
+            return
+        value = items[0].data(0, Qt.UserRole)
+        self.details.clear()
+        if isinstance(value, dict):
+            for key, child in list(value.items())[:self._MAX_CHILDREN]:
+                self._add_detail(key, child)
+            self._add_omitted(self.details.invisibleRootItem(), len(value))
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value[:self._MAX_CHILDREN]):
+                self._add_detail("[%d]" % index, child)
+            self._add_omitted(self.details.invisibleRootItem(), len(value))
+        else:
+            self._add_detail(_("Value"), value)
+
+    def _add_detail(self, label, value):
+        item = QTreeWidgetItem([str(label), self._value_label(value)])
+        item.setData(0, Qt.UserRole, value)
+        self.details.addTopLevelItem(item)
+        if isinstance(value, dict):
+            for key, child in list(value.items())[:self._MAX_CHILDREN]:
+                item.addChild(QTreeWidgetItem([str(key), self._value_label(child)]))
+            self._add_omitted(item, len(value))
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value[:self._MAX_CHILDREN]):
+                item.addChild(QTreeWidgetItem(["[%d]" % index, self._value_label(child)]))
+            self._add_omitted(item, len(value))
+
+
 class ModManager(Page):
     title = "Mod Manager"
     hint = ("Rust-backed Football Life tools, separated by task. Reports are read-only; operations "
@@ -157,6 +291,7 @@ class ModManager(Page):
         self._studio_dirty = False
         self._studio_selection = ""
         self._studio_nodes = []
+        self._studio_entries_for = None
         self._asset_entries = []
         self._animation_path = ""
         self.tabs = _ToolDeck()
@@ -182,18 +317,15 @@ class ModManager(Page):
         return layout
 
     def _output(self, key, parent, readonly=True):
-        box = QPlainTextEdit()
-        box.setObjectName("log")
-        box.setReadOnly(readonly)
-        box.setLineWrapMode(QPlainTextEdit.NoWrap)
-        parent.addWidget(box, 1)
-        self.outputs[key] = box
-        return box
+        report = _ReportView()
+        parent.addWidget(report, 1)
+        self.outputs[key] = report
+        return report
 
     def _show(self, key, value):
         target = self.outputs.get(key)
         if target is not None:
-            target.setPlainText(value if isinstance(value, str) else _report(value))
+            target.set_data(value)
 
     def _run(self, label, work, done):
         if not native.available():
@@ -495,20 +627,35 @@ class ModManager(Page):
         pack = QPushButton(_("Build CPK..."))
         pack.clicked.connect(self.pack_cpk)
         layout.addWidget(row(self.cpk_path, browse, inspect, map_button, extract, pack, stretch=False))
+        self.cpk_summary = QLabel(_("Choose an archive to browse its contents."))
+        self.cpk_summary.setWordWrap(True)
+        layout.addWidget(self.cpk_summary)
         self.cpk_filter = QLineEdit()
         self.cpk_filter.setPlaceholderText(_("Filter archive paths"))
         self.cpk_filter.textChanged.connect(self.filter_cpk_entries)
         layout.addWidget(self.cpk_filter)
         self.cpk_entries = QTreeWidget()
-        self.cpk_entries.setHeaderLabels([_("Path"), _("Stored bytes"), _("Unpacked bytes"), _("Compressed")])
-        layout.addWidget(self.cpk_entries, 1)
-        self._output("cpk", layout)
+        self.cpk_entries.setAlternatingRowColors(True)
+        self.cpk_entries.setHeaderLabels([_("Archive path"), _("Files / stored"), _("Unpacked size"), _("Kind")])
+        layout.addWidget(self.cpk_entries, 3)
+        report = self._output("cpk", layout)
 
     def filter_cpk_entries(self):
         query = self.cpk_filter.text().strip().casefold()
         for index in range(self.cpk_entries.topLevelItemCount()):
-            item = self.cpk_entries.topLevelItem(index)
-            item.setHidden(bool(query and query not in item.text(0).casefold()))
+            self._filter_cpk_item(self.cpk_entries.topLevelItem(index), query)
+
+    def _filter_cpk_item(self, item, query):
+        path = str(item.data(0, Qt.UserRole) or item.text(0)).casefold()
+        own_match = not query or query in path
+        child_match = False
+        for index in range(item.childCount()):
+            child_match = self._filter_cpk_item(item.child(index), query) or child_match
+        visible = own_match or child_match
+        item.setHidden(not visible)
+        if query and child_match:
+            item.setExpanded(True)
+        return visible
 
     def inspect_cpk(self):
         path = self.cpk_path.text().strip()
@@ -522,11 +669,89 @@ class ModManager(Page):
 
     def _show_cpk(self, data):
         self.cpk_entries.clear()
-        for path, stored, unpacked, compressed in data.get("files", []):
-            item = QTreeWidgetItem([str(path), str(stored), str(unpacked), str(compressed)])
+        files = data.get("files", [])
+        folders = {}
+        for path, stored, unpacked, compressed in files:
+            parts = [part for part in str(path).replace("\\", "/").split("/") if part]
+            if not parts:
+                continue
+            prefix = []
+            for part in parts[:-1]:
+                prefix.append(part)
+                key = "/".join(prefix)
+                folder = folders.setdefault(key, {"files": 0, "unpacked": 0})
+                folder["files"] += 1
+                folder["unpacked"] += int(unpacked)
+
+        for key in sorted(folders, key=lambda value: (value.count("/"), value.casefold())):
+            parts = key.split("/")
+            parent_key = "/".join(parts[:-1])
+            parent = folders[parent_key].get("item") if parent_key else None
+            folder = folders[key]
+            item = QTreeWidgetItem([
+                parts[-1], _("%(count)d files") % {"count": folder["files"]},
+                self._map_size(folder["unpacked"]), _("Folder"),
+            ])
+            item.setData(0, Qt.UserRole, key)
+            if parent is None:
+                self.cpk_entries.addTopLevelItem(item)
+            else:
+                parent.addChild(item)
+            folder["item"] = item
+
+        for path, stored, unpacked, compressed in files:
+            parts = [part for part in str(path).replace("\\", "/").split("/") if part]
+            if not parts:
+                continue
+            parent_key = "/".join(parts[:-1])
+            parent = folders[parent_key]["item"] if parent_key else None
+            item = QTreeWidgetItem([
+                parts[-1], self._map_size(int(stored)), self._map_size(int(unpacked)),
+                _("Compressed") if compressed else _("Stored"),
+            ])
+            item.setData(0, Qt.UserRole, str(path).replace("\\", "/"))
+            if parent is None:
+                self.cpk_entries.addTopLevelItem(item)
+            else:
+                parent.addChild(item)
+
+        self.cpk_summary.setText(
+            _("%(files)d files · %(compressed)d compressed · %(size)s unpacked · %(folders)d top-level folders")
+            % {"files": data.get("entries", len(files)), "compressed": data.get("compressed", 0),
+               "size": self._map_size(data.get("unpacked_bytes", 0)),
+               "folders": len(data.get("folders", []))}
+        )
+        shown = data.get("files_shown", len(files))
+        total = data.get("files_total", len(files))
+        if shown < total:
+            self.cpk_summary.setText(
+                self.cpk_summary.text() + _(" · showing the first %(shown)d of %(total)d entries")
+                % {"shown": shown, "total": total}
+            )
+        self.filter_cpk_entries()
+        self.cpk_entries.expandToDepth(0)
+        self._show("cpk", {key: value for key, value in data.items() if key != "files"})
+
+    def _show_cpk_map(self, data):
+        self.cpk_entries.clear()
+        self.cpk_summary.setText(
+            _("%(entries)d files · %(compressed)d compressed · %(size)s unpacked")
+            % {"entries": data.get("entries", 0), "compressed": data.get("compressed", 0),
+               "size": self._map_size(data.get("unpacked", 0))}
+        )
+        for section in data.get("sections", []):
+            info = section.get("info") or {}
+            item = QTreeWidgetItem([
+                str(section.get("path", "")),
+                _("%(count)d files") % {"count": section.get("files", 0)},
+                self._map_size(section.get("bytes", 0)),
+                str(info.get("title", _("Folder"))),
+            ])
+            item.setData(0, Qt.UserRole, section.get("path", ""))
+            item.setToolTip(0, str(info.get("what", "")))
             self.cpk_entries.addTopLevelItem(item)
         self.filter_cpk_entries()
-        self._show("cpk", {key: value for key, value in data.items() if key != "files"})
+        self._show("cpk", data)
 
     def map_cpk(self):
         path = self.cpk_path.text().strip()
@@ -536,7 +761,7 @@ class ModManager(Page):
             return
         self.cpk_path.setText(path)
         self._run(_("Mapping CPK archive..."), lambda: native.archive_map(path),
-                  lambda data: self._show("cpk", data))
+                  self._show_cpk_map)
 
     def extract_cpk(self):
         path = self.cpk_path.text().strip()
@@ -1559,7 +1784,11 @@ class ModManager(Page):
 
     def load_studio_entries(self):
         addons = self._addons()
+        self.studio_entries.clear()
         if not addons:
+            self.studio_entries.addItem(_("Select a game folder first"))
+            self.studio_entries.model().item(0).setEnabled(False)
+            self._studio_entries_for = ""
             self.say(_("Select a game folder first."), "warn")
             return
 
@@ -1569,6 +1798,12 @@ class ModManager(Page):
                 label = entry.get("value", "") if isinstance(entry, dict) else str(entry)
                 key = entry.get("key", "") if isinstance(entry, dict) else ""
                 self.studio_entries.addItem(label, key)
+            if not entries:
+                self.studio_entries.addItem(_("No registered packs found"))
+                placeholder = self.studio_entries.model().item(0)
+                if isinstance(placeholder, QStandardItem):
+                    placeholder.setEnabled(False)
+            self._studio_entries_for = os.path.normcase(os.path.abspath(addons))
             self._show("studio", entries)
 
         self._run(_("Reading registered Sider packs..."), lambda: native.studio_entries(addons), done)
@@ -1617,9 +1852,14 @@ class ModManager(Page):
         elif current == _("Game map") and self.map_tree.topLevelItemCount() == 0:
             if self.map_root.text().strip() and native.available():
                 self.load_game_map()
-        elif current == _("Mod Studio") and self.studio_tree.topLevelItemCount() == 0:
-            if self.studio_root.text().strip() and native.available():
+        elif current == _("Mod Studio"):
+            if self.studio_tree.topLevelItemCount() == 0 and self.studio_root.text().strip() \
+                    and native.available():
                 self.load_studio_tree()
+            addons = self._addons()
+            addons_key = os.path.normcase(os.path.abspath(addons)) if addons else ""
+            if self._studio_entries_for != addons_key and native.available():
+                self.load_studio_entries()
 
     def refresh_current(self):
         index = self.tabs.currentIndex()
@@ -1628,6 +1868,8 @@ class ModManager(Page):
                     self.load_studio_tree)
         if 0 <= index < len(handlers):
             handlers[index]()
+        if index == 8:
+            self.load_studio_entries()
 
     def _refresh_tables(self):
         if self.pesdb_dir.text().strip():
