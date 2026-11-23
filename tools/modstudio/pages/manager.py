@@ -2,13 +2,14 @@
 import json
 import os
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QImage, QPixmap
-from PySide6.QtWidgets import (QComboBox, QFileDialog, QInputDialog, QLabel, QLineEdit,
-                               QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QTabWidget,
-                               QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel,
+                               QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
+                               QSpinBox, QSplitter, QStackedWidget, QTreeWidget, QTreeWidgetItem,
+                               QVBoxLayout, QWidget)
 
-from .. import native
+from .. import native, theme
 from ..i18n import _
 from ..siderini import norm, root_path
 from ..ui import Page, ask, hint, pick_dir, run_job, row
@@ -16,6 +17,132 @@ from ..ui import Page, ask, hint, pick_dir, run_job, row
 
 def _report(value):
     return json.dumps(value, ensure_ascii=False, indent=2, default=str)
+
+
+class _ToolDeck(QWidget):
+    currentChanged = Signal(int)
+    _DESCRIPTIONS = {
+        "Game map": "Explore game folders, archives, and content paths.",
+        "Pack order": "Review, verify, and safely adjust Sider pack order.",
+        "Conflicts": "Find files that overlap between installed mods.",
+        "CPK archives": "Inspect archive contents and locate game resources.",
+        "Textures": "Preview and inspect supported texture files.",
+        "Tables": "Read PES data tables, containers, and binary files.",
+        "Assets": "Browse and replace supported menu and game assets.",
+        "Menu maker": "Check menu links, clone screens, and inspect compiled atlases.",
+        "Mod Studio": "Browse mod files and manage registered packs.",
+    }
+
+    def __init__(self):
+        super().__init__()
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(12)
+
+        rail = QFrame()
+        rail.setObjectName("card")
+        rail.setAttribute(Qt.WA_StyledBackground, True)
+        rail.setMinimumWidth(205)
+        rail.setMaximumWidth(250)
+        rail_layout = QVBoxLayout(rail)
+        rail_layout.setContentsMargins(12, 12, 12, 12)
+        rail_layout.setSpacing(8)
+        rail_title = QLabel(_("TOOLS"))
+        rail_title.setObjectName("section_o")
+        rail_layout.addWidget(rail_title)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(_("Find a tool..."))
+        self.search.setClearButtonEnabled(True)
+        self.search.setToolTip(_("Filter the tool list by name."))
+        self.search.textChanged.connect(self._filter_tools)
+        rail_layout.addWidget(self.search)
+        self.list = QListWidget()
+        self.list.setObjectName("managerNav")
+        self.list.setSpacing(3)
+        self.list.setUniformItemSizes(True)
+        self.list.setTextElideMode(Qt.ElideRight)
+        self.list.currentRowChanged.connect(self._select)
+        self.list.setStyleSheet(
+            "QListWidget#managerNav { background: transparent; border: none; }"
+            "QListWidget#managerNav::item { border: 1px solid transparent; padding: 9px 8px; }"
+            "QListWidget#managerNav::item:hover { background: %s; border-color: %s; }"
+            "QListWidget#managerNav::item:selected { background: %s; border-color: %s;"
+            " border-left: 3px solid %s; color: %s; }"
+            % (theme.PANEL2, theme.BORDER, theme.SELECTION, theme.LINE2, theme.ORANGE, theme.TEXT)
+        )
+        rail_layout.addWidget(self.list, 1)
+        self.tool_count = QLabel(_("0 tools"))
+        self.tool_count.setObjectName("subtle")
+        rail_layout.addWidget(self.tool_count)
+        root.addWidget(rail)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(8)
+        self.title = QLabel()
+        self.title.setObjectName("pagetitle")
+        content_layout.addWidget(self.title)
+        self.description = QLabel()
+        self.description.setObjectName("hint")
+        self.description.setWordWrap(True)
+        content_layout.addWidget(self.description)
+        self.stack = QStackedWidget()
+        content_layout.addWidget(self.stack, 1)
+        root.addWidget(content, 1)
+
+    def addTab(self, page, title):
+        item = QListWidgetItem("%02d   %s" % (self.stack.count() + 1, _(title)))
+        item.setData(Qt.UserRole, title)
+        item.setToolTip(_(self._DESCRIPTIONS.get(title, "")))
+        self.list.addItem(item)
+        index = self.stack.addWidget(page)
+        self.tool_count.setText(_("%(count)d tools") % {"count": self.stack.count()})
+        if index == 0:
+            self.list.setCurrentRow(0)
+        return index
+
+    def _select(self, index):
+        if index < 0:
+            return
+        self.stack.setCurrentIndex(index)
+        title = self.tabText(index)
+        raw_title = str(self.list.item(index).data(Qt.UserRole))
+        self.title.setText(title)
+        self.description.setText(_(self._DESCRIPTIONS.get(raw_title, "")))
+        self.currentChanged.emit(index)
+
+    def _filter_tools(self, text):
+        query = text.strip().casefold()
+        visible = []
+        for index in range(self.list.count()):
+            item = self.list.item(index)
+            matches = not query or query in str(item.data(Qt.UserRole)).casefold()
+            item.setHidden(not matches)
+            if matches:
+                visible.append(index)
+        current = self.currentIndex()
+        if visible and (current < 0 or self.list.item(current).isHidden()):
+            self.list.setCurrentRow(visible[0])
+
+    def count(self):
+        return self.stack.count()
+
+    def tabText(self, index):
+        item = self.list.item(index)
+        return _(str(item.data(Qt.UserRole))) if item is not None else ""
+
+    def currentIndex(self):
+        index = self.list.currentRow()
+        return index if index >= 0 else self.stack.currentIndex()
+
+    def setCurrentIndex(self, index):
+        if not 0 <= index < self.count():
+            return
+        item = self.list.item(index)
+        if item.isHidden():
+            self.search.clear()
+        self.list.setCurrentRow(index)
 
 
 class ModManager(Page):
@@ -32,7 +159,7 @@ class ModManager(Page):
         self._studio_nodes = []
         self._asset_entries = []
         self._animation_path = ""
-        self.tabs = QTabWidget()
+        self.tabs = _ToolDeck()
         self.outer.addWidget(self.tabs, 1)
         self.outputs = {}
         self._make_map_tab()
@@ -49,9 +176,9 @@ class ModManager(Page):
     def _tab(self, title):
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
-        self.tabs.addTab(page, _(title))
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(10)
+        self.tabs.addTab(page, title)
         return layout
 
     def _output(self, key, parent, readonly=True):
@@ -1005,6 +1132,19 @@ class ModManager(Page):
         link = QPushButton(_("Set link..."))
         link.clicked.connect(self.set_menu_link)
         layout.addWidget(row(self.menu_screen, self.menu_event, self.menu_target, link, stretch=False))
+        self.menu_clone_id = QLineEdit()
+        self.menu_clone_id.setPlaceholderText(_("New screen ID, e.g. BL/NewScreen"))
+        clone = QPushButton(_("Clone selected screen..."))
+        clone.clicked.connect(self.clone_menu_screen)
+        layout.addWidget(row(self.menu_clone_id, clone, stretch=False))
+        self.menu_binary_path = QLineEdit()
+        self.menu_binary_path.setPlaceholderText(_("Compiled menu .bin (AFP/TXP2 atlas)"))
+        browse_binary = QPushButton(_("Choose .bin..."))
+        browse_binary.clicked.connect(lambda: self._choose_file_into(
+            self.menu_binary_path, "Menu binaries (*.bin);;All files (*)"))
+        inspect_binary = QPushButton(_("Inspect compiled menu"))
+        inspect_binary.clicked.connect(self.inspect_menu_binary)
+        layout.addWidget(row(self.menu_binary_path, browse_binary, inspect_binary, stretch=False))
         self.menu_tree = QTreeWidget()
         self.menu_tree.setHeaderLabels([_("Screen / event"), _("Target")])
         self.menu_tree.itemSelectionChanged.connect(self.select_menu_entry)
@@ -1032,6 +1172,7 @@ class ModManager(Page):
 
         def done(result):
             self.menu_tree.clear()
+            self.menu_tree.setHeaderLabels([_("Screen / event"), _("Target")])
             for entry in result.get("entries", []):
                 screen = str(entry.get("id", ""))
                 screen_item = QTreeWidgetItem([screen, ""])
@@ -1053,6 +1194,8 @@ class ModManager(Page):
         if not items:
             return
         data = items[0].data(0, Qt.UserRole) or {}
+        if data.get("kind") == "atlas":
+            return
         self.menu_screen.setText(data.get("screen", ""))
         self.menu_event.setText(data.get("event", ""))
         self.menu_target.setText(data.get("target", ""))
@@ -1072,6 +1215,77 @@ class ModManager(Page):
         self._run(_("Updating menu link..."),
                   lambda: native.menu_link(root, bases, screen, event, target),
                   lambda result: (self._show("menu", result), self.check_menu()))
+
+    def clone_menu_screen(self):
+        root = self.menu_root.text().strip()
+        screen = self.menu_screen.text().strip()
+        target = self.menu_clone_id.text().strip()
+        if not root or not screen or not target:
+            self.say(_("Choose a menu folder and source screen, then enter the new screen ID."), "warn")
+            return
+        if not ask(self, "Clone menu screen",
+                   _("Copy %(source)s to %(target)s? The existing screen will not be overwritten.")
+                   % {"source": screen, "target": target}):
+            return
+
+        def done(created):
+            self.menu_clone_id.clear()
+            self.menu_screen.setText(created)
+            self._show("menu", {"created_screen": created})
+            self.check_menu()
+
+        self._run(_("Cloning menu screen..."),
+                  lambda: native.menu_clone(root, screen, target), done)
+
+    def inspect_menu_binary(self):
+        path = self.menu_binary_path.text().strip()
+        if not path or not os.path.isfile(path):
+            path = self._file(filters="Menu binaries (*.bin);;All files (*)")
+        if not path:
+            return
+        self.menu_binary_path.setText(path)
+
+        def done(report):
+            self.menu_tree.clear()
+            layout = report.get("menu_layout")
+            if not layout:
+                self.menu_tree.setHeaderLabels([_("Compiled menu"), _("Result")])
+                self._show("menu", report)
+                self.say(_("No AFP/TXP2 picture atlas was recognized in this file."), "warn")
+                return
+
+            self.menu_tree.setHeaderLabels([_("Picture / texture"), _("Atlas rectangle (pixels)")])
+            for index, texture in enumerate(layout.get("textures", [])):
+                texture_item = QTreeWidgetItem([
+                    _("Texture %(index)s · %(width)s × %(height)s · format 0x%(format)02x")
+                    % {"index": index, "width": texture["width"], "height": texture["height"],
+                       "format": texture["format"]},
+                    "",
+                ])
+                texture_item.setData(0, Qt.UserRole, {"kind": "atlas"})
+                self.menu_tree.addTopLevelItem(texture_item)
+                for picture in layout.get("pictures", []):
+                    if picture.get("texture") != index:
+                        continue
+                    rect = (picture["x0_half"] / 2, picture["y0_half"] / 2,
+                            picture["x1_half"] / 2, picture["y1_half"] / 2)
+                    item = QTreeWidgetItem([
+                        picture["name"],
+                        _("[%(x0).1f, %(y0).1f]–[%(x1).1f, %(y1).1f]")
+                        % dict(zip(("x0", "y0", "x1", "y1"), rect)),
+                    ])
+                    item.setData(0, Qt.UserRole, {"kind": "atlas"})
+                    texture_item.addChild(item)
+            self.menu_tree.expandAll()
+            self._show("menu", {
+                "file": path,
+                "package": layout.get("package_name"),
+                "textures": layout.get("textures", []),
+                "pictures": len(layout.get("pictures", [])),
+                "coordinate_note": _("Rectangles locate pictures in texture atlases, not on screen."),
+            })
+
+        self._run(_("Decoding compiled menu..."), lambda: native.inspect_binary(path), done)
 
     def _make_studio_tab(self):
         layout = self._tab("Mod Studio")

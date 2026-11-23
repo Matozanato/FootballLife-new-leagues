@@ -1104,7 +1104,7 @@ fn menu_link(
 
 #[pyfunction]
 fn menu_clone(py: Python<'_>, root: PathBuf, screen: String, target: String) -> PyResult<String> {
-    py.detach(move || {
+    py.detach(move || -> anyhow::Result<String> {
         let screens = menus::load(&root)?;
         let (copy, destination) = menus::clone_screen(&screens, &screen, &target)?;
         if let Some(parent) = destination.parent() {
@@ -1388,5 +1388,40 @@ mod tests {
         assert!(safe_cpk_entry_path("common/../../outside.bin").is_err());
         assert!(safe_cpk_entry_path("C:/outside.bin").is_err());
         assert!(safe_cpk_entry_path("/outside.bin").is_err());
+    }
+
+    #[test]
+    fn menu_clone_command_creates_a_nested_screen_through_pyo3() {
+        let root = temp_dir("menu-clone");
+        let _ = fs::remove_dir_all(&root);
+        let flow = root.join("common/script/flow");
+        fs::create_dir_all(flow.join("BL")).unwrap();
+        fs::write(
+            flow.join("BL/first.json"),
+            r#"{"events":{"back":{"to":"BL/first"}},"data":{"type":"menu"}}"#,
+        )
+        .unwrap();
+
+        Python::initialize();
+        Python::attach(|py| {
+            let created = menu_clone(
+                py,
+                root.clone(),
+                "BL/first".into(),
+                "BL/copies/second".into(),
+            )
+            .unwrap();
+            assert_eq!(created, "BL/copies/second");
+        });
+        let cloned = flow.join("BL/copies/second.json");
+        let value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&cloned).unwrap()).unwrap();
+        assert_eq!(value["events"]["back"]["to"], "BL/first");
+        assert!(Python::attach(|py| {
+            menu_clone(py, root.clone(), "BL/first".into(), "../outside".into())
+        })
+        .is_err());
+        assert!(!root.join("common/script/outside.json").exists());
+        let _ = fs::remove_dir_all(root);
     }
 }

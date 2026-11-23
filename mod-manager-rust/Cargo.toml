@@ -13,7 +13,7 @@ name = "fl27mm"
 path = "src/main.rs"
 
 [workspace]
-members = ["ui/src-tauri"]
+members = ["ui/src-tauri", "python"]
 
 [dependencies]
 anyhow = "1"
