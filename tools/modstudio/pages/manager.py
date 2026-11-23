@@ -291,6 +291,7 @@ class ModManager(Page):
         self._studio_dirty = False
         self._studio_selection = ""
         self._studio_nodes = []
+        self._studio_tree_generation = 0
         self._studio_entries_for = None
         self._asset_entries = []
         self._animation_path = ""
@@ -327,7 +328,7 @@ class ModManager(Page):
         if target is not None:
             target.set_data(value)
 
-    def _run(self, label, work, done):
+    def _run(self, label, work, done, failed=None):
         if not native.available():
             self.say(_("The Rust manager extension is not installed. Rebuild the app with its PyO3 module."), "err")
             return
@@ -342,6 +343,8 @@ class ModManager(Page):
             self.app.busy(False)
             message = traceback_text.strip().splitlines()
             self.say(_("Mod Manager operation failed:") + "\n" + (message[-1] if message else traceback_text), "err")
+            if failed is not None:
+                failed(traceback_text)
 
         run_job(lambda _progress: work(), finish, fail)
 
@@ -1535,6 +1538,7 @@ class ModManager(Page):
         self.studio_tree = QTreeWidget()
         self.studio_tree.setHeaderLabels([_("Name"), _("Kind"), _("Size")])
         self.studio_tree.itemDoubleClicked.connect(self.open_studio_item)
+        self.studio_tree.itemExpanded.connect(self.expand_studio_item)
         self.studio_tree.itemSelectionChanged.connect(self.select_studio_item)
         split.addWidget(self.studio_tree)
         editor = QWidget()
@@ -1599,28 +1603,90 @@ class ModManager(Page):
         if not root:
             self.say(_("Choose a workspace folder first."), "warn")
             return
+        if not os.path.isdir(root):
+            self.say(_("The selected workspace folder does not exist or is not accessible."), "err")
+            return
+        self._studio_tree_generation += 1
+        generation = self._studio_tree_generation
 
         def done(nodes):
+            if generation != self._studio_tree_generation:
+                return
             self._studio_nodes = nodes
-            self.studio_tree.clear()
-            for node in nodes:
-                item = QTreeWidgetItem([node.get("name", ""), _("Folder" if node.get("dir") else "File"),
-                                        "" if node.get("dir") else str(node.get("size", ""))])
-                item.setData(0, Qt.UserRole, node)
-                if node.get("dir"):
-                    item.addChild(QTreeWidgetItem(["", "", ""]))
-                self.studio_tree.addTopLevelItem(item)
+            items = [self._studio_tree_item(node) for node in nodes]
+            self.studio_tree.setUpdatesEnabled(False)
+            sorting = self.studio_tree.isSortingEnabled()
+            self.studio_tree.setSortingEnabled(False)
+            try:
+                self.studio_tree.clear()
+                self.studio_tree.addTopLevelItems(items)
+            finally:
+                self.studio_tree.setSortingEnabled(sorting)
+                self.studio_tree.setUpdatesEnabled(True)
             self._show("studio", {"entries": len(nodes), "root": root})
 
         self._run(_("Reading workspace..."), lambda: native.studio_tree(root), done)
 
-    def open_studio_item(self, item, _column=0):
-        node = item.data(0, Qt.UserRole) or {}
-        path = node.get("path", "")
+    def _studio_tree_item(self, node):
+        item = QTreeWidgetItem([
+            node.get("name", ""),
+            _("Folder" if node.get("dir") else "File"),
+            "" if node.get("dir") else str(node.get("size", "")),
+        ])
+        item.setData(0, Qt.UserRole, node)
         if node.get("dir"):
-            self._studio_selection = path
-            self.studio_root.setText(path)
-            self.load_studio_tree()
+            item.setData(0, Qt.UserRole + 1, "unloaded")
+            placeholder = QTreeWidgetItem()
+            placeholder.setData(0, Qt.UserRole, {"placeholder": True})
+            item.addChild(placeholder)
+        return item
+
+    def expand_studio_item(self, item):
+        node = item.data(0, Qt.UserRole)
+        if not isinstance(node, dict) or not node.get("dir"):
+            return
+        if item.data(0, Qt.UserRole + 1) != "unloaded":
+            return
+        path = str(node.get("path") or "").strip()
+        if not path or not os.path.isdir(path):
+            item.takeChildren()
+            item.setData(0, Qt.UserRole + 1, "loaded")
+            self.say(_("This folder no longer exists or is not accessible."), "err")
+            return
+
+        generation = self._studio_tree_generation
+        item.setData(0, Qt.UserRole + 1, "loading")
+        item.takeChildren()
+
+        def current():
+            return (generation == self._studio_tree_generation
+                    and item.treeWidget() is self.studio_tree)
+
+        def done(nodes):
+            if not current():
+                return
+            item.addChildren([self._studio_tree_item(child) for child in nodes])
+            item.setData(0, Qt.UserRole + 1, "loaded")
+
+        def failed(_error):
+            if not current():
+                return
+            item.setData(0, Qt.UserRole + 1, "unloaded")
+            placeholder = QTreeWidgetItem()
+            placeholder.setData(0, Qt.UserRole, {"placeholder": True})
+            item.addChild(placeholder)
+
+        self._run(_("Loading folder..."), lambda: native.studio_tree(path), done, failed)
+
+    def open_studio_item(self, item, _column=0):
+        node = item.data(0, Qt.UserRole)
+        if not isinstance(node, dict) or node.get("placeholder"):
+            return
+        path = str(node.get("path") or "").strip()
+        if not path or node.get("dir"):
+            return
+        if not os.path.isfile(path):
+            self.say(_("This file no longer exists or is not accessible."), "err")
             return
         self._studio_selection = path
         if self._studio_dirty and not ask(self, "Unsaved changes",
@@ -1646,11 +1712,16 @@ class ModManager(Page):
     def select_studio_item(self):
         items = self.studio_tree.selectedItems()
         if not items:
+            self._studio_selection = ""
+            self.studio_file.setText(_("No file selected"))
             return
         node = items[0].data(0, Qt.UserRole) or {}
-        if node:
-            self._studio_selection = node.get("path", "")
-            self.studio_file.setText(self._studio_selection)
+        if not isinstance(node, dict) or node.get("placeholder"):
+            self._studio_selection = ""
+            self.studio_file.setText(_("No file selected"))
+            return
+        self._studio_selection = str(node.get("path") or "")
+        self.studio_file.setText(self._studio_selection or _("No file selected"))
 
     def _studio_target(self):
         return self._studio_selection or self.studio_root.text().strip()
