@@ -343,11 +343,7 @@ fn cloth_mesh(b: &[u8], info: &mut Info) {
     if let Some(parts) = le32(b, 16) {
         info.field("parts", parts.to_string());
     }
-    for (at, label) in [
-        (20usize, "position bytes"),
-        (24, "attribute bytes"),
-        (28, "index bytes"),
-    ] {
+    for (at, label) in [(20usize, "position bytes"), (24, "attribute bytes"), (28, "index bytes")] {
         if let Some(v) = le32(b, at) {
             info.field(label, v.to_string());
         }
@@ -355,10 +351,7 @@ fn cloth_mesh(b: &[u8], info: &mut Info) {
     // Only claim the arithmetic when it actually holds for this file.
     let exact = le32(b, 20) == Some(verts * 12) && le32(b, 24) == Some(verts * 36);
     if exact {
-        info.field(
-            "layout",
-            "positions 12 B/vertex, attributes 36 B/vertex".to_string(),
-        );
+        info.field("layout", "positions 12 B/vertex, attributes 36 B/vertex".to_string());
         // Sizes dividing cleanly proves where the blocks are, not what is
         // inside them: the attribute stream is still unread, so saying
         // "fully decoded" here would be a lie about the vertex data.
@@ -388,28 +381,15 @@ fn gani(b: &[u8], info: &mut Info) {
             info.field("track data", format!("{} bytes at 112", c.track_len));
             info.field(
                 "unit table",
-                format!(
-                    "{} entries at 164, {}..{} bytes apart",
+                format!("{} entries at 164, {}..{} bytes apart",
                     c.unit_offsets.len(),
-                    c.unit_offsets
-                        .windows(2)
-                        .map(|w| w[1] - w[0])
-                        .min()
-                        .unwrap_or(0),
-                    c.unit_offsets
-                        .windows(2)
-                        .map(|w| w[1] - w[0])
-                        .max()
-                        .unwrap_or(0)
-                ),
+                    c.unit_offsets.windows(2).map(|w| w[1] - w[0]).min().unwrap_or(0),
+                    c.unit_offsets.windows(2).map(|w| w[1] - w[0]).max().unwrap_or(0)),
             );
             if c.size_disagrees() {
                 // 18 of the shipped clips declare a size that is not their own.
                 // The header field is stale; the file is fine.
-                info.field(
-                    "declared length",
-                    format!("{} (stale; the file is {})", c.declared_size, c.len),
-                );
+                info.field("declared length", format!("{} (stale; the file is {})", c.declared_size, c.len));
             }
             info.field("frames", c.frame_count.to_string());
             info.unresolved = Some(
@@ -428,14 +408,7 @@ fn ask(b: &[u8], info: &mut Info) {
     match crate::ask::Skeleton::parse(b) {
         Ok(s) => {
             info.field("bones", s.bones.len().to_string());
-            info.field(
-                "basis",
-                if s.identity_basis() {
-                    "identity (animation space)"
-                } else {
-                    "render (skinning basis)"
-                },
-            );
+            info.field("basis", if s.identity_basis() { "identity (animation space)" } else { "render (skinning basis)" });
             info.field(
                 "root",
                 match s.root() {
@@ -444,10 +417,7 @@ fn ask(b: &[u8], info: &mut Info) {
                 },
             );
             match s.draw_order() {
-                Ok(o) => info.field(
-                    "hierarchy",
-                    format!("{} bones reachable from the root", o.len()),
-                ),
+                Ok(o) => info.field("hierarchy", format!("{} bones reachable from the root", o.len())),
                 Err(e) => info.unresolved = Some(e.to_string()),
             }
             if !s.identity_basis() {
@@ -470,13 +440,7 @@ fn frig(b: &[u8], info: &mut Info) {
             info.field("units", r.unit_count.to_string());
             info.field("segments", r.segment_count.to_string());
             let chains = r.units.iter().filter(|u| u.kind.bones_driven() > 1).count();
-            info.field(
-                "chain units",
-                format!(
-                    "{chains} of {} (a chain drives more than one bone)",
-                    r.units.len()
-                ),
-            );
+            info.field("chain units", format!("{chains} of {} (a chain drives more than one bone)", r.units.len()));
             info.unresolved = Some(
                 "the group label table is not decoded: the records begin with a hash and the offset \
                  base is not established, so group names are absent rather than guessed"
@@ -611,10 +575,7 @@ mod tests {
     use super::*;
 
     fn field<'a>(info: &'a Info, key: &str) -> Option<&'a str> {
-        info.fields
-            .iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v.as_str())
+        info.fields.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
     }
 
     #[test]
@@ -633,14 +594,8 @@ mod tests {
         let mut skl = vec![12u8, 0, 0, 0];
         skl.resize(40, 0);
         assert_eq!(identify("a.skl", &skl), Format::Skeleton);
-        assert_eq!(
-            identify("a.seq", &[7u8, 0, 0, 0, 9, 0, 0, 0]),
-            Format::AnimationSequence
-        );
-        assert_eq!(
-            identify("a.fdc", &[7u8, 0, 0, 0, 0x58, 0, 0, 0]),
-            Format::CutScene
-        );
+        assert_eq!(identify("a.seq", &[7u8, 0, 0, 0, 9, 0, 0, 0]), Format::AnimationSequence);
+        assert_eq!(identify("a.fdc", &[7u8, 0, 0, 0, 0x58, 0, 0, 0]), Format::CutScene);
     }
 
     #[test]
@@ -648,14 +603,8 @@ mod tests {
         // 400 of 400 shipped .skl files start with u32 12, but so do unrelated
         // blobs, so the name carries the identification and the header only
         // confirms it.
-        assert_eq!(
-            identify("rig.skl", &[12, 0, 0, 0, 1, 0, 0, 0, 56, 0, 0, 0]),
-            Format::Skeleton
-        );
-        assert_ne!(
-            identify("blob", &[12, 0, 0, 0, 1, 0, 0, 0, 56, 0, 0, 0]),
-            Format::Skeleton
-        );
+        assert_eq!(identify("rig.skl", &[12, 0, 0, 0, 1, 0, 0, 0, 56, 0, 0, 0]), Format::Skeleton);
+        assert_ne!(identify("blob", &[12, 0, 0, 0, 1, 0, 0, 0, 56, 0, 0, 0]), Format::Skeleton);
     }
 
     #[test]
@@ -665,10 +614,7 @@ mod tests {
         // the honest answer, and text is not a gap -- what matters is that the
         // survey does not list them as undecodable game content.
         let f = identify("af.msg", b"# created by tools/loadICU.tcl");
-        assert!(
-            f.known(),
-            "a Tcl locale file must not surface as a decode gap, got {f:?}"
-        );
+        assert!(f.known(), "a Tcl locale file must not surface as a decode gap, got {f:?}");
         assert!(!f.is_game_content() || f == Format::Text);
         assert!(!Format::Library.is_game_content());
     }
@@ -676,22 +622,13 @@ mod tests {
     #[test]
     fn known_and_unknown_formats_are_separated_honestly() {
         assert!(Format::Mesh.known());
-        assert!(
-            Format::ClothMesh.known() == false,
-            "cloth interiors are not solved"
-        );
+        assert!(Format::ClothMesh.known() == false, "cloth interiors are not solved");
         // Decoded by their own modules, each validated against the shipped set.
-        assert!(
-            Format::Animation.known(),
-            "clips, units and keyframes are read and edited"
-        );
+        assert!(Format::Animation.known(), "clips, units and keyframes are read and edited");
         assert!(Format::Skeleton.known());
         assert!(Format::Rig.known());
         // Still genuinely unsolved, and the survey must keep saying so.
-        assert!(
-            !Format::CutScene.known(),
-            "4,343 cut-scene files are unread"
-        );
+        assert!(!Format::CutScene.known(), "4,343 cut-scene files are unread");
         assert!(!Format::AnimationSequence.known());
         assert!(!Format::CameraAnimation.known());
     }
@@ -729,15 +666,8 @@ mod tests {
             v
         };
         let info = describe(std::path::Path::new("collar_002.clmesh"), &bad).unwrap();
-        assert!(
-            info.unresolved.is_some(),
-            "a block layout that does not divide must be flagged"
-        );
-        assert_eq!(
-            field(&info, "vertices"),
-            Some("486"),
-            "counts stay usable either way"
-        );
+        assert!(info.unresolved.is_some(), "a block layout that does not divide must be flagged");
+        assert_eq!(field(&info, "vertices"), Some("486"), "counts stay usable either way");
     }
 
     /// A clip that satisfies every header invariant the real decoder checks, so
@@ -775,32 +705,15 @@ mod tests {
 
     #[test]
     fn gani_reports_the_decoded_counts_and_flags_a_stale_size() {
-        let info = describe(
-            std::path::Path::new("a.gani"),
-            &fake_gani(3, 5, 10, 999_999),
-        )
-        .unwrap();
+        let info = describe(std::path::Path::new("a.gani"), &fake_gani(3, 5, 10, 999_999)).unwrap();
         assert_eq!(field(&info, "units"), Some("3"));
         assert_eq!(field(&info, "segments"), Some("5"));
         assert_eq!(field(&info, "frame rate"), Some("10 fps"));
         let stale = field(&info, "declared length").unwrap();
-        assert!(
-            stale.contains("stale"),
-            "a wrong size field must be called out: {stale}"
-        );
-        assert!(
-            info.unresolved.is_some(),
-            "the rig mapping is not decoded, and must say so"
-        );
-        assert!(
-            info.unresolved.as_deref().unwrap().contains("FRIG"),
-            "name what is missing"
-        );
-        assert_eq!(
-            field(&info, "frames"),
-            Some("0"),
-            "the fixture leaves the count unset"
-        );
+        assert!(stale.contains("stale"), "a wrong size field must be called out: {stale}");
+        assert!(info.unresolved.is_some(), "the rig mapping is not decoded, and must say so");
+        assert!(info.unresolved.as_deref().unwrap().contains("FRIG"), "name what is missing");
+        assert_eq!(field(&info, "frames"), Some("0"), "the fixture leaves the count unset");
     }
 
     #[test]
@@ -810,29 +723,17 @@ mod tests {
         let mut v = fake_gani(2, 4, 10, 256);
         v[80] = b'X';
         let info = describe(std::path::Path::new("a.gani"), &v).unwrap();
-        assert!(
-            info.unresolved
-                .as_deref()
-                .unwrap()
-                .starts_with("header rejected"),
-            "{:?}",
-            info.unresolved
-        );
+        assert!(info.unresolved.as_deref().unwrap().starts_with("header rejected"), "{:?}", info.unresolved);
         assert_eq!(field(&info, "units"), None);
     }
 
     #[test]
     fn truncated_input_is_reported_instead_of_panicking() {
-        for (name, bytes) in [
-            ("a.clmesh", &b"CLMESH2\x00"[..]),
-            ("a.gani", &[0xd2, 0xa2, 0xfc, 0x0b][..]),
-            ("a.skl", &[12u8][..]),
-        ] {
+        for (name, bytes) in
+            [("a.clmesh", &b"CLMESH2\x00"[..]), ("a.gani", &[0xd2, 0xa2, 0xfc, 0x0b][..]), ("a.skl", &[12u8][..])]
+        {
             let info = describe(std::path::Path::new(name), bytes).unwrap();
-            assert!(
-                info.unresolved.is_some(),
-                "{name} should report the shortfall"
-            );
+            assert!(info.unresolved.is_some(), "{name} should report the shortfall");
         }
     }
 }
@@ -848,10 +749,7 @@ mod probe_tests {
         let b: Vec<u8> = (0..2048).map(|i| 0xc0 + (i % 64) as u8).collect();
         let f = identify("blob", &b);
         eprintln!("dense high-byte binary -> {f:?}");
-        assert!(
-            !matches!(f, Format::Text),
-            "high bytes are not evidence of text"
-        );
+        assert!(!matches!(f, Format::Text), "high bytes are not evidence of text");
     }
 
     /// An unknown file whose first u32 happens to be 12 is not a skeleton.
@@ -861,11 +759,7 @@ mod probe_tests {
         b.extend_from_slice(&[0u8; 200]);
         let f = identify("mystery", &b);
         eprintln!("leading 12, no extension -> {f:?}");
-        assert_ne!(
-            f,
-            Format::Skeleton,
-            "one coincidental field is not a signature"
-        );
+        assert_ne!(f, Format::Skeleton, "one coincidental field is not a signature");
     }
 
     /// The generic camera signature is four bytes; a random file can match it.
@@ -874,11 +768,7 @@ mod probe_tests {
         let b = vec![0x01, 0x00, 0x01, 0xff, 9, 9, 9, 9];
         let f = identify("settings.bin", &b);
         eprintln!("db bytes with camera-like prefix -> {f:?}");
-        assert_ne!(
-            f,
-            Format::CameraAnimation,
-            "a database is not a camera animation"
-        );
+        assert_ne!(f, Format::CameraAnimation, "a database is not a camera animation");
     }
 }
 
@@ -888,11 +778,7 @@ mod probe2 {
     #[test]
     fn sidecar_and_labels() {
         // The .fpkd sidecar shares the container's leading six bytes.
-        let side = {
-            let mut v = b"foxfpkdwin0".to_vec();
-            v.resize(80, 0);
-            v
-        };
+        let side = { let mut v = b"foxfpkdwin0".to_vec(); v.resize(80, 0); v };
         eprintln!("fpkd sidecar -> {:?}", identify("face.fpkd", &side));
         // A dotfile has no extension.
         eprintln!(".gitignore ext -> {:?}", ext(".gitignore"));
@@ -907,9 +793,6 @@ mod probe2 {
         let info = describe(std::path::Path::new("a.gani"), &g).unwrap();
         eprintln!("gani fields -> {:?}", info.fields);
         let keys: Vec<&str> = info.fields.iter().map(|(k, _)| k.as_str()).collect();
-        assert!(
-            !keys.contains(&"entry count"),
-            "slot 16 was never shown to be a count"
-        );
+        assert!(!keys.contains(&"entry count"), "slot 16 was never shown to be a count");
     }
 }

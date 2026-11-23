@@ -240,9 +240,7 @@ fn read_materials(
     block: &dyn Fn(usize) -> Option<(usize, usize)>,
     strings: &dyn Fn(usize) -> String,
 ) -> Vec<Material> {
-    let Some((mi_off, mi_count)) = block(4) else {
-        return Vec::new();
-    };
+    let Some((mi_off, mi_count)) = block(4) else { return Vec::new() };
     let (tp_off, tp_count) = block(7).unwrap_or((0, 0));
     let (tx_off, tx_count) = block(6).unwrap_or((0, 0));
     let u16_at = |at: usize| -> usize {
@@ -274,11 +272,7 @@ fn read_materials(
                 continue;
             }
             let (texture, path) = tex_at(ti);
-            slots.push(Slot {
-                name: slot,
-                texture,
-                path,
-            });
+            slots.push(Slot { name: slot, texture, path });
         }
         out.push(Material { name, slots });
     }
@@ -294,13 +288,14 @@ impl Mesh {
         if at + 4 > buf.len() {
             return None;
         }
-        Some([f16_to_f32(le_u16(buf, at)), f16_to_f32(le_u16(buf, at + 2))])
+        Some([
+            f16_to_f32(le_u16(buf, at)),
+            f16_to_f32(le_u16(buf, at + 2)),
+        ])
     }
 
     pub fn set_uv(&mut self, v: usize, set: usize, u: f32, vv: f32) {
-        let Some(&off) = self.uv_offsets.get(set) else {
-            return;
-        };
+        let Some(&off) = self.uv_offsets.get(set) else { return };
         let at = v * self.stride + off;
         if at + 4 > self.attributes.len() {
             return;
@@ -338,9 +333,7 @@ impl Mesh {
             if t.len() != 3 || !t.contains(&(v as u16)) {
                 continue;
             }
-            let [Some(a), Some(b), Some(c)] = [t.first(), t.get(1), t.get(2)] else {
-                continue;
-            };
+            let [Some(a), Some(b), Some(c)] = [t.first(), t.get(1), t.get(2)] else { continue };
             let (a, b, c) = (*a as usize, *b as usize, *c as usize);
             if a >= self.positions.len() || b >= self.positions.len() || c >= self.positions.len() {
                 continue;
@@ -409,40 +402,22 @@ impl Fmdl {
         let mut s0 = Vec::with_capacity(s0count);
         for i in 0..s0count {
             let at = sio + i * 8;
-            s0.push((
-                le_u16(&bytes, at) as usize,
-                le_u16(&bytes, at + 2) as usize,
-                le_u32(&bytes, at + 4) as usize,
-            ));
+            s0.push((le_u16(&bytes, at) as usize, le_u16(&bytes, at + 2) as usize, le_u32(&bytes, at + 4) as usize));
         }
         let mut s1 = Vec::with_capacity(s1count);
         for i in 0..s1count {
             let at = sio + s0count * 8 + i * 12;
-            s1.push((
-                le_u32(&bytes, at) as usize,
-                le_u32(&bytes, at + 4) as usize,
-                le_u32(&bytes, at + 8) as usize,
-            ));
+            s1.push((le_u32(&bytes, at) as usize, le_u32(&bytes, at + 4) as usize, le_u32(&bytes, at + 8) as usize));
         }
         let block = |kind: usize| -> Option<(usize, usize)> {
-            s0.iter()
-                .find(|(t, _, _)| *t == kind)
-                .map(|(_, c, o)| (*o, *c))
+            s0.iter().find(|(t, _, _)| *t == kind).map(|(_, c, o)| (*o, *c))
         };
         let buffer = |kind: usize| -> Option<(usize, usize)> {
-            s1.iter()
-                .find(|(t, _, _)| *t == kind)
-                .map(|(_, o, l)| (s1off + *o, *l))
+            s1.iter().find(|(t, _, _)| *t == kind).map(|(_, o, l)| (s1off + *o, *l))
         };
 
         let Some((mi_off, mi_count)) = block(3) else {
-            return Ok(Fmdl {
-                bytes,
-                version,
-                meshes: Vec::new(),
-                materials: Vec::new(),
-                spans: Vec::new(),
-            });
+            return Ok(Fmdl { bytes, version, meshes: Vec::new(), materials: Vec::new(), spans: Vec::new() });
         };
         let (mfi_off, mfi_count) = block(9).unwrap_or((0, 0));
         let (mf_off, mf_count) = block(10).unwrap_or((0, 0));
@@ -495,25 +470,14 @@ impl Fmdl {
             let first_index = le_u32(&bytes, at + 16) as usize;
             let index_count = le_u32(&bytes, at + 20) as usize;
 
-            let fmt_base = if i < mfi_count {
-                s0off + mfi_off + i * 8
-            } else {
-                0
-            };
+            let fmt_base = if i < mfi_count { s0off + mfi_off + i * 8 } else { 0 };
             let has_fmt = i < mfi_count;
             let (fmt_first, vert_first) = if has_fmt {
-                (
-                    le_u16(&bytes, fmt_base + 4) as usize,
-                    le_u16(&bytes, fmt_base + 6) as usize,
-                )
+                (le_u16(&bytes, fmt_base + 4) as usize, le_u16(&bytes, fmt_base + 6) as usize)
             } else {
                 (0, 0)
             };
-            let vert_kinds = if has_fmt {
-                bytes[fmt_base + 1] as usize
-            } else {
-                0
-            };
+            let vert_kinds = if has_fmt { bytes[fmt_base + 1] as usize } else { 0 };
 
             // Positions sit in their own mesh format ahead of the attributes.
             let mut pos_span = (0usize, 0usize);
@@ -528,9 +492,7 @@ impl Fmdl {
                 let bi = bytes[at] as usize;
                 let st = bytes[at + 2] as usize;
                 let off = le_u32(&bytes, at + 4) as usize;
-                let Some((base, _)) = buf_index.get(bi) else {
-                    continue;
-                };
+                let Some((base, _)) = buf_index.get(bi) else { continue };
                 let abs = base + off;
                 if k == 0 {
                     pos_span = (abs, vertex_count * 12);
@@ -579,11 +541,7 @@ impl Fmdl {
             let positions: Vec<V3> = (0..vertex_count)
                 .map(|v| {
                     let at = pos_span.0 + v * 12;
-                    V3::new(
-                        le_f32(&bytes, at),
-                        le_f32(&bytes, at + 4),
-                        le_f32(&bytes, at + 8),
-                    )
+                    V3::new(le_f32(&bytes, at), le_f32(&bytes, at + 4), le_f32(&bytes, at + 8))
                 })
                 .collect();
             let attributes = bytes[attr_span.0..aend].to_vec();
@@ -605,13 +563,7 @@ impl Fmdl {
             spans.push((pos_span.0, attr_span.0, idx_base + first_index * 2));
         }
         let materials = read_materials(&bytes, s0off, &block, &strings);
-        Ok(Fmdl {
-            bytes,
-            version,
-            meshes,
-            materials,
-            spans,
-        })
+        Ok(Fmdl { bytes, version, meshes, materials, spans })
     }
 
     pub fn read(path: &std::path::Path) -> io::Result<Fmdl> {
@@ -619,16 +571,12 @@ impl Fmdl {
     }
 
     pub fn mesh(&self, i: usize) -> io::Result<&Mesh> {
-        self.meshes
-            .get(i)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("no mesh {i}")))
+        self.meshes.get(i).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("no mesh {i}")))
     }
 
     /// The material one mesh draws with.
     pub fn material(&self, mesh: usize) -> Option<&Material> {
-        self.meshes
-            .get(mesh)
-            .and_then(|m| self.materials.get(m.material_instance))
+        self.meshes.get(mesh).and_then(|m| self.materials.get(m.material_instance))
     }
 
     /// The colour map a mesh should be textured with, by name. `None` means the
@@ -660,10 +608,7 @@ impl Fmdl {
         let Some(&(base, _, _)) = self.spans.get(i) else {
             return err("no such mesh");
         };
-        let mesh = self
-            .meshes
-            .get(i)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no such mesh"))?;
+        let mesh = self.meshes.get(i).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no such mesh"))?;
         if positions.len() != mesh.positions.len() {
             return err("a reshaped head must keep its vertex count");
         }
@@ -684,17 +629,11 @@ impl Fmdl {
 
     /// Write the UV channel back into the attribute stream and into the file.
     pub fn set_uv(&mut self, i: usize, v: usize, set: usize, u: f32, vv: f32) -> io::Result<()> {
-        let Some(off) = self
-            .meshes
-            .get(i)
-            .and_then(|m| m.uv_offsets.get(set).copied())
-        else {
+        let Some(off) = self.meshes.get(i).and_then(|m| m.uv_offsets.get(set).copied()) else {
             return err("that mesh has no such UV channel");
         };
         // UVs live in the attribute buffer, not after the positions.
-        let (_, _, attr, _) = self
-            .spans(i)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no such mesh"))?;
+        let (_, _, attr, _) = self.spans(i).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no such mesh"))?;
         let stride = self.meshes[i].stride;
         let at = attr + v * stride + off;
         if at + 4 > self.bytes.len() {
@@ -710,11 +649,7 @@ impl Fmdl {
 
     /// Push every position along its normal by `amount(u, v)` in metres. The
     /// topology, bones and materials are not touched.
-    pub fn displace_along_normals<F: Fn(f32, f32) -> f32>(
-        &mut self,
-        i: usize,
-        amount: F,
-    ) -> io::Result<usize> {
+    pub fn displace_along_normals<F: Fn(f32, f32) -> f32>(&mut self, i: usize, amount: F) -> io::Result<usize> {
         let mesh = self.mesh(i)?.clone();
         let mut moved = 0;
         let mut next = Vec::with_capacity(mesh.positions.len());
@@ -745,9 +680,7 @@ impl Fmdl {
     pub fn refresh_normals(&mut self, i: usize) -> io::Result<()> {
         // Normals are an attribute channel, so every address here is relative to
         // the attribute buffer. Using the position base writes over the shape.
-        let (_, _, attr, _) = self
-            .spans(i)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no such mesh"))?;
+        let (_, _, attr, _) = self.spans(i).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no such mesh"))?;
         let off = match self.meshes.get(i).and_then(|m| m.normal_offset) {
             Some(o) => o,
             None => return Ok(()),
@@ -795,7 +728,8 @@ impl Fmdl {
         let mut pos_base = 0usize;
         let mut uv_base = 0usize;
         for m in &self.meshes {
-            let uvs: Vec<Option<[f32; 2]>> = (0..m.positions.len()).map(|v| m.uv(v, 0)).collect();
+            let uvs: Vec<Option<[f32; 2]>> =
+                (0..m.positions.len()).map(|v| m.uv(v, 0)).collect();
             for t in m.indices.chunks(3) {
                 if t.len() != 3 {
                     continue;
@@ -851,6 +785,7 @@ fn real_face() -> Option<crate::fpk::Entry> {
 mod tests {
     use super::*;
 
+
     #[test]
     fn half_float_round_trips_the_values_channels_actually_hold() {
         for v in [0.0f32, 1.0, -1.0, 0.5, -0.5, 0.25, 2.0, 123.5, 4.0, -3.25] {
@@ -880,14 +815,8 @@ mod tests {
             indices: vec![0, 2, 1],
         };
         let n = m.recomputed_normals();
-        assert!(
-            n[0].z < 0.0,
-            "winding should put the normal behind the triangle"
-        );
-        assert!(
-            m.normal(0).norm() > 0.9,
-            "a stream with no normal channel falls back to geometry"
-        );
+        assert!(n[0].z < 0.0, "winding should put the normal behind the triangle");
+        assert!(m.normal(0).norm() > 0.9, "a stream with no normal channel falls back to geometry");
     }
 
     #[test]
@@ -896,15 +825,12 @@ mod tests {
         assert!(err.to_string().contains("FMDL"), "{err}");
     }
 
+
     #[test]
     fn a_real_head_decodes_to_the_counts_the_buffers_imply() {
         let Some(entry) = real_face() else { return };
         let model = Fmdl::parse(entry.data).expect("face_high.fmdl should parse");
-        assert!(
-            (model.version - 2.03).abs() < 0.01,
-            "version {}",
-            model.version
-        );
+        assert!((model.version - 2.03).abs() < 0.01, "version {}", model.version);
         assert_eq!(model.meshes.len(), 7, "MeshInfo entries");
 
         let verts: usize = model.meshes.iter().map(|m| m.positions.len()).sum();
@@ -953,10 +879,7 @@ mod tests {
         let mut model = Fmdl::parse(original.clone()).unwrap();
         let before = model.mesh(2).unwrap().positions.clone();
         model.set_positions(2, &before).unwrap();
-        assert_eq!(
-            model.bytes, original,
-            "writing the same shape must not perturb the file"
-        );
+        assert_eq!(model.bytes, original, "writing the same shape must not perturb the file");
     }
 
     #[test]
@@ -972,26 +895,16 @@ mod tests {
         let mut touched = 0;
         for (i, (a, b)) in model.bytes.iter().zip(original.iter()).enumerate() {
             if a != b {
-                assert!(
-                    i >= base && i < base + len,
-                    "byte {i} outside {base}..{} was rewritten",
-                    base + len
-                );
+                assert!(i >= base && i < base + len, "byte {i} outside {base}..{} was rewritten", base + len);
                 touched += 1;
             }
         }
         assert!(touched > 0, "a 2 mm inflation changed nothing");
-        assert!(
-            attr > base + len && idx > attr,
-            "buffer ranges must be ordered positions, attributes, indices"
-        );
+        assert!(attr > base + len && idx > attr, "buffer ranges must be ordered positions, attributes, indices");
         assert!(idx + model.mesh(0).unwrap().indices.len() * 2 <= original.len());
         let (lo, hi) = model.bounds().unwrap();
         let (olo, ohi) = Fmdl::parse(original).unwrap().bounds().unwrap();
-        assert!(
-            hi.x - lo.x > ohi.x - olo.x,
-            "an inflated head must measure larger"
-        );
+        assert!(hi.x - lo.x > ohi.x - olo.x, "an inflated head must measure larger");
     }
 
     #[test]
@@ -1024,10 +937,7 @@ mod tests {
         let again = model.mesh(0).unwrap().uv(3, 0).unwrap();
         // Half precision at 0.6 has a quantum of 4.9e-4, so the nearest
         // representable answer is allowed to sit half a quantum away.
-        assert!(
-            (again[0] - (uv[0] + 0.01)).abs() < 3e-4,
-            "{uv:?} -> {again:?}"
-        );
+        assert!((again[0] - (uv[0] + 0.01)).abs() < 3e-4, "{uv:?} -> {again:?}");
 
         // Re-writing unchanged normals has to be a no-op, which is only true if
         // the shipped stream already agrees with the geometry.
@@ -1070,11 +980,8 @@ mod material_tests {
     fn each_material_resolves_to_its_own_textures() {
         let Some(m) = head() else { return };
         assert_eq!(m.materials.len(), 5, "MaterialInstances");
-        let got: Vec<(&str, Option<&str>)> = m
-            .materials
-            .iter()
-            .map(|mat| (mat.name.as_str(), mat.base().map(|s| s.texture.as_str())))
-            .collect();
+        let got: Vec<(&str, Option<&str>)> =
+            m.materials.iter().map(|mat| (mat.name.as_str(), mat.base().map(|s| s.texture.as_str()))).collect();
         let want = [
             ("fox_skin_mat", Some("face_bsm_alp.dds")),
             ("eyeline_SG", None),
@@ -1091,10 +998,7 @@ mod material_tests {
         // is what produced the shard artefacts.
         let eye = &m.materials[1];
         assert!(eye.base().is_none(), "eyeline must have no colour map");
-        assert!(
-            eye.slot("CubeMap_Tex_LIN").is_some(),
-            "eyeline must bind a cube map"
-        );
+        assert!(eye.slot("CubeMap_Tex_LIN").is_some(), "eyeline must bind a cube map");
     }
 
     /// Every texture is bound exactly once across all materials, which is what
@@ -1105,23 +1009,11 @@ mod material_tests {
         // 16 bindings, one per texture. The number of *distinct* names is lower
         // because one texture can serve several slots -- face_srm is both the
         // specular and the roughness map of the skin material.
-        let bound: Vec<&str> = m
-            .materials
-            .iter()
-            .flat_map(|x| x.slots.iter())
-            .map(|s| s.texture.as_str())
-            .collect();
-        assert_eq!(
-            bound.len(),
-            16,
-            "every texture should be bound exactly once"
-        );
+        let bound: Vec<&str> = m.materials.iter().flat_map(|x| x.slots.iter()).map(|s| s.texture.as_str()).collect();
+        assert_eq!(bound.len(), 16, "every texture should be bound exactly once");
         assert_eq!(m.texture_refs().len(), 13, "distinct texture names");
         for t in &bound {
-            assert!(
-                m.texture_refs().iter().any(|(n, _)| n == t),
-                "{t} bound but not listed"
-            );
+            assert!(m.texture_refs().iter().any(|(n, _)| n == t), "{t} bound but not listed");
         }
     }
 
@@ -1131,15 +1023,8 @@ mod material_tests {
     fn meshes_point_at_materials_in_range() {
         let Some(m) = head() else { return };
         assert_eq!(m.meshes.len(), 7);
-        let big = m
-            .meshes
-            .iter()
-            .position(|x| x.positions.len() == 1794)
-            .expect("face mesh");
-        assert_eq!(
-            m.materials[m.meshes[big].material_instance].name,
-            "fox_skin_mat"
-        );
+        let big = m.meshes.iter().position(|x| x.positions.len() == 1794).expect("face mesh");
+        assert_eq!(m.materials[m.meshes[big].material_instance].name, "fox_skin_mat");
         for (i, mesh) in m.meshes.iter().enumerate() {
             assert!(
                 mesh.material_instance < m.materials.len(),

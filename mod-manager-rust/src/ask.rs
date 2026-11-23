@@ -77,11 +77,7 @@ impl Skeleton {
         }
         let records_end = 8 + count * RECORD;
         if records_end > b.len() {
-            bail!(
-                "{} bone records need {records_end} bytes, the file is {}",
-                b.len(),
-                count
-            );
+            bail!("{} bone records need {records_end} bytes, the file is {}", b.len(), count);
         }
         // The names follow the records with no table of offsets to trust, so
         // they are read as a packed run and counted. A mismatch means the
@@ -114,11 +110,7 @@ impl Skeleton {
             if parent >= count as i32 || (parent < -1) {
                 bail!("bone {} has parent {parent}, outside -1..{count}", names[k]);
             }
-            let position = [
-                le_f32(b, at + 0x0C),
-                le_f32(b, at + 0x10),
-                le_f32(b, at + 0x14),
-            ];
+            let position = [le_f32(b, at + 0x0C), le_f32(b, at + 0x10), le_f32(b, at + 0x14)];
             let rotation = [
                 le_f32(b, at + 0x1C),
                 le_f32(b, at + 0x20),
@@ -128,12 +120,7 @@ impl Skeleton {
             if !position.iter().all(|v| v.is_finite()) || !rotation.iter().all(|v| v.is_finite()) {
                 bail!("bone {} has a non-finite transform", names[k]);
             }
-            bones.push(Bone {
-                name: names[k].clone(),
-                parent,
-                position,
-                rotation,
-            });
+            bones.push(Bone { name: names[k].clone(), parent, position, rotation });
         }
         Ok(Skeleton { version, bones })
     }
@@ -160,11 +147,7 @@ impl Skeleton {
             .filter(|(_, b)| b.parent == -1)
             .map(|(i, _)| i)
             .collect();
-        if roots.len() == 1 {
-            Some(roots[0])
-        } else {
-            None
-        }
+        if roots.len() == 1 { Some(roots[0]) } else { None }
     }
 
     /// Depth-first order from the root, so a parent always precedes its child.
@@ -176,9 +159,7 @@ impl Skeleton {
                 children[b.parent as usize].push(i);
             }
         }
-        let root = self
-            .root()
-            .ok_or_else(|| anyhow::anyhow!("no single root bone"))?;
+        let root = self.root().ok_or_else(|| anyhow::anyhow!("no single root bone"))?;
         let mut out = Vec::with_capacity(self.bones.len());
         let mut stack = vec![root];
         while let Some(i) = stack.pop() {
@@ -203,11 +184,7 @@ impl Skeleton {
             "skeleton v{}: {} bones, {} basis, {}\n",
             self.version,
             self.bones.len(),
-            if self.identity_basis() {
-                "identity"
-            } else {
-                "render"
-            },
+            if self.identity_basis() { "identity" } else { "render" },
             match self.root() {
                 Some(r) => format!("root {}", self.bones[r].name),
                 None => "no single root".to_string(),
@@ -231,8 +208,7 @@ mod tests {
     use super::*;
 
     fn body() -> Option<std::path::PathBuf> {
-        let p = std::env::temp_dir()
-            .join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_anim_skel.ask");
+        let p = std::env::temp_dir().join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_anim_skel.ask");
         p.is_file().then_some(p)
     }
 
@@ -245,10 +221,7 @@ mod tests {
         assert_eq!(s.bones[0].parent, -1, "the root has no parent");
         // Measured: the root hip sits about 1.096 up in the anim skeleton.
         assert!((s.bones[0].position[1] - 1.0961).abs() < 0.01);
-        assert!(
-            s.identity_basis(),
-            "body_anim_skel stores identity rest rotations"
-        );
+        assert!(s.identity_basis(), "body_anim_skel stores identity rest rotations");
         assert_eq!(s.root(), Some(0));
         assert_eq!(s.draw_order().unwrap().len(), 20);
     }
@@ -270,10 +243,7 @@ mod tests {
                     assert!(s.draw_order().is_ok(), "{}: unreachable bones", p.display());
                     ok += 1;
                 }
-                Err(e) => bad.push(format!(
-                    "{}: {e}",
-                    p.file_name().unwrap_or_default().to_string_lossy()
-                )),
+                Err(e) => bad.push(format!("{}: {e}", p.file_name().unwrap_or_default().to_string_lossy())),
             }
         }
         assert!(ok > 0, "no shipped skeleton parsed");
@@ -294,10 +264,7 @@ mod tests {
         // the real structural check, and it is what catches a misread layout.
         let mut wrong = b.clone();
         wrong[4..8].copy_from_slice(&19u32.to_le_bytes());
-        assert!(
-            Skeleton::parse(&wrong).is_err(),
-            "19 records would mis-split the name run"
-        );
+        assert!(Skeleton::parse(&wrong).is_err(), "19 records would mis-split the name run");
     }
 
     /// The `cdcdcdcd` bytes in the shipped body skeleton are leaked uninitialised
@@ -320,21 +287,11 @@ mod tests {
                 plain_files += 1;
             }
         }
-        assert!(
-            files.len() >= 20,
-            "expected the shipped skeletons, found {}",
-            files.len()
-        );
-        assert!(
-            plain_files > 0,
-            "the loose cinematic skeletons carry no marker; if they now do, the layout changed"
-        );
+        assert!(files.len() >= 20, "expected the shipped skeletons, found {}", files.len());
+        assert!(plain_files > 0, "the loose cinematic skeletons carry no marker; if they now do, the layout changed");
         // The marker case is the body skeleton inside dt13_all.cpk, covered by
         // the test above; it must parse through the same code as these.
-        assert!(
-            body().is_some(),
-            "extract the body skeleton to /tmp/skelx for the marker case"
-        );
+        assert!(body().is_some(), "extract the body skeleton to /tmp/skelx for the marker case");
     }
 
     #[test]

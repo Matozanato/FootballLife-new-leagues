@@ -46,8 +46,7 @@ pub fn analyse(addons: &Path, ini: &Ini) -> Vec<Shadow> {
     let entries = ini.active("cpk.root");
     // Gathering keys is the expensive part and is independent per pack; only
     // the claiming below has to follow the order.
-    let keys: Vec<Vec<String>> = entries
-        .par_iter()
+    let keys: Vec<Vec<String>> = entries.par_iter()
         .map(|e| packs::keys(&resolve(addons, &e.value)))
         .collect();
 
@@ -165,7 +164,10 @@ mod tests {
                 fs::write(&path, b"x").unwrap();
             }
         }
-        let entries = vec![entry(".\\livecpk\\root"), entry(".\\livecpk\\Specific")];
+        let entries = vec![
+            entry(".\\livecpk\\root"),
+            entry(".\\livecpk\\Specific"),
+        ];
         let ordered = sorted(&tmp, &entries);
         assert_eq!(ordered[0].value, ".\\livecpk\\Specific");
         assert_eq!(ordered[1].value, ".\\livecpk\\root");
@@ -183,10 +185,7 @@ mod tests {
     fn a_buried_pack_is_reported_dead_with_its_blocker() {
         let tmp = std::env::temp_dir().join("fl27mm_dead_test");
         let _ = fs::remove_dir_all(&tmp);
-        for p in [
-            "livecpk/Big/common/sound.acb",
-            "livecpk/Small/common/sound.acb",
-        ] {
+        for p in ["livecpk/Big/common/sound.acb", "livecpk/Small/common/sound.acb"] {
             let path = tmp.join(p);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(&path, b"x").unwrap();

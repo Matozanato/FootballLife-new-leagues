@@ -32,6 +32,7 @@ fn stamp(path: &Path) -> (u64, SystemTime) {
     }
 }
 
+
 fn e<E: std::fmt::Display>(err: E) -> String {
     format!("{err:#}")
 }
@@ -92,21 +93,12 @@ fn scan(game: String) -> CmdResult<ScanReport> {
         if !mseen.insert(entry.value.to_lowercase()) {
             duplicates.push(format!("module {}", entry.value));
         }
-        if !addons
-            .join("modules")
-            .join(entry.value.replace('\\', "/"))
-            .is_file()
-        {
+        if !addons.join("modules").join(entry.value.replace('\\', "/")).is_file() {
             missing.push(format!("module {}", entry.value));
         }
     }
-    let flag = |key: &str| {
-        parsed
-            .active(key)
-            .first()
-            .map(|v| v.value.trim() == "1")
-            .unwrap_or(false)
-    };
+    let flag = |key: &str| parsed.active(key).first()
+        .map(|v| v.value.trim() == "1").unwrap_or(false);
 
     Ok(ScanReport {
         ini: path.to_string_lossy().into_owned(),
@@ -152,12 +144,8 @@ pub struct OrderReport {
 
 /// The order as the game will actually resolve it: first-wins, key by key.
 #[tauri::command(async)]
-fn order_report(
-    ini_path: String,
-    addons: String,
-    refresh: Option<bool>,
-    cache: tauri::State<Cache>,
-) -> CmdResult<OrderReport> {
+fn order_report(ini_path: String, addons: String, refresh: Option<bool>,
+                cache: tauri::State<Cache>) -> CmdResult<OrderReport> {
     let key = format!("{}|{}", ini_path.to_lowercase(), addons.to_lowercase());
     let mark = stamp(Path::new(&ini_path));
     if !refresh.unwrap_or(false) {
@@ -173,20 +161,16 @@ fn order_report(
     let entries = parsed.active("cpk.root");
 
     let discovered = packs::discover(&addons.join("livecpk").join("root"));
-    let by_rel: std::collections::HashMap<String, &packs::Pack> = discovered
-        .iter()
-        .map(|p| (p.rel.to_lowercase(), p))
-        .collect();
+    let by_rel: std::collections::HashMap<String, &packs::Pack> = discovered.iter()
+        .map(|p| (p.rel.to_lowercase(), p)).collect();
     // ini values are ".\livecpk\root\<rel>"; discovery reports "<rel>". Compare
     // like with like, or every pack on disk looks unregistered.
     const PREFIX: &str = ".\\livecpk\\root\\";
-    let active_rel: HashSet<String> = entries
-        .iter()
+    let active_rel: HashSet<String> = entries.iter()
         .map(|v| v.value.to_lowercase())
         .map(|v| v.strip_prefix(PREFIX).map(str::to_string).unwrap_or(v))
         .collect();
-    let unregistered = discovered
-        .iter()
+    let unregistered = discovered.iter()
         .filter(|p| !active_rel.contains(&p.rel.to_lowercase()))
         .count();
 
@@ -200,53 +184,30 @@ fn order_report(
         let surviving = shadow.map(|s| s.surviving).unwrap_or(0);
         rows.push(PackRow {
             value: entry.value.clone(),
-            name: pack
-                .map(|p| p.name.clone())
+            name: pack.map(|p| p.name.clone())
                 .unwrap_or_else(|| entry.value.rsplit('\\').next().unwrap_or("").to_string()),
-            kind: pack
-                .map(|p| p.kind.label().to_string())
-                .unwrap_or_else(|| "unknown".into()),
+            kind: pack.map(|p| p.kind.label().to_string()).unwrap_or_else(|| "unknown".into()),
             alternative: pack.map(|p| p.kind.is_alternative()).unwrap_or(false),
             total,
             surviving,
             dead: shadow.map(|s| s.dead()).unwrap_or(false),
             exists: order::resolve(&addons, &entry.value).is_dir(),
-            blockers: shadow
-                .map(|s| {
-                    s.blockers
-                        .iter()
-                        .take(3)
-                        .map(|(rel, keys)| Blocker {
-                            rel: rel.clone(),
-                            keys: *keys,
-                        })
-                        .collect()
-                })
+            blockers: shadow.map(|s| s.blockers.iter().take(3)
+                .map(|(rel, keys)| Blocker { rel: rel.clone(), keys: *keys }).collect())
                 .unwrap_or_default(),
         });
     }
     let dead = rows.iter().filter(|r| r.dead).count();
-    let partial = rows
-        .iter()
-        .filter(|r| !r.dead && r.surviving < r.total)
-        .count();
+    let partial = rows.iter().filter(|r| !r.dead && r.surviving < r.total).count();
     let report = OrderReport {
         alive: rows.len() - dead - partial,
         partial,
         dead,
         unregistered,
-        modules: parsed
-            .active("lua.module")
-            .iter()
-            .map(|v| v.value.clone())
-            .collect(),
+        modules: parsed.active("lua.module").iter().map(|v| v.value.clone()).collect(),
         rows,
     };
-    cache
-        .order
-        .lock()
-        .unwrap()
-        .insert(key, (mark.0, mark.1, report.clone()));
+    cache.order.lock().unwrap().insert(key, (mark.0, mark.1, report.clone()));
     Ok(report)
 }
 
@@ -260,21 +221,13 @@ pub struct SaveReport {
 /// Write a new cpk.root order. Backs the ini up first and refuses to write an
 /// order that drops or invents entries.
 #[tauri::command(async)]
-fn save_order(
-    ini_path: String,
-    addons: String,
-    values: Vec<String>,
-    cache: tauri::State<Cache>,
-) -> CmdResult<SaveReport> {
+fn save_order(ini_path: String, addons: String, values: Vec<String>,
+              cache: tauri::State<Cache>) -> CmdResult<SaveReport> {
     let path = Path::new(&ini_path);
     let mut parsed = ini::Ini::read(path).map_err(e)?;
     let current = parsed.all("cpk.root");
     if values.len() != current.len() {
-        return Err(format!(
-            "order has {} entries, the ini has {}",
-            values.len(),
-            current.len()
-        ));
+        return Err(format!("order has {} entries, the ini has {}", values.len(), current.len()));
     }
     let before: HashSet<String> = current.iter().map(|v| v.value.to_lowercase()).collect();
     let after: HashSet<String> = values.iter().map(|v| v.to_lowercase()).collect();
@@ -284,8 +237,7 @@ fn save_order(
 
     let mut reordered = Vec::with_capacity(values.len());
     for value in &values {
-        let source = current
-            .iter()
+        let source = current.iter()
             .find(|v| v.value.eq_ignore_ascii_case(value))
             .ok_or_else(|| format!("no ini entry for {value}"))?;
         let mut clone = (*source).clone();
@@ -294,9 +246,7 @@ fn save_order(
     }
 
     let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+        .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let backup = path.with_file_name(format!("sider.ini.bak-{stamp}"));
     std::fs::copy(path, &backup).map_err(e)?;
     parsed.replace_ordered("cpk.root", reordered);
@@ -345,15 +295,11 @@ fn conflict_report(root: String) -> CmdResult<ConflictReport> {
         shared: c.shared,
         identical: c.identical,
         differing: c.differing,
-        pairs: pairs
-            .iter()
-            .take(60)
-            .map(|((a, b), n)| ConflictPair {
-                a: found[*a].rel.clone(),
-                b: found[*b].rel.clone(),
-                keys: **n,
-            })
-            .collect(),
+        pairs: pairs.iter().take(60).map(|((a, b), n)| ConflictPair {
+            a: found[*a].rel.clone(),
+            b: found[*b].rel.clone(),
+            keys: **n,
+        }).collect(),
         examples: c.examples,
     })
 }
@@ -386,17 +332,13 @@ fn cpk_list(archive: String) -> CmdResult<CpkListing> {
         file_size: std::fs::metadata(path).map_err(e)?.len(),
         content_offset: opened.content_offset,
         align: get("Align"),
-        entries: opened
-            .files
-            .iter()
-            .map(|f| CpkEntry {
-                path: f.path(),
-                size: f.size,
-                extract_size: f.extract_size,
-                compressed: f.compressed(),
-                id: f.id,
-            })
-            .collect(),
+        entries: opened.files.iter().map(|f| CpkEntry {
+            path: f.path(),
+            size: f.size,
+            extract_size: f.extract_size,
+            compressed: f.compressed(),
+            id: f.id,
+        }).collect(),
     })
 }
 
@@ -432,8 +374,8 @@ pub struct PackResult {
 
 #[tauri::command(async)]
 fn cpk_pack(src: String, dest: String, compress: Option<bool>) -> CmdResult<PackResult> {
-    let files =
-        cpk::pack(Path::new(&src), Path::new(&dest), compress.unwrap_or(true)).map_err(e)?;
+    let files = cpk::pack(Path::new(&src), Path::new(&dest),
+                          compress.unwrap_or(true)).map_err(e)?;
     let back = cpk::Cpk::open(Path::new(&dest)).map_err(e)?;
     let packed = back.files.iter().filter(|f| f.compressed()).count();
     Ok(PackResult {
@@ -488,10 +430,8 @@ fn tex_preview(path: String, level: Option<usize>) -> CmdResult<String> {
         let mut writer = encoder.write_header().map_err(e)?;
         writer.write_image_data(&rgba).map_err(e)?;
     }
-    Ok(format!(
-        "data:image/png;base64,{}",
-        base64::engine::general_purpose::STANDARD.encode(buf)
-    ))
+    Ok(format!("data:image/png;base64,{}",
+               base64::engine::general_purpose::STANDARD.encode(buf)))
 }
 
 #[derive(Serialize)]
@@ -504,10 +444,7 @@ pub struct ConvertRow {
 #[tauri::command(async)]
 fn tex_convert(input: String, out: String, kind: String) -> CmdResult<Vec<ConvertRow>> {
     let tag: u32 = match kind.as_str() {
-        "normal" => 9,
-        "material" => 1,
-        "cube" => 7,
-        _ => 3,
+        "normal" => 9, "material" => 1, "cube" => 7, _ => 3,
     };
     let src = PathBuf::from(&input);
     let dest = PathBuf::from(&out);
@@ -520,11 +457,7 @@ fn tex_convert(input: String, out: String, kind: String) -> CmdResult<Vec<Conver
                 if p.is_dir() {
                     stack.push(p);
                 } else {
-                    let ext = p
-                        .extension()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_lowercase();
+                    let ext = p.extension().unwrap_or_default().to_string_lossy().to_lowercase();
                     if ext == "ftex" || ext == "dds" {
                         files.push(p);
                     }
@@ -535,26 +468,13 @@ fn tex_convert(input: String, out: String, kind: String) -> CmdResult<Vec<Conver
     } else {
         files.push(src.clone());
     }
-    let base = if src.is_dir() {
-        src.clone()
-    } else {
-        src.parent().unwrap_or(Path::new(".")).to_path_buf()
-    };
+    let base = if src.is_dir() { src.clone() } else { src.parent().unwrap_or(Path::new(".")).to_path_buf() };
 
     let mut rows = Vec::new();
     for p in files {
-        let rel = p
-            .strip_prefix(&base)
-            .unwrap_or(&p)
-            .to_string_lossy()
-            .into_owned();
-        let ext = p
-            .extension()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_lowercase();
-        let target = dest
-            .join(p.strip_prefix(&base).unwrap_or(&p))
+        let rel = p.strip_prefix(&base).unwrap_or(&p).to_string_lossy().into_owned();
+        let ext = p.extension().unwrap_or_default().to_string_lossy().to_lowercase();
+        let target = dest.join(p.strip_prefix(&base).unwrap_or(&p))
             .with_extension(if ext == "ftex" { "dds" } else { "ftex" });
         let result = (|| -> Result<String, String> {
             if let Some(parent) = target.parent() {
@@ -562,38 +482,18 @@ fn tex_convert(input: String, out: String, kind: String) -> CmdResult<Vec<Conver
             }
             if ext == "ftex" {
                 let t = ftex::to_dds_file(&p, &target).map_err(e)?;
-                Ok(format!(
-                    "{}x{} {} {} mips",
-                    t.width,
-                    t.height,
-                    t.format.name(),
-                    t.mips.len()
-                ))
+                Ok(format!("{}x{} {} {} mips", t.width, t.height, t.format.name(), t.mips.len()))
             } else {
                 let bytes = std::fs::read(&p).map_err(e)?;
                 let mut t = ftex::Ftex::from_dds(&bytes).map_err(e)?;
                 t.texture_type = tag;
                 t.write_ftex(&target).map_err(e)?;
-                Ok(format!(
-                    "{}x{} {} {} mips",
-                    t.width,
-                    t.height,
-                    t.format.name(),
-                    t.mips.len()
-                ))
+                Ok(format!("{}x{} {} {} mips", t.width, t.height, t.format.name(), t.mips.len()))
             }
         })();
         match result {
-            Ok(detail) => rows.push(ConvertRow {
-                file: rel,
-                ok: true,
-                detail,
-            }),
-            Err(detail) => rows.push(ConvertRow {
-                file: rel,
-                ok: false,
-                detail,
-            }),
+            Ok(detail) => rows.push(ConvertRow { file: rel, ok: true, detail }),
+            Err(detail) => rows.push(ConvertRow { file: rel, ok: false, detail }),
         }
     }
     Ok(rows)
@@ -619,41 +519,23 @@ fn container_report(input: String) -> CmdResult<Vec<ContainerRow>> {
         while let Some(d) = stack.pop() {
             for entry in std::fs::read_dir(&d).map_err(e)?.flatten() {
                 let p = entry.path();
-                if p.is_dir() {
-                    stack.push(p);
-                } else {
-                    files.push(p);
-                }
+                if p.is_dir() { stack.push(p); } else { files.push(p); }
             }
         }
         files.sort();
     } else {
         files.push(src.clone());
     }
-    let base = if src.is_dir() {
-        src.clone()
-    } else {
-        src.parent().unwrap_or(Path::new(".")).to_path_buf()
-    };
+    let base = if src.is_dir() { src.clone() } else { src.parent().unwrap_or(Path::new(".")).to_path_buf() };
     let mut rows = Vec::new();
     for p in files {
-        let rel = p
-            .strip_prefix(&base)
-            .unwrap_or(&p)
-            .to_string_lossy()
-            .into_owned();
+        let rel = p.strip_prefix(&base).unwrap_or(&p).to_string_lossy().into_owned();
         let raw = match std::fs::read(&p) {
             Ok(r) => r,
             Err(err) => {
-                rows.push(ContainerRow {
-                    file: rel,
-                    framing: "-".into(),
-                    file_size: 0,
-                    body_size: 0,
-                    exact: false,
-                    level: None,
-                    error: Some(e(err)),
-                });
+                rows.push(ContainerRow { file: rel, framing: "-".into(), file_size: 0,
+                                         body_size: 0, exact: false, level: None,
+                                         error: Some(e(err)) });
                 continue;
             }
         };
@@ -664,34 +546,16 @@ fn container_report(input: String) -> CmdResult<Vec<ContainerRow>> {
                 let file_size = raw.len();
                 match wesys::encode(&mut f) {
                     Ok(_) => rows.push(ContainerRow {
-                        file: rel,
-                        framing,
-                        file_size,
-                        body_size,
-                        exact: f.exact,
-                        level: f.level,
-                        error: None,
-                    }),
+                        file: rel, framing, file_size, body_size,
+                        exact: f.exact, level: f.level, error: None }),
                     Err(err) => rows.push(ContainerRow {
-                        file: rel,
-                        framing,
-                        file_size,
-                        body_size,
-                        exact: false,
-                        level: None,
-                        error: Some(e(err)),
-                    }),
+                        file: rel, framing, file_size, body_size,
+                        exact: false, level: None, error: Some(e(err)) }),
                 }
             }
             Err(err) => rows.push(ContainerRow {
-                file: rel,
-                framing: "-".into(),
-                file_size: raw.len(),
-                body_size: 0,
-                exact: false,
-                level: None,
-                error: Some(e(err)),
-            }),
+                file: rel, framing: "-".into(), file_size: raw.len(), body_size: 0,
+                exact: false, level: None, error: Some(e(err)) }),
         }
     }
     Ok(rows)
@@ -701,9 +565,7 @@ fn container_report(input: String) -> CmdResult<Vec<ContainerRow>> {
 fn container_unwrap(input: String, dest: String) -> CmdResult<usize> {
     let f = wesys::decode(&std::fs::read(&input).map_err(e)?).map_err(e)?;
     if f.kind == wesys::Kind::Unknown {
-        return Err(
-            "unidentified framing; refusing to write a body this codec cannot interpret".into(),
-        );
+        return Err("unidentified framing; refusing to write a body this codec cannot interpret".into());
     }
     if let Some(parent) = Path::new(&dest).parent() {
         std::fs::create_dir_all(parent).map_err(e)?;
@@ -753,29 +615,20 @@ fn pesdb_report(dir: String) -> CmdResult<Vec<TableRow>> {
                 stack.push(p);
                 continue;
             }
-            let name = p
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string();
+            let name = p.file_name().unwrap_or_default().to_string_lossy().to_string();
             if !name.ends_with(".bin") || !p.to_string_lossy().contains("pesdb") {
                 continue;
             }
             let v = pesdb::validate(&p);
             rows.push(TableRow {
-                file: p
-                    .strip_prefix(&root)
-                    .unwrap_or(&p)
-                    .to_string_lossy()
-                    .into_owned(),
+                file: p.strip_prefix(&root).unwrap_or(&p).to_string_lossy().into_owned(),
                 ok: v.ok,
                 status: match v.status {
                     pesdb::Status::Ok => "ok",
                     pesdb::Status::BadStride => "badstride",
                     pesdb::Status::Unrecognised => "unrecognised",
                     pesdb::Status::Unreadable => "unreadable",
-                }
-                .to_string(),
+                }.to_string(),
                 reason: v.reason,
             });
         }
@@ -785,11 +638,8 @@ fn pesdb_report(dir: String) -> CmdResult<Vec<TableRow>> {
 }
 
 #[tauri::command]
-async fn game_map(
-    game: String,
-    refresh: Option<bool>,
-    cache: tauri::State<'_, Cache>,
-) -> CmdResult<gamemap::GameMap> {
+async fn game_map(game: String, refresh: Option<bool>,
+                  cache: tauri::State<'_, Cache>) -> CmdResult<gamemap::GameMap> {
     let path = PathBuf::from(&game);
     let key = game.to_lowercase();
     let mark = stamp(&path.join("SiderAddons").join("sider.ini"));
@@ -801,13 +651,8 @@ async fn game_map(
         }
     }
     let built = tauri::async_runtime::spawn_blocking(move || gamemap::build(&path))
-        .await
-        .map_err(e)?;
-    cache
-        .map
-        .lock()
-        .unwrap()
-        .insert(key, (mark.0, mark.1, built.clone()));
+        .await.map_err(e)?;
+    cache.map.lock().unwrap().insert(key, (mark.0, mark.1, built.clone()));
     Ok(built)
 }
 
@@ -816,8 +661,7 @@ async fn archive_map(archive: String, depth: Option<usize>) -> CmdResult<gamemap
     let path = PathBuf::from(archive);
     let depth = depth.unwrap_or(3);
     tauri::async_runtime::spawn_blocking(move || gamemap::archive_map(&path, depth))
-        .await
-        .map_err(e)?
+        .await.map_err(e)?
 }
 
 #[tauri::command(async)]
@@ -837,11 +681,7 @@ fn bin_section(file: String, index: usize, bytes: Option<usize>) -> CmdResult<St
 fn bin_hex(file: String, at: Option<usize>, bytes: Option<usize>) -> CmdResult<String> {
     let raw = std::fs::read(&file).map_err(e)?;
     let body = wesys::decode(&raw).map_err(e)?.body;
-    Ok(binread::hexdump(
-        &body,
-        at.unwrap_or(0),
-        bytes.unwrap_or(512),
-    ))
+    Ok(binread::hexdump(&body, at.unwrap_or(0), bytes.unwrap_or(512)))
 }
 
 #[derive(serde::Serialize)]
@@ -861,14 +701,12 @@ fn bin_section_table(file: String, index: usize) -> CmdResult<SectionBlock> {
     let path = Path::new(&file);
     let data = binread::section_bytes(path, index).map_err(e)?;
     let report = binread::read(path).map_err(e)?;
-    let name = report
-        .sections
+    let name = report.sections
         .as_ref()
         .and_then(|t| t.sections.get(index))
         .map(|s| s.name.clone())
         .unwrap_or_default();
-    let plausible_floats = data
-        .chunks_exact(4)
+    let plausible_floats = data.chunks_exact(4)
         .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .filter(|v| v.is_finite() && (*v == 0.0 || (1e-4..=1e9).contains(&v.abs())))
         .count();
@@ -878,8 +716,7 @@ fn bin_section_table(file: String, index: usize) -> CmdResult<SectionBlock> {
         // Not the tidy count-then-rows shape: look for a repeating row width
         // that makes the bytes read as parameters anyway.
         None => fl27mm::structure::best_row_width(&data).map(|(row, rows)| {
-            let values: Vec<f32> = data
-                .chunks_exact(4)
+            let values: Vec<f32> = data.chunks_exact(4)
                 .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
                 .collect();
             (row, rows, values)
@@ -915,6 +752,7 @@ fn explain_path(rel: String) -> gamemap::Info {
 // command is the only one that touches the live setup, and the UI gates it
 // behind a confirm; the core itself refuses an existing target rather than
 // overwriting it, so a double click cannot destroy an installed pack.
+
 #[tauri::command(async)]
 fn studio_tree(root: String) -> CmdResult<Vec<fl27mm::studio::Node>> {
     fl27mm::studio::tree(Path::new(&root)).map_err(e)
@@ -942,12 +780,18 @@ fn studio_new_pack(
 }
 
 #[tauri::command(async)]
-fn studio_check_pack(dir: String, addons: String) -> CmdResult<fl27mm::studio::PackCheck> {
+fn studio_check_pack(
+    dir: String,
+    addons: String,
+) -> CmdResult<fl27mm::studio::PackCheck> {
     fl27mm::studio::check_pack(Path::new(&dir), Path::new(&addons)).map_err(e)
 }
 
 #[tauri::command(async)]
-fn studio_install(src: String, addons: String) -> CmdResult<fl27mm::studio::Install> {
+fn studio_install(
+    src: String,
+    addons: String,
+) -> CmdResult<fl27mm::studio::Install> {
     fl27mm::studio::install_pack(Path::new(&src), Path::new(&addons)).map_err(e)
 }
 
@@ -1025,6 +869,7 @@ fn studio_reveal(path: String) -> CmdResult<()> {
         .map_err(e)
 }
 
+
 /// Write bytes back into a table at a body offset. The core re-reads the file
 /// and refuses if anything outside the requested window moved.
 #[tauri::command]
@@ -1032,11 +877,7 @@ fn bin_patch(file: String, offset: usize, hex: String) -> CmdResult<serde_json::
     let bytes: Option<Vec<u8>> = hex
         .as_bytes()
         .chunks(2)
-        .map(|c| {
-            std::str::from_utf8(c)
-                .ok()
-                .and_then(|s| u8::from_str_radix(s, 16).ok())
-        })
+        .map(|c| std::str::from_utf8(c).ok().and_then(|s| u8::from_str_radix(s, 16).ok()))
         .collect();
     let Some(bytes) = bytes else {
         return Err(format!("{hex:?} is not an even number of hex digits"));
@@ -1055,6 +896,7 @@ fn bin_patch(file: String, offset: usize, hex: String) -> CmdResult<serde_json::
     Ok(serde_json::json!({ "changed": changed, "size": len, "backup": backup.to_string_lossy() }))
 }
 
+
 /// List editable assets under a folder, grouped by family. Bounded so a scan of
 /// a 200 GB install cannot hang the UI.
 #[tauri::command]
@@ -1062,9 +904,7 @@ fn asset_list(root: String, limit: Option<usize>) -> CmdResult<serde_json::Value
     let cap = limit.unwrap_or(400);
     let mut out = Vec::new();
     for p in fl27mm::fsutil::files(Path::new(&root)) {
-        let Some(e) = fl27mm::assets::entry(&p) else {
-            continue;
-        };
+        let Some(e) = fl27mm::assets::entry(&p) else { continue };
         out.push(e);
         if out.len() >= cap {
             break;
@@ -1088,16 +928,16 @@ fn asset_replace(
 /// Render a model with its own bound textures, so an edit can be seen on the
 /// asset rather than only in a flat preview.
 #[tauri::command]
-fn asset_preview(model: String, view: String, size: usize) -> CmdResult<serde_json::Value> {
+fn asset_preview(
+    model: String,
+    view: String,
+    size: usize,
+) -> CmdResult<serde_json::Value> {
     use fl27mm::render::{self, Camera, Mode, Texture};
     let path = Path::new(&model);
     let mut models = render::load_scene(path).map_err(e)?;
     render::keep_texturable(&mut models);
-    let maps = render::Maps::load_from(
-        &models,
-        &render::texture_roots(path),
-        &render::base_archives(path),
-    );
+    let maps = render::Maps::load_from(&models, &render::texture_roots(path), &render::base_archives(path));
     let cam = match view.as_str() {
         "front" => Camera::front(),
         "back" => Camera::back(),
@@ -1106,28 +946,16 @@ fn asset_preview(model: String, view: String, size: usize) -> CmdResult<serde_js
         _ => Camera::three_quarter(),
     };
     let fallback = render::skin_for(path);
-    let held: Option<Texture> =
-        fallback
-            .as_ref()
-            .map(|(rgba, w, h)| Texture { rgba, w: *w, h: *h });
-    let px = render::render_scene_maps(
-        &models,
-        held.as_ref(),
-        Some(&maps),
-        &cam,
-        Mode::Textured,
-        size,
-        size,
-    );
+    let held: Option<Texture> = fallback
+        .as_ref()
+        .map(|(rgba, w, h)| Texture { rgba, w: *w, h: *h });
+    let px = render::render_scene_maps(&models, held.as_ref(), Some(&maps), &cam, Mode::Textured, size, size);
     let mut buf = Vec::new();
     {
         let mut enc = png::Encoder::new(&mut buf, size as u32, size as u32);
         enc.set_color(png::ColorType::Rgba);
         enc.set_depth(png::BitDepth::Eight);
-        enc.write_header()
-            .map_err(e)?
-            .write_image_data(&px)
-            .map_err(e)?;
+        enc.write_header().map_err(e)?.write_image_data(&px).map_err(e)?;
     }
     let (found, named) = maps.stats();
     Ok(serde_json::json!({
@@ -1139,6 +967,7 @@ fn asset_preview(model: String, view: String, size: usize) -> CmdResult<serde_js
     }))
 }
 
+
 /// Read a rig chain file: a `.ask` skeleton or a `.frig` rig. Returns the bones
 /// or units so the app can show what a clip is actually driving, and refuses a
 /// file whose header does not satisfy its own decoder rather than showing a
@@ -1148,10 +977,7 @@ fn rig_read(path: String) -> CmdResult<serde_json::Value> {
     use fl27mm::{ask, frig};
     let p = Path::new(&path);
     let bytes = std::fs::read(p).map_err(e)?;
-    let ext = p
-        .extension()
-        .map(|x| x.to_string_lossy().to_lowercase())
-        .unwrap_or_default();
+    let ext = p.extension().map(|x| x.to_string_lossy().to_lowercase()).unwrap_or_default();
     match ext.as_str() {
         "ask" => {
             let s = ask::Skeleton::parse(&bytes).map_err(e)?;
@@ -1173,9 +999,7 @@ fn rig_read(path: String) -> CmdResult<serde_json::Value> {
             // meaning to the reader. The install uses two pairings: a plain
             // same-stem pair, and the engine's `<x>_skel.frig` +
             // `<x>_anim_skel.ask`, so both are tried.
-            let stem = p
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
+            let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default();
             let candidates = [
                 p.with_extension("ask"),
@@ -1228,8 +1052,7 @@ fn gani_read(path: String) -> CmdResult<serde_json::Value> {
     for (k, u) in units.iter().enumerate() {
         let mut segs = Vec::new();
         for s in &u.segments {
-            let keys =
-                gani::keys_of(&bytes, s, clip.frame_count as usize, u.is_static()).map_err(e)?;
+            let keys = gani::keys_of(&bytes, s, clip.frame_count as usize, u.is_static()).map_err(e)?;
             segs.push(serde_json::json!({
                 "id": s.segment_id, "kind": s.kind.name(), "bits": s.component_bits,
                 "bytes": [s.blob.0, s.blob.1], "keys": keys.len(),
@@ -1270,22 +1093,14 @@ fn gani_set_key(
         unit,
         segment,
         key,
-        gani::KeyValue::Quat {
-            parts: [parts[0], parts[1], parts[2]],
-            signs: [signs[0], signs[1], signs[2]],
-        },
+        gani::KeyValue::Quat { parts: [parts[0], parts[1], parts[2]], signs: [signs[0], signs[1], signs[2]] },
     )
     .map_err(e)?;
     let bytes = std::fs::read(Path::new(&path)).map_err(e)?;
     let clip = gani::Clip::parse(&bytes).map_err(e)?;
     let units = gani::walk(&bytes).map_err(e)?;
-    let u = units
-        .get(unit)
-        .ok_or_else(|| "unit went away".to_string())?;
-    let s = u
-        .segments
-        .get(segment)
-        .ok_or_else(|| "segment went away".to_string())?;
+    let u = units.get(unit).ok_or_else(|| "unit went away".to_string())?;
+    let s = u.segments.get(segment).ok_or_else(|| "segment went away".to_string())?;
     let keys = gani::keys_of(&bytes, s, clip.frame_count as usize, u.is_static()).map_err(e)?;
     Ok(serde_json::json!({
         "readBack": keys.get(key).map(|x| x.render()).unwrap_or_default(),
@@ -1329,6 +1144,7 @@ fn menu_check(root: String, bases: Vec<String>) -> CmdResult<serde_json::Value> 
     }))
 }
 
+
 /// Repoint one navigation event and write the screen back. The core refuses a
 /// target that exists in neither the set nor the layers given, so a typo here
 /// is an error rather than a new dead button.
@@ -1343,11 +1159,7 @@ fn menu_link(
     use fl27mm::menus;
     let p = Path::new(&root);
     let screens = menus::load(p).map_err(e)?;
-    if !menus::target_known(
-        &screens,
-        &bases.iter().map(PathBuf::from).collect::<Vec<_>>(),
-        &target,
-    ) {
+    if !menus::target_known(&screens, &bases.iter().map(PathBuf::from).collect::<Vec<_>>(), &target) {
         return Err(format!(
             "{target} is not a screen in this set or in the layers given; nothing would follow the button"
         ));
@@ -1357,56 +1169,36 @@ fn menu_link(
     Ok(format!("{} · {} -> {}", screen, event, target))
 }
 
+#[tauri::command]
+fn menu_clone(root: String, screen: String, target: String) -> CmdResult<String> {
+    use fl27mm::menus;
+    let screens = menus::load(Path::new(&root)).map_err(e)?;
+    let (copy, destination) = menus::clone_screen(&screens, &screen, &target).map_err(e)?;
+    if let Some(parent) = destination.parent() {
+        std::fs::create_dir_all(parent).map_err(e)?;
+    }
+    menus::write(&copy).map_err(e)?;
+    Ok(copy.id)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(Cache::default())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            detect_game,
-            scan,
-            order_report,
-            save_order,
-            conflict_report,
-            cpk_list,
-            cpk_extract,
-            cpk_pack,
-            tex_info,
-            tex_preview,
-            tex_convert,
-            container_report,
-            container_unwrap,
-            container_rewrap,
-            pesdb_report,
-            game_map,
-            archive_map,
-            explain_path,
-            bin_read,
-            bin_section,
-            bin_hex,
-            bin_section_table,
-            studio_tree,
-            studio_read,
-            studio_write,
-            studio_new_pack,
-            studio_check_pack,
-            studio_install,
-            studio_kinds,
-            studio_entries,
-            studio_edit,
-            studio_create,
-            studio_rename,
-            studio_remove,
-            studio_reveal,
+            detect_game, scan, order_report, save_order, conflict_report,
+            cpk_list, cpk_extract, cpk_pack,
+            tex_info, tex_preview, tex_convert,
+            container_report, container_unwrap, container_rewrap,
+            pesdb_report, game_map, archive_map, explain_path, bin_read, bin_section, bin_hex, bin_section_table,
+            studio_tree, studio_read, studio_write, studio_new_pack,
+            studio_check_pack, studio_install, studio_kinds,
+            studio_entries, studio_edit, studio_create, studio_rename,
+            studio_remove, studio_reveal,
             bin_patch,
-            asset_list,
-            asset_replace,
-            asset_preview,
-            gani_read,
-            gani_rate,
-            gani_set_key,
-            rig_read,
-            menu_check,
-            menu_link,
+            asset_list, asset_replace, asset_preview,
+            gani_read, gani_rate, gani_set_key, rig_read,
+            menu_check, menu_link, menu_clone,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the FL27 mod manager");

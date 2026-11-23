@@ -22,9 +22,7 @@ fn target_units() -> usize {
 fn read_children(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut dirs = Vec::new();
     let mut files = Vec::new();
-    let Ok(entries) = fs::read_dir(dir) else {
-        return (dirs, files);
-    };
+    let Ok(entries) = fs::read_dir(dir) else { return (dirs, files) };
     for entry in entries.flatten() {
         // file_type comes from the directory enumeration on Windows, so this
         // does not cost an extra stat per entry the way path.is_dir() does.
@@ -33,11 +31,7 @@ fn read_children(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
             Ok(_) => files.push(entry.path()),
             Err(_) => {
                 let p = entry.path();
-                if p.is_dir() {
-                    dirs.push(p)
-                } else {
-                    files.push(p)
-                }
+                if p.is_dir() { dirs.push(p) } else { files.push(p) }
             }
         }
     }
@@ -70,8 +64,7 @@ pub fn files(root: &Path) -> Vec<PathBuf> {
         }
         frontier = next;
     }
-    let rest: Vec<PathBuf> = frontier
-        .par_iter()
+    let rest: Vec<PathBuf> = frontier.par_iter()
         .flat_map(|d| {
             let mut f = Vec::new();
             walk_serial(d, &mut f);
@@ -89,9 +82,7 @@ pub fn stats(root: &Path, cap: usize) -> (u64, usize) {
     let mut count = 0usize;
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let Ok(entries) = fs::read_dir(&dir) else {
-            continue;
-        };
+        let Ok(entries) = fs::read_dir(&dir) else { continue };
         for entry in entries.flatten() {
             match entry.file_type() {
                 Ok(t) if t.is_dir() => stack.push(entry.path()),
@@ -104,9 +95,7 @@ pub fn stats(root: &Path, cap: usize) -> (u64, usize) {
                 }
                 Err(_) => {
                     let p = entry.path();
-                    if p.is_dir() {
-                        stack.push(p)
-                    }
+                    if p.is_dir() { stack.push(p) }
                 }
             }
         }

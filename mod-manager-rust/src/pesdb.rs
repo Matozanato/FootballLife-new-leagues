@@ -50,28 +50,19 @@ pub fn inspect(path: &Path) -> std::io::Result<TableInfo> {
     let file_size = raw.len() as u64;
     if raw.len() >= 16 && &raw[3..8] == WESYS {
         let body = u32::from_le_bytes([raw[12], raw[13], raw[14], raw[15]]) as u64;
-        return Ok(TableInfo {
-            framing: Framing::Wesys,
-            file_size,
-            body_size: body,
-        });
+        return Ok(TableInfo { framing: Framing::Wesys, file_size, body_size: body });
     }
     if raw.len() > 24 && raw[4..8] == [8, 0, 0, 0] {
         let header = u32::from_le_bytes([raw[8], raw[9], raw[10], raw[11]]) as usize;
         let body = u32::from_le_bytes([raw[12], raw[13], raw[14], raw[15]]) as u64;
         if (4..=65536).contains(&header) && header as u64 + body <= file_size {
-            return Ok(TableInfo {
-                framing: Framing::Container,
-                file_size,
-                body_size: body,
-            });
+            return Ok(TableInfo { framing: Framing::Container, file_size, body_size: body });
         }
     }
     // Same readability test the container codec uses, so the two never
     // disagree about whether a file is text-like or opaque.
     let head = &raw[..raw.len().min(4096)];
-    let printable = head
-        .iter()
+    let printable = head.iter()
         .filter(|&&c| (32..127).contains(&c) || matches!(c, 9 | 10 | 13))
         .count();
     let framing = if !head.is_empty() && printable * 10 > head.len() * 6 {
@@ -79,11 +70,7 @@ pub fn inspect(path: &Path) -> std::io::Result<TableInfo> {
     } else {
         Framing::Unknown
     };
-    Ok(TableInfo {
-        framing,
-        file_size,
-        body_size: file_size,
-    })
+    Ok(TableInfo { framing, file_size, body_size: file_size })
 }
 
 /// Record strides established by measurement, not assumption. Unknown tables
@@ -124,10 +111,8 @@ pub fn validate(path: &Path) -> Verdict {
         Ok(i) => i,
         Err(e) => {
             return Verdict {
-                ok: false,
-                status: Status::Unreadable,
-                reason: format!("unreadable: {e}"),
-                info: None,
+                ok: false, status: Status::Unreadable,
+                reason: format!("unreadable: {e}"), info: None,
             }
         }
     };
@@ -138,8 +123,7 @@ pub fn validate(path: &Path) -> Verdict {
             reason: format!(
                 "{} B of opaque data with no WESYS header — not a table this \
                  codec can read, so its record layout cannot be checked",
-                info.file_size
-            ),
+                info.file_size),
             info: Some(info),
         };
     }
@@ -147,11 +131,8 @@ pub fn validate(path: &Path) -> Verdict {
         None => Verdict {
             ok: true,
             status: Status::Ok,
-            reason: format!(
-                "{} B {}, no established stride for {name}",
-                info.body_size,
-                info.framing.label()
-            ),
+            reason: format!("{} B {}, no established stride for {name}",
+                            info.body_size, info.framing.label()),
             info: Some(info),
         },
         Some(stride) => {
@@ -204,11 +185,8 @@ mod tests {
         let v = validate(&p);
         assert!(!v.ok);
         assert_eq!(v.status, Status::Unrecognised);
-        assert!(
-            !v.reason.contains("left over"),
-            "must not claim a stride defect about unreadable bytes: {}",
-            v.reason
-        );
+        assert!(!v.reason.contains("left over"),
+                "must not claim a stride defect about unreadable bytes: {}", v.reason);
     }
 
     #[test]

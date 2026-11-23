@@ -82,29 +82,19 @@ impl Value {
 }
 
 impl From<u64> for Value {
-    fn from(v: u64) -> Self {
-        Value::Int(v)
-    }
+    fn from(v: u64) -> Self { Value::Int(v) }
 }
 impl From<u32> for Value {
-    fn from(v: u32) -> Self {
-        Value::Int(v as u64)
-    }
+    fn from(v: u32) -> Self { Value::Int(v as u64) }
 }
 impl From<usize> for Value {
-    fn from(v: usize) -> Self {
-        Value::Int(v as u64)
-    }
+    fn from(v: usize) -> Self { Value::Int(v as u64) }
 }
 impl From<&str> for Value {
-    fn from(v: &str) -> Self {
-        Value::Str(v.to_string())
-    }
+    fn from(v: &str) -> Self { Value::Str(v.to_string()) }
 }
 impl From<String> for Value {
-    fn from(v: String) -> Self {
-        Value::Str(v)
-    }
+    fn from(v: String) -> Self { Value::Str(v) }
 }
 
 pub type Row = HashMap<String, Value>;
@@ -127,11 +117,7 @@ fn read_string(buf: &[u8], strings: usize, off: u32) -> String {
     if s >= buf.len() {
         return String::new();
     }
-    let e = buf[s..]
-        .iter()
-        .position(|&c| c == 0)
-        .map(|i| s + i)
-        .unwrap_or(buf.len());
+    let e = buf[s..].iter().position(|&c| c == 0).map(|i| s + i).unwrap_or(buf.len());
     String::from_utf8_lossy(&buf[s..e]).into_owned()
 }
 
@@ -142,11 +128,8 @@ fn read_value(buf: &[u8], p: usize, kind: u8, strings: usize) -> Value {
     }
     let raw = &buf[p..p + w];
     match kind & 0x0F {
-        0x0A => Value::Str(read_string(
-            buf,
-            strings,
-            u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
-        )),
+        0x0A => Value::Str(read_string(buf, strings, u32::from_be_bytes(
+            [raw[0], raw[1], raw[2], raw[3]]))),
         0x08 => {
             let bits = u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]);
             Value::Int(f32::from_bits(bits) as u64)
@@ -196,11 +179,7 @@ impl Utf {
             } else {
                 None
             };
-            columns.push(Column {
-                name: cname,
-                flags,
-                constant,
-            });
+            columns.push(Column { name: cname, flags, constant });
         }
 
         let mut rows = Vec::with_capacity(num_rows);
@@ -221,11 +200,7 @@ impl Utf {
             }
             rows.push(row);
         }
-        Ok(Utf {
-            name,
-            columns,
-            rows,
-        })
+        Ok(Utf { name, columns, rows })
     }
 }
 
@@ -278,20 +253,12 @@ pub struct Builder {
 
 impl Builder {
     pub fn new(name: &str) -> Builder {
-        Builder {
-            name: name.to_string(),
-            columns: Vec::new(),
-            rows: Vec::new(),
-        }
+        Builder { name: name.to_string(), columns: Vec::new(), rows: Vec::new() }
     }
 
     /// A column whose value is stored once per row.
     pub fn col(mut self, name: &str, flags: u8) -> Self {
-        self.columns.push(Column {
-            name: name.to_string(),
-            flags,
-            constant: None,
-        });
+        self.columns.push(Column { name: name.to_string(), flags, constant: None });
         self
     }
 
@@ -316,8 +283,7 @@ impl Builder {
     }
 
     fn row_length(&self) -> usize {
-        self.columns
-            .iter()
+        self.columns.iter()
             .filter(|c| storage(c.flags) == 0x50)
             .map(|c| type_width(c.flags))
             .sum()
@@ -344,12 +310,8 @@ impl Builder {
             schema.push(col.flags);
             schema.extend_from_slice(&ptr.to_be_bytes());
             if storage(col.flags) == 0x30 {
-                write_value(
-                    &mut schema,
-                    col.flags,
-                    col.constant.as_ref().unwrap_or(&Value::Zero),
-                    &mut strings,
-                );
+                write_value(&mut schema, col.flags,
+                            col.constant.as_ref().unwrap_or(&Value::Zero), &mut strings);
             }
         }
 
@@ -399,10 +361,7 @@ pub fn packet(magic: &[u8; 4], table: &[u8]) -> Vec<u8> {
 
 /// Convenience: build a one-row table from ordered (name, value) pairs.
 pub fn row(pairs: &[(&str, Value)]) -> Row {
-    pairs
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.clone()))
-        .collect()
+    pairs.iter().map(|(k, v)| (k.to_string(), v.clone())).collect()
 }
 
 #[cfg(test)]

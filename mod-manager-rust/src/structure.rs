@@ -117,12 +117,7 @@ fn column_stats(recs: &[&[u8]], at: usize) -> ColumnStats {
     let (mut four_zero, mut hi_zero, mut all_float, mut all_same, mut repeats) =
         (true, true, true, true, 0usize);
     if at + 4 <= recs[0].len() {
-        let first = [
-            recs[0][at],
-            recs[0][at + 1],
-            recs[0][at + 2],
-            recs[0][at + 3],
-        ];
+        let first = [recs[0][at], recs[0][at + 1], recs[0][at + 2], recs[0][at + 3]];
         let mut seen = std::collections::HashSet::new();
         for r in recs {
             let b = [r[at], r[at + 1], r[at + 2], r[at + 3]];
@@ -149,15 +144,7 @@ fn column_stats(recs: &[&[u8]], at: usize) -> ColumnStats {
         all_float = false;
         all_same = constant;
     }
-    ColumnStats {
-        all_zero,
-        constant,
-        four_zero,
-        hi_zero,
-        all_float,
-        all_same,
-        repeats,
-    }
+    ColumnStats { all_zero, constant, four_zero, hi_zero, all_float, all_same, repeats }
 }
 
 /// Classify the field starting at one offset. Independent of every other
@@ -173,46 +160,22 @@ fn decide(recs: &[&[u8]], at: usize, stride: usize) -> Decision {
     let n = recs.len();
     if at + 4 <= stride {
         if s.four_zero {
-            return Decision {
-                width: 4,
-                kind: FieldKind::Padding,
-                support: n,
-            };
+            return Decision { width: 4, kind: FieldKind::Padding, support: n };
         }
         if s.all_same {
-            return Decision {
-                width: 4,
-                kind: FieldKind::Constant,
-                support: n,
-            };
+            return Decision { width: 4, kind: FieldKind::Constant, support: n };
         }
         if s.all_float {
-            return Decision {
-                width: 4,
-                kind: FieldKind::Float,
-                support: n,
-            };
+            return Decision { width: 4, kind: FieldKind::Float, support: n };
         }
         if s.hi_zero && repeats_are_key(s.repeats, n) {
-            return Decision {
-                width: 4,
-                kind: FieldKind::Id,
-                support: n,
-            };
+            return Decision { width: 4, kind: FieldKind::Id, support: n };
         }
         if s.hi_zero {
-            return Decision {
-                width: 4,
-                kind: FieldKind::Counter,
-                support: n,
-            };
+            return Decision { width: 4, kind: FieldKind::Counter, support: n };
         }
         if let Some((w, sup)) = text_run(recs, at, stride) {
-            return Decision {
-                width: w,
-                kind: FieldKind::Text,
-                support: sup,
-            };
+            return Decision { width: w, kind: FieldKind::Text, support: sup };
         }
     }
     let (kind, width) = if s.all_zero {
@@ -224,11 +187,7 @@ fn decide(recs: &[&[u8]], at: usize, stride: usize) -> Decision {
     } else {
         (FieldKind::Counter, 1)
     };
-    Decision {
-        width,
-        kind,
-        support: n,
-    }
+    Decision { width, kind, support: n }
 }
 
 fn repeats_are_key(repeats: usize, n: usize) -> bool {
@@ -260,8 +219,7 @@ fn text_run(recs: &[&[u8]], offset: usize, stride: usize) -> Option<(usize, usiz
     // from a holder record at the median length — taking recs[median_index]
     // instead picks an arbitrary record that may be blank, which is how a real
     // name field got rejected for failing the letter test.
-    let mut holders: Vec<(usize, &[u8])> = recs
-        .iter()
+    let mut holders: Vec<(usize, &[u8])> = recs.iter()
         // A name starts with printable ASCII or with a UTF-8 lead byte. FL27
         // database names are UTF-8 — the Japanese stadium names in
         // Stadium.bin are invisible to an ASCII-only test, and that is what
@@ -301,8 +259,7 @@ fn text_run(recs: &[&[u8]], offset: usize, stride: usize) -> Option<(usize, usiz
             return None;
         }
     } else {
-        let alpha = body
-            .iter()
+        let alpha = body.iter()
             .filter(|b| b.is_ascii_alphabetic() || **b == b' ')
             .count();
         if alpha * 2 < body.len() {
@@ -383,8 +340,7 @@ fn sample_of(recs: &[&[u8]], offset: usize, width: usize, kind: FieldKind) -> St
     // sparse table is usually blank, and printing its control bytes as
     // "\u{1f}" made a real name field look like unreadable garbage.
     let r = match kind {
-        FieldKind::Text => recs
-            .iter()
+        FieldKind::Text => recs.iter()
             .find(|r| name_start(r[offset]))
             .copied()
             .unwrap_or(recs[recs.len() / 2]),
@@ -397,25 +353,14 @@ fn sample_of(recs: &[&[u8]], offset: usize, width: usize, kind: FieldKind) -> St
             format!("{v:.4}")
         }
         FieldKind::Id | FieldKind::Counter => {
-            if width == 1 {
-                format!("{}", bytes[0])
-            } else {
-                format!(
-                    "{}",
-                    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
-                )
-            }
+            if width == 1 { format!("{}", bytes[0]) }
+            else { format!("{}", u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])) }
         }
         FieldKind::Text => {
             let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
             format!("{:?}", String::from_utf8_lossy(&bytes[..end]))
         }
-        _ => bytes
-            .iter()
-            .take(8)
-            .map(|b| format!("{b:02x}"))
-            .collect::<Vec<_>>()
-            .join(" "),
+        _ => bytes.iter().take(8).map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" "),
     }
 }
 
@@ -436,9 +381,7 @@ fn sub_record_period(recs: &[&[u8]], stride: usize) -> Option<usize> {
     let mut best = None;
     let mut best_score = 0.0f64;
     for p in 16..=stride / 2 {
-        let agree = (p..stride)
-            .filter(|&k| zero_profile[k] == zero_profile[k - p])
-            .count();
+        let agree = (p..stride).filter(|&k| zero_profile[k] == zero_profile[k - p]).count();
         let score = agree as f64 / (stride - p) as f64;
         if score > best_score && score > 0.98 {
             best_score = score;
@@ -463,8 +406,7 @@ pub fn infer(body: &[u8], stride: usize) -> Option<Inferred> {
 
     // Every offset is classified independently, so this is the part worth
     // parallelising; the merge below has to stay in order.
-    let decisions: Vec<Decision> = (0..stride)
-        .into_par_iter()
+    let decisions: Vec<Decision> = (0..stride).into_par_iter()
         .map(|at| decide(&rows, at, stride))
         .collect();
 
@@ -479,8 +421,7 @@ pub fn infer(body: &[u8], stride: usize) -> Option<Inferred> {
         // terminator and a length of its own, and merging two adjacent ones
         // turned `Boots.bin`'s whole 100-byte record into a single "name".
         let merge = kind != FieldKind::Text
-            && fields
-                .last()
+            && fields.last()
                 .map(|l| l.kind == kind && l.offset + l.width == at)
                 .unwrap_or(false);
         if merge {
@@ -509,8 +450,7 @@ pub fn infer(body: &[u8], stride: usize) -> Option<Inferred> {
         }
     }
 
-    let mapped: usize = fields
-        .iter()
+    let mapped: usize = fields.iter()
         .filter(|f| f.kind != FieldKind::Padding && f.kind != FieldKind::Mixed)
         .map(|f| f.width)
         .sum();
@@ -543,9 +483,7 @@ pub fn best_row_width(data: &[u8]) -> Option<(usize, usize)> {
         if data.len() / row < 4 {
             break;
         }
-        let agree = (row..data.len())
-            .filter(|&k| profile[k] == profile[k - row])
-            .count();
+        let agree = (row..data.len()).filter(|&k| profile[k] == profile[k - row]).count();
         let score = agree as f64 / (data.len() - row) as f64;
         if score > 0.95 && best.is_none_or(|(_, s)| score > s) {
             best = Some((row, score));
@@ -570,12 +508,10 @@ pub fn infer_block(data: &[u8]) -> Option<(usize, usize, Vec<f32>)> {
     if row == 0 || !row.is_multiple_of(4) {
         return None;
     }
-    let floats: Vec<f32> = rest
-        .chunks_exact(4)
+    let floats: Vec<f32> = rest.chunks_exact(4)
         .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect();
-    let sane = floats
-        .iter()
+    let sane = floats.iter()
         .filter(|v| f32_sane(v.to_bits()) || v.abs() > 1e7)
         .count();
     if sane * 20 < floats.len() * 19 {
@@ -607,19 +543,11 @@ mod tests {
         });
         let got = infer(&body, 16).unwrap();
         assert_eq!(got.records, 20);
-        let pad = got
-            .fields
-            .iter()
-            .find(|f| f.kind == FieldKind::Padding)
-            .unwrap();
+        let pad = got.fields.iter().find(|f| f.kind == FieldKind::Padding).unwrap();
         assert_eq!((pad.offset, pad.width), (4, 8));
         // +12 is 11 00 00 00 in every record: a constant, read as one 4-byte
         // field rather than as a byte plus three padding bytes.
-        let c = got
-            .fields
-            .iter()
-            .find(|f| f.kind == FieldKind::Constant)
-            .unwrap();
+        let c = got.fields.iter().find(|f| f.kind == FieldKind::Constant).unwrap();
         assert_eq!((c.offset, c.width), (12, 4));
     }
 
@@ -632,21 +560,16 @@ mod tests {
             r
         });
         let got = infer(&body, 8).unwrap();
-        assert!(
-            got.fields.iter().any(|f| f.kind == FieldKind::Float),
-            "{:?}",
-            got.fields
-        );
+        assert!(got.fields.iter().any(|f| f.kind == FieldKind::Float),
+                "{:?}", got.fields);
     }
 
     #[test]
     fn text_runs_are_recognised_and_sampled() {
         // Names must differ per record, or the run is genuinely constant and
         // the correct answer is Constant, not Text.
-        let names = [
-            "Ireland", "Scotland", "Wales", "France", "Spain", "Italy", "Germany", "Portugal",
-            "Brazil", "Japan",
-        ];
+        let names = ["Ireland", "Scotland", "Wales", "France", "Spain",
+                     "Italy", "Germany", "Portugal", "Brazil", "Japan"];
         let body = rows(10, |i| {
             let mut r = vec![0u8; 32];
             r[..4].copy_from_slice(&(i as u32).to_le_bytes());
@@ -654,11 +577,7 @@ mod tests {
             r
         });
         let got = infer(&body, 32).unwrap();
-        let t = got
-            .fields
-            .iter()
-            .find(|f| f.kind == FieldKind::Text)
-            .unwrap();
+        let t = got.fields.iter().find(|f| f.kind == FieldKind::Text).unwrap();
         assert_eq!(t.offset, 8);
         // The sample is the middle record, not the first, so it must be one of
         // the names actually present rather than a specific one.
@@ -703,10 +622,7 @@ mod tests {
         let mut misaligned = vec![0u8; 4];
         misaligned[..4].copy_from_slice(&7u32.to_le_bytes());
         misaligned.extend_from_slice(&[0u8; 401]);
-        assert!(
-            infer_block(&misaligned).is_none(),
-            "count must divide the data"
-        );
+        assert!(infer_block(&misaligned).is_none(), "count must divide the data");
 
         let mut junk = vec![0u8; 4];
         junk[..4].copy_from_slice(&10u32.to_le_bytes());
@@ -723,8 +639,7 @@ mod tests {
         // area plus a 4-byte key plus padding, with an internal name token at
         // +1055 — all of it found from the bytes, not from documentation.
         let p = std::path::Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\CompetitionRegulation.bin",
-        );
+            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\CompetitionRegulation.bin");
         if !p.exists() {
             return;
         }
@@ -732,38 +647,22 @@ mod tests {
         let body = crate::wesys::decode(&raw).unwrap().body;
         let got = infer(&body, 2352).unwrap();
         assert_eq!(got.records, 197);
-        assert!(
-            got.sub_record.is_none() || got.sub_record.unwrap() >= 16,
-            "a trivial 2-byte period must not be reported: {:?}",
-            got.sub_record
-        );
+        assert!(got.sub_record.is_none() || got.sub_record.unwrap() >= 16,
+                "a trivial 2-byte period must not be reported: {:?}", got.sub_record);
         // The point of this test is the cross-check: the hand-written map in
         // binread says the display name sits at +1087, and the inferrer — which
         // is given nothing but the bytes — must find a text field there too.
         // Asserting a specific record's value would only prove the sample is
         // stable, not that the layout was recovered.
-        assert!(
-            got.fields
-                .iter()
-                .any(|f| f.kind == FieldKind::Text && f.offset == 1087),
-            "expected the inferrer to find the name field at +1087, got {:?}",
-            got.fields
-                .iter()
-                .filter(|f| f.offset > 1000 && f.offset < 1150)
-                .map(|f| (f.offset, f.width, f.kind.label()))
-                .collect::<Vec<_>>()
-        );
-        assert!(got
-            .fields
-            .iter()
-            .any(|f| f.kind == FieldKind::Padding && f.width > 40));
+        assert!(got.fields.iter().any(|f| f.kind == FieldKind::Text && f.offset == 1087),
+                "expected the inferrer to find the name field at +1087, got {:?}",
+                got.fields.iter().filter(|f| f.offset > 1000 && f.offset < 1150)
+                    .map(|f| (f.offset, f.width, f.kind.label())).collect::<Vec<_>>());
+        assert!(got.fields.iter().any(|f| f.kind == FieldKind::Padding && f.width > 40));
         let total: usize = got.fields.iter().map(|f| f.width).sum();
         assert_eq!(total, 2352, "fields must tile the record");
         // No over-long run may still be labelled a counter.
-        assert!(!got
-            .fields
-            .iter()
-            .any(|f| f.kind == FieldKind::Counter && f.width > 8));
+        assert!(!got.fields.iter().any(|f| f.kind == FieldKind::Counter && f.width > 8));
     }
 
     #[test]
@@ -776,15 +675,9 @@ mod tests {
         // A named list rather than a walk of livecpk: several packs carry
         // their own 8 MB Player.bin, and inferring over all of them pushed the
         // suite from 27 s to 279 s for no extra coverage.
-        let dir =
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb";
-        let names = [
-            "Competition.bin",
-            "CompetitionEntry.bin",
-            "CompetitionRegulation.bin",
-            "Team.bin",
-            "Player.bin",
-        ];
+        let dir = r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb";
+        let names = ["Competition.bin", "CompetitionEntry.bin",
+                     "CompetitionRegulation.bin", "Team.bin", "Player.bin"];
         let mut files = 0;
         for name in names {
             let p = std::path::Path::new(dir).join(name);
@@ -798,33 +691,20 @@ mod tests {
             };
             let stride = crate::pesdb::stride_for(name).unwrap_or(0) as usize;
             let Some(got) = (stride >= 8 && body.len() % stride == 0)
-                .then(|| infer(&body, stride))
-                .flatten()
-            else {
-                continue;
-            };
+                .then(|| infer(&body, stride)).flatten() else { continue };
             let mut cursor = 0;
             for f in &got.fields {
-                assert_eq!(
-                    f.offset, cursor,
-                    "{name}: gap or overlap at {cursor} (field {:?})",
-                    f
-                );
+                assert_eq!(f.offset, cursor,
+                    "{name}: gap or overlap at {cursor} (field {:?})", f);
                 assert!(f.width >= 1, "{name}: zero-width field at {}", f.offset);
                 cursor += f.width;
             }
             assert_eq!(cursor, stride, "{name}: fields do not cover the record");
-            assert!(
-                got.mapped_bytes <= stride,
-                "{name}: {} mapped over a stride of {stride}",
-                got.mapped_bytes
-            );
+            assert!(got.mapped_bytes <= stride,
+                    "{name}: {} mapped over a stride of {stride}", got.mapped_bytes);
             files += 1;
         }
-        assert!(
-            files >= 3,
-            "expected to check several shipped tables, got {files}"
-        );
+        assert!(files >= 3, "expected to check several shipped tables, got {files}");
     }
 
     #[test]
@@ -832,8 +712,7 @@ mod tests {
         // cpuLevel.o is a 16-byte header then 34 rows of 32 bytes, so the
         // count does not divide the remainder and the tidy reading fails.
         let p = std::path::Path::new(
-            r"C:\Games\SP Football Life 2027\FL27 Megapatch\out\rt\common\match\constant\constant_match.bin",
-        );
+            r"C:\Games\SP Football Life 2027\FL27 Megapatch\out\rt\common\match\constant\constant_match.bin");
         if !p.exists() {
             return;
         }
@@ -850,24 +729,18 @@ mod tests {
         // Merging neighbouring text fields claimed all 100 bytes were one
         // name, which is not a layout, it is an artefact of the merge rule.
         let p = std::path::Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\boot-root\common\etc\pesdb\Boots.bin",
-        );
+            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\boot-root\common\etc\pesdb\Boots.bin");
         if !p.exists() {
             return;
         }
         let raw = std::fs::read(p).unwrap();
         let body = crate::wesys::decode(&raw).unwrap().body;
         let got = infer(&body, 100).unwrap();
-        assert!(
-            !got.fields
-                .iter()
+        assert!(!got.fields.iter()
                 .any(|f| f.kind == FieldKind::Text && f.width >= 100),
-            "one text field cannot span the whole record: {:?}",
-            got.fields
-                .iter()
-                .map(|f| (f.offset, f.width, f.kind.label()))
-                .collect::<Vec<_>>()
-        );
+                "one text field cannot span the whole record: {:?}",
+                got.fields.iter().map(|f| (f.offset, f.width, f.kind.label()))
+                    .collect::<Vec<_>>());
     }
 
     #[test]

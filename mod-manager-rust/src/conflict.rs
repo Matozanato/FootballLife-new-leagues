@@ -19,6 +19,10 @@ use crate::packs::{self, Pack};
 
 pub fn fingerprint(path: &Path) -> io::Result<(u64, u64)> {
     let size = path.metadata()?.len();
+    Ok((size, content_hash(path)?))
+}
+
+fn content_hash(path: &Path) -> io::Result<u64> {
     let mut file = File::open(path)?;
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     let mut buf = vec![0u8; 1 << 16];
@@ -32,7 +36,7 @@ pub fn fingerprint(path: &Path) -> io::Result<(u64, u64)> {
             hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
         }
     }
-    Ok((size, hash))
+    Ok(hash)
 }
 
 /// key -> the packs that carry it
@@ -60,42 +64,87 @@ pub struct Conflicts {
 }
 
 pub fn analyse(packs: &[Pack], idx: &HashMap<String, Vec<usize>>) -> Conflicts {
-    let mut out = Conflicts::default();
-    for (key, owners) in idx {
-        if owners.len() < 2 {
-            continue;
-        }
-        out.shared += 1;
-        // Fingerprint per owner, so a pair is only a conflict when those two
-        // actually disagree. Marking every pair because one pack differs
-        // reports conflicts between packs that are byte-identical.
-        let mut prints: Vec<(usize, (u64, u64))> = Vec::new();
-        for &i in owners {
-            let path = packs[i].path.join(key.replace('/', "\\"));
-            if let Ok(fp) = fingerprint(&path) {
-                prints.push((i, fp));
+    use rayon::prelude::*;
+
+    let mut shared: Vec<_> = idx.iter().filter(|(_, owners)| owners.len() > 1).collect();
+    shared.sort_unstable_by(|a, b| a.0.cmp(b.0));
+
+    let results: Vec<_> = shared
+        .par_iter()
+        .map(|(key, owners)| {
+            let files: Vec<_> = owners
+                .iter()
+                .filter_map(|&i| {
+                    let path = packs[i].path.join(key.replace('/', "\\"));
+                    let size = path.metadata().ok()?.len();
+                    Some((i, path, size))
+                })
+                .collect();
+            let mut size_counts = HashMap::new();
+            for (_, _, size) in &files {
+                *size_counts.entry(*size).or_insert(0usize) += 1;
             }
-        }
-        let first = prints.first().map(|(_, fp)| *fp);
-        let same = first.is_some() && prints.iter().all(|(_, fp)| Some(*fp) == first);
-        if same {
+            let prints: Vec<_> = files
+                .into_iter()
+                .filter_map(|(i, path, size)| {
+                    let hash = if size_counts[&size] > 1 {
+                        Some(content_hash(&path).ok()?)
+                    } else {
+                        None
+                    };
+                    Some((i, size, hash))
+                })
+                .collect();
+
+            let all_equal = prints.first().is_some_and(|first| {
+                prints.iter().all(|(i, size, hash)| {
+                    *i == first.0 || (*size == first.1 && hash.is_some() && *hash == first.2)
+                })
+            });
+            let pairs = if all_equal {
+                Vec::new()
+            } else {
+                let mut pairs = Vec::new();
+                for a in 0..prints.len() {
+                    for b in (a + 1)..prints.len() {
+                        if prints[a].1 == prints[b].1
+                            && prints[a].2.is_some()
+                            && prints[a].2 == prints[b].2
+                        {
+                            continue;
+                        }
+                        let (mut x, mut y) = (prints[a].0, prints[b].0);
+                        if x > y {
+                            std::mem::swap(&mut x, &mut y);
+                        }
+                        pairs.push((x, y));
+                    }
+                }
+                pairs
+            };
+            (
+                all_equal,
+                !all_equal,
+                pairs,
+                (!all_equal).then(|| (*key).clone()),
+            )
+        })
+        .collect();
+
+    let mut out = Conflicts::default();
+    for (identical, differing, pairs, example) in results {
+        out.shared += 1;
+        if identical {
             out.identical += 1;
-            continue;
-        }
-        out.differing += 1;
-        if out.examples.len() < 8 {
-            out.examples.push(key.clone());
-        }
-        for a in 0..prints.len() {
-            for b in (a + 1)..prints.len() {
-                if prints[a].1 == prints[b].1 {
-                    continue;
+        } else if differing {
+            out.differing += 1;
+            if out.examples.len() < 8 {
+                if let Some(key) = example {
+                    out.examples.push(key);
                 }
-                let (mut x, mut y) = (prints[a].0, prints[b].0);
-                if x > y {
-                    std::mem::swap(&mut x, &mut y);
-                }
-                *out.pairs.entry((x, y)).or_insert(0) += 1;
+            }
+            for pair in pairs {
+                *out.pairs.entry(pair).or_insert(0) += 1;
             }
         }
     }

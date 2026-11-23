@@ -23,11 +23,7 @@ fn main() -> anyhow::Result<()> {
     let t = fl27mm::ftex::Ftex::read(Path::new(atlas))?;
     let (w, h, rgba) = t.to_rgba(0)?;
     eprintln!("atlas {}x{}", w, h);
-    let tex = render::Texture {
-        rgba: &rgba,
-        w: w as usize,
-        h: h as usize,
-    };
+    let tex = render::Texture { rgba: &rgba, w: w as usize, h: h as usize };
 
     let cam = match view.as_str() {
         "front" => Camera::front(),

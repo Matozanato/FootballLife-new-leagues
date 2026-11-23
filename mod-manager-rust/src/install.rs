@@ -25,11 +25,7 @@ impl Install {
             game: game.to_string_lossy().into_owned(),
             addons: addons.to_string_lossy().into_owned(),
             ini: addons.join("sider.ini").to_string_lossy().into_owned(),
-            packs_root: addons
-                .join("livecpk")
-                .join("root")
-                .to_string_lossy()
-                .into_owned(),
+            packs_root: addons.join("livecpk").join("root").to_string_lossy().into_owned(),
         }
     }
 }
@@ -119,19 +115,14 @@ pub fn detect(extra: &[PathBuf]) -> Vec<Install> {
         }
         let key = normalise(dir);
         let lowered = key.to_string_lossy().to_lowercase();
-        if seen
-            .iter()
-            .any(|s| s.to_string_lossy().to_lowercase() == lowered)
-        {
+        if seen.iter().any(|s| s.to_string_lossy().to_lowercase() == lowered) {
             return;
         }
         seen.push(key);
         out.push(Install::new(dir));
     };
     for root in extra.iter().chain(candidates(&mounted_drives()).iter()) {
-        let Ok(entries) = std::fs::read_dir(root) else {
-            continue;
-        };
+        let Ok(entries) = std::fs::read_dir(root) else { continue };
         for e in entries.flatten() {
             let p = e.path();
             if p.is_dir() {
@@ -154,18 +145,12 @@ mod tests {
         // The old list was ["C:", "D:", "E:", "F:"]. Anything past F: was
         // invisible, which is the reported bug on its own.
         assert!(prefixes_for("G:\\").iter().any(|p| p == Path::new("G:\\")));
-        assert!(prefixes_for("H:\\")
-            .iter()
-            .any(|p| p == Path::new("H:\\Games")));
+        assert!(prefixes_for("H:\\").iter().any(|p| p == Path::new("H:\\Games")));
         assert!(prefixes_for("G:\\")
             .iter()
             .any(|p| p == Path::new("G:\\SteamLibrary\\steamapps\\common")));
         let c = candidates(&["G:".to_string(), "H:".to_string()]);
-        assert!(
-            c.len() >= 2 * 19,
-            "expected a prefix per drive, got {}",
-            c.len()
-        );
+        assert!(c.len() >= 2 * 19, "expected a prefix per drive, got {}", c.len());
     }
 
     #[test]
@@ -184,9 +169,7 @@ mod tests {
         assert!(is_install(&game));
         assert!(!is_install(&tmp.join("NotAGame")));
         let i = Install::new(&game);
-        assert!(
-            i.ini.ends_with("SiderAddons\\sider.ini") || i.ini.ends_with("SiderAddons/sider.ini")
-        );
+        assert!(i.ini.ends_with("SiderAddons\\sider.ini") || i.ini.ends_with("SiderAddons/sider.ini"));
         assert!(i.packs_root.contains("livecpk"));
         std::fs::remove_dir_all(&tmp).ok();
     }
@@ -199,9 +182,7 @@ mod tests {
         std::fs::write(game.join("SiderAddons").join("sider.ini"), "[cpk.root]\n").unwrap();
         let found = detect(&[game.clone()]);
         assert!(
-            found
-                .iter()
-                .any(|f| f.game.eq_ignore_ascii_case(&game.to_string_lossy())),
+            found.iter().any(|f| f.game.eq_ignore_ascii_case(&game.to_string_lossy())),
             "a folder the user chose must be reported: {found:?}"
         );
         std::fs::remove_dir_all(&tmp).ok();
@@ -219,11 +200,7 @@ mod tests {
             .iter()
             .filter(|f| normalise(Path::new(&f.game)) == normalise(&game))
             .collect();
-        assert_eq!(
-            hits.len(),
-            1,
-            "{game:?} and {other:?} are one install, got {hits:?}"
-        );
+        assert_eq!(hits.len(), 1, "{game:?} and {other:?} are one install, got {hits:?}");
         std::fs::remove_dir_all(&tmp).ok();
     }
 }

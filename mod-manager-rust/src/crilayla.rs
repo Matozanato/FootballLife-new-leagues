@@ -98,10 +98,7 @@ fn encode_length(bits: &mut BitVec, length: usize) {
         }
         rem -= max;
         idx += 1;
-        debug_assert!(
-            idx < 1024,
-            "length {length} needs an unreasonable number of fields"
-        );
+        debug_assert!(idx < 1024, "length {length} needs an unreasonable number of fields");
     }
 }
 
@@ -165,7 +162,9 @@ fn tokenise(q: &[u8]) -> Vec<Token> {
                 // way the index stays below i + len, so it is always in bounds.
                 if dist >= 3 && dist <= reach {
                     let mut len = 0usize;
-                    while len < MAX_MATCH && i + len < n && q[i + len] == q[i + len - dist] {
+                    while len < MAX_MATCH && i + len < n
+                        && q[i + len] == q[i + len - dist]
+                    {
                         len += 1;
                     }
                     if len > best_len {
@@ -182,10 +181,7 @@ fn tokenise(q: &[u8]) -> Vec<Token> {
         }
 
         if best_len >= 3 {
-            tokens.push(Token::Match {
-                distance: best_dist,
-                length: best_len,
-            });
+            tokens.push(Token::Match { distance: best_dist, length: best_len });
             // Index every position the match covers so later bytes can reach it.
             // j is needed as an index into three different arrays, so this is
             // deliberately a range loop rather than a slice iterator.
@@ -329,11 +325,7 @@ mod tests {
             let back = crate::cpk::crilayla_decompress(&blob).unwrap();
             assert_eq!(back, d, "a {run}-byte run did not survive");
             // One long match, not thousands of literals.
-            assert!(
-                blob.len() < 4096,
-                "{run}-byte run encoded to {} bytes",
-                blob.len()
-            );
+            assert!(blob.len() < 4096, "{run}-byte run encoded to {} bytes", blob.len());
         }
     }
 
@@ -342,7 +334,8 @@ mod tests {
         // The six-entry sample above passed while 15 of 606 files were wrong,
         // so the real check is: take every compressed entry, not a handful.
         use std::io::{Read, Seek, Write};
-        let cpk_path = std::path::Path::new(r"C:\Games\SP Football Life 2027\Data\dt00_x64.cpk");
+        let cpk_path = std::path::Path::new(
+            r"C:\Games\SP Football Life 2027\Data\dt00_x64.cpk");
         if !cpk_path.exists() {
             return;
         }
@@ -352,8 +345,7 @@ mod tests {
         let mut failed = Vec::new();
         for entry in cpk.files.iter().filter(|f| f.compressed()) {
             let mut raw = vec![0u8; entry.size as usize];
-            file.seek(std::io::SeekFrom::Start(cpk.content_offset + entry.offset))
-                .unwrap();
+            file.seek(std::io::SeekFrom::Start(cpk.content_offset + entry.offset)).unwrap();
             file.read_exact(&mut raw).unwrap();
             let plain = crate::cpk::crilayla_decompress(&raw).unwrap();
             let blob = match compress(&plain) {
@@ -367,16 +359,9 @@ mod tests {
             }
             checked += 1;
         }
-        assert!(
-            checked > 200,
-            "expected to exercise most of the 298, got {checked}"
-        );
-        assert!(
-            failed.is_empty(),
-            "{} entries failed to round-trip: {:?}",
-            failed.len(),
-            &failed[..failed.len().min(5)]
-        );
+        assert!(checked > 200, "expected to exercise most of the 298, got {checked}");
+        assert!(failed.is_empty(), "{} entries failed to round-trip: {:?}",
+                failed.len(), &failed[..failed.len().min(5)]);
     }
 
     #[test]
@@ -398,8 +383,7 @@ mod tests {
         for entry in cpk.files.iter().filter(|f| f.compressed()).take(6) {
             let mut f = std::fs::File::open(cpk_path).unwrap();
             use std::io::Seek;
-            f.seek(std::io::SeekFrom::Start(cpk.content_offset + entry.offset))
-                .unwrap();
+            f.seek(std::io::SeekFrom::Start(cpk.content_offset + entry.offset)).unwrap();
             let mut raw = vec![0u8; entry.size as usize];
             f.read_exact(&mut raw).unwrap();
             let plain = crate::cpk::crilayla_decompress(&raw).unwrap();
@@ -410,11 +394,7 @@ mod tests {
             assert_eq!(back, plain, "{} did not round-trip", entry.path());
             // Our size must be within a sane margin of CRI's own.
             let ratio = blob.len() as f64 / entry.size as f64;
-            assert!(
-                ratio < 1.35,
-                "{} grew to {ratio:.2}x CRI's size",
-                entry.path()
-            );
+            assert!(ratio < 1.35, "{} grew to {ratio:.2}x CRI's size", entry.path());
             checked += 1;
         }
         assert!(checked > 0, "dt00 should contain compressed entries");

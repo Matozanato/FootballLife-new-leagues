@@ -144,9 +144,7 @@ fn truncated_cpk_never_panics() {
 /// user reaches by pointing the tool at the wrong file.
 #[test]
 fn arbitrary_bytes_are_rejected_not_consumed() {
-    let mut b: Vec<u8> = (0..200_000u32)
-        .map(|i| (i.wrapping_mul(2654435761) >> 13) as u8)
-        .collect();
+    let mut b: Vec<u8> = (0..200_000u32).map(|i| (i.wrapping_mul(2654435761) >> 13) as u8).collect();
     probe_all(&b);
     b[..6].copy_from_slice(b"foxfpk");
     probe_all(&b);

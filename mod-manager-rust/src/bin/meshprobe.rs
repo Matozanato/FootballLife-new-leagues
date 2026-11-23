@@ -13,26 +13,15 @@ fn main() -> anyhow::Result<()> {
             vec![path.to_path_buf()]
         };
         for f in files {
-            if f.extension()
-                .and_then(|e| e.to_str())
-                .map(|e| e.to_lowercase())
+            if f.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
                 != Some("fmdl".into())
             {
                 continue;
             }
             let Ok(m) = Fmdl::read(&f) else { continue };
-            println!(
-                "{}  ({} meshes, {} materials)",
-                f.display(),
-                m.meshes.len(),
-                m.materials.len()
-            );
+            println!("{}  ({} meshes, {} materials)", f.display(), m.meshes.len(), m.materials.len());
             for mat in &m.materials {
-                let slots: Vec<String> = mat
-                    .slots
-                    .iter()
-                    .map(|s| format!("{}={}", s.name, s.texture))
-                    .collect();
+                let slots: Vec<String> = mat.slots.iter().map(|s| format!("{}={}", s.name, s.texture)).collect();
                 println!("  material {:?}  {}", mat.name, slots.join("  "));
             }
             for mesh in &m.meshes {
@@ -50,14 +39,12 @@ fn main() -> anyhow::Result<()> {
                     for &off in &mesh.uv_offsets {
                         let base = v * mesh.stride + off;
                         if base + 8 <= mesh.attributes.len() {
-                            let f = |i: usize| {
-                                f32::from_le_bytes([
-                                    mesh.attributes[base + i * 4],
-                                    mesh.attributes[base + i * 4 + 1],
-                                    mesh.attributes[base + i * 4 + 2],
-                                    mesh.attributes[base + i * 4 + 3],
-                                ])
-                            };
+                            let f = |i: usize| f32::from_le_bytes([
+                                mesh.attributes[base + i * 4],
+                                mesh.attributes[base + i * 4 + 1],
+                                mesh.attributes[base + i * 4 + 2],
+                                mesh.attributes[base + i * 4 + 3],
+                            ]);
                             let (u, vv) = (f(0), f(1));
                             ulo = [ulo[0].min(u), ulo[1].min(vv)];
                             uhi = [uhi[0].max(u), uhi[1].max(vv)];

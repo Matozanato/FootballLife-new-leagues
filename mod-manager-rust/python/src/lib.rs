@@ -1103,6 +1103,21 @@ fn menu_link(
 }
 
 #[pyfunction]
+fn menu_clone(py: Python<'_>, root: PathBuf, screen: String, target: String) -> PyResult<String> {
+    py.detach(move || {
+        let screens = menus::load(&root)?;
+        let (copy, destination) = menus::clone_screen(&screens, &screen, &target)?;
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("creating {}", parent.display()))?;
+        }
+        menus::write(&copy)?;
+        Ok(copy.id)
+    })
+    .map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
 fn studio_tree(py: Python<'_>, root: PathBuf) -> PyResult<String> {
     let nodes = py
         .detach(move || studio::tree(&root))
@@ -1263,6 +1278,7 @@ fn _fl27mm(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(rig_inspect, module)?)?;
     module.add_function(wrap_pyfunction!(menu_check, module)?)?;
     module.add_function(wrap_pyfunction!(menu_link, module)?)?;
+    module.add_function(wrap_pyfunction!(menu_clone, module)?)?;
     module.add_function(wrap_pyfunction!(studio_tree, module)?)?;
     module.add_function(wrap_pyfunction!(studio_read, module)?)?;
     module.add_function(wrap_pyfunction!(studio_write, module)?)?;

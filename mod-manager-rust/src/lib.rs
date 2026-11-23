@@ -10,29 +10,29 @@
 //! half: they read and write the game's own containers rather than shelling out
 //! to third-party tools.
 
-pub mod ask;
-pub mod assets;
 pub mod bc7;
+pub mod assets;
+pub mod ask;
 pub mod binread;
 pub mod conflict;
-pub mod cpk;
 pub mod crilayla;
+pub mod cpk;
 pub mod fmdl;
-pub mod foxfmt;
 pub mod fpk;
 pub mod frig;
+pub mod render;
+pub mod foxfmt;
 pub mod fsutil;
+pub mod menus;
 pub mod ftex;
-pub mod gamemap;
 pub mod gani;
+pub mod gamemap;
 pub mod ini;
 pub mod install;
-pub mod menus;
 pub mod order;
 pub mod packs;
 pub mod pesdb;
-pub mod render;
-pub mod structure;
 pub mod studio;
+pub mod structure;
 pub mod utf;
 pub mod wesys;

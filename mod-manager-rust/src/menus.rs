@@ -322,6 +322,21 @@ pub fn clone_screen(
         .get(from)
         .with_context(|| format!("no screen {from} to copy"))?;
     let target = normalise(to);
+    if target.is_empty()
+        || target.split('/').any(|part| {
+            part.is_empty()
+                || part == "."
+                || part == ".."
+                || part.ends_with([' ', '.'])
+                || part
+                    .chars()
+                    .any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\0'))
+        })
+    {
+        bail!(
+            "invalid screen id {target:?}; use non-empty path segments without reserved characters"
+        );
+    }
     if screens.contains_key(&target) {
         bail!("{target} already exists; refusing to overwrite a working screen");
     }
@@ -444,6 +459,18 @@ mod tests {
         ]);
         let err = clone_screen(&s, "BL/BLMainMenu", "BL/BLSettings").unwrap_err();
         assert!(err.to_string().contains("already exists"), "{err}");
+    }
+
+    #[test]
+    fn cloning_rejects_paths_that_escape_the_flow_folder() {
+        let s = set(&[screen("BL/BLMainMenu", &[])]);
+        for target in ["../outside", "BL/../outside", "C:/outside", "BL/"] {
+            let err = clone_screen(&s, "BL/BLMainMenu", target).unwrap_err();
+            assert!(
+                err.to_string().contains("invalid screen id"),
+                "{target}: {err}"
+            );
+        }
     }
 
     /// Round-tripping must not lose fields this tool does not model: a real

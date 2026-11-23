@@ -223,11 +223,7 @@ impl Rig {
         let mut out = Vec::with_capacity(units);
         for k in 0..units {
             let at = offs[k];
-            let end = if k + 1 < units {
-                offs[k + 1]
-            } else {
-                groups_at.min(b.len())
-            };
+            let end = if k + 1 < units { offs[k + 1] } else { groups_at.min(b.len()) };
             let code = le_u32(b, at);
             let kind = UnitType::from_code(code)
                 .ok_or_else(|| anyhow::anyhow!("unit {k} has unrecorded type {code}"))?;
@@ -237,9 +233,7 @@ impl Rig {
             if k + 1 < units && offs[k + 1] - at != want {
                 bail!(
                     "unit {k} is a {} ({} bytes) but the next unit starts {} bytes later",
-                    kind.name(),
-                    want,
-                    offs[k + 1] - at
+                    kind.name(), want, offs[k + 1] - at
                 );
             }
             let sh = |n: usize| i16::from_le_bytes([b[at + n], b[at + n + 1]]);
@@ -259,11 +253,7 @@ impl Rig {
                 } else {
                     sh(16)
                 };
-                let a = if kind == UnitType::LocalTransformSrt {
-                    -1
-                } else {
-                    sh(18)
-                };
+                let a = if kind == UnitType::LocalTransformSrt { -1 } else { sh(18) };
                 (Some(s as u16), if a < 0 { None } else { Some(a as u16) })
             } else {
                 (None, None)
@@ -300,9 +290,7 @@ impl Rig {
             .iter()
             .filter_map(|u| {
                 let i = u.skel_index? as usize;
-                sk.bones
-                    .get(i)
-                    .map(|b| (b.name.clone(), u.kind.name().to_string()))
+                sk.bones.get(i).map(|b| (b.name.clone(), u.kind.name().to_string()))
             })
             .collect()
     }
@@ -335,11 +323,7 @@ fn cstr(b: &[u8], at: usize) -> String {
     if at >= b.len() {
         return String::new();
     }
-    let end = b[at..]
-        .iter()
-        .position(|&c| c == 0)
-        .map(|p| at + p)
-        .unwrap_or(b.len());
+    let end = b[at..].iter().position(|&c| c == 0).map(|p| at + p).unwrap_or(b.len());
     String::from_utf8_lossy(&b[at..end]).into_owned()
 }
 
@@ -377,13 +361,11 @@ mod tests {
     use super::*;
 
     fn rigs() -> Vec<std::path::PathBuf> {
-        let mut out: Vec<_> =
-            crate::fsutil::files(Path::new("C:/Games/SP Football Life 2027/SiderAddons"))
-                .into_iter()
-                .filter(|p| p.extension().map(|e| e == "frig").unwrap_or(false))
-                .collect();
-        let dt13 = std::env::temp_dir()
-            .join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_skel.frig");
+        let mut out: Vec<_> = crate::fsutil::files(Path::new("C:/Games/SP Football Life 2027/SiderAddons"))
+            .into_iter()
+            .filter(|p| p.extension().map(|e| e == "frig").unwrap_or(false))
+            .collect();
+        let dt13 = std::env::temp_dir().join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_skel.frig");
         if dt13.is_file() {
             out.push(dt13);
         }
@@ -410,38 +392,23 @@ mod tests {
 
     #[test]
     fn the_body_rig_matches_the_body_clips_it_drives() {
-        let p = std::env::temp_dir()
-            .join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_skel.frig");
+        let p = std::env::temp_dir().join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_skel.frig");
         let Ok(rig) = Rig::read(&p) else { return };
         assert_eq!(rig.version, 102, "the published format asserts version 102");
         assert_eq!(rig.unit_count, 15, "the body rig drives fifteen units");
         assert_eq!(rig.segment_count, 27, "and twenty-seven channels");
         assert_eq!(rig.name, "HumanBody");
         assert_eq!(rig.units[0].kind, UnitType::Root);
-        assert_eq!(
-            rig.units[0].track_count, 2,
-            "the root stores a rotation and a translation"
-        );
+        assert_eq!(rig.units[0].track_count, 2, "the root stores a rotation and a translation");
         assert_eq!(rig.units[0].parent_unit, -1, "the root has no parent unit");
         assert_eq!(rig.units[1].kind, UnitType::LocalTransform);
         // Legs are two-bone chains and arms three, and they are the only units
         // that are not one-to-one with a bone.
-        let two = rig
-            .units
-            .iter()
-            .filter(|u| u.kind == UnitType::TwoBone)
-            .count();
+        let two = rig.units.iter().filter(|u| u.kind == UnitType::TwoBone).count();
         let arm = rig.units.iter().filter(|u| u.kind == UnitType::Arm).count();
         assert_eq!(two, 2, "one two-bone chain per leg");
         assert_eq!(arm, 2, "one arm chain per side");
-        assert_eq!(
-            rig.units
-                .iter()
-                .find(|u| u.kind == UnitType::Arm)
-                .unwrap()
-                .track_count,
-            4
-        );
+        assert_eq!(rig.units.iter().find(|u| u.kind == UnitType::Arm).unwrap().track_count, 4);
     }
 
     /// The cross-validation that matters. An independent account of this format
@@ -454,31 +421,15 @@ mod tests {
     #[test]
     fn the_direct_units_resolve_to_exactly_the_published_set_of_bones() {
         let dir = std::env::temp_dir().join("skelx/common/anime/FoxAnim/Body/CharacterAssets");
-        let Ok(rig) = Rig::read(&dir.join("body_skel.frig")) else {
-            return;
-        };
-        let Ok(sk) = crate::ask::Skeleton::read(&dir.join("body_anim_skel.ask")) else {
-            return;
-        };
+        let Ok(rig) = Rig::read(&dir.join("body_skel.frig")) else { return };
+        let Ok(sk) = crate::ask::Skeleton::read(&dir.join("body_anim_skel.ask")) else { return };
         let mut got: Vec<String> = rig.bones_named(&sk).into_iter().map(|(b, _)| b).collect();
         got.sort();
         let want = [
-            "dsk_hip",
-            "sk_belly",
-            "sk_chest",
-            "sk_foot_l",
-            "sk_foot_r",
-            "sk_hand_l",
-            "sk_hand_r",
-            "sk_head",
-            "sk_neck",
-            "sk_root_hip",
+            "dsk_hip", "sk_belly", "sk_chest", "sk_foot_l", "sk_foot_r", "sk_hand_l",
+            "sk_hand_r", "sk_head", "sk_neck", "sk_root_hip",
         ];
-        assert_eq!(
-            got,
-            want.to_vec(),
-            "the direct channels must resolve to the published bones"
-        );
+        assert_eq!(got, want.to_vec(), "the direct channels must resolve to the published bones");
         // And the chain-only bones are exactly the ones that did not appear.
         let missing: Vec<String> = sk
             .bones
@@ -486,17 +437,8 @@ mod tests {
             .filter(|b| !got.contains(&b.name))
             .map(|b| b.name.clone())
             .collect();
-        for limb in [
-            "sk_thigh_l",
-            "sk_leg_l",
-            "sk_upperarm_l",
-            "sk_forearm_l",
-            "sk_shoulder_r",
-        ] {
-            assert!(
-                missing.contains(&limb.to_string()),
-                "{limb} should be chain-only"
-            );
+        for limb in ["sk_thigh_l", "sk_leg_l", "sk_upperarm_l", "sk_forearm_l", "sk_shoulder_r"] {
+            assert!(missing.contains(&limb.to_string()), "{limb} should be chain-only");
         }
     }
 
@@ -507,10 +449,7 @@ mod tests {
         let mut b = std::fs::read(p).unwrap();
         // A type nobody recorded cannot be sized, so the walk must stop.
         b[32..36].copy_from_slice(&99u32.to_le_bytes());
-        assert!(
-            Rig::parse(&b).is_err(),
-            "an unknown unit type must be refused"
-        );
+        assert!(Rig::parse(&b).is_err(), "an unknown unit type must be refused");
         // A header size that disagrees with the file is a corrupt or unknown
         // layout, not something to press on with.
         let mut b2 = std::fs::read(p).unwrap();
@@ -544,10 +483,7 @@ mod tests {
         ] {
             assert!(k.is_direct(), "{k:?} names a bone directly");
         }
-        assert!(
-            !UnitType::Root.is_direct(),
-            "the root unit is the root, not an indexed bone"
-        );
+        assert!(!UnitType::Root.is_direct(), "the root unit is the root, not an indexed bone");
         assert_eq!(UnitType::Arm.bones_driven(), 3);
         assert_eq!(UnitType::TwoBone.bones_driven(), 2);
         assert_eq!(UnitType::Arm.record_size(), 64);

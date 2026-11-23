@@ -42,6 +42,7 @@ body { display: flex; flex-direction: column; }
   border-right: 1px solid var(--line);
   padding: 10px 8px;
   display: flex; flex-direction: column; gap: 4px;
+  overflow-y: auto;
 }
 .tabs button {
   text-align: left; background: none; border: 0; color: var(--muted);
@@ -55,7 +56,7 @@ body { display: flex; flex-direction: column; }
 .health .warn { color: var(--warn); }
 
 main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 12px 14px; gap: 10px; overflow: hidden; }
-.tab { display: none; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
+.tab { display: none; flex-direction: column; gap: 10px; min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
 .tab.active { display: flex; }
 
 .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -359,3 +360,9 @@ button.danger:hover { background: #3a2020; }
 .gani-seg { cursor: pointer; border-radius: 5px; padding: 2px 6px; }
 .gani-seg:hover { background: rgba(78, 161, 255, .07); }
 .gani-seg.on { background: #16233a; outline: 1px solid #4ea1ff; }
+
+.atlas-section { margin: 8px 0; }
+.atlas-map { display: block; max-width: 100%; margin-top: 5px; border: 1px solid var(--line); }
+.atlas-background { fill: #10151c; }
+.atlas-rect { fill: rgba(78, 161, 255, .18); stroke: #70b7ff; stroke-width: 1.5; }
+.atlas-rect:hover { fill: rgba(78, 161, 255, .45); stroke-width: 2.5; }

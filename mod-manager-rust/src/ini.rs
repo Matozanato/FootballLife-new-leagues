@@ -70,7 +70,11 @@ fn parse_assignment(text: &str) -> Option<(String, String, bool, String)> {
     let rest = text[eq + 1..].trim_start();
     let (value, quoted, comment) = if let Some(after) = rest.strip_prefix('"') {
         match after.find('"') {
-            Some(end) => (after[..end].to_string(), true, after[end + 1..].to_string()),
+            Some(end) => (
+                after[..end].to_string(),
+                true,
+                after[end + 1..].to_string(),
+            ),
             None => (after.to_string(), true, String::new()),
         }
     } else {
@@ -113,10 +117,7 @@ impl Ini {
         }
         // Mixed endings are normalised to whichever one the file leads with; a
         // file with no line breaks at all keeps the LF default.
-        Ini {
-            lines,
-            crlf: text.contains("\r\n"),
-        }
+        Ini { lines, crlf: text.contains("\r\n") }
     }
 
     pub fn read(path: &Path) -> io::Result<Ini> {
@@ -213,17 +214,9 @@ mod tests {
     #[test]
     fn order_is_preserved_and_disabled_excluded() {
         let ini = Ini::parse(SAMPLE);
-        let packs: Vec<&str> = ini
-            .active("cpk.root")
-            .iter()
-            .map(|e| e.value.as_str())
-            .collect();
+        let packs: Vec<&str> = ini.active("cpk.root").iter().map(|e| e.value.as_str()).collect();
         assert_eq!(packs, vec![".\\livecpk\\A", ".\\livecpk\\B"]);
-        let mods: Vec<&str> = ini
-            .active("lua.module")
-            .iter()
-            .map(|e| e.value.as_str())
-            .collect();
+        let mods: Vec<&str> = ini.active("lua.module").iter().map(|e| e.value.as_str()).collect();
         assert_eq!(mods, vec!["on.lua"]);
         assert_eq!(ini.all("lua.module").len(), 2);
     }

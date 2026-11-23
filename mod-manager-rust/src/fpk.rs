@@ -69,10 +69,7 @@ fn name_of(bytes: &[u8]) -> String {
 impl Fpk {
     pub fn parse(buf: &[u8]) -> io::Result<Fpk> {
         if buf.len() < TABLE_OFFSET + ENTRY_STRIDE {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "too short to be a foxfpk",
-            ));
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "too short to be a foxfpk"));
         }
         if &buf[0..8] != MAGIC {
             return Err(io::Error::new(
@@ -96,10 +93,7 @@ impl Fpk {
         }
         let table_end = TABLE_OFFSET + count * ENTRY_STRIDE;
         if table_end > buf.len() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "entry table runs past the end",
-            ));
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "entry table runs past the end"));
         }
         let mut entries = Vec::with_capacity(count);
         for i in 0..count {
@@ -113,31 +107,21 @@ impl Fpk {
             // Names sit in the blob straight after the table, so they are the
             // first thing a corrupt or misaligned read shows up against.
             let Some(name_end) = name_off.checked_add(name_len) else {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "name range overflows",
-                ));
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "name range overflows"));
             };
             if name_off < table_end || name_end > buf.len() {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    format!(
-                        "entry {i} name range {name_off}..{name_end} is outside the string blob"
-                    ),
+                    format!("entry {i} name range {name_off}..{name_end} is outside the string blob"),
                 ));
             }
             let Some(data_end) = data_off.checked_add(data_len) else {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "data range overflows",
-                ));
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "data range overflows"));
             };
             if data_end > buf.len() {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    format!(
-                        "entry {i} data range {data_off}..{data_end} runs past the end of the file"
-                    ),
+                    format!("entry {i} data range {data_off}..{data_end} runs past the end of the file"),
                 ));
             }
             entries.push(Entry {
@@ -217,16 +201,16 @@ impl Fpk {
 
     pub fn find(&self, name: &str) -> Option<&Entry> {
         let want = name.replace('\\', "/");
-        self.entries.iter().find(|e| {
-            e.name.eq_ignore_ascii_case(&want) || file_name(&e.name).eq_ignore_ascii_case(&want)
-        })
+        self.entries
+            .iter()
+            .find(|e| e.name.eq_ignore_ascii_case(&want) || file_name(&e.name).eq_ignore_ascii_case(&want))
     }
 
     pub fn find_mut(&mut self, name: &str) -> Option<&mut Entry> {
         let want = name.replace('\\', "/");
-        self.entries.iter_mut().find(|e| {
-            e.name.eq_ignore_ascii_case(&want) || file_name(&e.name).eq_ignore_ascii_case(&want)
-        })
+        self.entries
+            .iter_mut()
+            .find(|e| e.name.eq_ignore_ascii_case(&want) || file_name(&e.name).eq_ignore_ascii_case(&want))
     }
 
     /// Drop every payload into `dest`, mirroring the recorded paths.
@@ -303,10 +287,7 @@ mod tests {
             let at = TABLE_OFFSET + i * ENTRY_STRIDE;
             assert_eq!(le_u64(&bytes, at) % ALIGN, 0, "entry {i} is misaligned");
         }
-        assert_eq!(
-            file_name("Assets\\pes16\\model\\face\\face_diff.bin"),
-            "face_diff.bin"
-        );
+        assert_eq!(file_name("Assets\\pes16\\model\\face\\face_diff.bin"), "face_diff.bin");
     }
 
     #[test]

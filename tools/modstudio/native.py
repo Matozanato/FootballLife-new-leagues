@@ -221,6 +221,12 @@ def menu_link(root, bases, screen, event, target):
     )
 
 
+def menu_clone(root, screen, target):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.menu_clone(os.fspath(root), screen, target)
+
+
 def studio_tree(root):
     if _fl27mm is None:
         raise RuntimeError("The Rust manager extension is not built")

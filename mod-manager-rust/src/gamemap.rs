@@ -81,12 +81,8 @@ pub struct Info {
 impl Info {
     fn new(title: &str, what: &str, format: &str, edit: Edit, how: &str) -> Info {
         Info {
-            title: title.into(),
-            what: what.into(),
-            format: format.into(),
-            edit,
-            breaks: edit.consequence().into(),
-            how: how.into(),
+            title: title.into(), what: what.into(), format: format.into(),
+            edit, breaks: edit.consequence().into(), how: how.into(),
         }
     }
 
@@ -297,14 +293,11 @@ pub fn describe(rel: &str) -> Info {
         return info;
     }
     if name == "version.txt" {
-        return Info::new(
-            "Archive version marker",
+        return Info::new("Archive version marker",
             "A short text stamp naming the content version this archive was \
              built for. dt18 ships one alongside its nine match constants.",
-            "text",
-            Edit::ReadOnly,
-            "Read it to tell which gameplay build is installed.",
-        );
+            "text", Edit::ReadOnly,
+            "Read it to tell which gameplay build is installed.");
     }
 
     let rules: &[(&str, Info)] = &[
@@ -441,194 +434,94 @@ pub fn describe(rel: &str) -> Info {
 fn extension_info(name: &str) -> Info {
     let ext = name.rsplit_once('.').map(|(_, e)| e).unwrap_or("");
     match ext {
-        "cpk" => Info::new(
-            "CRIWARE archive",
+        "cpk" => Info::new("CRIWARE archive",
             "A packed file tree. The header and TOC are @UTF tables; entries are \
              stored or CRILAYLA-compressed.",
-            "CPK",
-            Edit::Careful,
-            "Archives tab lists, extracts and rebuilds it.",
-        ),
-        "ftex" => Info::new(
-            "Fox Engine texture",
+            "CPK", Edit::Careful,
+            "Archives tab lists, extracts and rebuilds it."),
+        "ftex" => Info::new("Fox Engine texture",
             "A texture with a mip chain, zlib-compressed in 16 KiB chunks. PES \
              writes format version 2.03 and 2.04; LUT files are 16x16x16 volumes.",
-            "ftex",
-            Edit::Safe,
-            "Textures tab previews it and converts to and from DDS.",
-        ),
-        "dds" => Info::new(
-            "DirectDraw surface",
+            "ftex", Edit::Safe,
+            "Textures tab previews it and converts to and from DDS."),
+        "dds" => Info::new("DirectDraw surface",
             "Standard PC texture. DXT1 has no alpha, DXT5 does; changing the \
              format changes how the game samples it.",
-            "dds",
-            Edit::Safe,
-            "Textures tab converts it to ftex.",
-        ),
-        "lua" => Info::new(
-            "Sider module",
+            "dds", Edit::Safe, "Textures tab converts it to ftex."),
+        "lua" => Info::new("Sider module",
             "Runs inside the game through Sider's LuaJIT. Modules load in the \
              order sider.ini lists them, so dependencies must come first.",
-            "Lua",
-            Edit::Safe,
-            "Edit freely; sider.log names any module that fails to load.",
-        ),
-        "ini" => Info::new(
-            "Configuration",
+            "Lua", Edit::Safe,
+            "Edit freely; sider.log names any module that fails to load."),
+        "ini" => Info::new("Configuration",
             "Plain key = value text. Sider reads cpk.root and lua.module from it.",
-            "ini",
-            Edit::Safe,
-            "Pack order tab reorders cpk.root with a backup.",
-        ),
-        "json" => Info::new(
-            "JSON data",
-            "Readable structured data.",
-            "json",
-            Edit::Safe,
-            "Edit as text.",
-        ),
-        "xml" => Info::new(
-            "XML descriptor",
-            "Readable model or archive description.",
-            "xml",
-            Edit::Safe,
-            "Edit as text.",
-        ),
-        "gani" => Info::new(
-            "Animation clip",
-            "Fox Engine animation data: tracks of keyframes over frames.",
-            "gani",
-            Edit::Careful,
+            "ini", Edit::Safe, "Pack order tab reorders cpk.root with a backup."),
+        "json" => Info::new("JSON data",
+            "Readable structured data.", "json", Edit::Safe, "Edit as text."),
+        "xml" => Info::new("XML descriptor",
+            "Readable model or archive description.", "xml", Edit::Safe, "Edit as text."),
+        "gani" => Info::new("Animation clip",
+            "Fox Engine animation data: tracks of keyframes over frames.", "gani", Edit::Careful,
             "Frame rate and single keyframes can be rewritten safely; a whole clip is \
              normally replaced as a set with the mod that authored it, because the rig it \
-             targets lives outside the file.",
-        ),
-        "ask" => Info::new(
-            "Skeleton",
+             targets lives outside the file."),
+        "ask" => Info::new("Skeleton",
             "The bones of a model and their rest transforms: parent index, local position and \
              local quaternion per bone. An `_anim` skeleton has identity rest rotations, so an \
              animation value read against it is the bone's rotation directly; a `_render` \
              skeleton carries the skinning basis instead, and applying animation rotations \
-             onto those corrupts the pose.",
-            "ask",
-            Edit::Unknown,
+             onto those corrupts the pose.", "ask", Edit::Unknown,
             "Read it to understand what a clip is driving. Editing bone transforms changes the \
-             model's bind pose, which every existing animation was authored against.",
-        ),
-        "frig" => Info::new(
-            "Rig mapping",
+             model's bind pose, which every existing animation was authored against."),
+        "frig" => Info::new("Rig mapping",
             "How animation channels map onto skeleton bones. Each unit is a root rotation, a root \
              translation, a single-bone channel, or a chain that drives two or three bones at once \
              -- the legs and arms are chains, which is why a tool that only reads single-bone \
              channels leaves the arms frozen in bind pose. The unit and segment counts match the \
              clips it drives, and that correspondence is how a clip is identified with a rig.",
-            "frig",
-            Edit::Unknown,
+            "frig", Edit::Unknown,
             "Read it alongside a clip. A rig and a clip disagreeing on their counts means the \
-             animation is being applied to the wrong skeleton.",
-        ),
-        "fpk" | "fpkd" => Info::new(
-            "Fox package",
+             animation is being applied to the wrong skeleton."),
+        "fpk" | "fpkd" => Info::new("Fox package",
             "A Fox Engine container, usually paired: .fpk holds data, .fpkd the \
-             matching descriptor.",
-            "fpk / fpkd",
-            Edit::Careful,
-            "PES Archive Tools extracts and recompiles these.",
-        ),
-        "fmdl" => Info::new(
-            "Fox model",
-            "Geometry and material references.",
-            "fmdl",
-            Edit::Careful,
-            "Replace alongside its textures.",
-        ),
-        "awb" | "acb" => Info::new(
-            "CRI audio bank",
+             matching descriptor.", "fpk / fpkd", Edit::Careful,
+            "PES Archive Tools extracts and recompiles these."),
+        "fmdl" => Info::new("Fox model", "Geometry and material references.",
+            "fmdl", Edit::Careful, "Replace alongside its textures."),
+        "awb" | "acb" => Info::new("CRI audio bank",
             "AWB holds the streams, ACB the cues that reference them.",
-            "awb / acb",
-            Edit::Careful,
-            "PES Sound Editor opens and rebuilds these.",
-        ),
-        "str" => Info::new(
-            "String table",
-            "Indexed text.",
-            ".str",
-            Edit::Risky,
-            "Keep entry lengths unchanged.",
-        ),
-        "bin" => Info::new(
-            "Binary table or art",
+            "awb / acb", Edit::Careful, "PES Sound Editor opens and rebuilds these."),
+        "str" => Info::new("String table", "Indexed text.", ".str", Edit::Risky,
+            "Keep entry lengths unchanged."),
+        "bin" => Info::new("Binary table or art",
             "Extension alone does not say which: under pesdb it is a database \
              table, under menu it is texture art, under match/constant it is \
              gameplay tuning. The path decides.",
-            "bin",
-            Edit::Unknown,
-            "Tables tab reports the framing and whether the stride tiles.",
-        ),
-        "png" => Info::new(
-            "PNG image",
-            "Ordinary image.",
-            "png",
-            Edit::Safe,
-            "Edit in any image editor.",
-        ),
-        "txt" | "rtf" => Info::new(
-            "Text",
-            "Readable notes or a version stamp.",
-            "text",
-            Edit::ReadOnly,
-            "Read it; the game rarely depends on it.",
-        ),
-        "hkx" => Info::new(
-            "Havok physics",
+            "bin", Edit::Unknown,
+            "Tables tab reports the framing and whether the stride tiles."),
+        "png" => Info::new("PNG image", "Ordinary image.", "png", Edit::Safe,
+            "Edit in any image editor."),
+        "txt" | "rtf" => Info::new("Text", "Readable notes or a version stamp.",
+            "text", Edit::ReadOnly, "Read it; the game rarely depends on it."),
+        "hkx" => Info::new("Havok physics",
             "Havok collision or physics data used by props and stadiums.",
-            "hkx",
-            Edit::Risky,
-            "Authored in a Havok toolchain, not by hand.",
-        ),
-        "zip" => Info::new(
-            "Zip archive",
-            "An ordinary zip.",
-            "zip",
-            Edit::Safe,
-            "Open with any archive tool.",
-        ),
-        "bak" => Info::new(
-            "Backup",
+            "hkx", Edit::Risky, "Authored in a Havok toolchain, not by hand."),
+        "zip" => Info::new("Zip archive", "An ordinary zip.", "zip", Edit::Safe,
+            "Open with any archive tool."),
+        "bak" => Info::new("Backup",
             "A copy someone kept before editing. The game does not read it.",
-            "backup",
-            Edit::ReadOnly,
-            "Safe to remove once you no longer need it.",
-        ),
-        "exe" | "dll" | "addon64" => Info::new(
-            "Program code",
+            "backup", Edit::ReadOnly, "Safe to remove once you no longer need it."),
+        "exe" | "dll" | "addon64" => Info::new("Program code",
             "Executable or injected library. Not game content.",
-            "PE binary",
-            Edit::ReadOnly,
-            "Do not edit; configure it instead.",
-        ),
-        "log" => Info::new(
-            "Log",
-            "Diagnostic output.",
-            "text",
-            Edit::ReadOnly,
-            "Read it to find which module or pack failed.",
-        ),
-        "cache" => Info::new(
-            "Module cache",
+            "PE binary", Edit::ReadOnly, "Do not edit; configure it instead."),
+        "log" => Info::new("Log", "Diagnostic output.", "text", Edit::ReadOnly,
+            "Read it to find which module or pack failed."),
+        "cache" => Info::new("Module cache",
             "Runtime state a module wrote for itself. Safe to delete; the module \
-             rebuilds it.",
-            "binary",
-            Edit::Safe,
-            "Delete to force a rebuild.",
-        ),
-        _ => Info::new(
-            "Unrecognised",
+             rebuilds it.", "binary", Edit::Safe, "Delete to force a rebuild."),
+        _ => Info::new("Unrecognised",
             "This path is not covered by the map. Nothing here is a guess.",
-            "unknown",
-            Edit::Unknown,
-            "Inspect it before changing it.",
-        ),
+            "unknown", Edit::Unknown, "Inspect it before changing it."),
     }
 }
 
@@ -667,9 +560,7 @@ fn node(rel: &str, path: &Path, group: &str, info: Info, open_as: Option<&str>) 
     Node {
         rel: rel.to_string(),
         path: path.to_string_lossy().into_owned(),
-        name: path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
+        name: path.file_name().map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| rel.to_string()),
         group: group.to_string(),
         info,
@@ -691,30 +582,15 @@ pub fn build(game: &Path) -> GameMap {
     // ---- Data -------------------------------------------------------------
     let data = game.join("Data");
     if data.is_dir() {
-        let mut data_node = node(
-            "Data",
-            &data,
-            "game",
-            Info::new(
-                "Data archives",
-                "Every dt*.cpk the game loads. Sider's livecpk packs shadow files \
+        let mut data_node = node("Data", &data, "game", Info::new(
+            "Data archives",
+            "Every dt*.cpk the game loads. Sider's livecpk packs shadow files \
              inside these by path, so most mods never need to touch them.",
-                "folder of CPK archives",
-                Edit::Careful,
-                "Archives tab opens any of them.",
-            ),
-            None,
-        );
-        let mut entries: Vec<PathBuf> = std::fs::read_dir(&data)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .map(|e| e.path())
-            .filter(|p| {
-                p.extension()
-                    .map(|e| e.eq_ignore_ascii_case("cpk"))
-                    .unwrap_or(false)
-            })
+            "folder of CPK archives", Edit::Careful,
+            "Archives tab opens any of them."), None);
+        let mut entries: Vec<PathBuf> = std::fs::read_dir(&data).into_iter()
+            .flatten().flatten().map(|e| e.path())
+            .filter(|p| p.extension().map(|e| e.eq_ignore_ascii_case("cpk")).unwrap_or(false))
             .collect();
         entries.sort();
         for p in entries {
@@ -722,13 +598,8 @@ pub fn build(game: &Path) -> GameMap {
             let size = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
             archives += 1;
             archive_bytes += size;
-            let mut n = node(
-                &format!("Data/{name}"),
-                &p,
-                "archive",
-                describe(&name),
-                Some("cpk"),
-            );
+            let mut n = node(&format!("Data/{name}"), &p, "archive",
+                             describe(&name), Some("cpk"));
             n.bytes = size;
             data_node.children.push(n);
         }
@@ -740,40 +611,25 @@ pub fn build(game: &Path) -> GameMap {
     // ---- SiderAddons ------------------------------------------------------
     let addons = game.join("SiderAddons");
     if addons.is_dir() {
-        let mut side = node(
-            "SiderAddons",
-            &addons,
-            "sider",
-            Info::new(
-                "Sider",
-                "Sider 7 by juce. It injects LiveCPK (loose files that shadow archive \
+        let mut side = node("SiderAddons", &addons, "sider", Info::new(
+            "Sider",
+            "Sider 7 by juce. It injects LiveCPK (loose files that shadow archive \
              content by path) and a LuaJIT runtime into the game at launch.",
-                "folder",
-                Edit::Safe,
-                "Everything a mod installs lives under here.",
-            ),
-            None,
-        );
+            "folder", Edit::Safe,
+            "Everything a mod installs lives under here."), None);
 
         let ini_path = addons.join("sider.ini");
         if ini_path.is_file() {
-            let mut n = node(
-                "SiderAddons/sider.ini",
-                &ini_path,
-                "config",
-                Info::new(
-                    "sider.ini",
-                    "The order file. cpk.root is FIRST WINS: a pack only contributes \
+            let mut n = node("SiderAddons/sider.ini", &ini_path, "config", Info::new(
+                "sider.ini",
+                "The order file. cpk.root is FIRST WINS: a pack only contributes \
                  keys no earlier pack already carries. lua.module loads in \
                  sequence, so dependencies must precede their users. Neither \
                  rule is visible in the file, which is why hand edits silently \
                  disable packs.",
-                    "ini",
-                    Edit::Safe,
-                    "Pack order tab shows what each entry actually contributes.",
-                ),
-                Some("packs"),
-            );
+                "ini", Edit::Safe,
+                "Pack order tab shows what each entry actually contributes."),
+                Some("packs"));
             n.bytes = std::fs::metadata(&ini_path).map(|m| m.len()).unwrap_or(0);
             side.children.push(n);
             findings.extend(check_ini(&ini_path, &addons));
@@ -782,20 +638,11 @@ pub fn build(game: &Path) -> GameMap {
         for exe in ["sider.exe", "sider.dll"] {
             let p = addons.join(exe);
             if p.is_file() {
-                let mut n = node(
-                    &format!("SiderAddons/{exe}"),
-                    &p,
-                    "sider",
-                    Info::new(
-                        exe,
-                        "The Sider injector itself. Launch the game through Sider, \
+                let mut n = node(&format!("SiderAddons/{exe}"), &p, "sider", Info::new(
+                    exe,
+                    "The Sider injector itself. Launch the game through Sider, \
                      not the plain executable, or no mod loads.",
-                        "PE binary",
-                        Edit::ReadOnly,
-                        "Do not edit.",
-                    ),
-                    None,
-                );
+                    "PE binary", Edit::ReadOnly, "Do not edit."), None);
                 n.bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
                 side.children.push(n);
             }
@@ -803,45 +650,25 @@ pub fn build(game: &Path) -> GameMap {
 
         let modules = addons.join("modules");
         if modules.is_dir() {
-            let mut n = node(
-                "SiderAddons/modules",
-                &modules,
-                "lua",
-                Info::new(
-                    "Lua modules",
-                    "One .lua per mod, loaded in sider.ini order. Cameras, scenes, \
+            let mut n = node("SiderAddons/modules", &modules, "lua", Info::new(
+                "Lua modules",
+                "One .lua per mod, loaded in sider.ini order. Cameras, scenes, \
                  broadcast, fans, editors and the switcher libraries all live \
                  here. A module that throws is named in sider.log.",
-                    "Lua",
-                    Edit::Safe,
-                    "Edit freely; the load order is what usually breaks.",
-                ),
-                None,
-            );
+                "Lua", Edit::Safe,
+                "Edit freely; the load order is what usually breaks."), None);
             let (bytes, files) = crate::fsutil::stats(&modules, 100_000);
             n.bytes = bytes;
             n.files = files;
-            let mut luas: Vec<PathBuf> = std::fs::read_dir(&modules)
-                .into_iter()
-                .flatten()
-                .flatten()
-                .map(|e| e.path())
-                .filter(|p| {
-                    p.extension()
-                        .map(|e| e.eq_ignore_ascii_case("lua"))
-                        .unwrap_or(false)
-                })
+            let mut luas: Vec<PathBuf> = std::fs::read_dir(&modules).into_iter()
+                .flatten().flatten().map(|e| e.path())
+                .filter(|p| p.extension().map(|e| e.eq_ignore_ascii_case("lua")).unwrap_or(false))
                 .collect();
             luas.sort();
             for p in luas {
                 let name = p.file_name().unwrap().to_string_lossy().into_owned();
-                let mut c = node(
-                    &format!("SiderAddons/modules/{name}"),
-                    &p,
-                    "lua",
-                    module_info(&name),
-                    None,
-                );
+                let mut c = node(&format!("SiderAddons/modules/{name}"), &p, "lua",
+                                 module_info(&name), None);
                 c.bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
                 n.children.push(c);
             }
@@ -850,51 +677,33 @@ pub fn build(game: &Path) -> GameMap {
 
         let livecpk = addons.join("livecpk");
         if livecpk.is_dir() {
-            let mut n = node(
-                "SiderAddons/livecpk",
-                &livecpk,
-                "packs",
-                Info::new(
-                    "LiveCPK packs",
-                    "Loose file trees that shadow archive content by path. A file at \
+            let mut n = node("SiderAddons/livecpk", &livecpk, "packs", Info::new(
+                "LiveCPK packs",
+                "Loose file trees that shadow archive content by path. A file at \
                  livecpk/root/common/render/symbol/x.dds replaces the same path \
                  inside dt14 without repacking anything.",
-                    "folder",
-                    Edit::Safe,
-                    "Pack order tab decides which pack wins each path.",
-                ),
-                None,
-            );
-            let mut tops: Vec<PathBuf> = std::fs::read_dir(&livecpk)
-                .into_iter()
-                .flatten()
-                .flatten()
-                .map(|e| e.path())
-                .filter(|p| p.is_dir())
-                .collect();
+                "folder", Edit::Safe,
+                "Pack order tab decides which pack wins each path."), None);
+            let mut tops: Vec<PathBuf> = std::fs::read_dir(&livecpk).into_iter()
+                .flatten().flatten().map(|e| e.path())
+                .filter(|p| p.is_dir()).collect();
             tops.sort();
             for p in tops {
                 let name = p.file_name().unwrap().to_string_lossy().into_owned();
                 let rel = format!("SiderAddons/livecpk/{name}");
                 let info = if name.eq_ignore_ascii_case("root") {
-                    Info::new(
-                        "Base pack root",
+                    Info::new("Base pack root",
                         "The catch-all pack. Because cpk.root is first wins, this \
                          entry must be LAST: putting it early disables every \
                          specialised pack whose keys it also carries.",
-                        "folder",
-                        Edit::Safe,
-                        "Keep it last in the order.",
-                    )
+                        "folder", Edit::Safe,
+                        "Keep it last in the order.")
                 } else {
-                    Info::new(
-                        &name,
+                    Info::new(&name,
                         "A pack tree. Whether it is registered, and where it sits \
                          in the order, decides if any of it reaches the game.",
-                        "folder",
-                        Edit::Safe,
-                        "Pack order tab shows its surviving keys.",
-                    )
+                        "folder", Edit::Safe,
+                        "Pack order tab shows its surviving keys.")
                 };
                 let mut c = node(&rel, &p, "packs", info, Some("packs"));
                 let (bytes, files) = crate::fsutil::stats(&p, 20_000);
@@ -909,47 +718,26 @@ pub fn build(game: &Path) -> GameMap {
         }
 
         for (dir, title, what) in [
-            (
-                "content",
-                "Module content",
-                "Data owned by modules rather than by the game: kitserver configs, \
+            ("content", "Module content",
+             "Data owned by modules rather than by the game: kitserver configs, \
               audio, cinematics, editor details. Modules read it by their own \
-              conventions, not through cpk.root.",
-            ),
-            (
-                "menu-server",
-                "MenuServer map",
-                "Per-competition menu selection. The hundred-odd menu packs are \
+              conventions, not through cpk.root."),
+            ("menu-server", "MenuServer map",
+             "Per-competition menu selection. The hundred-odd menu packs are \
               alternatives, not layers: MenuServer picks one at runtime, which \
-              is why ordering alone cannot make them all work.",
-            ),
-            (
-                "ModStudio",
-                "Mod Studio",
-                "World-building modules. They read modules/fl26world.txt at boot \
-              and configure themselves from it.",
-            ),
-            (
-                "TouchlineCompanion",
-                "Touchline companion",
-                "Companion module data for the Touchline mod family.",
-            ),
+              is why ordering alone cannot make them all work."),
+            ("ModStudio", "Mod Studio",
+             "World-building modules. They read modules/fl26world.txt at boot \
+              and configure themselves from it."),
+            ("TouchlineCompanion", "Touchline companion",
+             "Companion module data for the Touchline mod family."),
         ] {
             let p = addons.join(dir);
             if p.is_dir() {
-                let mut n = node(
-                    &format!("SiderAddons/{dir}"),
-                    &p,
-                    "content",
-                    Info::new(
-                        title,
-                        what,
-                        "folder",
-                        Edit::Safe,
-                        "Owned by its module; edit through that module.",
-                    ),
-                    None,
-                );
+                let mut n = node(&format!("SiderAddons/{dir}"), &p, "content",
+                                 Info::new(title, what, "folder", Edit::Safe,
+                                           "Owned by its module; edit through that module."),
+                                 None);
                 let (bytes, files) = crate::fsutil::stats(&p, 20_000);
                 n.bytes = bytes;
                 n.files = files;
@@ -959,20 +747,11 @@ pub fn build(game: &Path) -> GameMap {
 
         let log = addons.join("sider.log");
         if log.is_file() {
-            let mut n = node(
-                "SiderAddons/sider.log",
-                &log,
-                "log",
-                Info::new(
-                    "sider.log",
-                    "Every module load and every Lua error, with file and line. The \
+            let mut n = node("SiderAddons/sider.log", &log, "log", Info::new(
+                "sider.log",
+                "Every module load and every Lua error, with file and line. The \
                  first place to look when a mod does nothing.",
-                    "text",
-                    Edit::ReadOnly,
-                    "Read it after a launch.",
-                ),
-                None,
-            );
+                "text", Edit::ReadOnly, "Read it after a launch."), None);
             n.bytes = std::fs::metadata(&log).map(|m| m.len()).unwrap_or(0);
             side.children.push(n);
         }
@@ -983,45 +762,29 @@ pub fn build(game: &Path) -> GameMap {
     if let Some(docs) = documents_dir() {
         let saves = docs.join("SPGAME").join("Football Life");
         if saves.is_dir() {
-            let mut n = node(
-                "Saves",
-                &saves,
-                "saves",
-                Info::new(
-                    "Save data",
-                    "WEPES holds the edit database, 2027 holds career saves, and \
+            let mut n = node("Saves", &saves, "saves", Info::new(
+                "Save data",
+                "WEPES holds the edit database, 2027 holds career saves, and \
                  settings.dat holds game options. Careers are slot-indexed: a \
                  result belongs to a fixture slot, not to a team name.",
-                    "folder",
-                    Edit::ReadOnly,
-                    "Read for analysis. Writing a save risks corrupting a career.",
-                ),
-                None,
-            );
+                "folder", Edit::ReadOnly,
+                "Read for analysis. Writing a save risks corrupting a career."),
+                None);
             let (bytes, files) = crate::fsutil::stats(&saves, 20_000);
             n.bytes = bytes;
             n.files = files;
             for sub in ["WEPES", "2027"] {
                 let p = saves.join(sub);
                 if p.is_dir() {
-                    let mut c = node(
-                        &format!("Saves/{sub}"),
-                        &p,
-                        "saves",
-                        Info::new(
-                            sub,
-                            if sub == "WEPES" {
-                                "The edit database: EDIT00000000 and friends. This is \
+                    let mut c = node(&format!("Saves/{sub}"), &p, "saves", Info::new(
+                        sub,
+                        if sub == "WEPES" {
+                            "The edit database: EDIT00000000 and friends. This is \
                              where in-game edits are stored, encrypted."
-                            } else {
-                                "Master League and Become a Legend careers."
-                            },
-                            "save",
-                            Edit::ReadOnly,
-                            "Never write.",
-                        ),
-                        None,
-                    );
+                        } else {
+                            "Master League and Become a Legend careers."
+                        },
+                        "save", Edit::ReadOnly, "Never write."), None);
                     let (b, f) = crate::fsutil::stats(&p, 20_000);
                     c.bytes = b;
                     c.files = f;
@@ -1033,73 +796,33 @@ pub fn build(game: &Path) -> GameMap {
     }
 
     // ---- executables and injectors ---------------------------------------
-    let mut programs = node(
-        "Programs",
-        game,
-        "programs",
-        Info::new(
-            "Executables and injectors",
-            "The game, its launchers, and the post-processing chain. None of this is \
+    let mut programs = node("Programs", game, "programs", Info::new(
+        "Executables and injectors",
+        "The game, its launchers, and the post-processing chain. None of this is \
          game content, and none of it is ordered by Sider.",
-            "folder",
-            Edit::ReadOnly,
-            "Configure, do not edit.",
-        ),
-        None,
-    );
+        "folder", Edit::ReadOnly, "Configure, do not edit."), None);
     for (file, title, what) in [
-        (
-            "FL_2027.exe",
-            "Game executable",
-            "The game itself. Launch through Sider so mods load.",
-        ),
-        (
-            "FL 2027 start.exe",
-            "FL launcher",
-            "Football Life's own launcher, which starts Sider and the game.",
-        ),
-        (
-            "FL27 Switcher.exe",
-            "FL27 Switcher",
-            "Switches between installed mod configurations.",
-        ),
-        (
-            "Settings.exe",
-            "Settings",
-            "Graphics and display settings, written to the game's config.",
-        ),
-        (
-            "dxgi.dll",
-            "DXGI proxy",
-            "A proxy library that loads ReShade and the DLSS/OptiScaler chain \
-          before the game's own rendering starts.",
-        ),
-        (
-            "ReShade.ini",
-            "ReShade configuration",
-            "Which post-processing shaders run, and in what order.",
-        ),
-        (
-            "nvngx_dlss.dll",
-            "DLSS",
-            "NVIDIA's upscaler. RenoDX and OptiScaler hook it.",
-        ),
+        ("FL_2027.exe", "Game executable",
+         "The game itself. Launch through Sider so mods load."),
+        ("FL 2027 start.exe", "FL launcher",
+         "Football Life's own launcher, which starts Sider and the game."),
+        ("FL27 Switcher.exe", "FL27 Switcher",
+         "Switches between installed mod configurations."),
+        ("Settings.exe", "Settings",
+         "Graphics and display settings, written to the game's config."),
+        ("dxgi.dll", "DXGI proxy",
+         "A proxy library that loads ReShade and the DLSS/OptiScaler chain \
+          before the game's own rendering starts."),
+        ("ReShade.ini", "ReShade configuration",
+         "Which post-processing shaders run, and in what order."),
+        ("nvngx_dlss.dll", "DLSS",
+         "NVIDIA's upscaler. RenoDX and OptiScaler hook it."),
     ] {
         let p = game.join(file);
         if p.is_file() {
-            let mut n = node(
-                file,
-                &p,
-                "programs",
-                Info::new(
-                    title,
-                    what,
-                    "PE binary / ini",
-                    Edit::ReadOnly,
-                    "Configure it; do not patch it.",
-                ),
-                None,
-            );
+            let mut n = node(file, &p, "programs",
+                             Info::new(title, what, "PE binary / ini", Edit::ReadOnly,
+                                       "Configure it; do not patch it."), None);
             n.bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
             programs.children.push(n);
         }
@@ -1110,10 +833,7 @@ pub fn build(game: &Path) -> GameMap {
 
     GameMap {
         game: game.to_string_lossy().into_owned(),
-        nodes,
-        findings,
-        archives,
-        archive_bytes,
+        nodes, findings, archives, archive_bytes,
     }
 }
 
@@ -1124,76 +844,40 @@ fn documents_dir() -> Option<PathBuf> {
 fn module_info(name: &str) -> Info {
     let lower = name.to_ascii_lowercase();
     let (title, what) = if lower.contains("cam") {
-        (
-            "Camera module",
-            "Overrides the match camera. Cameras are last-wins: \
-         the last camera module loaded is the one in control.",
-        )
+        ("Camera module", "Overrides the match camera. Cameras are last-wins: \
+         the last camera module loaded is the one in control.")
     } else if lower.contains("scene") || lower.contains("celebration") {
-        (
-            "Scene module",
-            "Triggers cut-scenes and celebrations at match events.",
-        )
+        ("Scene module", "Triggers cut-scenes and celebrations at match events.")
     } else if lower.contains("broadcast") {
-        (
-            "Broadcast module",
-            "TV-style presentation: overlays, replays, penalties.",
-        )
+        ("Broadcast module", "TV-style presentation: overlays, replays, penalties.")
     } else if lower.contains("chant") || lower.contains("fans") || lower.contains("crowd") {
-        (
-            "Atmosphere module",
-            "Crowd and chant behaviour during a match.",
-        )
+        ("Atmosphere module", "Crowd and chant behaviour during a match.")
     } else if lower.starts_with("mlx") || lower.starts_with("ml") {
-        (
-            "Master League module",
-            "Career-mode behaviour. Reads the career save; \
-         well-behaved ones never write it.",
-        )
+        ("Master League module", "Career-mode behaviour. Reads the career save; \
+         well-behaved ones never write it.")
     } else if lower.starts_with("dr_") {
-        (
-            "League creator module",
-            "Captures or extends competition and team data \
-         for the league-creation tooling.",
-        )
+        ("League creator module", "Captures or extends competition and team data \
+         for the league-creation tooling.")
     } else if lower.contains("editor") || lower.contains("pcc") {
         ("Editor module", "In-game editing and preview surfaces.")
     } else if lower.contains("menu") {
         ("Menu module", "Selects and serves menu content at runtime.")
     } else if lower.contains("turf") || lower.contains("cloth") {
-        (
-            "Pitch / cloth module",
-            "Turf and cloth behaviour during play.",
-        )
+        ("Pitch / cloth module", "Turf and cloth behaviour during play.")
     } else {
-        (
-            "Lua module",
-            "A Sider module. Its load position in sider.ini decides \
-         what it can see and what overrides it.",
-        )
+        ("Lua module", "A Sider module. Its load position in sider.ini decides \
+         what it can see and what overrides it.")
     };
-    Info::new(
-        title,
-        what,
-        "Lua",
-        Edit::Safe,
-        "Edit freely; sider.log reports failures with a line number.",
-    )
+    Info::new(title, what, "Lua", Edit::Safe,
+              "Edit freely; sider.log reports failures with a line number.")
 }
 
 fn check_ini(ini_path: &Path, addons: &Path) -> Vec<Finding> {
     let mut out = Vec::new();
-    let Ok(parsed) = ini::Ini::read(ini_path) else {
-        return out;
-    };
+    let Ok(parsed) = ini::Ini::read(ini_path) else { return out };
     let packs = parsed.active("cpk.root");
-    let flag = |k: &str| {
-        parsed
-            .active(k)
-            .first()
-            .map(|v| v.value.trim() == "1")
-            .unwrap_or(false)
-    };
+    let flag = |k: &str| parsed.active(k).first()
+        .map(|v| v.value.trim() == "1").unwrap_or(false);
     if !flag("lua.enabled") {
         out.push(Finding {
             severity: "error".into(),
@@ -1215,13 +899,9 @@ fn check_ini(ini_path: &Path, addons: &Path) -> Vec<Finding> {
             out.push(Finding {
                 severity: "error".into(),
                 title: "The base root is not last".into(),
-                detail: format!(
-                    "`.\\livecpk\\root` sits at position {} of {}. Because \
+                detail: format!("`.\\livecpk\\root` sits at position {} of {}. Because \
                                  cpk.root is first wins, every pack after it loses \
-                                 the keys it already carries.",
-                    pos + 1,
-                    packs.len()
-                ),
+                                 the keys it already carries.", pos + 1, packs.len()),
                 path: ini_path.to_string_lossy().into_owned(),
             });
         }
@@ -1241,34 +921,24 @@ fn check_ini(ini_path: &Path, addons: &Path) -> Vec<Finding> {
 
 fn check_tables(livecpk: &Path) -> Vec<Finding> {
     use rayon::prelude::*;
-    let tables: Vec<PathBuf> = crate::fsutil::files(livecpk)
-        .into_iter()
+    let tables: Vec<PathBuf> = crate::fsutil::files(livecpk).into_iter()
         .filter(|p| {
             let s = p.to_string_lossy();
             s.contains("pesdb") && s.ends_with(".bin")
         })
         .collect();
-    let mut out: Vec<Finding> = tables
-        .par_iter()
+    let mut out: Vec<Finding> = tables.par_iter()
         .filter_map(|p| {
             let v = pesdb::validate(p);
             if v.ok {
                 return None;
             }
-            let name = p
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned();
+            let name = p.file_name().unwrap_or_default().to_string_lossy().into_owned();
             let (severity, title) = match v.status {
-                pesdb::Status::Unrecognised => (
-                    "warn".to_string(),
-                    format!("{name} is not a readable table"),
-                ),
-                _ => (
-                    "error".to_string(),
-                    format!("{name} would corrupt the game"),
-                ),
+                pesdb::Status::Unrecognised => ("warn".to_string(),
+                    format!("{name} is not a readable table")),
+                _ => ("error".to_string(),
+                    format!("{name} would corrupt the game")),
             };
             Some(Finding {
                 severity,
@@ -1315,16 +985,12 @@ pub fn archive_map(path: &Path, depth: usize) -> Result<ArchiveMap, String> {
         entries: summary.entries,
         unpacked: summary.unpacked,
         compressed: summary.compressed,
-        sections: grouped
-            .into_iter()
-            .take(40)
-            .map(|f| ArchiveSection {
-                info: describe(&format!("{}/_", f.name)),
-                path: f.name,
-                files: f.files,
-                bytes: f.bytes,
-            })
-            .collect(),
+        sections: grouped.into_iter().take(40).map(|f| ArchiveSection {
+            info: describe(&format!("{}/_", f.name)),
+            path: f.name,
+            files: f.files,
+            bytes: f.bytes,
+        }).collect(),
         extensions: by_ext.into_iter().collect(),
     })
 }
@@ -1335,26 +1001,11 @@ mod tests {
 
     #[test]
     fn every_data_archive_is_explained() {
-        for n in [
-            "dt00_x64.cpk",
-            "dt10_x64.cpk",
-            "dt11_x64.cpk",
-            "dt12_g4.cpk",
-            "dt13_all.cpk",
-            "dt14_all.cpk",
-            "dt15_x64.cpk",
-            "dt16_all.cpk",
-            "dt17_x64.cpk",
-            "dt18_all.cpk",
-            "dt19_x64.cpk",
-            "dt30_g4.cpk",
-            "dt32_g4.cpk",
-            "dt33_g4.cpk",
-            "dt34_g4.cpk",
-            "dt35_g4.cpk",
-            "dt20_eng_x64.cpk",
-            "dt00_4K_x64.cpk",
-        ] {
+        for n in ["dt00_x64.cpk", "dt10_x64.cpk", "dt11_x64.cpk", "dt12_g4.cpk",
+                  "dt13_all.cpk", "dt14_all.cpk", "dt15_x64.cpk", "dt16_all.cpk",
+                  "dt17_x64.cpk", "dt18_all.cpk", "dt19_x64.cpk", "dt30_g4.cpk",
+                  "dt32_g4.cpk", "dt33_g4.cpk", "dt34_g4.cpk", "dt35_g4.cpk",
+                  "dt20_eng_x64.cpk", "dt00_4K_x64.cpk"] {
             let info = describe(n);
             assert_ne!(info.title, "Unrecognised", "{n} has no explanation");
             assert!(!info.what.is_empty(), "{n} has no description");
@@ -1363,20 +1014,11 @@ mod tests {
 
     #[test]
     fn path_rules_beat_the_extension_fallback() {
-        assert_eq!(
-            describe("common/etc/pesdb/Player.bin").title,
-            "Database table"
-        );
+        assert_eq!(describe("common/etc/pesdb/Player.bin").title, "Database table");
         assert_eq!(describe("common/menu/general/x.bin").title, "Menu screen");
-        assert_eq!(
-            describe("common/match/constant/constant_match.bin").title,
-            "Match constant"
-        );
+        assert_eq!(describe("common/match/constant/constant_match.bin").title, "Match constant");
         assert_eq!(describe("somewhere/else/mystery.bin").edit, Edit::Unknown);
-        assert_eq!(
-            describe("Asset/model/character/uniform/texture/a.ftex").title,
-            "Kit texture"
-        );
+        assert_eq!(describe("Asset/model/character/uniform/texture/a.ftex").title, "Kit texture");
     }
 
     #[test]
@@ -1395,20 +1037,14 @@ mod tests {
         let mut missing = Vec::new();
         for entry in std::fs::read_dir(data).unwrap().flatten() {
             let p = entry.path();
-            if p.extension()
-                .map(|e| e.eq_ignore_ascii_case("cpk"))
-                .unwrap_or(false)
-            {
+            if p.extension().map(|e| e.eq_ignore_ascii_case("cpk")).unwrap_or(false) {
                 let name = p.file_name().unwrap().to_string_lossy().into_owned();
                 if describe(&name).title == "Unrecognised" {
                     missing.push(name);
                 }
             }
         }
-        assert!(
-            missing.is_empty(),
-            "archives with no explanation: {missing:?}"
-        );
+        assert!(missing.is_empty(), "archives with no explanation: {missing:?}");
     }
 
     #[test]
@@ -1448,10 +1084,7 @@ mod explain_tests {
         ];
         for p in paths {
             let info = describe(p);
-            assert!(
-                !info.breaks.is_empty(),
-                "{p} explains nothing about failure"
-            );
+            assert!(!info.breaks.is_empty(), "{p} explains nothing about failure");
             assert!(
                 info.breaks.len() > 30,
                 "{p} has a stub consequence: {:?}",
@@ -1465,17 +1098,8 @@ mod explain_tests {
     /// most of the ~89 blocks rely on it rather than overriding it.
     #[test]
     fn every_risk_rating_has_a_consequence() {
-        for e in [
-            Edit::Safe,
-            Edit::Careful,
-            Edit::Risky,
-            Edit::ReadOnly,
-            Edit::Unknown,
-        ] {
-            assert!(
-                e.consequence().len() > 40,
-                "{e:?} has no useful consequence"
-            );
+        for e in [Edit::Safe, Edit::Careful, Edit::Risky, Edit::ReadOnly, Edit::Unknown] {
+            assert!(e.consequence().len() > 40, "{e:?} has no useful consequence");
             assert!(!e.label().is_empty());
         }
     }
@@ -1485,17 +1109,9 @@ mod explain_tests {
     #[test]
     fn a_specific_consequence_replaces_the_generic_one() {
         let info = describe("common/etc/pesdb/Team.bin");
-        assert_ne!(
-            info.breaks,
-            Edit::Risky.consequence(),
-            "the stride rule should be specific"
-        );
+        assert_ne!(info.breaks, Edit::Risky.consequence(), "the stride rule should be specific");
         assert!(info.breaks.contains("stride"), "got {:?}", info.breaks);
         let generic = describe("common/render/symbol/a.dds");
-        assert_eq!(
-            generic.breaks,
-            generic.edit.consequence(),
-            "an unoverridden block should use the rule"
-        );
+        assert_eq!(generic.breaks, generic.edit.consequence(), "an unoverridden block should use the rule");
     }
 }

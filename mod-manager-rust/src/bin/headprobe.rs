@@ -28,19 +28,10 @@ fn main() -> anyhow::Result<()> {
         _ => Camera::three_quarter(),
     };
     let fallback = render::skin_for(path);
-    let held: Option<Texture> =
-        fallback
-            .as_ref()
-            .map(|(rgba, w, h)| Texture { rgba, w: *w, h: *h });
-    let (px, skipped) = render::render_report(
-        &models,
-        held.as_ref(),
-        Some(&maps),
-        &cam,
-        Mode::Textured,
-        size,
-        size,
-    );
+    let held: Option<Texture> = fallback
+        .as_ref()
+        .map(|(rgba, w, h)| Texture { rgba, w: *w, h: *h });
+    let (px, skipped) = render::render_report(&models, held.as_ref(), Some(&maps), &cam, Mode::Textured, size, size);
     eprintln!("render_report {:?}", t3.elapsed());
     let mut px = px;
     // Flatten onto the background: a viewer that shows transparency as white
@@ -61,19 +52,14 @@ fn main() -> anyhow::Result<()> {
             for (i, mesh) in m.meshes.iter().enumerate() {
                 let mat = m.material(i);
                 let name = mat.map(|x| x.name.as_str()).unwrap_or("-");
-                let slots = mat
-                    .map(|x| {
-                        x.slots
-                            .iter()
-                            .map(|s| format!("{}={}", s.name, s.texture))
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    })
-                    .unwrap_or_default();
-                println!(
-                    "  mesh {:<2} {:<16} mat {:<26} {}",
-                    i, mesh.name, name, slots
-                );
+                let slots = mat.map(|x| {
+                    x.slots
+                        .iter()
+                        .map(|s| format!("{}={}", s.name, s.texture))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                }).unwrap_or_default();
+                println!("  mesh {:<2} {:<16} mat {:<26} {}", i, mesh.name, name, slots);
             }
         }
         for m in &raw {
@@ -84,12 +70,7 @@ fn main() -> anyhow::Result<()> {
                         .map(|x| x.to_string_lossy().to_lowercase())
                         .unwrap_or_default();
                     let got = maps.texture(&stem).is_some();
-                    println!(
-                        "  {:<20} {:<28} {}",
-                        s.name,
-                        s.texture,
-                        if got { "FOUND" } else { "missing" }
-                    );
+                    println!("  {:<20} {:<28} {}", s.name, s.texture, if got { "FOUND" } else { "missing" });
                 }
             }
         }
@@ -112,11 +93,7 @@ fn write_png(path: &str, w: usize, h: usize, rgba: &[u8]) -> anyhow::Result<()> 
         for (i, v) in table.iter_mut().enumerate() {
             let mut c = i as u32;
             for _ in 0..8 {
-                c = if c & 1 != 0 {
-                    0xEDB8_8320 ^ (c >> 1)
-                } else {
-                    c >> 1
-                };
+                c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
             }
             *v = c;
         }

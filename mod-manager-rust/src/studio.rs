@@ -54,7 +54,8 @@ fn mtime_of(meta: &fs::Metadata) -> u64 {
 }
 
 fn hidden_name(name: &str) -> bool {
-    name.starts_with('.') || matches!(name, "target" | "node_modules" | "__pycache__" | ".git")
+    name.starts_with('.')
+        || matches!(name, "target" | "node_modules" | "__pycache__" | ".git")
 }
 
 /// One level of a directory, sorted folders-first then by name. Deliberately
@@ -62,7 +63,8 @@ fn hidden_name(name: &str) -> bool {
 /// tree that expands lazily is the only version that opens quickly.
 pub fn tree(root: &Path) -> Result<Vec<Node>> {
     let mut out = Vec::new();
-    let rd = fs::read_dir(root).with_context(|| format!("opening {}", root.display()))?;
+    let rd = fs::read_dir(root)
+        .with_context(|| format!("opening {}", root.display()))?;
     for entry in rd.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
         let Ok(meta) = entry.metadata() else { continue };
@@ -102,7 +104,8 @@ pub struct TextFile {
 /// `.cpk`, `.ftex`, `.bin`, `.fmdl` — is distinguished from the ones worth
 /// editing (`sider.ini`, `.lua`, `.json`, `.txt`, `.md`).
 pub fn read_text(path: &Path) -> Result<TextFile> {
-    let meta = fs::metadata(path).with_context(|| format!("statting {}", path.display()))?;
+    let meta = fs::metadata(path)
+        .with_context(|| format!("statting {}", path.display()))?;
     let size = meta.len();
     if size > READ_LIMIT {
         bail!(
@@ -140,18 +143,20 @@ pub fn read_text(path: &Path) -> Result<TextFile> {
 /// leave a half-written `sider.ini` behind. Returns the bytes now on disk.
 pub fn write_text(path: &Path, text: &str) -> Result<usize> {
     let parent = path.parent().unwrap_or(Path::new("."));
-    fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("creating {}", parent.display()))?;
     let tmp = path.with_extension(format!(
         "{}.fl27mm-tmp",
         path.extension().and_then(|e| e.to_str()).unwrap_or("tmp")
     ));
     {
-        let mut f =
-            fs::File::create(&tmp).with_context(|| format!("creating {}", tmp.display()))?;
+        let mut f = fs::File::create(&tmp)
+            .with_context(|| format!("creating {}", tmp.display()))?;
         f.write_all(text.as_bytes())?;
         f.flush()?;
     }
-    fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))?;
+    fs::rename(&tmp, path)
+        .with_context(|| format!("replacing {}", path.display()))?;
     Ok(text.len())
 }
 
@@ -225,33 +230,22 @@ pub fn new_pack(addons: &Path, name: &str, kind: &str) -> Result<Scaffold> {
 
     for rel in layout {
         let path = addons.join(
-            rel.replace("<name>", name)
-                .replace('/', std::path::MAIN_SEPARATOR_STR),
-        );
+            rel.replace("<name>", name).replace('/', std::path::MAIN_SEPARATOR_STR));
         if path.exists() {
             skipped.push(path.to_string_lossy().replace('\\', "/"));
             continue;
         }
-        fs::create_dir_all(&path).with_context(|| format!("creating {}", path.display()))?;
+        fs::create_dir_all(&path)
+            .with_context(|| format!("creating {}", path.display()))?;
         created.push(path.to_string_lossy().replace('\\', "/"));
     }
 
     // The script itself, for the one kind that is defined by it.
     if kind == "lua" {
-        write_if_absent(
-            &pack.join("init.lua"),
-            &lua_stub(name),
-            &mut skipped,
-            &mut files,
-        )?;
+        write_if_absent(&pack.join("init.lua"), &lua_stub(name), &mut skipped, &mut files)?;
     }
     let readme = pack.join("README.txt");
-    write_if_absent(
-        &readme,
-        &readme_body(name, kind, hint, hook),
-        &mut skipped,
-        &mut files,
-    )?;
+    write_if_absent(&readme, &readme_body(name, kind, hint, hook), &mut skipped, &mut files)?;
 
     // Prove it landed. A directory where a file belongs is the specific way
     // this used to fail, so the check distinguishes the two.
@@ -259,10 +253,7 @@ pub fn new_pack(addons: &Path, name: &str, kind: &str) -> Result<Scaffold> {
     for p in &files {
         let path = Path::new(p);
         if !path.is_file() {
-            missing.push(format!(
-                "{} is not a file",
-                p.rsplit('/').next().unwrap_or(p)
-            ));
+            missing.push(format!("{} is not a file", p.rsplit('/').next().unwrap_or(p)));
         }
     }
     if !pack.is_dir() {
@@ -411,18 +402,16 @@ fn copy_tree(src: &Path, dest: &Path, out: &mut Vec<InstalledFile>) -> Result<u6
 
 /// The base root line, which must remain the last `cpk.root` in the file.
 fn base_root_index(ini: &Ini) -> Option<usize> {
-    ini.line_indices("cpk.root").into_iter().rev().find(
-        |&i| matches!(ini.lines.get(i), Some(Line::Entry(e)) if crate::order::is_base(&e.value)),
-    )
+    ini.line_indices("cpk.root").into_iter().rev().find(|&i| {
+        matches!(ini.lines.get(i), Some(Line::Entry(e)) if crate::order::is_base(&e.value))
+    })
 }
 
 /// Register a pack in sider.ini without disturbing any other line. Returns the
 /// rendered line, or None when the pack is already registered.
 pub fn register(ini: &mut Ini, value: &str, section_hint: &str) -> Option<String> {
     let already = ini.all(section_hint).iter().any(|e| {
-        e.value
-            .replace('/', "\\")
-            .eq_ignore_ascii_case(&value.replace('/', "\\"))
+        e.value.replace('/', "\\").eq_ignore_ascii_case(&value.replace('/', "\\"))
     });
     if already {
         return None;
@@ -443,10 +432,7 @@ pub fn register(ini: &mut Ini, value: &str, section_hint: &str) -> Option<String
         "cpk.root" => base_root_index(ini)
             .or_else(|| ini.line_indices(section_hint).into_iter().next())
             .unwrap_or(ini.lines.len()),
-        _ => ini
-            .line_indices(section_hint)
-            .into_iter()
-            .next_back()
+        _ => ini.line_indices(section_hint).into_iter().next_back()
             .map(|i| i + 1)
             .unwrap_or(ini.lines.len()),
     };
@@ -460,11 +446,8 @@ pub fn install_pack(src: &Path, addons: &Path) -> Result<Install> {
     if !src.is_dir() {
         bail!("{} is not a folder", src.display());
     }
-    let name = src
-        .file_name()
-        .context("pack folder has no name")?
-        .to_string_lossy()
-        .to_string();
+    let name = src.file_name().context("pack folder has no name")?
+        .to_string_lossy().to_string();
     let root = addons.join("livecpk").join("root");
     let target = root.join(&name);
     if src == target {
@@ -484,16 +467,13 @@ pub fn install_pack(src: &Path, addons: &Path) -> Result<Install> {
         }
         fs::create_dir_all(target.parent().unwrap_or(&root))?;
         let copied = copy_tree(src, &target, &mut files)?;
-        let bad: Vec<&str> = files
-            .iter()
+        let bad: Vec<&str> = files.iter()
             .filter(|f| !f.verified)
             .map(|f| f.path.as_str())
             .collect();
         if !bad.is_empty() {
             warnings.push(format!(
-                "{} copied file(s) do not match their source: {:?}",
-                bad.len(),
-                &bad[..bad.len().min(3)]
+                "{} copied file(s) do not match their source: {:?}", bad.len(), &bad[..bad.len().min(3)]
             ));
         }
         copied
@@ -519,10 +499,8 @@ pub fn install_pack(src: &Path, addons: &Path) -> Result<Install> {
             warnings.push(format!("{name} is already registered in sider.ini"));
         }
     } else {
-        warnings.push(format!(
-            "no sider.ini at {} — files copied, nothing registered",
-            addons.display()
-        ));
+        warnings.push(format!("no sider.ini at {} — files copied, nothing registered",
+                             addons.display()));
     }
     Ok(Install {
         target: target.to_string_lossy().replace('\\', "/"),
@@ -690,11 +668,7 @@ pub fn edit(addons: &Path, key: &str, value: &str, mode: &str, apply: bool) -> R
                 );
             }
             ini.lines.swap(idx, other);
-            note = format!(
-                "{} moved {}",
-                value,
-                if mode == "up" { "up" } else { "down" }
-            );
+            note = format!("{} moved {}", value, if mode == "up" { "up" } else { "down" });
             after = vec![render_line(&ini.lines[idx]), render_line(&ini.lines[other])];
         }
         other => bail!("unknown action {other}"),
@@ -702,8 +676,7 @@ pub fn edit(addons: &Path, key: &str, value: &str, mode: &str, apply: bool) -> R
 
     let mut backup = None;
     if apply {
-        let stamp = fs::metadata(&ini_path)
-            .ok()
+        let stamp = fs::metadata(&ini_path).ok()
             .and_then(|m| m.modified().ok())
             .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())
@@ -786,17 +759,13 @@ pub struct PackCheck {
 /// already claims. Uses the same discovery the Pack order tab uses, so the
 /// answer cannot disagree with that view.
 pub fn check_pack(dir: &Path, addons: &Path) -> Result<PackCheck> {
-    let name = dir
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
+    let name = dir.file_name().map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
     let mut notes: Vec<String> = Vec::new();
     let mut counts: BTreeMap<String, usize> = Default::default();
     let mut bytes = 0u64;
     for f in crate::fsutil::files(dir) {
-        let ext = f
-            .extension()
-            .and_then(|e| e.to_str())
+        let ext = f.extension().and_then(|e| e.to_str())
             .map(|e| format!(".{e}"))
             .unwrap_or_else(|| "(no extension)".to_string());
         *counts.entry(ext).or_default() += 1;
@@ -815,10 +784,8 @@ pub fn check_pack(dir: &Path, addons: &Path) -> Result<PackCheck> {
 
     let ini = Ini::read(&addons.join("sider.ini")).unwrap_or_default();
     let want = format!(".\\livecpk\\root\\{name}").to_lowercase();
-    let registered = ini
-        .all("cpk.root")
-        .iter()
-        .any(|e| e.value.replace('/', "\\").to_lowercase() == want);
+    let registered = ini.all("cpk.root").iter().any(|e|
+        e.value.replace('/', "\\").to_lowercase() == want);
 
     // Which earlier packs already hold a file this pack would provide. My own
     // relative paths are collected once up front: walking them again for every
@@ -916,8 +883,7 @@ mod tests {
         assert_eq!(n, 5);
         assert_eq!(fs::read_to_string(&p).unwrap(), "hello");
         let leftovers: Vec<_> = fs::read_dir(p.parent().unwrap())
-            .unwrap()
-            .flatten()
+            .unwrap().flatten()
             .filter(|e| e.file_name().to_string_lossy().contains("fl27mm-tmp"))
             .collect();
         assert!(leftovers.is_empty(), "temp file left behind");
@@ -931,32 +897,20 @@ mod tests {
 \tcpk.root = \".\\livecpk\\root\"\n\
 \tlua.module = \"lib\\CommonLib.lua\"  # shared\n";
         let mut ini = Ini::parse(src);
-        let before: Vec<String> = ini
-            .lines
-            .iter()
-            .map(|l| match l {
-                Line::Entry(e) => e.render(),
-                Line::Raw(r) => r.clone(),
-            })
-            .collect();
+        let before: Vec<String> = ini.lines.iter().map(|l| match l {
+            Line::Entry(e) => e.render(),
+            Line::Raw(r) => r.clone(),
+        }).collect();
         let line = register(&mut ini, ".\\livecpk\\root\\New", "cpk.root").unwrap();
-        let after: Vec<String> = ini
-            .lines
-            .iter()
-            .map(|l| match l {
-                Line::Entry(e) => e.render(),
-                Line::Raw(r) => r.clone(),
-            })
-            .collect();
+        let after: Vec<String> = ini.lines.iter().map(|l| match l {
+            Line::Entry(e) => e.render(),
+            Line::Raw(r) => r.clone(),
+        }).collect();
         assert_eq!(line, "\tcpk.root = \".\\livecpk\\root\\New\"");
         // Everything that was there is still there, unchanged, in order.
         let kept: Vec<&String> = after.iter().filter(|s| before.contains(s)).collect();
         assert_eq!(kept, before.iter().collect::<Vec<&String>>());
-        let roots: Vec<usize> = after
-            .iter()
-            .position(|s| s.contains("New"))
-            .into_iter()
-            .collect();
+        let roots: Vec<usize> = after.iter().position(|s| s.contains("New")).into_iter().collect();
         let base = after.iter().position(|s| s.ends_with("\\root\"")).unwrap();
         assert!(roots[0] < base, "a new pack must precede the base root");
         // And registering it again changes nothing.
@@ -967,23 +921,11 @@ mod tests {
     fn scaffold_creates_the_expected_layout_without_overwriting() {
         let d = temp("scaffold");
         let s = new_pack(&d, "My Faces", "mesh").unwrap();
-        assert!(
-            s.created
-                .iter()
-                .any(|p| p.contains("My Faces/Asset/model/character/face")),
-            "{:?}",
-            s.created
-        );
-        assert!(
-            s.missing.is_empty(),
-            "mesh scaffold left something undone: {:?}",
-            s.missing
-        );
+        assert!(s.created.iter().any(|p| p.contains("My Faces/Asset/model/character/face")),
+                "{:?}", s.created);
+        assert!(s.missing.is_empty(), "mesh scaffold left something undone: {:?}", s.missing);
         let again = new_pack(&d, "My Faces", "mesh").unwrap();
-        assert!(
-            again.created.is_empty(),
-            "a second run must not rewrite anything"
-        );
+        assert!(again.created.is_empty(), "a second run must not rewrite anything");
         assert!(!again.skipped.is_empty());
 
         // The bug this guards: the layout used to list `init.lua` as a path to
@@ -994,27 +936,16 @@ mod tests {
         assert!(lua.dir.ends_with("My Script"));
         let init = d.join("My Script/init.lua");
         assert!(init.is_file(), "init.lua must be a file, not a folder");
-        assert!(
-            !init.is_dir(),
-            "a directory named init.lua is the old failure"
-        );
+        assert!(!init.is_dir(), "a directory named init.lua is the old failure");
         assert!(lua.missing.is_empty(), "{:?}", lua.missing);
-        assert!(
-            lua.files.iter().any(|p| p.ends_with("init.lua")),
-            "{:?}",
-            lua.files
-        );
+        assert!(lua.files.iter().any(|p| p.ends_with("init.lua")), "{:?}", lua.files);
         assert!(fs::read_to_string(&init).unwrap().contains("My Script"));
         assert!(d.join("My Script/README.txt").is_file());
 
         // Every kind must end with nothing missing.
         for kind in ["cpk", "lua", "mesh", "generic"] {
             let got = new_pack(&d, &format!("Pack {kind}"), kind).unwrap();
-            assert!(
-                got.missing.is_empty(),
-                "{kind} scaffold incomplete: {:?}",
-                got.missing
-            );
+            assert!(got.missing.is_empty(), "{kind} scaffold incomplete: {:?}", got.missing);
             assert!(Path::new(&got.dir).is_dir(), "{kind} pack folder absent");
         }
         let _ = fs::remove_dir_all(&d);
@@ -1025,36 +956,24 @@ mod tests {
         let addons = temp("addons");
         let live = addons.join("livecpk/root");
         fs::create_dir_all(&live).unwrap();
-        fs::write(
-            addons.join("sider.ini"),
-            "[sider]\n\tcpk.root = \".\\livecpk\\root\"\n",
-        )
-        .unwrap();
+        fs::write(addons.join("sider.ini"),
+            "[sider]\n\tcpk.root = \".\\livecpk\\root\"\n").unwrap();
         let pack = temp("packsrc").join("My Pack");
         fs::create_dir_all(pack.join("Asset/effect")).unwrap();
         fs::write(pack.join("Asset/effect/x.ftex"), b"texture-bytes").unwrap();
 
         let got = install_pack(&pack, &addons).unwrap();
         assert_eq!(got.files.len(), 1);
-        assert!(
-            got.files[0].verified,
-            "the copy must match its source byte for byte"
-        );
+        assert!(got.files[0].verified, "the copy must match its source byte for byte");
         assert_eq!(got.bytes, 13);
         assert!(got.backup.is_some(), "sider.ini must be copied aside first");
-        assert!(
-            got.ini_line.as_ref().unwrap().contains("My Pack"),
-            "{:?}",
-            got.ini_line
-        );
+        assert!(got.ini_line.as_ref().unwrap().contains("My Pack"), "{:?}", got.ini_line);
         let ini = fs::read_to_string(addons.join("sider.ini")).unwrap();
         let new_at = ini.find("My Pack").unwrap();
         let base_at = ini.find("cpk.root = \".\\livecpk\\root\"").unwrap();
         assert!(new_at < base_at, "the new pack must win over the base root");
-        assert!(
-            fs::read(addons.join("livecpk/root/My Pack/Asset/effect/x.ftex")).unwrap()
-                == b"texture-bytes"
-        );
+        assert!(fs::read(addons.join("livecpk/root/My Pack/Asset/effect/x.ftex")).unwrap()
+               == b"texture-bytes");
 
         // Installing a second time must refuse to overwrite, not silently clobber.
         let again = install_pack(&pack, &addons);
@@ -1067,27 +986,17 @@ mod tests {
     fn check_pack_names_what_would_shadow_it() {
         let addons = temp("check");
         fs::create_dir_all(addons.join("livecpk/root/Existing/Asset/effect")).unwrap();
-        fs::write(
-            addons.join("livecpk/root/Existing/Asset/effect/shared.ftex"),
-            b"a",
-        )
-        .unwrap();
-        fs::write(
-            addons.join("sider.ini"),
+        fs::write(addons.join("livecpk/root/Existing/Asset/effect/shared.ftex"), b"a").unwrap();
+        fs::write(addons.join("sider.ini"),
             "[sider]\n\tcpk.root = \".\\livecpk\\root\\Existing\"\n\
-             \tcpk.root = \".\\livecpk\\root\"\n",
-        )
-        .unwrap();
+             \tcpk.root = \".\\livecpk\\root\"\n").unwrap();
         let mine = addons.join("livecpk/root/Mine");
         fs::create_dir_all(mine.join("Asset/effect")).unwrap();
         fs::write(mine.join("Asset/effect/shared.ftex"), b"b").unwrap();
         let c = check_pack(&mine, &addons).unwrap();
         assert!(!c.registered);
-        assert!(
-            c.shadows.iter().any(|s| s.contains("shared.ftex")),
-            "Existing comes first, so it shadows this file: {:?}",
-            c.shadows
-        );
+        assert!(c.shadows.iter().any(|s| s.contains("shared.ftex")),
+                "Existing comes first, so it shadows this file: {:?}", c.shadows);
         let _ = fs::remove_dir_all(&addons);
     }
 
@@ -1105,19 +1014,14 @@ mod tests {
              \tcpk.root = \".\\livecpk\\root\\Missing\"\n\
              \tcpk.root = \".\\livecpk\\root\"\n\
              \tlua.module = \"lib\\a.lua\"\n",
-        )
-        .unwrap();
+        ).unwrap();
         let e = entries(&addons).unwrap();
         assert_eq!(e.len(), 5);
         assert_eq!(e[0].key, "cpk.root");
         assert_eq!(e[0].order, 1, "orders count per key, not across keys");
         assert!(e[0].exists && e[0].enabled);
         assert!(!e[1].enabled, "a semicolon line is disabled, not missing");
-        assert!(
-            e[1].comment.contains("switched off"),
-            "hand comments survive: {:?}",
-            e[1].comment
-        );
+        assert!(e[1].comment.contains("switched off"), "hand comments survive: {:?}", e[1].comment);
         assert!(!e[2].exists, "Missing is registered but absent");
         assert!(e[3].is_base, "the bare root is recognised");
         assert_eq!(e[4].key, "lua.module");
@@ -1135,32 +1039,15 @@ mod tests {
             \tlua.module = \"lib\\CommonLib.lua\"  # shared library\n";
         fs::write(addons.join("sider.ini"), text).unwrap();
 
-        let p = edit(
-            &addons,
-            "cpk.root",
-            ".\\livecpk\\root\\One",
-            "disable",
-            false,
-        )
-        .unwrap();
+        let p = edit(&addons, "cpk.root", ".\\livecpk\\root\\One", "disable", false).unwrap();
         assert!(!p.applied);
         assert!(p.backup.is_none(), "a preview must not create a backup");
         assert_eq!(p.before[0], "\tcpk.root = \".\\livecpk\\root\\One\"");
         assert_eq!(p.after[0], "\t;cpk.root = \".\\livecpk\\root\\One\"");
-        assert_eq!(
-            fs::read_to_string(addons.join("sider.ini")).unwrap(),
-            text,
-            "previewing must leave the file untouched"
-        );
+        assert_eq!(fs::read_to_string(addons.join("sider.ini")).unwrap(), text,
+                   "previewing must leave the file untouched");
 
-        let a = edit(
-            &addons,
-            "cpk.root",
-            ".\\livecpk\\root\\One",
-            "disable",
-            true,
-        )
-        .unwrap();
+        let a = edit(&addons, "cpk.root", ".\\livecpk\\root\\One", "disable", true).unwrap();
         assert!(a.applied && a.backup.is_some());
         let now = fs::read_to_string(addons.join("sider.ini")).unwrap();
         // Everything that was not the target line is byte-identical, including
@@ -1169,13 +1056,8 @@ mod tests {
         let after: Vec<&str> = now.lines().collect();
         assert_eq!(before.len(), after.len());
         let changed: Vec<usize> = (0..before.len())
-            .filter(|&i| before[i] != after[i])
-            .collect();
-        assert_eq!(
-            changed,
-            vec![1],
-            "only the requested line changed: {before:?} -> {after:?}"
-        );
+            .filter(|&i| before[i] != after[i]).collect();
+        assert_eq!(changed, vec![1], "only the requested line changed: {before:?} -> {after:?}");
         assert_eq!(after[2], before[2]);
         assert_eq!(after[3], before[3]);
         // And re-enabling restores the original bytes exactly.
@@ -1187,19 +1069,13 @@ mod tests {
     #[test]
     fn edit_refuses_to_move_a_pack_past_the_base_root() {
         let addons = temp("pin");
-        fs::write(
-            addons.join("sider.ini"),
-            "[sider]\n\
+        fs::write(addons.join("sider.ini"), "[sider]\n\
             \tcpk.root = \".\\livecpk\\root\\One\"\n\
-            \tcpk.root = \".\\livecpk\\root\"\n",
-        )
-        .unwrap();
+            \tcpk.root = \".\\livecpk\\root\"\n").unwrap();
         let err = edit(&addons, "cpk.root", ".\\livecpk\\root\\One", "down", false).unwrap_err();
         assert!(err.to_string().contains("base root"), "{err}");
-        assert!(
-            edit(&addons, "cpk.root", ".\\livecpk\\root\\Two", "up", false).is_err(),
-            "an unregistered value cannot be moved"
-        );
+        assert!(edit(&addons, "cpk.root", ".\\livecpk\\root\\Two", "up", false).is_err(),
+                "an unregistered value cannot be moved");
         let _ = fs::remove_dir_all(&addons);
     }
 
@@ -1209,32 +1085,18 @@ mod tests {
         fs::create_dir_all(ws.join("pack/sub")).unwrap();
         fs::write(ws.join("pack/keep.txt"), "mine").unwrap();
 
-        assert!(
-            create_file(&ws.join("pack/keep.txt")).is_err(),
-            "no silent overwrite"
-        );
-        assert!(
-            create_file(&ws.join("pack/new/deep.lua")).is_ok(),
-            "parents are made"
-        );
-        assert!(
-            rename(&ws.join("pack/keep.txt"), &ws.join("pack/new/deep.lua")).is_err(),
-            "rename must not replace an existing file"
-        );
+        assert!(create_file(&ws.join("pack/keep.txt")).is_err(), "no silent overwrite");
+        assert!(create_file(&ws.join("pack/new/deep.lua")).is_ok(), "parents are made");
+        assert!(rename(&ws.join("pack/keep.txt"), &ws.join("pack/new/deep.lua")).is_err(),
+                "rename must not replace an existing file");
         assert!(rename(&ws.join("pack/keep.txt"), &ws.join("pack/renamed.txt")).is_ok());
         assert!(!ws.join("pack/keep.txt").exists());
 
         assert!(remove(&ws.join("pack/renamed.txt"), &ws).is_ok());
-        assert!(
-            remove(&ws, &ws).is_err(),
-            "the workspace itself is off limits"
-        );
+        assert!(remove(&ws, &ws).is_err(), "the workspace itself is off limits");
         let outside = std::env::temp_dir().join("fl27mm-studio-outside");
         fs::create_dir_all(&outside).unwrap();
-        assert!(
-            remove(&outside, &ws).is_err(),
-            "nothing outside the workspace may be deleted"
-        );
+        assert!(remove(&outside, &ws).is_err(), "nothing outside the workspace may be deleted");
         assert!(outside.exists());
         let _ = fs::remove_dir_all(&outside);
         let _ = fs::remove_dir_all(&ws);

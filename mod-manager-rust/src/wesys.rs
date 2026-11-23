@@ -69,8 +69,7 @@ fn le_u32(b: &[u8], at: usize) -> u32 {
 
 pub fn inflate(raw: &[u8]) -> Result<Vec<u8>> {
     let mut out = Vec::new();
-    ZlibDecoder::new(raw)
-        .read_to_end(&mut out)
+    ZlibDecoder::new(raw).read_to_end(&mut out)
         .with_context(|| "WESYS zlib stream is not inflatable")?;
     Ok(out)
 }
@@ -92,11 +91,7 @@ pub fn decode(raw: &[u8]) -> Result<Fl27File> {
     if raw.len() >= 16 && &raw[3..8] == WESYS {
         let packed = le_u32(raw, 8) as usize;
         let unpacked = le_u32(raw, 12) as usize;
-        let end = if packed > 0 {
-            (16 + packed).min(raw.len())
-        } else {
-            raw.len()
-        };
+        let end = if packed > 0 { (16 + packed).min(raw.len()) } else { raw.len() };
         let body = inflate(&raw[16..end])?;
         if unpacked != 0 && body.len() != unpacked {
             bail!("header says {unpacked} bytes, stream gave {}", body.len());
@@ -133,15 +128,10 @@ pub fn decode(raw: &[u8]) -> Result<Fl27File> {
     // Calling that "plain" would let a patch carry an opaque blob through as if
     // it were a table, so it is named here and encode() refuses it.
     let head = &raw[..raw.len().min(4096)];
-    let printable = head
-        .iter()
+    let printable = head.iter()
         .filter(|&&c| (32..127).contains(&c) || matches!(c, 9 | 10 | 13))
         .count();
-    let kind = if printable * 10 > head.len() * 6 {
-        Kind::Plain
-    } else {
-        Kind::Unknown
-    };
+    let kind = if printable * 10 > head.len() * 6 { Kind::Plain } else { Kind::Unknown };
     Ok(Fl27File {
         kind,
         header: Vec::new(),
@@ -185,8 +175,7 @@ fn trial_params(wide: bool) -> Vec<(i32, i32, Strategy)> {
 /// 1.8 s for `Player.bin` alone.
 fn run_trials(body: &[u8], wide: bool) -> Vec<(i32, Vec<u8>)> {
     use rayon::prelude::*;
-    trial_params(wide)
-        .into_par_iter()
+    trial_params(wide).into_par_iter()
         .map(|(level, mem_level, strategy)| (level, deflate(body, level, mem_level, strategy)))
         .collect()
 }
@@ -204,9 +193,8 @@ fn wrap(header: &[u8], stream: &[u8], body_len: usize, tail: &[u8]) -> Vec<u8> {
 /// Re-serialise, preferring a byte-exact reproduction. Sets `level` and `exact`.
 pub fn encode(file: &mut Fl27File) -> Result<Vec<u8>> {
     match file.kind {
-        Kind::Unknown => {
-            bail!("unidentified framing — refusing to re-emit bytes this codec cannot interpret")
-        }
+        Kind::Unknown => bail!(
+            "unidentified framing — refusing to re-emit bytes this codec cannot interpret"),
         Kind::Wesys => {
             // Every trial is an independent deflate of the same body, and for a
             // multi-megabyte table the search dominated the reader: 1.8 s on
@@ -222,10 +210,7 @@ pub fn encode(file: &mut Fl27File) -> Result<Vec<u8>> {
                     file.exact = true;
                     return Ok(rebuilt);
                 }
-                if best_small
-                    .as_ref()
-                    .is_none_or(|(_, b)| stream.len() < b.len())
-                {
+                if best_small.as_ref().is_none_or(|(_, b)| stream.len() < b.len()) {
                     best_small = Some((level, stream));
                 }
             }
@@ -333,8 +318,7 @@ mod tests {
     #[test]
     fn real_game_table_survives_a_re_encode() {
         let p = std::path::Path::new(
-            r"C:\Games\SP Football Life 2027\FL27 Megapatch\out\rt\a\common\match\constant\constant_match.bin",
-        );
+            r"C:\Games\SP Football Life 2027\FL27 Megapatch\out\rt\a\common\match\constant\constant_match.bin");
         if !p.exists() {
             return;
         }

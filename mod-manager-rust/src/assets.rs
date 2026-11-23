@@ -66,10 +66,7 @@ pub fn family(path: &Path) -> Family {
     // extension is the only thing that says so; classifying by path alone put
     // every .gani under `character/face` into the face family, which then
     // promised a texture editor for a file that has no pixels.
-    let ext = path
-        .extension()
-        .map(|e| e.to_string_lossy().to_lowercase())
-        .unwrap_or_default();
+    let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
     if matches!(ext.as_str(), "gani" | "mtar" | "ask" | "frig") {
         return Family::Animation;
     }
@@ -200,11 +197,7 @@ pub fn replace(path: &Path, rgba: &[u8], w: u32, h: u32) -> Result<Report> {
         );
     }
     if rgba.len() < (w as usize) * (h as usize) * 4 {
-        bail!(
-            "need {} bytes of RGBA8, got {}",
-            w as usize * h as usize * 4,
-            rgba.len()
-        );
+        bail!("need {} bytes of RGBA8, got {}", w as usize * h as usize * 4, rgba.len());
     }
 
     let mut next = Ftex {
@@ -246,11 +239,7 @@ pub fn replace(path: &Path, rgba: &[u8], w: u32, h: u32) -> Result<Report> {
         );
     }
     if after.mips.len() != next.mips.len() {
-        bail!(
-            "mip depth changed on write ({} -> {})",
-            next.mips.len(),
-            after.mips.len()
-        );
+        bail!("mip depth changed on write ({} -> {})", next.mips.len(), after.mips.len());
     }
     let (aw, ah, argb) = after.to_rgba(0)?;
     let changed = if aw == w && ah == h {
@@ -306,10 +295,8 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     ));
     {
         use std::io::Write;
-        let mut f =
-            std::fs::File::create(&tmp).with_context(|| format!("creating {}", tmp.display()))?;
-        f.write_all(bytes)
-            .with_context(|| format!("writing {}", tmp.display()))?;
+        let mut f = std::fs::File::create(&tmp).with_context(|| format!("creating {}", tmp.display()))?;
+        f.write_all(bytes).with_context(|| format!("writing {}", tmp.display()))?;
     }
     std::fs::rename(&tmp, path).with_context(|| format!("saving {}", path.display()))?;
     Ok(())
@@ -354,10 +341,7 @@ pub fn entry(path: &Path) -> Option<Entry> {
             path: path.to_string_lossy().into_owned(),
             family: Family::Animation.name(),
             editable: false,
-            format: format!(
-                "{} units / {} segments @ {} fps",
-                clip.unit_count, clip.segment_count, clip.frame_rate
-            ),
+            format: format!("{} units / {} segments @ {} fps", clip.unit_count, clip.segment_count, clip.frame_rate),
             width: 0,
             height: 0,
             bytes,
@@ -383,25 +367,15 @@ mod tests {
 
     fn a_real_texture() -> Option<PathBuf> {
         let p = Path::new("C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006/sourceimages/#windx11/face_bsm_alp.ftex");
-        if p.is_file() {
-            Some(p.to_path_buf())
-        } else {
-            None
-        }
+        if p.is_file() { Some(p.to_path_buf()) } else { None }
     }
 
     #[test]
     fn a_family_is_read_from_the_path_not_the_extension() {
         let p = Path::new("Asset/model/character/face/real/100006/sourceimages/face_bsm_alp.ftex");
         assert_eq!(family(p), Family::Face);
-        assert_eq!(
-            family(Path::new("Asset/model/character/kit/113680/a.ftex")),
-            Family::Kit
-        );
-        assert_eq!(
-            family(Path::new("common/render/symbol/club/a.ftex")),
-            Family::Symbol
-        );
+        assert_eq!(family(Path::new("Asset/model/character/kit/113680/a.ftex")), Family::Kit);
+        assert_eq!(family(Path::new("common/render/symbol/club/a.ftex")), Family::Symbol);
         assert_eq!(family(Path::new("common/menu/mode/a.ftex")), Family::Menu);
     }
 
@@ -436,18 +410,9 @@ mod tests {
         let moved = (0..(w as usize * h as usize))
             .filter(|i| argb[i * 4].abs_diff(rgba[i * 4]) <= 24)
             .count();
-        assert!(
-            moved * 2 > w as usize * h as usize,
-            "only {moved} of {} pixels took the new colour",
-            w as usize * h as usize
-        );
-        let same = (0..(w as usize * h as usize))
-            .filter(|i| argb[i * 4] == original[i * 4] && argb[i * 4 + 1] == original[i * 4 + 1])
-            .count();
-        assert!(
-            same * 3 < w as usize * h as usize,
-            "{same} pixels still match the original, so the write did not land"
-        );
+        assert!(moved * 2 > w as usize * h as usize, "only {moved} of {} pixels took the new colour", w as usize * h as usize);
+        let same = (0..(w as usize * h as usize)).filter(|i| argb[i*4] == original[i*4] && argb[i*4+1] == original[i*4+1]).count();
+        assert!(same * 3 < w as usize * h as usize, "{same} pixels still match the original, so the write did not land");
         assert!(Path::new(&r.backup).exists(), "a backup must be kept");
         let _ = std::fs::remove_dir_all(&work_dir);
     }

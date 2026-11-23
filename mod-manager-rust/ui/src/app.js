@@ -287,7 +287,10 @@ function showTab(name) {
   document.querySelectorAll(".tabs button").forEach((x) =>
     x.classList.toggle("active", x.dataset.tab === name));
   document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
-  $("tab-" + name).classList.add("active");
+  const tab = $("tab-" + name);
+  if (!tab) return;
+  tab.classList.add("active");
+  tab.scrollTop = 0;
   if (!state.game || loaded[name]) return;
   if (name === "map") { loaded.map = true; loadMap(false); }
   if (name === "packs") { loaded.packs = true; loadOrder(false); }
@@ -300,14 +303,14 @@ document.querySelectorAll(".tabs button").forEach((b) => {
   });
 });
 
-// Keyboard: Ctrl+1..7 jumps to a tab, Ctrl+R refreshes the view that is on
+// Keyboard: Ctrl+1..9 jumps to a tab, Ctrl+R refreshes the view that is on
 // screen. Typed into the editor these are left to the editor's own handlers.
 document.addEventListener("keydown", (ev) => {
   if (!ev.ctrlKey || ev.metaKey || ev.altKey) return;
   const target = ev.target;
   const inEditor = target && target.id === "code";
   const inField = target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
-  if (/^[1-7]$/.test(ev.key)) {
+  if (/^[1-9]$/.test(ev.key)) {
     const tabs = document.querySelectorAll(".tabs button");
     const b = tabs[Number(ev.key) - 1];
     if (b) { ev.preventDefault(); b.click(); }
@@ -1165,37 +1168,52 @@ $("pickConflictRoot").addEventListener("click", async () => {
 });
 
 $("runConflicts").addEventListener("click", async () => {
-  const root = $("conflictRoot").value.trim();
-  if (!root) return say("Choose a packs folder first.", "err");
-  const r = await busy("Comparing pack contents", () => invoke("conflict_report", { root }));
-  $("conflictStats").textContent = `${r.packs} packs · ${r.keys.toLocaleString()} distinct keys`;
   const cards = $("conflictSummary");
-  cards.innerHTML = "";
-  [["shared keys", r.shared], ["identical (harmless)", r.identical],
-   ["genuinely differ", r.differing], ["conflicting pairs", r.pairs.length]].forEach(([l, n]) => {
-    const c = el("div", "card");
-    c.appendChild(el("div", "n", Number(n).toLocaleString()));
-    c.appendChild(el("div", "l", l));
-    cards.appendChild(c);
-  });
   const body = $("conflictTable").querySelector("tbody");
-  body.innerHTML = "";
-  r.pairs.forEach((p) => {
-    const tr = el("tr");
-    tr.appendChild(el("td", "num", String(p.keys)));
-    tr.appendChild(el("td", "path", p.a));
-    tr.appendChild(el("td", "path", p.b));
-    body.appendChild(tr);
-  });
   const ex = $("conflictExamples");
+  cards.innerHTML = "";
+  body.innerHTML = "";
   ex.innerHTML = "";
-  if (r.examples.length) {
-    ex.appendChild(el("b", null, "Example differing keys"));
-    const ul = el("ul");
-    r.examples.forEach((k) => ul.appendChild(el("li", null, k)));
-    ex.appendChild(ul);
+  $("conflictStats").textContent = "";
+  const root = $("conflictRoot").value.trim();
+  if (!root) {
+    cards.appendChild(finding("error", "Choose a packs folder first.", ""));
+    return say("Choose a packs folder first.", "err");
   }
-  say(`${r.differing.toLocaleString()} keys genuinely differ across ${r.pairs.length} pairs.`, "ok");
+  const button = $("runConflicts");
+  button.disabled = true;
+  cards.appendChild(el("div", "finding", "Comparing pack contents…"));
+  try {
+    const r = await busy("Comparing pack contents", () => invoke("conflict_report", { root }));
+    $("conflictStats").textContent = `${r.packs} packs · ${r.keys.toLocaleString()} distinct keys`;
+    cards.innerHTML = "";
+    [["shared keys", r.shared], ["identical (harmless)", r.identical],
+     ["genuinely differ", r.differing], ["conflicting pairs", r.pairs.length]].forEach(([l, n]) => {
+      const c = el("div", "card");
+      c.appendChild(el("div", "n", Number(n).toLocaleString()));
+      c.appendChild(el("div", "l", l));
+      cards.appendChild(c);
+    });
+    r.pairs.forEach((p) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "num", String(p.keys)));
+      tr.appendChild(el("td", "path", p.a));
+      tr.appendChild(el("td", "path", p.b));
+      body.appendChild(tr);
+    });
+    if (r.examples.length) {
+      ex.appendChild(el("b", null, "Example differing keys"));
+      const ul = el("ul");
+      r.examples.forEach((k) => ul.appendChild(el("li", null, k)));
+      ex.appendChild(ul);
+    }
+    say(`${r.differing.toLocaleString()} keys genuinely differ across ${r.pairs.length} pairs.`, "ok");
+  } catch (err) {
+    cards.innerHTML = "";
+    cards.appendChild(finding("error", "Could not compare pack contents", String(err)));
+  } finally {
+    button.disabled = false;
+  }
 });
 
 // ---------------------------------------------------------------- cpk
@@ -1486,6 +1504,7 @@ async function runBin() {
 
   renderSections();
   renderRecords();
+  renderMenuAtlas();
   renderStructure();
   renderStrings();
   showHex("body head", () => invoke("bin_hex", { file: binReport.path, at: 0, bytes: 512 }));
@@ -1554,6 +1573,78 @@ function renderRecords() {
   wrap.appendChild(table);
   if (r.records > rows) {
     wrap.appendChild(el("div", "muted", `showing ${rows} of ${r.records.toLocaleString()}`));
+  }
+}
+
+function renderMenuAtlas() {
+  const box = $("menuAtlas");
+  const summary = $("menuAtlasSummary");
+  box.innerHTML = "";
+  const layout = binReport.menu_layout;
+  if (!layout) {
+    summary.textContent = "— no AFP/TXP2 package recognized";
+    box.appendChild(el("div", "muted", "This file does not contain a recognized compiled menu picture package."));
+    return;
+  }
+  summary.textContent =
+    `— ${layout.package_name} · ${layout.textures.length} textures · ${layout.pictures.length} pictures`;
+  layout.textures.forEach((texture, index) => {
+    const pictures = layout.pictures.filter((picture) => picture.texture === index);
+    const section = el("div", "atlas-section");
+    section.appendChild(el("div", "muted",
+      `Texture ${index} · ${texture.width} × ${texture.height} · format 0x${texture.format.toString(16).padStart(2, "0")} · ${pictures.length} pictures`));
+    if (texture.width && texture.height) {
+      const scale = Math.min(1, 720 / texture.width, 220 / texture.height);
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", `0 0 ${texture.width} ${texture.height}`);
+      svg.setAttribute("width", String(Math.round(texture.width * scale)));
+      svg.setAttribute("height", String(Math.round(texture.height * scale)));
+      svg.setAttribute("class", "atlas-map");
+      const back = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      back.setAttribute("width", String(texture.width));
+      back.setAttribute("height", String(texture.height));
+      back.setAttribute("class", "atlas-background");
+      svg.appendChild(back);
+      pictures.forEach((picture) => {
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", String(picture.x0_half / 2));
+        rect.setAttribute("y", String(picture.y0_half / 2));
+        rect.setAttribute("width", String((picture.x1_half - picture.x0_half) / 2));
+        rect.setAttribute("height", String((picture.y1_half - picture.y0_half) / 2));
+        rect.setAttribute("class", "atlas-rect");
+        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        title.textContent = picture.name;
+        rect.appendChild(title);
+        svg.appendChild(rect);
+      });
+      section.appendChild(svg);
+    }
+    box.appendChild(section);
+  });
+  const table = el("table");
+  const header = el("tr");
+  ["#", "Picture", "Texture", "Atlas rectangle (pixels)"].forEach((label) => {
+    header.appendChild(el("th", null, label));
+  });
+  const thead = el("thead");
+  thead.appendChild(header);
+  table.appendChild(thead);
+  const body = el("tbody");
+  const rows = Math.min(layout.pictures.length, 1000);
+  const pixel = (half) => (half / 2).toLocaleString(undefined, { maximumFractionDigits: 1 });
+  layout.pictures.slice(0, rows).forEach((picture) => {
+    const row = el("tr");
+    row.appendChild(el("td", "num", String(picture.index)));
+    row.appendChild(el("td", null, picture.name));
+    row.appendChild(el("td", "num", String(picture.texture)));
+    row.appendChild(el("td", "num",
+      `${pixel(picture.x0_half)}, ${pixel(picture.y0_half)} – ${pixel(picture.x1_half)}, ${pixel(picture.y1_half)}`));
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  box.appendChild(table);
+  if (layout.pictures.length > rows) {
+    box.appendChild(el("div", "muted", `showing ${rows.toLocaleString()} of ${layout.pictures.length.toLocaleString()} pictures`));
   }
 }
 
@@ -1816,7 +1907,7 @@ async function patchBin() {
   const file = box.dataset.path || $("binPath").value.trim();
   if (!file) return say("Choose a .bin first.", "err");
   const off = parseInt($("binOffset").value.trim(), 10);
-  const hex = $("binHex").value.trim().replace(/\s+/g, "");
+  const hex = $("binPatchHex").value.trim().replace(/\s+/g, "");
   if (!Number.isInteger(off) || off < 0) return say("Offset must be a number.", "err");
   if (!hex || hex.length % 2 || !/^[0-9a-fA-F]+$/.test(hex)) {
     return say("Bytes must be an even number of hex digits.", "err");
@@ -2098,6 +2189,7 @@ async function menuCheck() {
   menu.broken = r.broken || [];
   menu.unreachable = r.unreachable || [];
   menu.groups = r.groups || [];
+  renderMenuFilters();
   $("menuCount").textContent = `${r.screens} screens · ${r.links} links`;
   const box = $("menuFindings");
   box.innerHTML = "";
@@ -2140,6 +2232,7 @@ function renderMenuGraph() {
   // Lanes in the core's own order: biggest group first, so the part of the
   // menu a user is most likely chasing sits at the top.
   const laneOrder = menu.groups.map((g) => g[0]);
+  const laneRank = new Map(laneOrder.map((group, i) => [group, i]));
   const lanes = new Map();
   menu.entries.forEach((e) => {
     const g = groupOf(e.id);
@@ -2147,9 +2240,15 @@ function renderMenuGraph() {
     lanes.get(g).push(e);
   });
   const ordered = [...lanes.keys()].sort((a, b) => {
-    const ia = laneOrder.indexOf(a), ib = laneOrder.indexOf(b);
+    const ia = laneRank.has(a) ? laneRank.get(a) : 999;
+    const ib = laneRank.has(b) ? laneRank.get(b) : 999;
     return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.localeCompare(b);
   });
+
+  const predecessors = new Map(menu.entries.map((e) => [e.id, []]));
+  menu.entries.forEach((e) => e.events.forEach((ev) => {
+    if (ev.to && predecessors.has(ev.to)) predecessors.get(ev.to).push(e.id);
+  }));
 
   // Depth from screens nothing in the set points at: those are the doors the
   // engine opens first, so leftmost is where navigation actually starts.
@@ -2185,10 +2284,9 @@ function renderMenuGraph() {
     for (let sweep = 0; sweep < 2; sweep++) {
       const score = new Map();
       list.forEach((e) => {
-        const preds = [];
-        menu.entries.forEach((o) => o.events.forEach((ev) => {
-          if (ev.to === e.id && row.has(o.id)) preds.push(row.get(o.id));
-        }));
+        const preds = (predecessors.get(e.id) || [])
+          .map((id) => row.get(id))
+          .filter(Number.isFinite);
         score.set(e.id, preds.length ? preds.reduce((s, v) => s + v, 0) / preds.length : row.get(e.id));
       });
       list.sort((a, b) => (depth.get(a.id) - depth.get(b.id)) || (score.get(a.id) - score.get(b.id)) || a.id.localeCompare(b.id));
@@ -2304,14 +2402,42 @@ function renderMenuGraph() {
 function renderMenuList() {
   const box = $("menuList");
   box.innerHTML = "";
-  menu.entries.forEach((e) => {
+  const query = $("menuSearch").value.trim().toLowerCase();
+  const group = $("menuGroup").value;
+  const entries = menu.entries.filter((e) => {
+    const prefix = e.id.includes("/") ? e.id.split("/")[0] : "(root)";
+    if (group && prefix !== group) return false;
+    if (!query) return true;
+    const haystack = `${e.id} ${e.events.map((ev) => `${ev.name} ${ev.to}`).join(" ")}`;
+    return haystack.toLowerCase().includes(query);
+  });
+  entries.forEach((e) => {
     const d = el("div", "tnode" + (menu.sel === e.id ? " on" : ""), "");
     d.appendChild(el("span", null, e.id));
     d.appendChild(el("span", "muted", `  ${e.events.length} event(s)`));
-    d.onclick = () => { menu.sel = e.id; renderMenuList(); menuShow(e); };
+    d.onclick = () => { menu.sel = e.id; renderMenuList(); renderMenuGraph(); menuShow(e); };
     box.appendChild(d);
   });
   if (!menu.entries.length) box.appendChild(el("div", "muted", "check a set first"));
+  else if (!entries.length) box.appendChild(el("div", "muted", "no screens match this filter"));
+  $("menuListCount").textContent = `${entries.length} shown`;
+}
+
+function renderMenuFilters() {
+  const select = $("menuGroup");
+  const previous = select.value;
+  select.innerHTML = "";
+  const all = document.createElement("option");
+  all.value = "";
+  all.textContent = "All groups";
+  select.appendChild(all);
+  menu.groups.forEach(([group, count]) => {
+    const option = document.createElement("option");
+    option.value = group;
+    option.textContent = `${group} (${count})`;
+    select.appendChild(option);
+  });
+  select.value = menu.groups.some(([group]) => group === previous) ? previous : "";
 }
 
 function menuShow(e) {
@@ -2348,6 +2474,28 @@ async function menuRepoint() {
   }
 }
 
+async function menuClone() {
+  if (!menu.sel) return say("Pick a screen to clone.", "warn");
+  const root = $("menuRoot").value.trim();
+  const target = $("menuCloneId").value.trim();
+  if (!root || !target) return say("Choose a menu set and enter the new screen ID.", "warn");
+  const yes = await dialog.ask(`Clone ${menu.sel} as ${target}?`, { title: "Clone menu screen" });
+  if (!yes) return;
+  try {
+    const id = await busy("Cloning screen", () => invoke("menu_clone", {
+      root, screen: menu.sel, target,
+    }));
+    menu.sel = id;
+    $("menuCloneId").value = "";
+    say(`Created ${id}.`, "ok");
+    await menuCheck();
+    const created = menu.entries.find((e) => e.id === id);
+    if (created) menuShow(created);
+  } catch (err) {
+    say(String(err), "err");
+  }
+}
+
 
 initStudio();
 $("menuBrowse").addEventListener("click", async () => {
@@ -2360,6 +2508,9 @@ $("menuBaseBrowse").addEventListener("click", async () => {
 });
 $("menuCheck").addEventListener("click", menuCheck);
 $("menuLink").addEventListener("click", menuRepoint);
+$("menuSearch").addEventListener("input", renderMenuList);
+$("menuGroup").addEventListener("change", renderMenuList);
+$("menuClone").addEventListener("click", menuClone);
 $("assetBrowse").addEventListener("click", async () => {
   const dir = await pick({ directory: true });
   if (dir) { $("assetRoot").value = dir; assetScan(); }

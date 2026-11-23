@@ -240,6 +240,14 @@
           <span><i class="ed ext"></i> screen nothing here points at</span>
           <span class="muted">click a screen to edit it, click an arrow to repoint that event. Links that resolve only in the base layer have no node here, so they are not drawn.</span>
         </div>
+        <div class="toolbar">
+          <input id="menuSearch" type="search" placeholder="Filter screens, events, or targets" />
+          <select id="menuGroup"><option value="">All groups</option></select>
+          <span id="menuListCount" class="muted"></span>
+          <span class="sep"></span>
+          <input id="menuCloneId" type="text" spellcheck="false" placeholder="New screen ID, e.g. BL/NewScreen" />
+          <button id="menuClone" class="ghost">Clone selected</button>
+        </div>
         <div class="split">
           <div id="menuList" class="tree"></div>
           <div class="editorcol">
@@ -379,6 +387,9 @@
                 <tbody></tbody>
               </table>
             </div>
+            <h3>Compiled menu atlas <span id="menuAtlasSummary" class="muted"></span></h3>
+            <p class="hint">Named pictures and their rectangles in texture atlases. These are atlas coordinates, not on-screen widget positions.</p>
+            <div id="menuAtlas" class="tablewrap"></div>
           </div>
           <div class="bincolumn">
             <h3>Hex <span id="hexLabel" class="muted"></span></h3>
@@ -396,7 +407,7 @@
           </div>
           <div class="toolbar">
             <input id="binOffset" type="text" spellcheck="false" placeholder="body offset" />
-            <input id="binHex" type="text" spellcheck="false" placeholder="new bytes in hex, e.g. 1F or 0A7B" />
+            <input id="binPatchHex" type="text" spellcheck="false" placeholder="new bytes in hex, e.g. 1F or 0A7B" />
             <button id="binApply">Patch bytes</button>
           </div>
           <p class="hint">Only the named bytes are written. The file is re-read afterwards and the
@@ -409,8 +420,8 @@
 
   <footer id="status" class="status">Ready.</footer>
   <script src="app.js"></script>
-<!-- The dialog plugin has open/save/ask/confirm/message but no prompt, so a
-<!-- text question needs a modal of its own. See promptText() in app.js. -->
+<!-- The dialog plugin has open/save/ask/confirm/message but no prompt.
+     Text questions use the modal below. See promptText() in app.js. -->
 <div id="modal" class="modal hidden">
   <div class="modalbox">
     <p id="modalTitle"></p>

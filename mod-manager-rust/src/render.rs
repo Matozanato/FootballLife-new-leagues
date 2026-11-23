@@ -33,42 +33,22 @@ pub struct Camera {
 impl Camera {
     /// Facing the face, just above eye line -- how a portrait is taken.
     pub fn front() -> Camera {
-        Camera {
-            yaw: 0.0,
-            pitch: -0.12,
-            zoom: 1.0,
-        }
+        Camera { yaw: 0.0, pitch: -0.12, zoom: 1.0 }
     }
     pub fn three_quarter() -> Camera {
-        Camera {
-            yaw: 0.62,
-            pitch: -0.12,
-            zoom: 1.0,
-        }
+        Camera { yaw: 0.62, pitch: -0.12, zoom: 1.0 }
     }
     pub fn profile() -> Camera {
-        Camera {
-            yaw: std::f32::consts::FRAC_PI_2,
-            pitch: -0.05,
-            zoom: 1.0,
-        }
+        Camera { yaw: std::f32::consts::FRAC_PI_2, pitch: -0.05, zoom: 1.0 }
     }
     /// Looking at the back of the skull. This is the view that exposes a head
     /// assembled from only part of its files.
     pub fn back() -> Camera {
-        Camera {
-            yaw: std::f32::consts::PI,
-            pitch: -0.12,
-            zoom: 1.0,
-        }
+        Camera { yaw: std::f32::consts::PI, pitch: -0.12, zoom: 1.0 }
     }
 
     pub fn top() -> Camera {
-        Camera {
-            yaw: 0.0,
-            pitch: -1.35,
-            zoom: 1.0,
-        }
+        Camera { yaw: 0.0, pitch: -1.35, zoom: 1.0 }
     }
 }
 
@@ -158,19 +138,12 @@ pub fn load_any(path: &std::path::Path) -> anyhow::Result<Fmdl> {
         // A face folder: take the container that holds the biggest mesh.
         let mut best: Option<(usize, Vec<u8>)> = None;
         for p in crate::fsutil::files(path) {
-            if p.extension()
-                .and_then(|e| e.to_str())
-                .map(|s| s.to_lowercase())
-                != Some("fpk".into())
-            {
+            if p.extension().and_then(|e| e.to_str()).map(|s| s.to_lowercase()) != Some("fpk".into()) {
                 continue;
             }
             let Ok(c) = Fpk::read(&p) else { continue };
             for e in c.entries {
-                if e.data.len() > 64
-                    && &e.data[0..4] == b"FMDL"
-                    && e.data.len() > best.as_ref().map(|(n, _)| *n).unwrap_or(0)
-                {
+                if e.data.len() > 64 && &e.data[0..4] == b"FMDL" && e.data.len() > best.as_ref().map(|(n, _)| *n).unwrap_or(0) {
                     best = Some((e.data.len(), e.data));
                 }
             }
@@ -236,11 +209,7 @@ pub fn extents(model: &Fmdl) -> Option<(V3, V3, V3, f32)> {
     if !any {
         return None;
     }
-    let centre = V3::new(
-        (lo.x + hi.x) * 0.5,
-        (lo.y + hi.y) * 0.5,
-        (lo.z + hi.z) * 0.5,
-    );
+    let centre = V3::new((lo.x + hi.x) * 0.5, (lo.y + hi.y) * 0.5, (lo.z + hi.z) * 0.5);
     let radius = V3::new(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z).norm() * 0.5;
     Some((lo, hi, centre, radius))
 }
@@ -260,20 +229,12 @@ pub struct Skin {
 }
 
 fn srgb_to_linear(c: f32) -> f32 {
-    if c <= 0.04045 {
-        c / 12.92
-    } else {
-        ((c + 0.055) / 1.055).powf(2.4)
-    }
+    if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
 }
 
 fn linear_to_srgb(c: f32) -> f32 {
     let v = c.clamp(0.0, 1.0);
-    if v <= 0.0031308 {
-        v * 12.92
-    } else {
-        1.055 * v.powf(1.0 / 2.4) - 0.055
-    }
+    if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
 }
 
 impl Skin {
@@ -282,42 +243,28 @@ impl Skin {
     pub fn new(tex: &Texture) -> Skin {
         let w = tex.w.max(1);
         let h = tex.h.max(1);
-        let base: Vec<f32> = tex
-            .rgba
-            .chunks(4)
-            .take(w * h)
-            .flat_map(|q| {
-                [
-                    srgb_to_linear(q[0] as f32 / 255.0),
-                    srgb_to_linear(q[1] as f32 / 255.0),
-                    srgb_to_linear(q[2] as f32 / 255.0),
-                    q[3] as f32 / 255.0,
-                ]
-            })
-            .collect();
+        let base: Vec<f32> = tex.rgba.chunks(4).take(w * h).flat_map(|q| {
+            [
+                srgb_to_linear(q[0] as f32 / 255.0),
+                srgb_to_linear(q[1] as f32 / 255.0),
+                srgb_to_linear(q[2] as f32 / 255.0),
+                q[3] as f32 / 255.0,
+            ]
+        }).collect();
         let mut levels = vec![base];
         loop {
             let (pw, ph) = {
                 let last = levels.last().unwrap();
                 (last.len() / (w * h), 0usize)
             };
-            let _ = pw;
-            let _ = ph;
+            let _ = pw; let _ = ph;
             let (cw, ch) = {
                 let i = levels.len() - 1;
-                let mut cw = w >> i;
-                let mut ch = h >> i;
-                if cw == 0 {
-                    cw = 1
-                }
-                if ch == 0 {
-                    ch = 1
-                }
+                let mut cw = w >> i; let mut ch = h >> i;
+                if cw == 0 { cw = 1 } if ch == 0 { ch = 1 }
                 (cw, ch)
             };
-            if cw <= 1 && ch <= 1 {
-                break;
-            }
+            if cw <= 1 && ch <= 1 { break; }
             let src = levels.last().unwrap();
             let nw = (cw / 2).max(1);
             let nh = (ch / 2).max(1);
@@ -349,9 +296,7 @@ impl Skin {
                     }
                     let o = (y * nw + x) * 4;
                     for c in 0..3 {
-                        dst[o + c] = if wsum > 0.0 {
-                            acc[c] / wsum
-                        } else {
+                        dst[o + c] = if wsum > 0.0 { acc[c] / wsum } else {
                             // Nothing here is covered; keep a colour so a later
                             // level does not divide by zero, but it will be
                             // clipped before it reaches the screen.
@@ -370,13 +315,7 @@ impl Skin {
     /// clamping smears one edge colour across every tile.
     fn wrap(x: f32) -> f32 {
         let f = x - x.floor();
-        if f < 0.0 {
-            0.0
-        } else if f >= 1.0 {
-            0.999999
-        } else {
-            f
-        }
+        if f < 0.0 { 0.0 } else if f >= 1.0 { 0.999999 } else { f }
     }
 
     fn bilinear(&self, level: usize, u: f32, v: f32, out: &mut [f32; 4]) {
@@ -411,22 +350,14 @@ impl Skin {
         let mut b = [0f32; 4];
         self.bilinear(i0, u, v, &mut a);
         self.bilinear(i1, u, v, &mut b);
-        if f <= 0.0 {
-            return a;
-        }
-        if f >= 1.0 {
-            return b;
-        }
+        if f <= 0.0 { return a; }
+        if f >= 1.0 { return b; }
         let mut o = [0f32; 4];
-        for c in 0..4 {
-            o[c] = a[c] * (1.0 - f) + b[c] * f;
-        }
+        for c in 0..4 { o[c] = a[c] * (1.0 - f) + b[c] * f; }
         o
     }
 
-    pub fn levels(&self) -> usize {
-        self.levels.len()
-    }
+    pub fn levels(&self) -> usize { self.levels.len() }
 }
 
 /// How many map texels one screen pixel covers, per triangle. This is the
@@ -434,15 +365,10 @@ impl Skin {
 /// per pixel keeps it stable and costs nothing.
 fn lod_for(uv: [[f32; 2]; 3], sx: [f32; 3], sy: [f32; 3], w: usize, h: usize) -> f32 {
     let area = ((sx[1] - sx[0]) * (sy[2] - sy[0]) - (sx[2] - sx[0]) * (sy[1] - sy[0])).abs() * 0.5;
-    if area < 1e-6 {
-        return 0.0;
-    }
-    let tu = (uv[1][0] - uv[0][0]) * (uv[2][1] - uv[0][1])
-        - (uv[2][0] - uv[0][0]) * (uv[1][1] - uv[0][1]);
+    if area < 1e-6 { return 0.0; }
+    let tu = (uv[1][0] - uv[0][0]) * (uv[2][1] - uv[0][1]) - (uv[2][0] - uv[0][0]) * (uv[1][1] - uv[0][1]);
     let tex_area = tu.abs() * (w as f32 * h as f32);
-    if tex_area <= 1e-9 {
-        return 0.0;
-    }
+    if tex_area <= 1e-9 { return 0.0; }
     (tex_area / area).log2().max(0.0)
 }
 
@@ -467,10 +393,7 @@ fn shade(n: V3, base: [f32; 4], spec: f32) -> [u8; 3] {
     // with the light's own colour, plus a broader oily one.
     let half_k = key_dir.add(V3::new(0.0, 0.0, 1.0)).normalized();
     let spec_k = n.dot(half_k).max(0.0).powf(48.0);
-    let half_w = V3::new(-0.30, 0.40, 0.86)
-        .normalized()
-        .add(V3::new(0.0, 0.0, 1.0))
-        .normalized();
+    let half_w = V3::new(-0.30, 0.40, 0.86).normalized().add(V3::new(0.0, 0.0, 1.0)).normalized();
     let spec_w = n.dot(half_w).max(0.0).powf(9.0);
 
     let diffuse = 0.10 + key * 0.86 + fill * 0.24;
@@ -622,8 +545,7 @@ fn raster(
                             let d = out[o + ch] as f32 / 255.0;
                             out[o + ch] = ((c[ch] as f32 / 255.0) * a + d * (1.0 - a))
                                 .clamp(0.0, 1.0)
-                                .mul_add(255.0, 0.5)
-                                as u8;
+                                .mul_add(255.0, 0.5) as u8;
                         }
                     } else {
                         out[o..o + 3].copy_from_slice(&c);
@@ -685,17 +607,11 @@ fn draw_mesh(
             continue;
         }
         let _ = &mesh.positions;
-        let lod = lod_for(
-            [
-                mesh.uv(idx[0], 0).unwrap_or([0.0, 0.0]),
-                mesh.uv(idx[1], 0).unwrap_or([0.0, 0.0]),
-                mesh.uv(idx[2], 0).unwrap_or([0.0, 0.0]),
-            ],
-            sx,
-            sy,
-            tex_wh.0,
-            tex_wh.1,
-        );
+        let lod = lod_for([
+            mesh.uv(idx[0], 0).unwrap_or([0.0, 0.0]),
+            mesh.uv(idx[1], 0).unwrap_or([0.0, 0.0]),
+            mesh.uv(idx[2], 0).unwrap_or([0.0, 0.0]),
+        ], sx, sy, tex_wh.0, tex_wh.1);
         let tri = Tri {
             sx,
             sy,
@@ -745,11 +661,7 @@ pub fn scene_extents(models: &[Fmdl]) -> Option<(V3, V3, V3, f32)> {
     if !any {
         return None;
     }
-    let centre = V3::new(
-        (lo.x + hi.x) * 0.5,
-        (lo.y + hi.y) * 0.5,
-        (lo.z + hi.z) * 0.5,
-    );
+    let centre = V3::new((lo.x + hi.x) * 0.5, (lo.y + hi.y) * 0.5, (lo.z + hi.z) * 0.5);
     let radius = V3::new(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z).norm() * 0.5;
     Some((lo, hi, centre, radius))
 }
@@ -770,11 +682,7 @@ pub fn load_scene(path: &std::path::Path) -> anyhow::Result<Vec<Fmdl>> {
         vec![path.to_path_buf()]
     };
     for f in files {
-        let ext = f
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("")
-            .to_lowercase();
+        let ext = f.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
         if ext == "fpk" {
             let Ok(c) = Fpk::read(&f) else { continue };
             for e in &c.entries {
@@ -800,32 +708,17 @@ pub fn load_scene(path: &std::path::Path) -> anyhow::Result<Vec<Fmdl>> {
         return load_any(path).map(|m| vec![m]);
     }
     // Skin first: it is the biggest and the one the camera frames on.
-    out.sort_by_key(|m| {
-        std::cmp::Reverse(m.meshes.iter().map(|x| x.positions.len()).sum::<usize>())
-    });
+    out.sort_by_key(|m| std::cmp::Reverse(m.meshes.iter().map(|x| x.positions.len()).sum::<usize>()));
     Ok(out)
 }
 
 /// Supersample factor: 3x at preview sizes, 2x above, 1x for large renders
 /// where the cost stops being worth it.
 fn samples(w: usize) -> usize {
-    if w <= 512 {
-        3
-    } else if w <= 900 {
-        2
-    } else {
-        1
-    }
+    if w <= 512 { 3 } else if w <= 900 { 2 } else { 1 }
 }
 
-pub fn render(
-    model: &Fmdl,
-    tex: Option<&Texture>,
-    cam: &Camera,
-    mode: Mode,
-    w: usize,
-    h: usize,
-) -> Vec<u8> {
+pub fn render(model: &Fmdl, tex: Option<&Texture>, cam: &Camera, mode: Mode, w: usize, h: usize) -> Vec<u8> {
     render_scene(std::slice::from_ref(model), tex, cam, mode, w, h)
 }
 
@@ -846,9 +739,7 @@ pub fn keep_texturable(models: &mut Vec<crate::fmdl::Fmdl>) {
         if m.materials.is_empty() {
             continue;
         }
-        let keep: Vec<bool> = (0..m.meshes.len())
-            .map(|i| m.base_texture(i).is_some())
-            .collect();
+        let keep: Vec<bool> = (0..m.meshes.len()).map(|i| m.base_texture(i).is_some()).collect();
         let mut i = 0usize;
         m.meshes.retain(|_| {
             let k = keep.get(i).copied().unwrap_or(true);
@@ -878,11 +769,7 @@ impl Maps {
         self.items
             .iter()
             .find(|(k, _, _, _)| *k == key)
-            .map(|(_, px, w, h)| Texture {
-                rgba: px,
-                w: *w,
-                h: *h,
-            })
+            .map(|(_, px, w, h)| Texture { rgba: px, w: *w, h: *h })
     }
 
     /// How many maps were named and how many were found on disk. A preview that
@@ -892,7 +779,7 @@ impl Maps {
         (self.items.len(), self.named)
     }
 
-    /// Load every base colour map the models bind, searching `roots` in order.
+        /// Load every base colour map the models bind, searching `roots` in order.
     pub fn load(models: &[Fmdl], roots: &[std::path::PathBuf]) -> Maps {
         Maps::load_from(models, roots, &[])
     }
@@ -956,9 +843,7 @@ impl Maps {
 /// only parses the header and TOC, but dt14 alone lists 26,121 entries and a
 /// render asks for several textures, so the handles are kept for the process.
 static ARCHIVES: std::sync::OnceLock<
-    std::sync::Mutex<
-        std::collections::HashMap<std::path::PathBuf, std::sync::Arc<crate::cpk::Cpk>>,
-    >,
+    std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, std::sync::Arc<crate::cpk::Cpk>>>,
 > = std::sync::OnceLock::new();
 
 fn cached_cpk(path: &std::path::Path) -> Option<std::sync::Arc<crate::cpk::Cpk>> {
@@ -983,9 +868,7 @@ fn from_archives(archives: &[std::path::PathBuf], key: &str) -> Option<Vec<u8>> 
     let want = format!("/{key}.ftex").to_lowercase();
     let mut other: Option<(std::sync::Arc<crate::cpk::Cpk>, crate::cpk::CpkFile)> = None;
     for cpk_path in archives {
-        let Some(cpk) = cached_cpk(cpk_path) else {
-            continue;
-        };
+        let Some(cpk) = cached_cpk(cpk_path) else { continue };
         for f in cpk.files.iter() {
             let p = f.path().to_lowercase();
             if !p.ends_with(&want) {
@@ -1047,9 +930,7 @@ pub fn base_archives(model_path: &std::path::Path) -> Vec<std::path::PathBuf> {
 /// reused (`dsk_clavicle_l` is the eyelash mesh).
 fn is_blended_part(material_name: &str) -> bool {
     let lower = material_name.to_lowercase();
-    lower.contains("hair")
-        || lower.contains("shell")
-        || lower.contains("eyelash")
+    lower.contains("hair") || lower.contains("shell") || lower.contains("eyelash")
         || lower.contains("occlusion")
 }
 
@@ -1086,11 +967,7 @@ pub fn texture_roots(model_path: &std::path::Path) -> Vec<std::path::PathBuf> {
     for sub in ["sourceimages/#windx11", "sourceimages"] {
         out.push(dir.join(sub));
     }
-    if let Some(ch) = dir
-        .parent()
-        .and_then(|p| p.parent())
-        .and_then(|p| p.parent())
-    {
+    if let Some(ch) = dir.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
         for sub in ["common/sourceimages/#windx11", "common/sourceimages"] {
             out.push(ch.join(sub));
         }
@@ -1112,14 +989,7 @@ pub fn mesh_refs(models: &[Fmdl]) -> Vec<(&Fmdl, usize, &Mesh)> {
     out
 }
 
-pub fn render_scene(
-    models: &[Fmdl],
-    tex: Option<&Texture>,
-    cam: &Camera,
-    mode: Mode,
-    w: usize,
-    h: usize,
-) -> Vec<u8> {
+pub fn render_scene(models: &[Fmdl], tex: Option<&Texture>, cam: &Camera, mode: Mode, w: usize, h: usize) -> Vec<u8> {
     render_scene_maps(models, tex, None, cam, mode, w, h)
 }
 
@@ -1186,11 +1056,7 @@ pub fn write_png(path: &std::path::Path, w: usize, h: usize, rgba: &[u8]) -> any
         for (i, v) in table.iter_mut().enumerate() {
             let mut c = i as u32;
             for _ in 0..8 {
-                c = if c & 1 != 0 {
-                    0xEDB8_8320 ^ (c >> 1)
-                } else {
-                    c >> 1
-                };
+                c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
             }
             *v = c;
         }
@@ -1269,11 +1135,7 @@ pub fn render_report(
     // `cache`, so growing the cache in the same loop would invalidate them.
     let mut wanted: Vec<Option<String>> = Vec::new();
     for (model, i, _mesh) in mesh_refs(models) {
-        let key = if maps.is_some() {
-            model.base_texture(i).map(stem_of)
-        } else {
-            None
-        };
+        let key = if maps.is_some() { model.base_texture(i).map(stem_of) } else { None };
         if let Some(k) = &key {
             if !cache.iter().any(|(c, _)| c == k) {
                 if let Some(t) = maps.and_then(|m| m.texture(k)) {
@@ -1289,10 +1151,9 @@ pub fn render_report(
         if want.as_deref().map(is_placeholder_map).unwrap_or(false) {
             continue;
         }
-        let blended = model
-            .material(i)
-            .map(|m| m.slot("CubeMap_Tex_LIN").is_some() || is_blended_part(&m.name))
-            .unwrap_or(false);
+        let blended = model.material(i).map(|m| {
+            m.slot("CubeMap_Tex_LIN").is_some() || is_blended_part(&m.name)
+        }).unwrap_or(false);
         let skin: Option<&Skin> = match &want {
             Some(key) => match cache.iter().find(|(k, _)| k == key).map(|(_, s)| s) {
                 Some(s) => Some(s),
@@ -1313,31 +1174,13 @@ pub fn render_report(
             None => fallback.as_ref(),
         };
         let (tw, th) = skin.map(|s| (s.w, s.h)).unwrap_or((1, 1));
-        parts.push(Part {
-            mesh,
-            skin,
-            tw,
-            th,
-            blended,
-        });
+        parts.push(Part { mesh, skin, tw, th, blended });
     }
     // Opaque first, with depth writes, so the face and skull are in the buffer
     // before anything translucent is composited over them.
     for part in parts.iter().filter(|p| !p.blended) {
-        draw_mesh(
-            &mut big,
-            &mut depth,
-            sw,
-            sh,
-            part.mesh,
-            &view,
-            mode,
-            part.skin,
-            (part.tw * ss, part.th * ss),
-            0,
-            0.0,
-            true,
-        );
+        draw_mesh(&mut big, &mut depth, sw, sh, part.mesh, &view, mode, part.skin,
+            (part.tw * ss, part.th * ss), 0, 0.0, true);
     }
     // Then the alpha-blended parts, far to near, tested against the opaque
     // depth but never writing it. Without the sort, two cards at similar
@@ -1345,31 +1188,11 @@ pub fn render_report(
     // suppressing the depth write, the first card laid down occludes every
     // card behind it, which is the stack-of-plates look.
     let mut blended: Vec<&Part> = parts.iter().filter(|p| p.blended).collect();
-    blended.sort_by(|a, b| {
-        part_depth(a, &view)
-            .partial_cmp(&part_depth(b, &view))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    blended.sort_by(|a, b| part_depth(a, &view).partial_cmp(&part_depth(b, &view)).unwrap_or(std::cmp::Ordering::Equal));
     for part in blended {
-        let clip = if mode == Mode::Textured && part.skin.is_some() {
-            CLIP_ALPHA as u8
-        } else {
-            0
-        };
-        draw_mesh(
-            &mut big,
-            &mut depth,
-            sw,
-            sh,
-            part.mesh,
-            &view,
-            mode,
-            part.skin,
-            (part.tw * ss, part.th * ss),
-            clip,
-            1.0,
-            false,
-        );
+        let clip = if mode == Mode::Textured && part.skin.is_some() { CLIP_ALPHA as u8 } else { 0 };
+        draw_mesh(&mut big, &mut depth, sw, sh, part.mesh, &view, mode, part.skin,
+            (part.tw * ss, part.th * ss), clip, 1.0, false);
     }
     (downsample(&big, sw, w, h, ss), skipped)
 }
@@ -1386,19 +1209,13 @@ fn downsample(src: &[u8], sw: usize, w: usize, h: usize, ss: usize) -> Vec<u8> {
                 for dx in 0..ss {
                     let i = ((y * ss + dy) * sw + (x * ss + dx)) * 4;
                     let a = src[i + 3] as f32 / 255.0;
-                    if a <= 0.0 {
-                        continue;
-                    }
+                    if a <= 0.0 { continue; }
                     cov += a;
-                    for c in 0..3 {
-                        acc[c] += src[i + c] as f32 * a;
-                    }
+                    for c in 0..3 { acc[c] += src[i + c] as f32 * a; }
                 }
             }
             let o = (y * w + x) * 4;
-            if cov <= 0.0 {
-                continue;
-            }
+            if cov <= 0.0 { continue; }
             // Coverage also anti-aliases the silhouette edge itself.
             let edge = (cov / (ss * ss) as f32).min(1.0);
             for c in 0..3 {
@@ -1430,12 +1247,7 @@ pub fn turntable_scene_maps(
     cell: usize,
     mode: Mode,
 ) -> Vec<u8> {
-    let cams = [
-        Camera::front(),
-        Camera::three_quarter(),
-        Camera::back(),
-        Camera::top(),
-    ];
+    let cams = [Camera::front(), Camera::three_quarter(), Camera::back(), Camera::top()];
     let total_w = cell * cams.len();
     let mut out = vec![0u8; total_w * cell * 4];
     for (i, c) in cams.iter().enumerate() {
@@ -1474,35 +1286,23 @@ mod alpha_probe {
     #[test]
     fn probe_alpha_distribution() {
         let dir = std::path::Path::new(crate::fmdl::REAL_FACE_DIR);
-        if !dir.exists() {
-            return;
-        }
+        if !dir.exists() { return; }
         for p in crate::fsutil::files(dir) {
             let name = p.file_name().unwrap().to_string_lossy().to_lowercase();
-            if !name.contains("bsm") || !name.ends_with(".ftex") {
-                continue;
-            }
+            if !name.contains("bsm") || !name.ends_with(".ftex") { continue; }
             let t = crate::ftex::Ftex::read(&p).unwrap();
             let (w, h, rgba) = t.to_rgba(0).unwrap();
             let mut hist = [0u32; 8];
             let mut dark_rgb = 0u32;
             for q in rgba.chunks(4) {
                 hist[(q[3] as usize * 8) / 256] += 1;
-                if (q[0] as u32 + q[1] as u32 + q[2] as u32) < 24 {
-                    dark_rgb += 1;
-                }
+                if (q[0] as u32 + q[1] as u32 + q[2] as u32) < 24 { dark_rgb += 1; }
             }
             let total = (w * h) as u32;
-            println!(
-                "{} {}x{} alpha-octile-histogram {:?} dark-rgb {:.1}%",
-                name,
-                w,
-                h,
-                hist.iter()
-                    .map(|c| (100.0 * *c as f64 / total as f64) as u32)
-                    .collect::<Vec<_>>(),
-                100.0 * dark_rgb as f64 / total as f64
-            );
+            println!("{} {}x{} alpha-octile-histogram {:?} dark-rgb {:.1}%",
+                name, w, h,
+                hist.iter().map(|c| (100.0 * *c as f64 / total as f64) as u32).collect::<Vec<_>>(),
+                100.0 * dark_rgb as f64 / total as f64);
         }
     }
 }
@@ -1527,12 +1327,7 @@ mod tests {
         }
     }
 
-    fn mesh(
-        positions: Vec<V3>,
-        normals: Vec<[f32; 4]>,
-        uvs: Vec<[f32; 2]>,
-        indices: Vec<u16>,
-    ) -> Mesh {
+    fn mesh(positions: Vec<V3>, normals: Vec<[f32; 4]>, uvs: Vec<[f32; 2]>, indices: Vec<u16>) -> Mesh {
         let mut attributes = vec![0u8; positions.len() * STRIDE];
         for v in 0..positions.len() {
             write_vertex(&mut attributes, v, normals[v], uvs[v]);
@@ -1551,13 +1346,7 @@ mod tests {
     }
 
     fn model(meshes: Vec<Mesh>) -> Fmdl {
-        Fmdl {
-            bytes: Vec::new(),
-            version: 2.03,
-            meshes,
-            materials: Vec::new(),
-            spans: Vec::new(),
-        }
+        Fmdl { bytes: Vec::new(), version: 2.03, meshes, materials: Vec::new(), spans: Vec::new() }
     }
 
     /// Two identical quads at different depths, each pointing at a different
@@ -1577,14 +1366,8 @@ mod tests {
         let normals = vec![[0.0f32, 0.0, 1.0, 1.0]; 8];
         // Near quad samples texel (0,0) = red; far quad samples (1,1) = blue.
         let uvs = vec![
-            [0.0, 0.0],
-            [0.1, 0.0],
-            [0.1, 0.1],
-            [0.0, 0.1],
-            [0.9, 0.9],
-            [1.0, 0.9],
-            [1.0, 1.0],
-            [0.9, 1.0],
+            [0.0, 0.0], [0.1, 0.0], [0.1, 0.1], [0.0, 0.1],
+            [0.9, 0.9], [1.0, 0.9], [1.0, 1.0], [0.9, 1.0],
         ];
         let m = mesh(
             positions.clone(),
@@ -1596,57 +1379,27 @@ mod tests {
         let tex_px = vec![
             255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255,
         ];
-        let tex = Texture {
-            rgba: &tex_px,
-            w: 2,
-            h: 2,
-        };
-        let px = render(
-            &model(vec![m]),
-            Some(&tex),
-            &Camera::front(),
-            Mode::Textured,
-            40,
-            40,
-        );
+        let tex = Texture { rgba: &tex_px, w: 2, h: 2 };
+        let px = render(&model(vec![m]), Some(&tex), &Camera::front(), Mode::Textured, 40, 40);
         let i = (20 * 40 + 20) * 4;
         assert_eq!(px[i + 3], 255, "centre pixel is empty");
-        assert!(
-            px[i] > 150 && px[i + 2] < 90,
-            "centre should be the near red quad, got {:?}",
-            &px[i..i + 4]
-        );
+        assert!(px[i] > 150 && px[i + 2] < 90, "centre should be the near red quad, got {:?}", &px[i..i + 4]);
 
         // And with the far quad in front, blue must win: the test is depth, not
         // winding or index order.
         let mut near_blue = positions.clone();
         // Put the blue corners in front instead of behind.
-        for i in 4..8 {
-            near_blue[i].z = 0.2;
-        }
-        for i in 0..4 {
-            near_blue[i].z = -0.2;
-        }
+        for i in 4..8 { near_blue[i].z = 0.2; }
+        for i in 0..4 { near_blue[i].z = -0.2; }
         let flipped = mesh(
             near_blue,
             normals.clone(),
             uvs.clone(),
             vec![0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7],
         );
-        let px = render(
-            &model(vec![flipped]),
-            Some(&tex),
-            &Camera::front(),
-            Mode::Textured,
-            40,
-            40,
-        );
+        let px = render(&model(vec![flipped]), Some(&tex), &Camera::front(), Mode::Textured, 40, 40);
         let i = (20 * 40 + 20) * 4;
-        assert!(
-            px[i + 2] > 150 && px[i] < 90,
-            "centre should be the near blue quad, got {:?}",
-            &px[i..i + 4]
-        );
+        assert!(px[i + 2] > 150 && px[i] < 90, "centre should be the near blue quad, got {:?}", &px[i..i + 4]);
     }
 
     /// Alpha-blended parts must composite far-to-near whatever order the file
@@ -1664,12 +1417,7 @@ mod tests {
                 V3::new(0.4, 0.4, z),
                 V3::new(-0.4, 0.4, z),
             ];
-            mesh(
-                positions,
-                normals.clone(),
-                uv.to_vec(),
-                vec![0, 1, 2, 0, 2, 3],
-            )
+            mesh(positions, normals.clone(), uv.to_vec(), vec![0, 1, 2, 0, 2, 3])
         };
         let mut near = quad(0.2, [[0.0, 0.0], [0.1, 0.0], [0.1, 0.1], [0.0, 0.1]]);
         let mut far = quad(-0.2, [[0.9, 0.9], [1.0, 0.9], [1.0, 1.0], [0.9, 1.0]]);
@@ -1685,51 +1433,26 @@ mod tests {
                 path: String::new(),
             }],
         };
-        let skin_mat = Material {
-            name: "skin".into(),
-            slots: Vec::new(),
-        };
+        let skin_mat = Material { name: "skin".into(), slots: Vec::new() };
         let tex_px = vec![
             255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255,
         ];
-        let tex = Texture {
-            rgba: &tex_px,
-            w: 2,
-            h: 2,
-        };
+        let tex = Texture { rgba: &tex_px, w: 2, h: 2 };
         let cam = Camera::front();
         for order in [0, 1] {
-            let mut m = model(if order == 0 {
-                vec![near.clone(), far.clone()]
-            } else {
-                vec![far.clone(), near.clone()]
-            });
-            m.materials = if order == 0 {
-                vec![hair_mat.clone(), skin_mat.clone()]
-            } else {
-                vec![skin_mat.clone(), hair_mat.clone()]
-            };
+            let mut m = model(if order == 0 { vec![near.clone(), far.clone()] } else { vec![far.clone(), near.clone()] });
+            m.materials = if order == 0 { vec![hair_mat.clone(), skin_mat.clone()] } else { vec![skin_mat.clone(), hair_mat.clone()] };
             let (px, skipped) = render_report(&[m], Some(&tex), None, &cam, Mode::Textured, 40, 40);
             assert!(skipped.is_empty(), "nothing should be skipped: {skipped:?}");
             let i = (20 * 40 + 20) * 4;
-            assert!(
-                px[i] > 150 && px[i + 2] < 90,
-                "file order {order} must still put the near card on top, got {:?}",
-                &px[i..i + 4]
-            );
+            assert!(px[i] > 150 && px[i + 2] < 90,
+                "file order {order} must still put the near card on top, got {:?}", &px[i..i + 4]);
         }
     }
 
     #[test]
     fn an_empty_model_renders_a_clean_transparent_frame() {
-        let px = render(
-            &model(Vec::new()),
-            None,
-            &Camera::front(),
-            Mode::Lambert,
-            32,
-            32,
-        );
+        let px = render(&model(Vec::new()), None, &Camera::front(), Mode::Lambert, 32, 32);
         assert_eq!(px.len(), 32 * 32 * 4);
         assert!(px.iter().all(|&b| b == 0), "nothing should be drawn");
         assert_eq!(coverage(&px), 0.0);
@@ -1748,31 +1471,12 @@ mod tests {
         let uvs = vec![[0.0f32, 0.0], [2.0, 0.0], [2.0, 1.0], [0.0, 1.0]];
         let m = mesh(positions, normals, uvs, vec![0, 1, 2, 0, 2, 3]);
         let tex_px = vec![255, 0, 0, 255, 0, 0, 255, 255];
-        let tex = Texture {
-            rgba: &tex_px,
-            w: 2,
-            h: 1,
-        };
-        let px = render(
-            &model(vec![m]),
-            Some(&tex),
-            &Camera::front(),
-            Mode::Textured,
-            41,
-            10,
-        );
+        let tex = Texture { rgba: &tex_px, w: 2, h: 1 };
+        let px = render(&model(vec![m]), Some(&tex), &Camera::front(), Mode::Textured, 41, 10);
         let left = (5 * 41 + 3) * 4;
         let right = (5 * 41 + 37) * 4;
-        assert!(
-            px[left] > 120,
-            "left half should be red, got {:?}",
-            &px[left..left + 3]
-        );
-        assert!(
-            px[right + 2] > 120,
-            "right half should be blue, got {:?}",
-            &px[right..right + 3]
-        );
+        assert!(px[left] > 120, "left half should be red, got {:?}", &px[left..left + 3]);
+        assert!(px[right + 2] > 120, "right half should be blue, got {:?}", &px[right..right + 3]);
     }
 
     fn real_head() -> Option<Fmdl> {
@@ -1796,20 +1500,10 @@ mod tests {
             assert!(v > 0.05 && v < 0.6, "{name} {v} m is not a head");
         }
         // The claim the user is entitled to make about a 3D face: it has depth.
-        assert!(
-            ez > 0.08,
-            "only {ez} m of front-to-back depth: that is a decal"
-        );
-        assert!(
-            ez > ex * 0.6,
-            "depth {ez} against width {ex} is too flat to be a skull"
-        );
+        assert!(ez > 0.08, "only {ez} m of front-to-back depth: that is a decal");
+        assert!(ez > ex * 0.6, "depth {ez} against width {ex} is too flat to be a skull");
         assert!(radius > 0.05 && radius < 0.5, "framing radius {radius}");
-        assert!(
-            centre.y > 1.0,
-            "the head sits at eye height, got {}",
-            centre.y
-        );
+        assert!(centre.y > 1.0, "the head sits at eye height, got {}", centre.y);
     }
 
     #[test]
@@ -1826,40 +1520,23 @@ mod tests {
             let px = render(&m, None, &cam, Mode::Lambert, w, h);
             let frac = coverage(&px);
             assert!(frac > 0.08, "{name} covered only {frac:.3} of the frame");
-            assert!(
-                frac < 0.98,
-                "{name} filled the whole frame, so it is not framed"
-            );
+            assert!(frac < 0.98, "{name} filled the whole frame, so it is not framed");
             let distinct: std::collections::HashSet<(u8, u8, u8)> = px
                 .chunks(4)
                 .filter(|p| p[3] > 200)
                 .map(|p| (p[0], p[1], p[2]))
                 .collect();
-            assert!(
-                distinct.len() > 200,
-                "{name} has only {} distinct colours",
-                distinct.len()
-            );
+            assert!(distinct.len() > 200, "{name} has only {} distinct colours", distinct.len());
             fracs.push((name, frac));
         }
         // Four genuinely different silhouettes, not one picture four times.
         let front = render(&m, None, &Camera::front(), Mode::Lambert, w, h);
         let side = render(&m, None, &Camera::profile(), Mode::Lambert, w, h);
         let top = render(&m, None, &Camera::top(), Mode::Lambert, w, h);
-        let diff = front
-            .iter()
-            .zip(side.iter())
-            .filter(|(a, b)| a != b)
-            .count();
-        assert!(
-            diff > w * h,
-            "front and profile are the same image ({diff} bytes apart)"
-        );
+        let diff = front.iter().zip(side.iter()).filter(|(a, b)| a != b).count();
+        assert!(diff > w * h, "front and profile are the same image ({diff} bytes apart)");
         let diff = front.iter().zip(top.iter()).filter(|(a, b)| a != b).count();
-        assert!(
-            diff > w * h,
-            "front and top are the same image ({diff} bytes apart)"
-        );
+        assert!(diff > w * h, "front and top are the same image ({diff} bytes apart)");
         assert_eq!(fracs.len(), 4);
     }
 
@@ -1870,25 +1547,14 @@ mod tests {
         let lit: Vec<&[u8]> = px.chunks(4).filter(|p| p[3] > 200).collect();
         assert!(!lit.is_empty(), "nothing drawn");
         // Surfaces facing the camera have z near +1, so blue dominates.
-        let forward = lit
-            .iter()
-            .filter(|p| p[2] > 200 && p[0].abs_diff(128) < 60 && p[1].abs_diff(128) < 60)
-            .count();
-        assert!(
-            forward * 20 > lit.len(),
-            "only {forward} of {} pixels face the camera",
-            lit.len()
-        );
+        let forward = lit.iter().filter(|p| p[2] > 200 && p[0].abs_diff(128) < 60 && p[1].abs_diff(128) < 60).count();
+        assert!(forward * 20 > lit.len(), "only {forward} of {} pixels face the camera", lit.len());
         // Two-sided shading must not have leaked into this view. From the front of
         // this shell nothing legitimately faces away -- the outside of the face is
         // all that is visible -- so a flipping bug would show up as a *surplus* of
         // rear-facing pixels, not a shortage.
         let rear = lit.iter().filter(|p| p[2] < 55).count();
-        assert!(
-            rear * 10 < lit.len(),
-            "{rear} of {} pixels face away from a front view",
-            lit.len()
-        );
+        assert!(rear * 10 < lit.len(), "{rear} of {} pixels face away from a front view", lit.len());
     }
 
     /// Measured, not assumed: the shipped head faces **+z**, so Camera::front()
@@ -1902,17 +1568,8 @@ mod tests {
     fn the_facing_axis_is_measured_from_the_geometry() {
         let Some(m) = real_head() else { return };
         let (lo, hi, _centre, _r) = extents(&m).unwrap();
-        assert!(
-            (hi.x - lo.x - 0.198).abs() < 0.02,
-            "head width {:.3} m",
-            hi.x - lo.x
-        );
-        assert!(
-            hi.z > 0.15 && lo.z < 0.0,
-            "z span {:.3}..{:.3} puts the face behind the skull",
-            lo.z,
-            hi.z
-        );
+        assert!((hi.x - lo.x - 0.198).abs() < 0.02, "head width {:.3} m", hi.x - lo.x);
+        assert!(hi.z > 0.15 && lo.z < 0.0, "z span {:.3}..{:.3} puts the face behind the skull", lo.z, hi.z);
         // Area-weighted mean of every triangle's vertex normals: the direction
         // the bulk of the skin faces.
         let mut acc = V3::new(0.0, 0.0, 0.0);
@@ -1927,28 +1584,15 @@ mod tests {
                     continue;
                 }
                 let p = &mesh.positions;
-                let a = p[idx[1]]
-                    .sub(p[idx[0]])
-                    .cross(p[idx[2]].sub(p[idx[0]]))
-                    .norm()
-                    * 0.5;
+                let a = p[idx[1]].sub(p[idx[0]]).cross(p[idx[2]].sub(p[idx[0]])).norm() * 0.5;
                 let n = (0..3).fold(V3::new(0.0, 0.0, 0.0), |s, k| s.add(mesh.normal(idx[k])));
                 acc = acc.add(n.scale(a));
                 area += a;
             }
         }
         let mean = acc.scale(1.0 / area.max(1e-9)).normalized();
-        assert!(
-            mean.z > 0.8,
-            "mean skin normal {:.3} {:.3} {:.3} does not point +z",
-            mean.x,
-            mean.y,
-            mean.z
-        );
-        assert!(
-            area > 0.05 && area < 0.5,
-            "total skin area {area:.4} m2 is not a head"
-        );
+        assert!(mean.z > 0.8, "mean skin normal {:.3} {:.3} {:.3} does not point +z", mean.x, mean.y, mean.z);
+        assert!(area > 0.05 && area < 0.5, "total skin area {area:.4} m2 is not a head");
         // The most protruding vertex along each axis, with its normal.
         for axis in 0..3 {
             let mut best = 0usize;
@@ -1967,10 +1611,7 @@ mod tests {
                 }
             }
             let n = m.meshes.first().unwrap().normal(best);
-            assert!(
-                n.x.is_finite() && n.y.is_finite() && n.z.is_finite(),
-                "axis {axis} normal is not finite"
-            );
+            assert!(n.x.is_finite() && n.y.is_finite() && n.z.is_finite(), "axis {axis} normal is not finite");
         }
     }
 
@@ -1982,18 +1623,7 @@ mod tests {
         // not absolute fractions: the shell is open, so both views also show
         // interior surfaces.
         let forward_frac = |yaw: f32| {
-            let px = render(
-                &m,
-                None,
-                &Camera {
-                    yaw,
-                    pitch: 0.0,
-                    zoom: 1.0,
-                },
-                Mode::Normals,
-                120,
-                120,
-            );
+            let px = render(&m, None, &Camera { yaw, pitch: 0.0, zoom: 1.0 }, Mode::Normals, 120, 120);
             let lit: Vec<&[u8]> = px.chunks(4).filter(|p| p[3] > 200).collect();
             let f = lit.iter().filter(|p| p[2] > 200).count();
             let b = lit.iter().filter(|p| p[2] < 55).count();
@@ -2005,14 +1635,8 @@ mod tests {
         // and none face away; from behind, the interior of the face shows through
         // the open shell, so forward-facing pixels there are the *inside* of the
         // skin, and rear-facing pixels (the skull's back) dominate.
-        assert!(
-            f0 > f180 * 2,
-            "yaw 0 gives {f0} forward pixels, yaw 180 gives {f180}: +z is not the face"
-        );
-        assert!(
-            b180 > b0,
-            "yaw 180 gives {b180} rear pixels against {b0} at yaw 0: not an open shell"
-        );
+        assert!(f0 > f180 * 2, "yaw 0 gives {f0} forward pixels, yaw 180 gives {f180}: +z is not the face");
+        assert!(b180 > b0, "yaw 180 gives {b180} rear pixels against {b0} at yaw 0: not an open shell");
         assert!(f0 * 4 > n, "only {f0} of {n} front pixels face the camera");
         assert!(b0 * 10 < n, "{b0} of {n} pixels face away in a front view");
         // The default camera must be the one that shows the face.
@@ -2029,50 +1653,18 @@ mod tests {
         let Some(m) = real_head() else { return };
         let size = 160usize;
         let plain = vec![200u8; size * size * 4];
-        let before = render(
-            &m,
-            Some(&Texture {
-                rgba: &plain,
-                w: size,
-                h: size,
-            }),
-            &Camera::front(),
-            Mode::Textured,
-            size,
-            size,
-        );
+        let before = render(&m, Some(&Texture { rgba: &plain, w: size, h: size }), &Camera::front(), Mode::Textured, size, size);
         // Same dimensions and same mip depth, only the colours differ.
         let mut alt = plain.clone();
         for px in alt.chunks_mut(4) {
             px[0] = 30;
             px[1] = 120;
         }
-        let after = render(
-            &m,
-            Some(&Texture {
-                rgba: &alt,
-                w: size,
-                h: size,
-            }),
-            &Camera::front(),
-            Mode::Textured,
-            size,
-            size,
-        );
-        let diff = before
-            .iter()
-            .zip(after.iter())
-            .filter(|(a, b)| a != b)
-            .count();
+        let after = render(&m, Some(&Texture { rgba: &alt, w: size, h: size }), &Camera::front(), Mode::Textured, size, size);
+        let diff = before.iter().zip(after.iter()).filter(|(a, b)| a != b).count();
         let covered = before.chunks(4).filter(|p| p[3] > 200).count();
-        assert!(
-            covered > size * size / 10,
-            "the head barely drew: {covered} px"
-        );
-        assert!(
-            diff > covered / 2,
-            "swapping the skin map changed only {diff} of {covered} covered pixels"
-        );
+        assert!(covered > size * size / 10, "the head barely drew: {covered} px");
+        assert!(diff > covered / 2, "swapping the skin map changed only {diff} of {covered} covered pixels");
     }
 
     #[test]
@@ -2102,7 +1694,7 @@ mod tests {
 #[cfg(test)]
 mod binding_tests {
     use super::{
-        coverage, keep_texturable, load_scene, render_scene_maps, texture_roots, Camera, Maps, Mode,
+        coverage, keep_texturable, load_scene, render_scene_maps, texture_roots, Maps, Camera, Mode,
     };
     use crate::fmdl::{Fmdl, REAL_FACE_FPK};
     use crate::fpk::Fpk;
@@ -2117,11 +1709,7 @@ mod binding_tests {
         }
         let fpk = Fpk::read(path).expect("container");
         let mut models = Vec::new();
-        for e in fpk
-            .entries
-            .iter()
-            .filter(|e| e.data.len() > 64 && &e.data[0..4] == b"FMDL")
-        {
+        for e in fpk.entries.iter().filter(|e| e.data.len() > 64 && &e.data[0..4] == b"FMDL") {
             if let Ok(m) = Fmdl::parse(e.data.clone()) {
                 if !m.meshes.is_empty() {
                     models.push(m);
@@ -2137,34 +1725,17 @@ mod binding_tests {
                 }
             }
         }
-        assert!(
-            dropped > 0,
-            "the head should contain parts with no colour map"
-        );
+        assert!(dropped > 0, "the head should contain parts with no colour map");
         keep_texturable(&mut models);
         let after: usize = models.iter().map(|m| m.meshes.len()).sum();
-        assert_eq!(
-            after,
-            before - dropped,
-            "only untexturable meshes should go"
-        );
+        assert_eq!(after, before - dropped, "only untexturable meshes should go");
         for m in &models {
             for i in 0..m.meshes.len() {
-                assert!(
-                    m.base_texture(i).is_some(),
-                    "a mesh without a colour map survived"
-                );
+                assert!(m.base_texture(i).is_some(), "a mesh without a colour map survived");
             }
         }
-        let verts: usize = models
-            .iter()
-            .flat_map(|m| m.meshes.iter())
-            .map(|x| x.positions.len())
-            .sum();
-        assert!(
-            verts > 1000,
-            "the head itself should still be there, got {verts} verts"
-        );
+        let verts: usize = models.iter().flat_map(|m| m.meshes.iter()).map(|x| x.positions.len()).sum();
+        assert!(verts > 1000, "the head itself should still be there, got {verts} verts");
     }
 
     /// A model with no decoded materials is evidence of nothing, so the filter
@@ -2216,14 +1787,9 @@ mod binding_tests {
             .flat_map(|(mi, m)| (0..m.meshes.len()).map(move |i| (mi, i, m.base_texture(i))))
             .find(|(_, _, b)| b.map(|x| x.contains("bsm")).unwrap_or(false));
         let Some((mi, i, name)) = skin else {
-            panic!(
-                "no mesh binds a bsm map; refs={:?}",
-                models[0].texture_refs().len()
-            );
+            panic!("no mesh binds a bsm map; refs={:?}", models[0].texture_refs().len());
         };
-        let t = maps
-            .texture(name.unwrap())
-            .expect("the bsm map should be loaded");
+        let t = maps.texture(name.unwrap()).expect("the bsm map should be loaded");
         assert_eq!((t.w, t.h), (1024, 1024), "skin map size");
         assert_eq!(t.rgba.len(), 1024 * 1024 * 4, "skin map is RGBA8");
         let _ = (mi, i);
@@ -2239,15 +1805,8 @@ mod binding_tests {
         }
         let mut models = load_scene(path).expect("scene");
         keep_texturable(&mut models);
-        let maps = Maps::load(
-            &models,
-            &[std::path::PathBuf::from("Z:/definitely/not/here")],
-        );
-        assert_eq!(
-            maps.stats().0,
-            0,
-            "nothing should resolve against a bogus root"
-        );
+        let maps = Maps::load(&models, &[std::path::PathBuf::from("Z:/definitely/not/here")]);
+        assert_eq!(maps.stats().0, 0, "nothing should resolve against a bogus root");
         let px = render_scene_maps(
             &models,
             None,
@@ -2257,10 +1816,7 @@ mod binding_tests {
             96,
             96,
         );
-        assert!(
-            coverage(&px) > 0.1,
-            "the head must still draw when no map resolves"
-        );
+        assert!(coverage(&px) > 0.1, "the head must still draw when no map resolves");
         // The shape is shown untextured rather than painted with a foreign map.
         assert_eq!(maps.stats().0, 0);
     }

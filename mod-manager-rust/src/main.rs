@@ -15,7 +15,7 @@
 //!   cpk        list, extract or rebuild a CRIWARE archive
 //!   ftex       convert Fox Engine textures to and from DDS
 //!   container  unwrap, inspect or re-wrap a WESYS/asset container
-//!   bin        decode a .bin: sections, records, strings and hex
+//!   bin        decode a .bin: sections, records, menu atlases, strings and hex
 
 use fl27mm::{binread, conflict, cpk, ftex, ini, order, packs, pesdb, wesys};
 
@@ -109,7 +109,7 @@ enum Cmd {
         #[arg(long, default_value = "diffuse")]
         kind: String,
     },
-    /// Decode a .bin: framing, match-constant sections, table records, hex.
+    /// Decode a .bin: framing, sections, table records, menu atlases and hex.
     Bin {
         /// The .bin file.
         file: PathBuf,
@@ -234,11 +234,7 @@ fn cmd_scan(game: &Path) -> Result<()> {
             println!("  DUPLICATE module: {}", e.value);
             dupes += 1;
         }
-        if !addons
-            .join("modules")
-            .join(e.value.replace('\\', "/"))
-            .is_file()
-        {
+        if !addons.join("modules").join(e.value.replace('\\', "/")).is_file() {
             println!("  MISSING module:   {}", e.value);
             missing += 1;
         }
@@ -263,10 +259,8 @@ fn cmd_conflicts(root: &Path) -> Result<()> {
     let total: usize = idx.len();
     let c = conflict::analyse(&found, &idx);
     println!("{total} distinct file keys");
-    println!(
-        "{} shared, {} identical (harmless), {} genuinely differ",
-        c.shared, c.identical, c.differing
-    );
+    println!("{} shared, {} identical (harmless), {} genuinely differ",
+             c.shared, c.identical, c.differing);
 
     let mut pairs: Vec<_> = c.pairs.iter().collect();
     pairs.sort_by(|a, b| b.1.cmp(a.1));
@@ -287,24 +281,15 @@ fn cmd_verify(ini_path: &Path, addons: &Path) -> Result<()> {
     let ini = Ini::read(ini_path)?;
     let shadows = order::analyse(addons, &ini);
     let dead: Vec<_> = shadows.iter().filter(|s| s.dead()).collect();
-    let partial: Vec<_> = shadows
-        .iter()
-        .filter(|s| !s.dead() && s.surviving < s.total)
-        .collect();
+    let partial: Vec<_> = shadows.iter()
+        .filter(|s| !s.dead() && s.surviving < s.total).collect();
     let alive = shadows.len() - dead.len() - partial.len();
-    println!(
-        "{} packs, {} fully effective, {} partial, {} dead",
-        shadows.len(),
-        alive,
-        partial.len(),
-        dead.len()
-    );
+    println!("{} packs, {} fully effective, {} partial, {} dead",
+             shadows.len(), alive, partial.len(), dead.len());
 
     println!("\ndead packs (first 20):");
     for s in dead.iter().take(20) {
-        let who = s
-            .blockers
-            .first()
+        let who = s.blockers.first()
             .map(|(w, n)| format!("{n} keys by {w}"))
             .unwrap_or_default();
         println!("  {}  ({} keys)  {who}", s.rel, s.total);
@@ -331,11 +316,7 @@ fn cmd_sort(ini_path: &Path, addons: &Path, write: bool) -> Result<()> {
     let sorted = order::sorted(addons, &entries);
     let before: Vec<&str> = entries.iter().map(|e| e.value.as_str()).collect();
     let after: Vec<&str> = sorted.iter().map(|e| e.value.as_str()).collect();
-    let moved = before
-        .iter()
-        .zip(after.iter())
-        .filter(|(a, b)| a != b)
-        .count();
+    let moved = before.iter().zip(after.iter()).filter(|(a, b)| a != b).count();
     println!("{} entries, {moved} change position", entries.len());
     println!("\nfirst 12 after sort:");
     for v in after.iter().take(12) {
@@ -360,15 +341,13 @@ fn cmd_sort(ini_path: &Path, addons: &Path, write: bool) -> Result<()> {
 
 fn cmd_pesdb(dir: &Path) -> Result<()> {
     use rayon::prelude::*;
-    let tables: Vec<PathBuf> = fl27mm::fsutil::files(dir)
-        .into_iter()
+    let tables: Vec<PathBuf> = fl27mm::fsutil::files(dir).into_iter()
         .filter(|p| {
             let s = p.to_string_lossy();
             s.contains("pesdb") && s.ends_with(".bin")
         })
         .collect();
-    let mut verdicts: Vec<(PathBuf, pesdb::Verdict)> = tables
-        .par_iter()
+    let mut verdicts: Vec<(PathBuf, pesdb::Verdict)> = tables.par_iter()
         .map(|p| (p.clone(), pesdb::validate(p)))
         .collect();
     verdicts.sort_by(|a, b| a.0.cmp(&b.0));
@@ -388,15 +367,11 @@ fn cmd_pesdb(dir: &Path) -> Result<()> {
             println!("  {tag}  {}  {}", rel.display(), v.reason);
         }
     }
-    let opaque = verdicts
-        .iter()
-        .filter(|(_, v)| v.status == pesdb::Status::Unrecognised)
-        .count();
+    let opaque = verdicts.iter()
+        .filter(|(_, v)| v.status == pesdb::Status::Unrecognised).count();
     let defect = bad - opaque;
-    println!(
-        "
-{ok} valid, {defect} with a measured defect, {opaque} unreadable"
-    );
+    println!("
+{ok} valid, {defect} with a measured defect, {opaque} unreadable");
     if defect > 0 {
         bail!("{defect} table(s) have a measured defect and would corrupt the game");
     }
@@ -406,56 +381,29 @@ fn cmd_pesdb(dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn cmd_cpk(
-    archive: &Path,
-    extract: Option<&Path>,
-    filter: Option<&str>,
-    summary: bool,
-    depth: usize,
-) -> Result<()> {
+fn cmd_cpk(archive: &Path, extract: Option<&Path>, filter: Option<&str>,
+           summary: bool, depth: usize) -> Result<()> {
     let cpk = cpk::Cpk::open(archive)?;
     if summary {
         let s = cpk.summary();
-        println!(
-            "{}: {} entries, {} compressed, {:.1} MB unpacked",
-            archive.file_name().unwrap().to_string_lossy(),
-            s.entries,
-            s.compressed,
-            s.unpacked as f64 / 1048576.0
-        );
-        let grouped = if depth > 1 {
-            cpk.folders_at(depth)
-        } else {
-            s.folders.clone()
-        };
+        println!("{}: {} entries, {} compressed, {:.1} MB unpacked",
+                 archive.file_name().unwrap().to_string_lossy(),
+                 s.entries, s.compressed, s.unpacked as f64 / 1048576.0);
+        let grouped = if depth > 1 { cpk.folders_at(depth) } else { s.folders.clone() };
         for f in grouped.iter().take(14) {
-            println!(
-                "    {:<44} {:>7} files  {:>9.1} MB",
-                f.name,
-                f.files,
-                f.bytes as f64 / 1048576.0
-            );
+            println!("    {:<44} {:>7} files  {:>9.1} MB",
+                     f.name, f.files, f.bytes as f64 / 1048576.0);
         }
-        let exts: Vec<String> = s
-            .extensions
-            .iter()
-            .take(8)
-            .map(|e| format!("{}:{}", e.ext, e.count))
-            .collect();
+        let exts: Vec<String> = s.extensions.iter().take(8)
+            .map(|e| format!("{}:{}", e.ext, e.count)).collect();
         println!("    extensions: {}", exts.join("  "));
         return Ok(());
     }
-    let entries: Vec<_> = cpk
-        .files
-        .iter()
+    let entries: Vec<_> = cpk.files.iter()
         .filter(|f| filter.is_none_or(|f_| f.path().contains(f_)))
         .collect();
-    println!(
-        "{}: {} entries ({} shown)",
-        archive.display(),
-        cpk.files.len(),
-        entries.len()
-    );
+    println!("{}: {} entries ({} shown)",
+             archive.display(), cpk.files.len(), entries.len());
     let packed = entries.iter().filter(|f| f.compressed()).count();
     println!("{packed} compressed, {} stored", entries.len() - packed);
 
@@ -486,12 +434,7 @@ fn cmd_cpk(
     } else {
         for f in entries.iter().take(60) {
             let flag = if f.compressed() { "packed" } else { "stored" };
-            println!(
-                "  {:>10}  {:>10}  {flag}  {}",
-                f.size,
-                f.extract_size,
-                f.path()
-            );
+            println!("  {:>10}  {:>10}  {flag}  {}", f.size, f.extract_size, f.path());
         }
         if entries.len() > 60 {
             println!("  ... {} more", entries.len() - 60);
@@ -506,58 +449,67 @@ fn cmd_bin(file: &Path, section: Option<usize>, bytes: usize) -> Result<()> {
         let table = report.sections.context("this file has no section table")?;
         let s = table.sections.get(index).context("no such section")?;
         let data = binread::section_bytes(file, index)?;
-        println!(
-            "{} [{}] {} bytes at {}",
-            file.display(),
-            s.name,
-            data.len(),
-            s.offset
-        );
+        println!("{} [{}] {} bytes at {}", file.display(), s.name, data.len(), s.offset);
         print!("{}", binread::hexdump(&data, 0, bytes));
         return Ok(());
     }
     let r = binread::read(file)?;
     println!("{}", file.display());
-    println!(
-        "  {:>14} bytes, framing {}, body {:>12} bytes",
-        r.file_size, r.framing, r.body_size
-    );
-    println!(
-        "  entropy {:.2} bits/byte · re-encode: {}",
-        r.entropy, r.re_encode
-    );
+    println!("  {:>14} bytes, framing {}, body {:>12} bytes",
+             r.file_size, r.framing, r.body_size);
+    println!("  entropy {:.2} bits/byte · re-encode: {}", r.entropy, r.re_encode);
     for n in &r.notes {
         println!("  note: {n}");
     }
     if let Some(t) = &r.sections {
-        println!(
-            "
+        println!("
   {} sections (table at {}, contiguous {}):",
-            t.count, t.table_offset, t.contiguous
-        );
+                 t.count, t.table_offset, t.contiguous);
         for (i, s) in t.sections.iter().enumerate() {
-            println!(
-                "    {i:>3}  {:<34} off {:>9}  size {:>8}",
-                s.name, s.offset, s.size
-            );
+            println!("    {i:>3}  {:<34} off {:>9}  size {:>8}", s.name, s.offset, s.size);
         }
+        println!("
+  hex-dump one with --section N");
+    }
+    if let Some(menu) = &r.menu_layout {
         println!(
-            "
-  hex-dump one with --section N"
+     "\n   compiled menu atlas: {} · {} textures · {} named pictures",
+     menu.package_name,
+     menu.textures.len(),
+     menu.pictures.len()
         );
+        for (i, texture) in menu.textures.iter().enumerate() {
+     println!(
+         "    texture {i}: {} × {} · format 0x{:02x}",
+         texture.width, texture.height, texture.format
+     );
+        }
+        for picture in menu.pictures.iter().take(12) {
+     println!(
+         "    {:<32} texture {}  atlas [{:.1}, {:.1}]–[{:.1}, {:.1}] px",
+         picture.name,
+         picture.texture,
+         picture.x0_half as f32 / 2.0,
+         picture.y0_half as f32 / 2.0,
+         picture.x1_half as f32 / 2.0,
+         picture.y1_half as f32 / 2.0
+     );
+        }
+        if menu.pictures.len() > 12 {
+     println!("    … {} more pictures", menu.pictures.len() - 12);
+        }
+        println!("    rectangles are texture-atlas coordinates, not screen positions");
     }
     if let Some(t) = &r.records {
-        println!(
-            "
+        println!("
   {} records at stride {}
-  {}",
-            t.records, t.stride, t.note
-        );
+  {}", t.records, t.stride, t.note);
         let cols: Vec<&str> = t.columns.iter().map(|c| c.name.as_str()).collect();
         if !cols.is_empty() {
             println!("    {}", cols.join("  "));
             for row in 0..t.records.min(12) {
-                let cells: Vec<&str> = t.columns.iter().map(|c| c.values[row].as_str()).collect();
+                let cells: Vec<&str> = t.columns.iter()
+                    .map(|c| c.values[row].as_str()).collect();
                 println!("    {}", cells.join("  "));
             }
             if t.records > 12 {
@@ -566,11 +518,9 @@ fn cmd_bin(file: &Path, section: Option<usize>, bytes: usize) -> Result<()> {
         }
     }
     if let Some(st) = &r.structure {
-        println!(
-            "
+        println!("
   inferred layout: stride {} over {} records, {} of {} bytes explained",
-            st.stride, st.records, st.mapped_bytes, st.stride
-        );
+                 st.stride, st.records, st.mapped_bytes, st.stride);
         if let Some(sub) = st.sub_record {
             println!("  repeating sub-record of {sub} bytes");
         }
@@ -578,23 +528,13 @@ fn cmd_bin(file: &Path, section: Option<usize>, bytes: usize) -> Result<()> {
             if f.kind == fl27mm::structure::FieldKind::Padding && f.width < 8 {
                 continue;
             }
-            println!(
-                "    +{:<6} {:<5} {:<12} {}/{}  {}",
-                f.offset,
-                f.width,
-                f.kind.label(),
-                f.supporting,
-                f.records,
-                f.sample
-            );
+            println!("    +{:<6} {:<5} {:<12} {}/{}  {}",
+                     f.offset, f.width, f.kind.label(), f.supporting, f.records, f.sample);
         }
     }
     if !r.strings.is_empty() {
-        println!(
-            "
-  {} printable runs in the body:",
-            r.strings.len()
-        );
+        println!("
+  {} printable runs in the body:", r.strings.len());
         for hit in r.strings.iter().take(20) {
             println!("    @{:<8} {}", hit.at, hit.text);
         }
@@ -614,8 +554,7 @@ fn texture_kind(name: &str) -> Result<u32> {
 
 fn cmd_ftex(input: &Path, out: Option<&Path>, kind: &str) -> Result<()> {
     let tag = texture_kind(kind)?;
-    let dest_root = out
-        .map(|p| p.to_path_buf())
+    let dest_root = out.map(|p| p.to_path_buf())
         .unwrap_or_else(|| input.parent().unwrap_or(Path::new(".")).to_path_buf());
 
     let mut files = Vec::new();
@@ -627,11 +566,7 @@ fn cmd_ftex(input: &Path, out: Option<&Path>, kind: &str) -> Result<()> {
                 if p.is_dir() {
                     stack.push(p);
                 } else {
-                    let ext = p
-                        .extension()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_lowercase();
+                    let ext = p.extension().unwrap_or_default().to_string_lossy().to_lowercase();
                     if ext == "ftex" || ext == "dds" {
                         files.push(p);
                     }
@@ -646,45 +581,25 @@ fn cmd_ftex(input: &Path, out: Option<&Path>, kind: &str) -> Result<()> {
         bail!("no .ftex or .dds files under {}", input.display());
     }
 
-    let base = if input.is_dir() {
-        input
-    } else {
-        input.parent().unwrap_or(Path::new("."))
-    };
+    let base = if input.is_dir() { input } else { input.parent().unwrap_or(Path::new(".")) };
     let mut done = 0;
     let mut failed = 0;
     for p in &files {
         let rel = p.strip_prefix(base).unwrap_or(p);
-        let ext = p
-            .extension()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_lowercase();
-        let target = dest_root
-            .join(rel)
-            .with_extension(if ext == "ftex" { "dds" } else { "ftex" });
+        let ext = p.extension().unwrap_or_default().to_string_lossy().to_lowercase();
+        let target = dest_root.join(rel).with_extension(if ext == "ftex" { "dds" } else { "ftex" });
         let result = (|| -> Result<String> {
             if ext == "ftex" {
                 let t = ftex::to_dds_file(p, &target)?;
-                Ok(format!(
-                    "{}x{} {} {} mips",
-                    t.width,
-                    t.height,
-                    t.format.name(),
-                    t.mips.len()
-                ))
+                Ok(format!("{}x{} {} {} mips", t.width, t.height,
+                           t.format.name(), t.mips.len()))
             } else {
                 let bytes = std::fs::read(p)?;
                 let mut t = ftex::Ftex::from_dds(&bytes)?;
                 t.texture_type = tag;
                 t.write_ftex(&target)?;
-                Ok(format!(
-                    "{}x{} {} {} mips",
-                    t.width,
-                    t.height,
-                    t.format.name(),
-                    t.mips.len()
-                ))
+                Ok(format!("{}x{} {} {} mips", t.width, t.height,
+                           t.format.name(), t.mips.len()))
             }
         })();
         match result {
@@ -700,10 +615,7 @@ fn cmd_ftex(input: &Path, out: Option<&Path>, kind: &str) -> Result<()> {
             }
         }
     }
-    println!(
-        "converted {done} to {}, {failed} failed",
-        dest_root.display()
-    );
+    println!("converted {done} to {}, {failed} failed", dest_root.display());
     if failed > 0 {
         bail!("{failed} texture(s) could not be converted");
     }
@@ -722,11 +634,7 @@ fn collect_files(input: &Path, exts: &[&str]) -> Result<Vec<PathBuf>> {
                 } else if exts.is_empty() {
                     files.push(p);
                 } else {
-                    let ext = p
-                        .extension()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_lowercase();
+                    let ext = p.extension().unwrap_or_default().to_string_lossy().to_lowercase();
                     if exts.contains(&ext.as_str()) {
                         files.push(p);
                     }
@@ -740,45 +648,27 @@ fn collect_files(input: &Path, exts: &[&str]) -> Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-fn cmd_container(
-    input: &Path,
-    unwrap: Option<&Path>,
-    rewrap: Option<&Path>,
-    out: Option<&Path>,
-) -> Result<()> {
+fn cmd_container(input: &Path, unwrap: Option<&Path>, rewrap: Option<&Path>,
+                 out: Option<&Path>) -> Result<()> {
     if let Some(original) = rewrap {
         let dest = out.context("--rewrap needs --out")?;
-        let framed =
-            std::fs::read(original).with_context(|| format!("reading {}", original.display()))?;
+        let framed = std::fs::read(original)
+            .with_context(|| format!("reading {}", original.display()))?;
         let mut f = wesys::decode(&framed)?;
-        f.body =
-            std::fs::read(input).with_context(|| format!("reading body {}", input.display()))?;
+        f.body = std::fs::read(input)
+            .with_context(|| format!("reading body {}", input.display()))?;
         let bytes = wesys::encode(&mut f)?;
         std::fs::create_dir_all(dest)?;
         let target = dest.join(original.file_name().unwrap());
         std::fs::write(&target, &bytes)?;
-        println!(
-            "{} -> {} ({} bytes, {} framing, level {:?}, {})",
-            input.display(),
-            target.display(),
-            bytes.len(),
-            f.kind.name(),
-            f.level,
-            if f.exact {
-                "byte-exact"
-            } else {
-                "semantically identical"
-            }
-        );
+        println!("{} -> {} ({} bytes, {} framing, level {:?}, {})",
+                 input.display(), target.display(), bytes.len(), f.kind.name(), f.level,
+                 if f.exact { "byte-exact" } else { "semantically identical" });
         return Ok(());
     }
 
     let files = collect_files(input, &[])?;
-    let base = if input.is_dir() {
-        input
-    } else {
-        input.parent().unwrap_or(Path::new("."))
-    };
+    let base = if input.is_dir() { input } else { input.parent().unwrap_or(Path::new(".")) };
     let mut counts: std::collections::BTreeMap<&str, usize> = Default::default();
     let mut exact = 0;
     let mut refused = 0;
@@ -788,20 +678,14 @@ fn cmd_container(
             Ok(f) => f,
             Err(e) => {
                 refused += 1;
-                println!(
-                    "  BAD   {}: {e}",
-                    p.strip_prefix(base).unwrap_or(p).display()
-                );
+                println!("  BAD   {}: {e}", p.strip_prefix(base).unwrap_or(p).display());
                 continue;
             }
         };
         *counts.entry(f.kind.name()).or_default() += 1;
         if f.kind == wesys::Kind::Unknown {
             refused += 1;
-            println!(
-                "  UNKNOWN framing: {}",
-                p.strip_prefix(base).unwrap_or(p).display()
-            );
+            println!("  UNKNOWN framing: {}", p.strip_prefix(base).unwrap_or(p).display());
             continue;
         }
         let rebuilt = wesys::encode(&mut f)?;
@@ -816,14 +700,10 @@ fn cmd_container(
             std::fs::write(&target, &f.body)?;
         }
         if files.len() <= 30 {
-            println!(
-                "  {:<10} {:>9} -> {:>9}  {}  {}",
-                f.kind.name(),
-                raw.len(),
-                f.body.len(),
-                if f.exact { "exact  " } else { "re-emit" },
-                p.strip_prefix(base).unwrap_or(p).display()
-            );
+            println!("  {:<10} {:>9} -> {:>9}  {}  {}",
+                     f.kind.name(), raw.len(), f.body.len(),
+                     if f.exact { "exact  " } else { "re-emit" },
+                     p.strip_prefix(base).unwrap_or(p).display());
         }
         let _ = rebuilt;
     }
@@ -835,14 +715,8 @@ fn cmd_container(
     Ok(())
 }
 
-fn cmd_menu(
-    root: &Path,
-    check: bool,
-    list: bool,
-    link: Option<&str>,
-    cl: Option<&str>,
-    bases: &[PathBuf],
-) -> Result<()> {
+
+fn cmd_menu(root: &Path, check: bool, list: bool, link: Option<&str>, cl: Option<&str>, bases: &[PathBuf]) -> Result<()> {
     use fl27mm::menus;
     // A menu-server folder ships only a subset of the game's screens, so
     // judging it alone calls almost every link dead: on a real set that is 344
@@ -899,16 +773,7 @@ fn cmd_menu(
         }
     }
     if !report.by_prefix.is_empty() {
-        println!(
-            "  groups: {}",
-            report
-                .by_prefix
-                .iter()
-                .take(12)
-                .map(|(p, n)| format!("{p}:{n}"))
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
+        println!("  groups: {}", report.by_prefix.iter().take(12).map(|(p, n)| format!("{p}:{n}")).collect::<Vec<_>>().join(" "));
     }
     if report.broken.is_empty() {
         println!("  every link resolves within this set and the layers given");
@@ -919,10 +784,7 @@ fn cmd_menu(
         }
     }
     if !report.unreachable.is_empty() {
-        println!(
-            "  {} screens nothing points at (informational, not an error)",
-            report.unreachable.len()
-        );
+        println!("  {} screens nothing points at (informational, not an error)", report.unreachable.len());
     }
     if check && !report.broken.is_empty() {
         bail!("{} broken navigation links", report.broken.len());
@@ -937,25 +799,17 @@ fn cmd_fmt(path: &Path, limit: Option<usize>) -> Result<()> {
         let total: usize = s.counts.iter().map(|(_, n)| n).sum();
         println!("{} files under {}", total, path.display());
         for (f, n) in &s.counts {
-            let mark = if f.is_game_content() && !f.known() {
-                "  GAP "
-            } else {
-                "        "
-            };
+            let mark = if f.is_game_content() && !f.known() { "  GAP " } else { "        " };
             println!("{mark}{n:>8}  {}", f.name());
         }
         let gaps: Vec<_> = s.gaps();
         if gaps.is_empty() {
-            println!(
-                "
-no undecoded game formats in this tree"
-            );
+            println!("
+no undecoded game formats in this tree");
         } else {
             let n: usize = gaps.iter().map(|(_, c)| c).sum();
-            println!(
-                "
-{n} game files are named but not decoded yet:"
-            );
+            println!("
+{n} game files are named but not decoded yet:");
             for (f, c) in gaps {
                 println!("  {c:>8}  {}", f.name());
             }
@@ -978,13 +832,7 @@ no undecoded game formats in this tree"
             slot.1 = format!("{total} bytes (first {} inspected)", head.len());
         }
     }
-    println!(
-        "{}: {}",
-        path.file_name()
-            .unwrap_or(path.as_os_str())
-            .to_string_lossy(),
-        info.format.name()
-    );
+    println!("{}: {}", path.file_name().unwrap_or(path.as_os_str()).to_string_lossy(), info.format.name());
     for (k, v) in &info.fields {
         println!("  {k:>16}  {v}");
     }
@@ -1013,10 +861,7 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
         vec![path.to_path_buf()]
     };
     for p in &files {
-        let ext = p
-            .extension()
-            .map(|e| e.to_string_lossy().to_lowercase())
-            .unwrap_or_default();
+        let ext = p.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
         match ext.as_str() {
             "ask" => match ask::Skeleton::read(p) {
                 Ok(s) => {
@@ -1028,10 +873,7 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
                         }
                     }
                 }
-                Err(e) => errs.push(format!(
-                    "{}: {e}",
-                    p.file_name().unwrap_or_default().to_string_lossy()
-                )),
+                Err(e) => errs.push(format!("{}: {e}", p.file_name().unwrap_or_default().to_string_lossy())),
             },
             "frig" => match frig::Rig::read(p) {
                 Ok(r) => {
@@ -1040,10 +882,7 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
                         print!("{}", r.describe());
                     }
                 }
-                Err(e) => errs.push(format!(
-                    "{}: {e}",
-                    p.file_name().unwrap_or_default().to_string_lossy()
-                )),
+                Err(e) => errs.push(format!("{}: {e}", p.file_name().unwrap_or_default().to_string_lossy())),
             },
             _ => {}
         }
@@ -1051,9 +890,7 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
     if files.len() > 1 {
         println!(
             "{} files under {}: {skeletons} skeletons, {rigs} rigs, {} refused",
-            files.len(),
-            path.display(),
-            errs.len()
+            files.len(), path.display(), errs.len()
         );
     }
     for e in errs.iter().take(12) {
@@ -1071,26 +908,12 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
                 for f in fl27mm::fsutil::files(p) {
                     if f.extension().map(|e| e == "frig").unwrap_or(false) {
                         let r = frig::Rig::read(&f)?;
-                        acc.push((
-                            f.file_name()
-                                .unwrap_or_default()
-                                .to_string_lossy()
-                                .into_owned(),
-                            r.unit_count,
-                            r.segment_count,
-                        ));
+                        acc.push((f.file_name().unwrap_or_default().to_string_lossy().into_owned(), r.unit_count, r.segment_count));
                     }
                 }
             } else if p.extension().map(|e| e == "frig").unwrap_or(false) {
                 let r = frig::Rig::read(p)?;
-                acc.push((
-                    p.file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .into_owned(),
-                    r.unit_count,
-                    r.segment_count,
-                ));
+                acc.push((p.file_name().unwrap_or_default().to_string_lossy().into_owned(), r.unit_count, r.segment_count));
             }
             Ok(())
         };
@@ -1100,8 +923,7 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
             println!(
                 "clip {}: {} units, {} segments",
                 path.file_name().unwrap_or_default().to_string_lossy(),
-                clip.unit_count,
-                clip.segment_count
+                clip.unit_count, clip.segment_count
             );
             for (name, u, s) in &rig_counts {
                 let verdict = if *u == clip.unit_count && *s == clip.segment_count {
@@ -1123,13 +945,7 @@ fn cmd_rig(path: &Path, with: Option<&Path>) -> Result<()> {
     Ok(())
 }
 
-fn cmd_gani(
-    path: &Path,
-    rate: Option<u32>,
-    all: bool,
-    tracks: bool,
-    set_key: Option<&str>,
-) -> Result<()> {
+fn cmd_gani(path: &Path, rate: Option<u32>, all: bool, tracks: bool, set_key: Option<&str>) -> Result<()> {
     use fl27mm::gani;
     if let Some(spec) = set_key {
         // UNIT|SEGMENT|KEY|components|signs, with components as raw stored
@@ -1143,13 +959,7 @@ fn cmd_gani(
         let segment = f[1].parse::<usize>().map_err(|_| bad("segment"))?;
         let key = f[2].parse::<usize>().map_err(|_| bad("key"))?;
         let nums = |s: &str, e: &str| -> Result<Vec<u32>> {
-            s.split(',')
-                .map(|x| {
-                    x.trim()
-                        .parse::<u32>()
-                        .map_err(|_| anyhow::anyhow!("{e} in {s}"))
-                })
-                .collect()
+            s.split(',').map(|x| x.trim().parse::<u32>().map_err(|_| anyhow::anyhow!("{e} in {s}"))).collect()
         };
         let parts = nums(f[3], "component")?;
         if parts.len() != 3 {
@@ -1189,17 +999,11 @@ fn cmd_gani(
                 match gani::Clip::read(p) {
                     Ok(c) => {
                         ok += 1;
-                        if c.size_disagrees() {
-                            stale += 1;
-                        }
+                        if c.size_disagrees() { stale += 1; }
                     }
                     Err(e) => {
                         bad += 1;
-                        println!(
-                            "  {}  {}",
-                            p.file_name().unwrap_or_default().to_string_lossy(),
-                            e
-                        );
+                        println!("  {}  {}", p.file_name().unwrap_or_default().to_string_lossy(), e);
                     }
                 }
             }
@@ -1217,14 +1021,9 @@ fn cmd_gani(
         for p in &clips {
             match gani::set_frame_rate(p, rate) {
                 Ok((was, now)) => {
-                    if was != now {
-                        changed += 1;
-                    }
+                    if was != now { changed += 1; }
                 }
-                Err(e) => println!(
-                    "  skipped {}: {e}",
-                    p.file_name().unwrap_or_default().to_string_lossy()
-                ),
+                Err(e) => println!("  skipped {}: {e}", p.file_name().unwrap_or_default().to_string_lossy()),
             }
         }
         println!("{} clips, {changed} rewritten to {rate} fps", clips.len());
@@ -1233,10 +1032,7 @@ fn cmd_gani(
     let clip = gani::Clip::read(path)?;
     if let Some(rate) = rate {
         let (was, now) = gani::set_frame_rate(path, rate)?;
-        println!(
-            "{}: frame rate {was} -> {now}",
-            path.file_name().unwrap_or_default().to_string_lossy()
-        );
+        println!("{}: frame rate {was} -> {now}", path.file_name().unwrap_or_default().to_string_lossy());
     }
     print!("{}", gani::describe(&clip));
     if tracks {
@@ -1246,89 +1042,36 @@ fn cmd_gani(
     Ok(())
 }
 
-fn main() -> Result<()> {
-    let cli = Cli::parse();
+fn main() -> Result<()> {    let cli = Cli::parse();
     match cli.cmd {
         Cmd::Scan { game } => cmd_scan(&game),
         Cmd::Conflicts { packs } => cmd_conflicts(&packs),
         Cmd::Verify { ini, addons } => cmd_verify(&ini, &addons),
         Cmd::Sort { ini, addons, write } => cmd_sort(&ini, &addons, write),
         Cmd::Pesdb { dir } => cmd_pesdb(&dir),
-        Cmd::Cpk {
-            archive,
-            extract,
-            filter,
-            pack,
-            out,
-            summary,
-            depth,
-            compress,
-        } => {
+        Cmd::Cpk { archive, extract, filter, pack, out, summary, depth, compress } => {
             if let Some(src) = pack {
                 let dest = out.context("--pack needs --out")?;
                 let n = cpk::pack(&src, &dest, compress)?;
-                println!(
-                    "packed {n} files into {} ({})",
-                    dest.display(),
-                    if compress {
-                        "CRILAYLA where it paid"
-                    } else {
-                        "stored"
-                    }
-                );
+                println!("packed {n} files into {} ({})", dest.display(),
+                     if compress { "CRILAYLA where it paid" } else { "stored" });
                 let back = cpk::Cpk::open(&dest)?;
-                println!(
-                    "re-read: {} entries, content at {}",
-                    back.files.len(),
-                    back.content_offset
-                );
+                println!("re-read: {} entries, content at {}",
+                         back.files.len(), back.content_offset);
                 Ok(())
             } else {
                 let archive = archive.context("give a .cpk, or use --pack")?;
-                cmd_cpk(
-                    &archive,
-                    extract.as_deref(),
-                    filter.as_deref(),
-                    summary,
-                    depth,
-                )
+                cmd_cpk(&archive, extract.as_deref(), filter.as_deref(), summary, depth)
             }
         }
         Cmd::Ftex { input, out, kind } => cmd_ftex(&input, out.as_deref(), &kind),
-        Cmd::Bin {
-            file,
-            section,
-            bytes,
-        } => cmd_bin(&file, section, bytes),
-        Cmd::Container {
-            input,
-            unwrap,
-            rewrap,
-            out,
-        } => cmd_container(&input, unwrap.as_deref(), rewrap.as_deref(), out.as_deref()),
+        Cmd::Bin { file, section, bytes } => cmd_bin(&file, section, bytes),
+        Cmd::Container { input, unwrap, rewrap, out } => {
+            cmd_container(&input, unwrap.as_deref(), rewrap.as_deref(), out.as_deref())
+        }
         Cmd::Fmt { path, limit } => cmd_fmt(&path, limit),
         Cmd::Rig { path, with } => cmd_rig(&path, with.as_deref()),
-        Cmd::Gani {
-            path,
-            rate,
-            all,
-            tracks,
-            set_key,
-        } => cmd_gani(&path, rate, all, tracks, set_key.as_deref()),
-        Cmd::Menu {
-            root,
-            check,
-            list,
-            link,
-            r#clone,
-            bases,
-        } => cmd_menu(
-            &root,
-            check,
-            list,
-            link.as_deref(),
-            r#clone.as_deref(),
-            &bases,
-        ),
+        Cmd::Gani { path, rate, all, tracks, set_key } => cmd_gani(&path, rate, all, tracks, set_key.as_deref()),
+        Cmd::Menu { root, check, list, link, r#clone, bases } => cmd_menu(&root, check, list, link.as_deref(), r#clone.as_deref(), &bases)
     }
 }

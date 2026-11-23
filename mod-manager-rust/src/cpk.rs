@@ -62,11 +62,7 @@ fn files_from(table: &Utf) -> Vec<CpkFile> {
     let mut out = Vec::new();
     for row in &table.rows {
         let g = |k: &str| row.get(k).map(|v| v.as_u64()).unwrap_or(0);
-        let s = |k: &str| {
-            row.get(k)
-                .map(|v| v.as_str().to_string())
-                .unwrap_or_default()
-        };
+        let s = |k: &str| row.get(k).map(|v| v.as_str().to_string()).unwrap_or_default();
         let name = s("FileName");
         if name.is_empty() {
             continue;
@@ -76,11 +72,7 @@ fn files_from(table: &Utf) -> Vec<CpkFile> {
             dir: s("DirName"),
             size: g("FileSize"),
             extract_size: g("ExtractSize"),
-            offset: if row.contains_key("FileOffset") {
-                g("FileOffset")
-            } else {
-                g("ContentOffset")
-            },
+            offset: if row.contains_key("FileOffset") { g("FileOffset") } else { g("ContentOffset") },
             id: g("ID"),
         });
     }
@@ -90,7 +82,8 @@ fn files_from(table: &Utf) -> Vec<CpkFile> {
 /// Read a slice of a file without pulling the whole archive into memory: the
 /// game's dt30 is 4 GB and only its header and TOC are ever needed to list it.
 fn read_at(path: &Path, offset: u64, len: usize) -> Result<Vec<u8>> {
-    let mut f = fs::File::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let mut f = fs::File::open(path)
+        .with_context(|| format!("opening {}", path.display()))?;
     f.seek(SeekFrom::Start(offset))?;
     let mut buf = vec![0u8; len];
     f.read_exact(&mut buf)
@@ -105,26 +98,19 @@ fn find_utf(buf: &[u8]) -> Option<usize> {
 impl Cpk {
     pub fn open(path: &Path) -> Result<Cpk> {
         let file_size = fs::metadata(path)
-            .with_context(|| format!("stat {}", path.display()))?
-            .len();
+            .with_context(|| format!("stat {}", path.display()))?.len();
         let head = read_at(path, 0, 16)?;
         if &head[0..4] != b"CPK " {
             bail!("{} is not a CPK", path.display());
         }
         let packet = u32::from_le_bytes([head[8], head[9], head[10], head[11]]) as usize;
         if packet < 8 || packet as u64 > file_size {
-            bail!(
-                "{}: header packet size {packet} is not plausible",
-                path.display()
-            );
+            bail!("{}: header packet size {packet} is not plausible", path.display());
         }
         let header_bytes = read_at(path, 0, 16 + packet)?;
         let at = find_utf(&header_bytes).context("no @UTF header in CPK")?;
         let header_table = Utf::parse(&header_bytes, at)?;
-        let header = header_table
-            .rows
-            .into_iter()
-            .next()
+        let header = header_table.rows.into_iter().next()
             .context("CPK header has no rows")?;
         let get = |k: &str| header.get(k).map(|v| v.as_u64()).unwrap_or(0);
 
@@ -146,12 +132,7 @@ impl Cpk {
         } else {
             bail!("CPK has neither a sized TOC nor ITOC");
         };
-        Ok(Cpk {
-            header,
-            files,
-            content_offset,
-            path: path.to_path_buf(),
-        })
+        Ok(Cpk { header, files, content_offset, path: path.to_path_buf() })
     }
 
     pub fn read_file(&self, entry: &CpkFile) -> Result<Vec<u8>> {
@@ -162,25 +143,15 @@ impl Cpk {
         f.read_exact(&mut raw)?;
         if entry.compressed() {
             if raw.len() < 8 || &raw[0..8] != b"CRILAYLA" {
-                bail!(
-                    "{}: expected CRILAYLA at {start}, found {}",
-                    entry.path(),
-                    raw.iter()
-                        .take(16)
-                        .map(|b| format!("{b:02x}"))
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                );
+                bail!("{}: expected CRILAYLA at {start}, found {}",
+                      entry.path(),
+                      raw.iter().take(16).map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" "));
             }
             let out = crilayla_decompress(&raw)
                 .with_context(|| format!("decompressing {}", entry.path()))?;
             if out.len() != entry.extract_size as usize {
-                bail!(
-                    "{}: got {} bytes, header says {}",
-                    entry.path(),
-                    out.len(),
-                    entry.extract_size
-                );
+                bail!("{}: got {} bytes, header says {}",
+                      entry.path(), out.len(), entry.extract_size);
             }
             Ok(out)
         } else {
@@ -197,11 +168,8 @@ impl Cpk {
             if let Some(parent) = out.parent() {
                 fs::create_dir_all(parent)?;
             }
-            fs::write(
-                &out,
-                self.read_file(f)
-                    .with_context(|| format!("extracting {}", f.path()))?,
-            )?;
+            fs::write(&out, self.read_file(f)
+                .with_context(|| format!("extracting {}", f.path()))?)?;
             done += 1;
         }
         Ok(done)
@@ -221,8 +189,7 @@ impl Cpk {
             e.0 += 1;
             e.1 += f.extract_size;
         }
-        let mut out: Vec<_> = map
-            .into_iter()
+        let mut out: Vec<_> = map.into_iter()
             .map(|(name, (files, bytes))| Folder { name, files, bytes })
             .collect();
         out.sort_by(|a, b| b.bytes.cmp(&a.bytes).then(a.name.cmp(&b.name)));
@@ -248,21 +215,17 @@ impl Cpk {
             let e = roots.entry(root).or_insert((0, 0));
             e.0 += 1;
             e.1 += f.extract_size;
-            let ext = path
-                .rsplit_once('.')
+            let ext = path.rsplit_once('.')
                 .map(|(_, x)| x.to_ascii_lowercase())
                 .unwrap_or_else(|| "(none)".into());
             *exts.entry(ext).or_insert(0) += 1;
         }
-        let mut folders: Vec<_> = roots
-            .into_iter()
+        let mut folders: Vec<_> = roots.into_iter()
             .map(|(name, (files, bytes))| Folder { name, files, bytes })
             .collect();
         folders.sort_by_key(|f| std::cmp::Reverse(f.bytes));
-        let mut extensions: Vec<_> = exts
-            .into_iter()
-            .map(|(ext, count)| Extension { ext, count })
-            .collect();
+        let mut extensions: Vec<_> = exts.into_iter()
+            .map(|(ext, count)| Extension { ext, count }).collect();
         extensions.sort_by_key(|e| std::cmp::Reverse(e.count));
         Summary {
             entries: self.files.len(),
@@ -303,9 +266,7 @@ fn align_up(v: u64, align: u64) -> u64 {
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     let mut entries: Vec<_> = fs::read_dir(dir)
         .with_context(|| format!("reading {}", dir.display()))?
-        .flatten()
-        .map(|e| e.path())
-        .collect();
+        .flatten().map(|e| e.path()).collect();
     entries.sort();
     for p in entries {
         if p.is_dir() {
@@ -348,14 +309,9 @@ pub fn pack(src: &Path, dest: &Path, compress: bool) -> Result<usize> {
     // is the slow part and is entirely independent per file. Packing dt00
     // serially took 12.9 s for 190 MB.
     use rayon::prelude::*;
-    let bodies: Vec<(String, Vec<u8>, Vec<u8>)> = paths
-        .par_iter()
+    let bodies: Vec<(String, Vec<u8>, Vec<u8>)> = paths.par_iter()
         .map(|p| -> Result<(String, Vec<u8>, Vec<u8>)> {
-            let rel = p
-                .strip_prefix(src)
-                .unwrap()
-                .to_string_lossy()
-                .replace('\\', "/");
+            let rel = p.strip_prefix(src).unwrap().to_string_lossy().replace('\\', "/");
             let bytes = fs::read(p).with_context(|| format!("reading {}", p.display()))?;
             let body = if compress {
                 crate::crilayla::compress(&bytes)
@@ -458,10 +414,7 @@ pub fn pack(src: &Path, dest: &Path, compress: bool) -> Result<usize> {
 
     let head = utf::packet(b"CPK ", &header.encode()?);
     if head.len() as u64 > ALIGN {
-        bail!(
-            "header packet is {} bytes, larger than the {ALIGN}-byte alignment",
-            head.len()
-        );
+        bail!("header packet is {} bytes, larger than the {ALIGN}-byte alignment", head.len());
     }
 
     let mut out = Vec::with_capacity(ALIGN as usize + content.len() + toc_packet.len());
