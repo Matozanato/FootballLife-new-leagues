@@ -1,6 +1,8 @@
 #ifndef FL26LEAGUES_BRACKET_VIEW_H
 #define FL26LEAGUES_BRACKET_VIEW_H
 
+#include <stddef.h>
+
 /* TournamentProgress round records as captured in Copa Chile. These copies
  * belong to the presentation layer and are never registered with FL27. */
 enum { LC_VIEW_ROUNDS=4 };

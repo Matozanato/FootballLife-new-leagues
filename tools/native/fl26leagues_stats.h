@@ -1,6 +1,8 @@
 #ifndef FL26LEAGUES_STATS_H
 #define FL26LEAGUES_STATS_H
 
+#include <stddef.h>
+
 /* FL27 rec596. The native ranking builder at 0x140fbd620 reads two
  * 17-player blocks from the match copy before it builds the top 40. */
 enum { LC_STATS_FIXTURES=62, LC_STATS_SIDE=17, LC_STATS_ROW=16,
