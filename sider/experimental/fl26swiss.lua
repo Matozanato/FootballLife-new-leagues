@@ -475,6 +475,57 @@ local function load_dll(path)
   return ffi.C.LoadLibraryA(path)
 end
 
+-- lab (17/11/2026): `lpname <reg> <name>` (fl26_swiss_lphase_name)
+local function world_lpname(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local out = {}
+  for line in f:lines() do
+    local r, nm = line:match("^%s*lpname%s+(%d+)%s+(.-)%s*$")
+    if r and nm ~= "" then out[#out + 1] = { tonumber(r), nm } end
+  end
+  f:close()
+  return #out > 0 and out or nil
+end
+
+-- lab (17/11/2026): `lphase <host reg> <phase reg> <text>` (fl26_swiss_lphase): text 2 a knockout item, 3 a group
+-- (pages of the league's table, L1/R1), 4 a set of leagues behind one item (named by `lpname <0x8000 + host>`)
+-- lab (21/11/2026): `sline <export> <numbers>` -> fl26swiss.dll's export int f(const uint32_t*, int), one call a line
+-- (the knockouts on one regulation: fl26_swiss_tcup, fl26_swiss_rcup, fl26_swiss_icup, fl26_swiss_reserve ...)
+local function world_slines(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return {} end
+  local out = {}
+  for line in f:lines() do
+    local name, rest = line:match("^%s*sline%s+([%w_]+)%s*(.*)$")
+    if name then
+      local v = {}
+      for x in rest:gmatch("%d+") do v[#v + 1] = tonumber(x) end
+      out[#out + 1] = { name, v }
+    end
+  end
+  f:close()
+  return out
+end
+
+local function world_lphase(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local out = {}
+  for line in f:lines() do
+    local h, r, t = line:match("^%s*lphase%s+(%d+)%s+(%d+)%s+(%d+)")
+    if h then out[#out + 1] = tonumber(h); out[#out + 1] = tonumber(r); out[#out + 1] = tonumber(t) end
+  end
+  f:close()
+  return #out > 0 and out or nil
+end
+
 function m.init(ctx)
   if ffi == nil then log("fl26swiss: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
@@ -1048,6 +1099,40 @@ function m.init(ctx)
         ffi.cast("fl26_swiss_access_t", pj)(jbuf, #july)
       elseif #july > 0 then
         log("fl26swiss: this fl26swiss.dll has no fl26_swiss_july -- July leagues start in August")
+      end
+      do   -- the zones of a competition, paged with L1/R1 on its table (lab, 17/11/2026; 0.4.0 port 20/11/2026)
+        local lp = world_lphase(ctx)
+        if lp then
+          local pl = ffi.C.GetProcAddress(h, "fl26_swiss_lphase")
+          if pl == nil then
+            log("fl26swiss: this fl26swiss.dll has no league phases in the menu (fl26_swiss_lphase); the lphase lines are not used")
+          else
+            local b = ffi.new("uint32_t[?]", #lp)
+            for i, x in ipairs(lp) do b[i - 1] = x end
+            local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", pl)(b, #lp))
+            log(string.format("fl26swiss: world file -- %d league phase(s) shown in their league's menu", k))
+            local names = world_lpname(ctx)
+            local pn = ffi.C.GetProcAddress(h, "fl26_swiss_lphase_name")
+            if names and pn ~= nil then
+              local fn = ffi.cast("int(*)(uint32_t, const char*)", pn)
+              local c = 0
+              for _, e in ipairs(names) do c = tonumber(fn(e[1], e[2])) end
+              log(string.format("fl26swiss: world file -- %d phase item name(s)", c))
+            elseif names then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_lphase_name; the lpname lines are not used")
+            end
+          end
+        end
+      end
+      for _, x in ipairs(world_slines(ctx)) do   -- lab 21/11/2026
+        local fn = ffi.C.GetProcAddress(h, x[1])
+        if fn == nil then log("fl26swiss: sline -- this DLL has no " .. x[1] .. "; the line is not used")
+        else
+          local b = ffi.new("uint32_t[?]", math.max(#x[2], 1))
+          for i, y in ipairs(x[2]) do b[i - 1] = y end
+          local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", fn)(b, #x[2]))
+          log(string.format("fl26swiss: sline %s (%d values) -> %d", x[1], #x[2], k))
+        end
       end
       -- `rcal`: the real calendar of a league of ours (fl26_swiss_rcal, 0.2.0); without the
       -- export (an older DLL) the leagues keep the calendar above

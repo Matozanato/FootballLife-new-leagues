@@ -40,7 +40,7 @@ def main(base):
     ok("a round of 32 clubs is 16 matches, what a fixture round holds", B.CLUBS_MAX // 2 == 16)
     # the UI's spin box and message read the same constants
     ui = open(os.path.join(HERE, "modstudio", "pages", "builder.py"), encoding="utf-8").read()
-    ok("the league dialog checks the times against max_legs", "B.max_legs(L[\"clubs\"])" in ui)
+    ok("the league dialog checks the times against max_legs", "B.max_legs(L[\"clubs\"]" in ui)   # (a zone's smaller minimum: , B.clubs_min(L))
     for clubs, legs in ((28, 2), (32, 1), (29, 1), (10, 4)):
         e = plan_error(base, clubs, legs)
         ok("%d clubs x %d: planned (%s)" % (clubs, legs, e), e is None)

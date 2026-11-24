@@ -1485,7 +1485,21 @@ static int wday_in(uint32_t d, int sy)
   while (m < 12 && d >= MONTH0[m]) m++;
   return dow(y, m, (int)(d - MONTH0[m - 1]) + 1);
 }
-static int wday(uint32_t d) { return wday_in(d, season_year()); }
+static uint32_t g_org;      /* (defined below, with the real calendars) */
+/* lab 20/11/2026: a January-December league's real calendar is built with g_org 0 (rcal_pick_days): its days are
+   all of ONE calendar year, the season's (season_year() + 1, also when built in January, where season_year() still
+   says the year before). wday_in's August-May frame gave its July-December days the weekdays of the year before:
+   Argentina's Regional "on Sundays" played on Mondays in 2026 (days 243, 250, 257 ...). */
+static int wday(uint32_t d)
+{
+  int sy = season_year();
+  if (g_org == 0 && sy && d < 365) {
+    int m = 1;
+    while (m < 12 && d >= MONTH0[m]) m++;
+    return dow(sy + 1, m, (int)(d - MONTH0[m - 1]) + 1);
+  }
+  return wday_in(d, sy);
+}
 /* day d as the game shows it, "Fri 01.08.2025", for the log */
 static const char* dstr(uint32_t d, char* buf, size_t cap)
 {
@@ -3427,7 +3441,7 @@ static void cont_build(void)
     int k = a->comp - LIB, ft = 0; uint32_t c = 0;
     uint16_t reg = a->reg; int first = a->rank, picked = 0;
     if (!first) {                                   /* cup winner, or the alt league's next place */
-      c = cup_winner(reg);
+      c = (a->comp == LIB || a->comp == LIBQ) ? cup_winner_within(reg, 330) : cup_winner(reg);   /* lab 21/11/2026 */
       if (c && has_club(used, nused, c)) c = 0;
       if (!c) { reg = a->alt; first = a->alt ? 1 : FINAL_MAX + 1; }
     }
@@ -6086,8 +6100,16 @@ static void poko_ko(int i, void* started)
        (unsigned)c->reg, d, buf[0], buf[1], ccup_matches(c->ko));
 }
 
+static void games_tick(void);   /* lab 20/11/2026: the per-day match log (below, with the real calendars) */
+static void rcup_tick(void);
+static void icup_tick(void);
+static void tcup_tick(void);
+static void mphase_tick(void);
 static void lpre_fill_days(void)
 {
+  games_tick();
+  rcup_tick(); icup_tick(); tcup_tick();         /* lab 21/11/2026: the knockouts on one regulation (Argentina) */
+  mphase_tick();                                  /* lab 21/11/2026: league phases from mid-season (the Federal A) */
   for (int i = 0; i < g_nlpre; i++) {
     lpre_fill(i);
     lib8_swap(i);
@@ -7816,6 +7838,1973 @@ static int ko_winner(const uint32_t* sl, uint32_t* w, uint16_t reg)
   *w = gh > ga ? h : a;
   return 1;
 }
+/* ==== lab 21/11/2026: the knockouts on one regulation of our 0.3.0 lab (rcup, icup, tcup), ported to 0.4.0 for
+   Argentina's play-offs. 0.4.0's ko_match/ko_winner take the regulation (u32 match ids past 65535): the slot's word
+   is the low half; the scheduler gets the record's dword id. ==== */
+#define CREATE_RVA 0x13f54b0
+#define KC_SCHED_RVA 0x1350290        /* scheduler: (ctx, day of the year, match id) */
+typedef char (*kc_sched_fn)(void* ctx, uint64_t day, uint64_t id);
+typedef char (*kc_create_fn)(void* ctx, void* vec, uint64_t reg, uint64_t kind, uint64_t leg, uint64_t tie);
+/* ---- a national cup on ONE regulation, a seeded bracket (rcup, lab 14/11/2026: the Canadian Championship) ----
+ *
+ * World file:  rcup reg=<R> holder=<team> fill=<day> legs=<l0>,<l1>,... days=<r0 leg1>,<r0 leg2>,<r1 leg1>,...
+ *              entry=<reg>:<position>|t<team>,...
+ * One regulation R (a copy of the Libertadores qualifying round, as kcup's), registered with no club; every
+ * match made here with the knockout builder's maker 0x1413f54b0 (kcup's way). The field, strongest first:
+ * the holder (R's last winner, kept with the save; a new career: holder=), then the entries in their order --
+ * t<team> a club invited by name (the MLS's Canadian clubs), <reg>:<position> a league's place: the club that
+ * finished there LAST season, kept the day its season was over (cupwin keys 0xE000 + entry), or, before any
+ * season was kept (a new career), the league's place as cwc_club reads it now (list order before a round).
+ * A club already in the field is skipped. The bracket is the standard seeded one for the next power of two:
+ * 1 v P, P/2 v P/2+1 ...; a seed with no opponent (P > field) goes straight to the next round -- so the four
+ * strongest meet no one of the four before the semi-finals. legs per round: 1 one match (the better seed at
+ * home), 2 two legs (the better seed at home in the second). Kinds of R: the rounds of a knockout of that
+ * size (..., 0x2e, 0x33, 0x34, 0x35), so the native bracket page reads them. Calendar year (Canada): a round
+ * holds this year's ties when its first match is dated this year. */
+#define RC_MAXE 32
+#define RC_MAXR 5
+static const uint8_t RC_KIND_END[RC_MAXR] = { 0x35, 0x34, 0x33, 0x2e, 0x30 };   /* final, SF, QF, R16, R32 */
+typedef struct {
+  uint16_t reg, fill; uint32_t holder; int nr; uint8_t legs[RC_MAXR]; uint16_t day[RC_MAXR][2];
+  int ne; uint32_t ent[RC_MAXE];
+  int made[RC_MAXR], champ_year, reg_year, on;
+} rcup_t;
+static rcup_t g_rc;
+
+/* v: reg holder fill nr legs[nr] days[2*nr] ne entries[ne] -- an entry is reg << 8 | position, or
+   0x80000000 | team */
+__declspec(dllexport) int fl26_swiss_rcup(const uint32_t* v, int n)
+{
+  memset(&g_rc, 0, sizeof g_rc);
+  if (!v || n < 4) return 0;
+  int p = 0;
+  g_rc.reg = (uint16_t)v[p++]; g_rc.holder = v[p++]; g_rc.fill = (uint16_t)v[p++]; g_rc.nr = (int)v[p++];
+  if (g_rc.nr < 1 || g_rc.nr > RC_MAXR || n < 4 + 3 * g_rc.nr + 1) { logf("fl26swiss: rcup -- bad line (%d values)", n); return 0; }
+  for (int r = 0; r < g_rc.nr; r++) g_rc.legs[r] = (uint8_t)v[p++];
+  for (int r = 0; r < g_rc.nr; r++) { g_rc.day[r][0] = (uint16_t)v[p++]; g_rc.day[r][1] = (uint16_t)v[p++]; }
+  g_rc.ne = (int)v[p++];
+  if (g_rc.ne < 1 || g_rc.ne > RC_MAXE || p + g_rc.ne != n) { logf("fl26swiss: rcup -- bad entry count (%d values)", n); return 0; }
+  for (int i = 0; i < g_rc.ne; i++) g_rc.ent[i] = v[p++];
+  for (int r = 0; r < RC_MAXR; r++) g_rc.made[r] = -1000;
+  g_rc.champ_year = g_rc.reg_year = -1000;
+  g_rc.on = 1;
+  logf("fl26swiss: rcup -- a seeded cup on one regulation: reg %u, %d entries plus the holder, %d round(s), filled on day %u",
+       (unsigned)g_rc.reg, g_rc.ne, g_rc.nr, (unsigned)g_rc.fill);
+  return 1;
+}
+static unsigned char* rc_blk(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  return o ? *(unsigned char**)(o + 0x48) : 0;
+}
+static int rc_cal_year(void) { unsigned char* b = rc_blk(); return b ? *(uint16_t*)(b + TODAY_OFF + 8) : -1; }
+static uint8_t rc_kind(int r) { return RC_KIND_END[g_rc.nr - 1 - r]; }
+static unsigned char* rc_rnd(int r) { return ko_round(g_rc.reg, rc_kind(r)); }
+static int rc_fresh(unsigned char* rnd, int year)
+{
+  if (ko_slots(rnd) < 1) return 0;
+  unsigned char* m = ko_match(*(uint16_t*)(ko_slot(rnd, 0) + 2), g_rc.reg);
+  return m && *(uint16_t*)(m + 4) == g_rc.reg && *(uint16_t*)(m + 8) == year;
+}
+#define RC_KEY(i) ((uint16_t)(0xE000u | (unsigned)(i)))
+/* the club of entry i for this year's edition */
+static uint32_t rc_entry_club(int i)
+{
+  uint32_t e = g_rc.ent[i];
+  if (e & 0x80000000u) return canon_club(full_club(e & 0x7fffffffu));     /* a team id -> the game's club value */
+  cupwin_t* w = cupwin_of(RC_KEY(i));
+  int ad = abs_day();
+  if (w && ad >= w->day && ad - w->day < 400) return w->club;
+  /* nothing kept yet (a new career): the league's list order -- the world puts last season's champion
+     first; its live table may already have a round or two of THIS season */
+  unsigned char* rec = get_rec((uint16_t)(e >> 8));
+  unsigned pos = e & 0xff;
+  uint32_t c = rec && pos >= 1 && pos <= rec_count(rec) ? rec_clubs(rec)[pos - 1] : 0;
+  return (c >> 14) ? canon_club(c) : 0;
+}
+/* the leagues' places, kept once their season is over (for next year's field) */
+static void rc_capture(void)
+{
+  static int tried = -100000;
+  int d = today(), ad = abs_day();
+  if (tried == ad || d < 150) return;
+  tried = ad;
+  int kept = 0;
+  for (int i = 0; i < g_rc.ne; i++) {
+    uint32_t e = g_rc.ent[i];
+    if (e & 0x80000000u) continue;
+    uint16_t reg = (uint16_t)(e >> 8);
+    cupwin_t* w = cupwin_of(RC_KEY(i));
+    if (w && ad >= w->day && ad - w->day < d) continue;        /* kept this calendar year already */
+    if (!season_played(reg)) continue;
+    const char* how = "";
+    uint32_t c = cwc_club(reg, (int)(e & 0xff), &how);
+    if (!(c >> 14)) continue;
+    if (!w) { if (g_ncupwin >= CUPWIN_N) continue; w = &g_cupwin[g_ncupwin++]; w->reg = RC_KEY(i); }
+    w->day = ad; w->club = canon_club(c); kept++;
+    logf("fl26swiss: rcup -- entry %d (reg %u place %u) kept for next year: %08x (%s)", i + 1, (unsigned)reg,
+         (unsigned)(e & 0xff), w->club, how);
+  }
+  if (kept) state_store();
+}
+/* the field, strongest first: the holder, then the entries */
+static int rc_field(uint32_t* s)
+{
+  int n = 0;
+  cupwin_t* w = cupwin_of(g_rc.reg);
+  int ad = abs_day();
+  uint32_t h = (w && ad >= w->day && ad - w->day < 400) ? w->club : (g_rc.holder ? full_club(g_rc.holder) : 0);   /* holder= is a team id */
+  if (h >> 14) s[n++] = canon_club(h);
+  for (int i = 0; i < g_rc.ne && n < RC_MAXE; i++) {
+    uint32_t c = rc_entry_club(i);
+    if ((c >> 14) && !has_club(s, (size_t)n, c)) s[n++] = c;
+  }
+  return n;
+}
+static int rc_rank(const uint32_t* s, int n, uint32_t c)
+{
+  for (int i = 0; i < n; i++) if (same_club(s[i], c)) return i;
+  return n;
+}
+/* the standard seeded order for P (a power of two): seeds 1..P, 1 v P, P/2 v P/2+1 ... */
+static void rc_order(int P, int* o)
+{
+  int m = 1; o[0] = 1;
+  while (m < P) {
+    int t[64];
+    for (int i = 0; i < m; i++) { t[2 * i] = o[i]; t[2 * i + 1] = 2 * m + 1 - o[i]; }
+    m *= 2;
+    memcpy(o, t, sizeof(int) * (size_t)m);
+  }
+}
+/* a tie's winner (one or two legs; level after both and a shoot-out: the second leg's host) */
+static uint32_t rc_tie_winner(const uint32_t* sl, uint16_t reg)
+{
+  uint32_t w = 0;
+  if (ko_winner(sl, &w, reg) && (w >> 14)) return canon_club(w);
+  const uint16_t* ids = (const uint16_t*)(sl + 2);
+  unsigned char* m1 = ko_match(ids[0], reg);
+  unsigned char* m2 = ids[1] == 0xffff ? 0 : ko_match(ids[1], reg);
+  if (!m1 || !(m1[7] & 0x40) || (ids[1] != 0xffff && (!m2 || !(m2[7] & 0x40)))) return 0;
+  return canon_club(m2 ? *(uint32_t*)(m2 + 0x14) : *(uint32_t*)(m1 + 0x14));
+}
+/* the clubs reaching round r, in bracket order (P >> r of them); 0 when a round before is not decided */
+static int rc_reaching(int r, int year, const uint32_t* s, int n, int P, uint32_t* out)
+{
+  int o[64]; rc_order(P, o);
+  uint32_t cur[64]; int m = P;
+  for (int i = 0; i < P; i++) cur[i] = o[i] <= n ? s[o[i] - 1] : 0;
+  for (int q = 0; q < r; q++) {
+    unsigned char* rnd = rc_rnd(q);
+    int k = rc_fresh(rnd, year) ? ko_slots(rnd) : 0;
+    uint32_t win[32]; int nwin = 0;
+    for (int s2 = 0; s2 < k && s2 < 16; s2++) {
+      uint32_t* sl = ko_slot(rnd, s2);
+      unsigned t = (sl[3] >> 22) & 0x1f;
+      uint32_t w = rc_tie_winner(sl, g_rc.reg);
+      if (!w || t >= 32) return 0;
+      win[t] = w; nwin = (int)t + 1 > nwin ? (int)t + 1 : nwin;
+    }
+    uint32_t nxt[32]; int t = 0;
+    for (int i = 0; i < m / 2; i++) {
+      uint32_t a = cur[2 * i], b = cur[2 * i + 1];
+      if (a && b) { if (t >= nwin) return 0; nxt[i] = win[t++]; }
+      else nxt[i] = a ? a : b;
+    }
+    m /= 2;
+    memcpy(cur, nxt, sizeof(uint32_t) * (size_t)m);
+  }
+  memcpy(out, cur, sizeof(uint32_t) * (size_t)m);
+  return m;
+}
+static void rc_register(int year)
+{
+  if (g_rc.reg_year == year) return;
+  g_rc.reg_year = year;
+  if (!get_rec(g_rc.reg)) { logf("fl26swiss: rcup -- reg %u is not in this world", (unsigned)g_rc.reg); return; }
+  int before = ccup_matches(g_rc.reg);
+  start_stage(0, g_rc.reg);
+  unsigned char* rec = get_rec(g_rc.reg);
+  unsigned had = rec ? rec_count(rec) : 0;
+  if (had) {
+    uint32_t none[1] = { 0 };
+    u32vec va = { none, none, none };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_rc.reg, &va, 1);
+    run_flush();
+  }
+  uint16_t id = g_rc.reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  int after = ccup_matches(g_rc.reg);
+  logf("fl26swiss: rcup -- reg %u registered for %d (day %d): %u club(s) from the stage start, emptied; match records %d -> %d%s",
+       (unsigned)g_rc.reg, year, today(), had, before, after, after > before ? " -- THE GAME MADE MATCHES OF ITS OWN" : "");
+}
+/* lab 17/11/2026: force -- the first round of a new edition. The registration's start_stage dates the
+   last edition's matches into this year (+8 = this year, the 2027 matches put on 2028's days: "day lists --
+   73 id(s) twice on one day"), so every old round looked made: 2028 stopped after its first round and the
+   old final's winner was taken again. When the first round is made everything before it is the old edition */
+static void rc_new_edition(int year, int force)
+{
+  int emptied = 0;
+  for (int r = 0; r < g_rc.nr; r++) {
+    unsigned char* rnd = rc_rnd(r);
+    int k = ko_slots(rnd);
+    if (k < 1 || (!force && rc_fresh(rnd, year))) continue;
+    for (int s = 0; s < k && s < 16; s++) memset(ko_slot(rnd, s), 0xff, 32);
+    *(uint32_t*)(rnd + 0x204) &= ~0x3ffffffu;
+    emptied++;
+  }
+  if (emptied) logf("fl26swiss: rcup -- a new edition: %d round record(s) of reg %u emptied", emptied, (unsigned)g_rc.reg);
+}
+/* round r's ties: cl holds them home of the first match first */
+static void rc_make(int r, uint32_t* cl, unsigned n, int year)
+{
+  rc_register(year);
+  rc_new_edition(year, r == 0);
+  kc_create_fn mk = (kc_create_fn)(uintptr_t)(g_base + CREATE_RVA);
+  struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec = { cl, cl + n, cl + n };
+  uint8_t kind = rc_kind(r);
+  int made = 0, two = g_rc.legs[r] == 2;
+  for (unsigned t = 0; t < n / 2 && t < 16; t++) {
+    if (two) { made += mk(0, &vec, g_rc.reg, kind, 0, t) != 0; made += mk(0, &vec, g_rc.reg, kind, 1, t) != 0; }
+    else made += mk(0, &vec, g_rc.reg, kind, 2, t) != 0;
+  }
+  unsigned char* rnd = rc_rnd(r);
+  int k = ko_slots(rnd);
+  static unsigned char ctx[256];
+  for (int s = 0; s < k && s < 16; s++) {
+    uint32_t* sl = ko_slot(rnd, s);
+    unsigned t = (sl[3] >> 22) & 0x1f;
+    if (2 * t + 1 >= n) continue;
+    uint32_t h = cl[2 * t], a = cl[2 * t + 1];
+    uint16_t* ids = (uint16_t*)(sl + 2);
+    sl[0] = h; sl[1] = a;
+    unsigned char* m1 = ko_match(ids[0], g_rc.reg);
+    unsigned char* m2 = ids[1] == 0xffff ? 0 : ko_match(ids[1], g_rc.reg);
+    if (m1) { *(uint32_t*)(m1 + 0x14) = h; *(uint32_t*)(m1 + 0x18) = a; }
+    if (m2) { *(uint32_t*)(m2 + 0x14) = a; *(uint32_t*)(m2 + 0x18) = h; }
+    if (m1) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(ctx, g_rc.day[r][0], *(uint32_t*)m1);
+    if (m2) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(ctx, g_rc.day[r][1], *(uint32_t*)m2);
+    logf("fl26swiss:   rcup round %d kind %#x tie %u: %08x v %08x, match %u/%u", r + 1, kind, t, h, a,
+         (unsigned)ids[0], (unsigned)ids[1]);
+  }
+  g_rc.made[r] = year;
+  {
+    unsigned char* blk = rc_blk();
+    uint32_t user = blk ? *(uint32_t*)(blk + USER_CLUB_OFF) : 0, lst[48]; unsigned nl = 0;
+    for (unsigned i = 0; i < n; i++) if (user && same_club(cl[i], user)) { lst[nl++] = cl[i]; break; }
+    for (unsigned i = 0; i < n && nl < 48; i++) if (!has_club(lst, nl, cl[i])) lst[nl++] = cl[i];
+    u32vec va = { lst, lst + nl, lst + nl };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_rc.reg, &va, 1);
+    run_flush();
+  }
+  logf("fl26swiss: rcup -- day %d: round %d of %d made, %u ties (%s), %d match(es); %d match record(s) under reg %u",
+       today(), r + 1, g_rc.nr, n / 2, two ? "two legs" : "one match", made, ccup_matches(g_rc.reg), (unsigned)g_rc.reg);
+  sched_rebuild("rcup round made");
+}
+static void rcup_tick(void)
+{
+  if (!g_rc.on || today() < 1) return;
+  rc_capture();
+  int d = today(), year = rc_cal_year();
+  if (year < 0) return;
+  uint32_t s[RC_MAXE + 1]; int n = 0, P = 1;
+  for (int r = 0; r < g_rc.nr; r++) {
+    if (g_rc.made[r] == year) continue;
+    int from = r == 0 ? g_rc.fill : g_rc.day[r - 1][g_rc.legs[r - 1] == 2] + 1;
+    if (d < from || d >= g_rc.day[r][0]) continue;
+    unsigned char* rnd = rc_rnd(r);
+    if (rc_fresh(rnd, year)) { g_rc.made[r] = year; continue; }      /* made already (a save loaded) */
+    if (!n) {
+      n = rc_field(s);
+      while (P < n) P *= 2;
+      if (P != (1 << g_rc.nr)) {
+        logf("fl26swiss: rcup -- a field of %d needs a bracket of %d, the line has %d round(s); not made", n, P, g_rc.nr);
+        g_rc.made[r] = year; return;
+      }
+    }
+    uint32_t reach[64];
+    int m = rc_reaching(r, year, s, n, P, reach);
+    if (!m) continue;                                   /* the round before is not decided yet */
+    uint32_t cl[64]; unsigned k = 0;
+    for (int i = 0; i + 1 < m; i += 2) {
+      uint32_t a = reach[i], b = reach[i + 1];
+      if (!a || !b) continue;                           /* a bye (round 1 only) */
+      int better_a = rc_rank(s, n, a) <= rc_rank(s, n, b);
+      uint32_t hi = better_a ? a : b, lo = better_a ? b : a;
+      if (g_rc.legs[r] == 2) { cl[k++] = lo; cl[k++] = hi; } else { cl[k++] = hi; cl[k++] = lo; }
+    }
+    if (r == 0) {
+      char line[600]; int q = 0;
+      for (int i = 0; i < n && q < (int)sizeof line - 12; i++) q += snprintf(line + q, sizeof line - (size_t)q, " %d:%08x", i + 1, s[i]);
+      logf("fl26swiss: rcup -- day %d: the field (%d, bracket of %d, %d bye(s)):%s", d, n, P, P - n, line);
+    }
+    if (!k) { g_rc.made[r] = year; continue; }
+    rc_make(r, cl, k, year);
+  }
+  if (g_rc.champ_year != year) {
+    unsigned char* rnd = rc_rnd(g_rc.nr - 1);
+    if (rc_fresh(rnd, year) && ko_slots(rnd) == 1) {
+      uint32_t w = rc_tie_winner(ko_slot(rnd, 0), g_rc.reg);
+      if (w) {
+        g_rc.champ_year = year;
+        cupwin_t* cw = cupwin_of(g_rc.reg);
+        if (!cw && g_ncupwin < CUPWIN_N) { cw = &g_cupwin[g_ncupwin++]; cw->reg = g_rc.reg; }
+        if (cw) { cw->day = abs_day(); cw->club = w; state_store(); }
+        logf("fl26swiss: rcup -- day %d: the cup's winner is %08x (the holder of next year's edition)", d, w);
+      }
+    }
+  }
+}
+/* date_handler: R's dates, one record per round and leg (borrowed from reg 17's 38-round calendar) */
+static int rc_dates(uint64_t reg, void* vec, uint64_t* rv)
+{
+  if (!g_rc.on || (uint16_t)reg != g_rc.reg) return 0;
+  *rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | 17, vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  date_t* dd = (date_t*)v->b;
+  size_t k = 0;
+  for (int r = 0; r < g_rc.nr; r++) {
+    if (g_rc.legs[r] == 2) {
+      if (k < have) { dd[k].day = g_rc.day[r][0]; dd[k].round = rc_kind(r); dd[k].kind = 0; k++; }
+      if (k < have) { dd[k].day = g_rc.day[r][1]; dd[k].round = rc_kind(r); dd[k].kind = 1; k++; }
+    } else if (k < have) { dd[k].day = g_rc.day[r][0]; dd[k].round = rc_kind(r); dd[k].kind = 2; k++; }
+  }
+  v->e = v->b + k * sizeof(date_t);
+  static int said;
+  if (said++ < 2) logf("fl26swiss: rcup -- reg %u dated: %u record(s)", (unsigned)g_rc.reg, (unsigned)k);
+  return 1;
+}
+
+/* ---- a national cup with staggered entry and an open draw (icup, lab 16/11/2026: Iceland's Mjolkurbikarinn) ----
+ *
+ * World file:  icup reg=<R> fill=<day> days=<d1>,...,<dn> enter=<round>:<league reg>,... [sreg=<S> sfill=<day>
+ *              sday=<day> slg=<league reg>] name=...
+ * One regulation R (a copy of the Libertadores qualifying round, as rcup's), registered with no club; every match
+ * made here with the knockout builder's maker (kcup's way), one match a tie (the regulation's extra time and
+ * penalties). The field of round r: the winners of round r-1, the club the draw of round r-1 left without an
+ * opponent (an odd field) and the clubs of the leagues entering at round r (their lists of this year: the
+ * New Year's exchange is done) -- the real cup's way, the lower divisions first, the top ones later. Each round is
+ * an open draw (fixed by year, round and field, so a reload makes the same); the first drawn is at home. A round
+ * of more than 16 ties takes two kinds. The cup's winner is kept (cupwin key R, with the save).
+ * The super cup (Meistarakeppni, its own regulation S): one match on sday between last season's champion of slg
+ * and the cup's last winner (the same club: slg's runner-up), both kept in cupwin (0xE800 + 0/1) once slg's
+ * season is over. A round holds this year's ties when its first match is dated this calendar year. */
+#define IC_MAXR 8
+#define IC_MAXE 12
+#define IC_MAXP 128
+typedef struct {
+  uint16_t reg, fill, nr, day[IC_MAXR]; int ne; uint8_t er[IC_MAXE]; uint16_t el[IC_MAXE];
+  uint16_t sreg, sfill, sday, slg;
+  int made[IC_MAXR], reg_year, champ_year, s_made, s_reg_year, s_cap_year, on;
+} icup_t;
+static icup_t g_ic;
+#define IC_KEY_CHAMP 0xE800u
+#define IC_KEY_RUNNER 0xE801u
+
+/* v: reg fill nr days[nr] ne (round, league)[ne] sreg sfill sday slg */
+__declspec(dllexport) int fl26_swiss_icup(const uint32_t* v, int n)
+{
+  memset(&g_ic, 0, sizeof g_ic);
+  if (!v || n < 4) return 0;
+  int p = 0;
+  g_ic.reg = (uint16_t)v[p++]; g_ic.fill = (uint16_t)v[p++]; g_ic.nr = (uint16_t)v[p++];
+  if (g_ic.nr < 2 || g_ic.nr > IC_MAXR || n < 3 + g_ic.nr + 1) { logf("fl26swiss: icup -- bad line (%d values)", n); return 0; }
+  for (int r = 0; r < g_ic.nr; r++) g_ic.day[r] = (uint16_t)v[p++];
+  g_ic.ne = (int)v[p++];
+  if (g_ic.ne < 1 || g_ic.ne > IC_MAXE || n != p + 2 * g_ic.ne + 4) { logf("fl26swiss: icup -- bad entry count (%d values)", n); return 0; }
+  for (int i = 0; i < g_ic.ne; i++) { g_ic.er[i] = (uint8_t)v[p++]; g_ic.el[i] = (uint16_t)v[p++]; }
+  g_ic.sreg = (uint16_t)v[p++]; g_ic.sfill = (uint16_t)v[p++]; g_ic.sday = (uint16_t)v[p++]; g_ic.slg = (uint16_t)v[p++];
+  for (int r = 0; r < IC_MAXR; r++) g_ic.made[r] = -1000;
+  g_ic.reg_year = g_ic.champ_year = g_ic.s_made = g_ic.s_reg_year = g_ic.s_cap_year = -1000;
+  g_ic.on = 1;
+  logf("fl26swiss: icup -- a cup with staggered entry on one regulation: reg %u, %d round(s), %d entering league(s), "
+       "filled on day %u; super cup reg %u on day %u", (unsigned)g_ic.reg, (int)g_ic.nr, g_ic.ne, (unsigned)g_ic.fill,
+       (unsigned)g_ic.sreg, (unsigned)g_ic.sday);
+  return 1;
+}
+/* the kinds of round r (two chunks of 16 ties): the last four are the bracket's R16, QF, SF, final */
+static uint8_t ic_kind(int r, int c)
+{
+  static const uint8_t END[4] = { 0x35, 0x34, 0x33, 0x2e };
+  static const uint8_t EARLY[4][2] = { { 0x30, 0x31 }, { 0x21, 0x22 }, { 0x23, 0x24 }, { 0x25, 0x26 } };
+  int back = g_ic.nr - 1 - r;
+  if (back < 4) return c == 0 ? END[back] : 0;
+  back -= 4;
+  return back < 4 ? EARLY[back][c & 1] : 0;
+}
+static int ic_fresh(uint16_t reg, unsigned char* rnd, int year)
+{
+  if (ko_slots(rnd) < 1) return 0;
+  unsigned char* m = ko_match(*(uint16_t*)(ko_slot(rnd, 0) + 2), reg);
+  return m && *(uint16_t*)(m + 4) == reg && *(uint16_t*)(m + 8) == year;
+}
+/* the clubs of the leagues entering at round r */
+static int ic_entrants(int r, uint32_t* out, int n, int cap)
+{
+  for (int i = 0; i < g_ic.ne; i++) {
+    if (g_ic.er[i] != r) continue;
+    unsigned char* rec = get_rec(g_ic.el[i]);
+    unsigned k = rec ? rec_count(rec) : 0;
+    for (unsigned j = 0; j < k && n < cap; j++) {
+      uint32_t c = canon_club(rec_clubs(rec)[j]);
+      if ((c >> 14) && !has_club(out, (size_t)n, c)) out[n++] = c;
+    }
+  }
+  return n;
+}
+/* the field of round r this year, or -1 while a round before it is not made or not decided */
+static int ic_field(int r, int year, uint32_t* p)
+{
+  int n = ic_entrants(0, p, 0, IC_MAXP);
+  for (int q = 0; q < r; q++) {
+    uint32_t nxt[IC_MAXP], tied[IC_MAXP]; int nn = 0, nt = 0, any = 0;
+    for (int c = 0; c < 2; c++) {
+      uint8_t kind = ic_kind(q, c);
+      unsigned char* rnd = kind ? ko_round(g_ic.reg, kind) : 0;
+      if (!rnd || !ic_fresh(g_ic.reg, rnd, year)) continue;
+      any = 1;
+      int k = ko_slots(rnd);
+      for (int s = 0; s < k && s < 16; s++) {
+        uint32_t* sl = ko_slot(rnd, s);
+        uint32_t w = rc_tie_winner(sl, g_ic.reg);
+        if (!w) return -1;
+        if (nt + 2 <= IC_MAXP) { tied[nt++] = canon_club(sl[0]); tied[nt++] = canon_club(sl[1]); }
+        if (nn < IC_MAXP) nxt[nn++] = w;
+      }
+    }
+    if (!any) return -1;
+    for (int i = 0; i < n && nn < IC_MAXP; i++) if (!has_club(tied, (size_t)nt, p[i])) nxt[nn++] = p[i];   /* the bye */
+    nn = ic_entrants(q + 1, nxt, nn, IC_MAXP);
+    memcpy(p, nxt, sizeof(uint32_t) * (size_t)nn);
+    n = nn;
+  }
+  return n;
+}
+/* the open draw: the field sorted, then shuffled by year and round (the same every time) */
+static void ic_draw(uint32_t* p, int n, int year, int r)
+{
+  for (int i = 1; i < n; i++) { uint32_t x = p[i]; int j = i - 1; while (j >= 0 && p[j] > x) { p[j + 1] = p[j]; j--; } p[j + 1] = x; }
+  uint32_t s = (uint32_t)year * 2654435761u ^ (uint32_t)(r + 1) * 40503u ^ g_ic.reg;
+  for (int i = n - 1; i > 0; i--) {
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+    int j = (int)(s % (uint32_t)(i + 1));
+    uint32_t t = p[i]; p[i] = p[j]; p[j] = t;
+  }
+}
+static void ic_register_reg(uint16_t reg, int year, const char* what)
+{
+  if (!get_rec(reg)) { logf("fl26swiss: icup -- %s reg %u is not in this world", what, (unsigned)reg); return; }
+  int before = ccup_matches(reg);
+  start_stage(0, reg);
+  unsigned char* rec = get_rec(reg);
+  unsigned had = rec ? rec_count(rec) : 0;
+  if (had) {
+    uint32_t none[1] = { 0 };
+    u32vec va = { none, none, none };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(reg, &va, 1);
+    run_flush();
+  }
+  uint16_t id = reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  int after = ccup_matches(reg);
+  logf("fl26swiss: icup -- %s reg %u registered for %d (day %d): %u club(s) from the stage start, emptied; match records %d -> %d%s",
+       what, (unsigned)reg, year, today(), had, before, after, after > before ? " -- THE GAME MADE MATCHES OF ITS OWN" : "");
+}
+static void ic_new_edition(uint16_t reg, int year, int force)   /* force: see rc_new_edition */
+{
+  int emptied = 0;
+  static const uint8_t ALL[] = { 0x35, 0x34, 0x33, 0x2e, 0x30, 0x31, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26 };
+  for (size_t i = 0; i < sizeof ALL; i++) {
+    unsigned char* rnd = ko_round(reg, ALL[i]);
+    int k = ko_slots(rnd);
+    if (k < 1 || (!force && ic_fresh(reg, rnd, year))) continue;
+    for (int s = 0; s < k && s < 16; s++) memset(ko_slot(rnd, s), 0xff, 32);
+    *(uint32_t*)(rnd + 0x204) &= ~0x3ffffffu;
+    emptied++;
+  }
+  if (emptied) logf("fl26swiss: icup -- a new edition: %d round record(s) of reg %u emptied", emptied, (unsigned)reg);
+}
+/* ties of one kind of reg on day: cl holds them, home first; the reg's list gets the clubs (the user's first) */
+static int ic_make_kind(uint16_t reg, uint8_t kind, uint32_t* cl, unsigned n, uint16_t day, int round_no)
+{
+  kc_create_fn mk = (kc_create_fn)(uintptr_t)(g_base + CREATE_RVA);
+  struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec = { cl, cl + n, cl + n };
+  int made = 0;
+  for (unsigned t = 0; t < n / 2 && t < 16; t++) made += mk(0, &vec, reg, kind, 2, t) != 0;
+  unsigned char* rnd = ko_round(reg, kind);
+  int k = ko_slots(rnd);
+  static unsigned char ctx[256];
+  for (int s = 0; s < k && s < 16; s++) {
+    uint32_t* sl = ko_slot(rnd, s);
+    unsigned t = (sl[3] >> 22) & 0x1f;
+    if (2 * t + 1 >= n) continue;
+    uint32_t h = cl[2 * t], a = cl[2 * t + 1];
+    uint16_t* ids = (uint16_t*)(sl + 2);
+    sl[0] = h; sl[1] = a;
+    unsigned char* m1 = ko_match(ids[0], reg);
+    if (m1) { *(uint32_t*)(m1 + 0x14) = h; *(uint32_t*)(m1 + 0x18) = a; }
+    if (m1) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(ctx, day, *(uint32_t*)m1);
+    logf("fl26swiss:   icup reg %u round %d kind %#x tie %u: %08x v %08x, match %u", (unsigned)reg, round_no, kind, t, h, a,
+         (unsigned)ids[0]);
+  }
+  return made;
+}
+static void ic_list(uint16_t reg, const uint32_t* cl, unsigned n)
+{
+  unsigned char* blk = rc_blk();
+  uint32_t user = blk ? *(uint32_t*)(blk + USER_CLUB_OFF) : 0, lst[48]; unsigned nl = 0;
+  for (unsigned i = 0; i < n; i++) if (user && same_club(cl[i], user)) { lst[nl++] = cl[i]; break; }
+  for (unsigned i = 0; i < n && nl < 48; i++) if (!has_club(lst, nl, cl[i])) lst[nl++] = cl[i];
+  u32vec va = { lst, lst + nl, lst + nl };
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(reg, &va, 1);
+  run_flush();
+}
+static int nocarry(uint16_t total);
+/* lab 17/11/2026: the super cup's league can be one of our splits (Iceland's Besta, 109 = 195 + 196/197):
+   the total has no matches of its own, so season_played(109) never held and no champion was kept (2027).
+   Its champion is the top of the championship group (group[0]); with the regular phase's points carried,
+   the regular phase and that group are counted together (a club of the lower group cannot pass one of
+   the upper: it starts at or below it and plays no match of the two after the split) */
+static final_t g_ic_stab;
+static int split_ids(uint16_t total, uint16_t* regular, uint16_t* group0);
+static uint16_t ic_super_league(void)
+{
+  uint16_t r, g;
+  return split_ids(g_ic.slg, &r, &g) && g ? g : g_ic.slg;
+}
+static uint32_t ic_super_club(int rank, const char** how)
+{
+  uint16_t sr = 0, sg = 0;
+  if (split_ids(g_ic.slg, &sr, &sg) && sg && sr && !nocarry(g_ic.slg)) {
+    if (g_ic_stab.day != abs_day() || !g_ic_stab.reg) {
+      uint16_t regs[2] = { sr, sg };
+      int played;
+      if (count_table(regs, 2, &g_ic_stab, &played) < 2) g_ic_stab.n = 0;
+      g_ic_stab.reg = g_ic.slg; g_ic_stab.day = abs_day();
+      logf("fl26swiss: icup -- split %u: regular %u + group %u counted together, %d club(s) from %d match(es)",
+           (unsigned)g_ic.slg, (unsigned)sr, (unsigned)sg, (int)g_ic_stab.n, played);
+    }
+    if (g_ic_stab.n >= rank) { *how = "regular phase and championship group, points carried"; return g_ic_stab.club[rank - 1]; }
+  }
+  return cwc_club(ic_super_league(), rank, how);
+}
+static void ic_super_capture(int year)
+{
+  if (!g_ic.slg || g_ic.s_cap_year == year || today() < 300 || !season_played(ic_super_league())) return;
+  g_ic.s_cap_year = year;
+  int ad = abs_day();
+  for (int k = 0; k < 2; k++) {
+    const char* how = "";
+    uint32_t c = ic_super_club(k + 1, &how);
+    if (!(c >> 14)) continue;
+    uint16_t key = (uint16_t)(k ? IC_KEY_RUNNER : IC_KEY_CHAMP);
+    cupwin_t* w = cupwin_of(key);
+    if (!w) { if (g_ncupwin >= CUPWIN_N) continue; w = &g_cupwin[g_ncupwin++]; w->reg = key; }
+    w->day = ad; w->club = canon_club(c);
+    logf("fl26swiss: icup -- reg %u's %s kept for the super cup: %08x (%s)", (unsigned)g_ic.slg, k ? "runner-up" : "champion",
+         w->club, how);
+  }
+  state_store();
+}
+static void ic_super(int year)
+{
+  int d = today();
+  if (!g_ic.sreg || g_ic.s_made == year || d < g_ic.sfill || d >= g_ic.sday) return;
+  unsigned char* rnd = ko_round(g_ic.sreg, 0x35);
+  if (ic_fresh(g_ic.sreg, rnd, year)) { g_ic.s_made = year; return; }
+  int ad = abs_day();
+  cupwin_t *ch = cupwin_of(IC_KEY_CHAMP), *ru = cupwin_of(IC_KEY_RUNNER), *cw = cupwin_of(g_ic.reg);
+  uint32_t a = ch && ad - ch->day < 300 ? ch->club : 0, b = cw && ad - cw->day < 330 ? cw->club : 0;
+  if (a && b && same_club(a, b)) b = ru && ad - ru->day < 300 ? ru->club : 0;
+  g_ic.s_made = year;
+  if (!(a >> 14) || !(b >> 14)) {
+    logf("fl26swiss: icup -- day %d: no super cup this year (champion %08x, cup winner %08x: not both kept yet)", d, a, b);
+    return;
+  }
+  if (g_ic.s_reg_year != year) { g_ic.s_reg_year = year; ic_register_reg(g_ic.sreg, year, "super cup"); }
+  ic_new_edition(g_ic.sreg, year, 1);
+  uint32_t cl[2] = { a, b };
+  int made = ic_make_kind(g_ic.sreg, 0x35, cl, 2, g_ic.sday, 1);
+  ic_list(g_ic.sreg, cl, 2);
+  logf("fl26swiss: icup -- day %d: super cup %08x v %08x on day %u, %d match(es)", d, a, b, (unsigned)g_ic.sday, made);
+  sched_rebuild("icup super cup made");
+}
+/* lab 17/11/2026: once a year (day 130), the super cup league's split: who plays its regular phase against
+   who its list names (the New Year exchange of 2028 changed the list only) */
+static void ic_split_check(int year)
+{
+  static int done = -1;
+  uint16_t r = 0, g = 0;
+  if (done == year || today() < 130 || !split_ids(g_ic.slg, &r, &g) || !r) return;
+  done = year;
+  final_t t; int played;
+  unsigned char* rec = get_rec(g_ic.slg);
+  if (!rec || count_table(&r, 1, &t, &played) < 2) return;
+  unsigned k = rec_count(rec), in = 0;
+  for (unsigned j = 0; j < k; j++) {
+    uint32_t c = rec_clubs(rec)[j];
+    int f = 0;
+    for (int i = 0; i < t.n && !f; i++) f = (t.club[i] >> 14) == (c >> 14);
+    if (f) in++; else logf("fl26swiss: split %u -- %d: listed %08x has played none of reg %u's matches", (unsigned)g_ic.slg, year, c, (unsigned)r);
+  }
+  logf("fl26swiss: split %u -- %d: %u of %u listed club(s) play its regular phase %u (%d club(s) in %d played match(es))",
+       (unsigned)g_ic.slg, year, in, k, (unsigned)r, (int)t.n, played);
+}
+/* lab 17/11/2026: diagnosis of the old editions' matches -- once a session, every match record of the
+   one-regulation cups by its year and played bit, with the first and last date of the unplayed ones */
+static void lph_unswap_day(void);
+static void cup_match_diag(void)
+{
+  static int done;
+  if (done) return;
+  done = 1;
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return;
+  uint16_t regs[5] = { g_ic.reg, g_ic.sreg, g_rc.reg, 256, 257 };
+  for (int r = 0; r < 5; r++) {
+    if (!regs[r]) continue;
+    int yrs[8] = {0}, pl[8] = {0}, un[8] = {0}, lo[8], hi[8], ny = 0;
+    for (uint32_t i = 0; i < cap; i++) {
+      const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+      if (*(const uint16_t*)m == 0xffff || *(const uint16_t*)(m + 4) != regs[r]) continue;
+      int y = *(const uint16_t*)(m + 8), k = 0, md = m[10] * 100 + m[11];
+      while (k < ny && yrs[k] != y) k++;
+      if (k == ny) { if (ny == 8) continue; yrs[ny] = y; lo[ny] = 9999; hi[ny] = 0; ny++; }
+      if (m[7] & 0x40) pl[k]++;
+      else { un[k]++; if (md < lo[k]) lo[k] = md; if (md > hi[k]) hi[k] = md; }
+    }
+    char buf[400]; int off = 0;
+    for (int k = 0; k < ny && off < 360; k++)
+      off += snprintf(buf + off, sizeof buf - off, " %d: %d played, %d unplayed (%04d..%04d);", yrs[k], pl[k], un[k],
+                      un[k] ? lo[k] : 0, un[k] ? hi[k] : 0);
+    logf("fl26swiss: match diag -- reg %u on day %d:%s", (unsigned)regs[r], today(), ny ? buf : " none");
+  }
+}
+static void icup_tick(void)
+{
+  lph_unswap_day();
+  if (!g_ic.on || today() < 1) return;
+  int d = today(), year = rc_cal_year();
+  if (year < 0) return;
+  cup_match_diag();
+  ic_split_check(year);
+  ic_super_capture(year);
+  ic_super(year);
+  for (int r = 0; r < g_ic.nr; r++) {
+    if (g_ic.made[r] == year) continue;
+    int from = r == 0 ? g_ic.fill : g_ic.day[r - 1] + 1;
+    if (d < from || d >= g_ic.day[r]) continue;
+    unsigned char* rnd = ko_round(g_ic.reg, ic_kind(r, 0));
+    if (ic_fresh(g_ic.reg, rnd, year)) { g_ic.made[r] = year; continue; }      /* made already (a save loaded) */
+    uint32_t p[IC_MAXP];
+    int n = ic_field(r, year, p);
+    if (n < 0) continue;                                 /* the round before is not decided yet */
+    g_ic.made[r] = year;
+    if (n < 2) { logf("fl26swiss: icup -- day %d: round %d has a field of %d; nothing to make", d, r + 1, n); continue; }
+    ic_draw(p, n, year, r);
+    int ties = n / 2;
+    if (ties > 32) ties = 32;
+    if (r == 0 && g_ic.reg_year != year) { g_ic.reg_year = year; ic_register_reg(g_ic.reg, year, "cup"); }
+    ic_new_edition(g_ic.reg, year, r == 0);
+    int made = 0;
+    for (int c = 0; c < 2 && 16 * c < ties; c++) {
+      uint8_t kind = ic_kind(r, c);
+      int nt = ties - 16 * c > 16 ? 16 : ties - 16 * c;
+      if (!kind) { logf("fl26swiss: icup -- round %d has more than 16 ties and no second kind; %d tie(s) left out", r + 1, nt); break; }
+      made += ic_make_kind(g_ic.reg, kind, p + 32 * c, (unsigned)(2 * nt), g_ic.day[r], r + 1);
+    }
+    ic_list(g_ic.reg, p, (unsigned)(2 * ties));
+    logf("fl26swiss: icup -- day %d: round %d of %d made: a field of %d, %d tie(s)%s, %d match(es) on day %u", d, r + 1,
+         (int)g_ic.nr, n, ties, n & 1 ? " and a bye" : "", made, (unsigned)g_ic.day[r]);
+    sched_rebuild("icup round made");
+  }
+  if (g_ic.champ_year != year) {
+    unsigned char* rnd = ko_round(g_ic.reg, 0x35);
+    if (ic_fresh(g_ic.reg, rnd, year) && ko_slots(rnd) == 1) {
+      uint32_t w = rc_tie_winner(ko_slot(rnd, 0), g_ic.reg);
+      if (w) {
+        g_ic.champ_year = year;
+        cupwin_t* cw = cupwin_of(g_ic.reg);
+        if (!cw && g_ncupwin < CUPWIN_N) { cw = &g_cupwin[g_ncupwin++]; cw->reg = g_ic.reg; }
+        if (cw) { cw->day = abs_day(); cw->club = w; state_store(); }
+        logf("fl26swiss: icup -- day %d: the cup's winner is %08x", d, w);
+      }
+    }
+  }
+}
+/* date_handler: R's dates, one record per kind (one match), and S's final */
+static int ic_dates(uint64_t reg, void* vec, uint64_t* rv)
+{
+  uint16_t id = (uint16_t)reg;
+  if (!g_ic.on || (id != g_ic.reg && (!g_ic.sreg || id != g_ic.sreg))) return 0;
+  *rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | 17, vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  date_t* dd = (date_t*)v->b;
+  size_t k = 0;
+  if (id == g_ic.sreg) {
+    if (k < have) { dd[k].day = g_ic.sday; dd[k].round = 0x35; dd[k].kind = 2; k++; }
+  } else
+    for (int r = 0; r < g_ic.nr; r++)
+      for (int c = 0; c < 2; c++) {
+        uint8_t kind = ic_kind(r, c);
+        if (kind && k < have) { dd[k].day = g_ic.day[r]; dd[k].round = kind; dd[k].kind = 2; k++; }
+      }
+  v->e = v->b + k * sizeof(date_t);
+  static int said;
+  if (said++ < 3) logf("fl26swiss: icup -- reg %u dated: %u record(s)", (unsigned)id, (unsigned)k);
+  return 1;
+}
+
+/* ---- ties on one regulation, each named by where its clubs come from (tcup, lab 17/11/2026: Norway) ----
+ *
+ * World file:  tcup reg=<R> fill=<day> tier=<T> r=<legs>:<day1>[:<day2>],... t=<round>:<A>:<B>,... name=...
+ * Norway's play-offs are a graph of ties: the 1. divisjon's ladder (5th v 6th, the winner at the 4th, then at the
+ * 3rd), its winner v the Eliteserien's 14th; the 2. divisjon's runners-up, the winner v the 1. divisjon's 14th;
+ * the 4. divisjon's pairs of districts and the north (two ties, the losers meet for the third place). A source:
+ * <reg>.<pos> a league's place in its live table on the round's making (the season is over: fill is after it) --
+ * the pos-th club that may play at tier T (a reserve side whose first team is at T or above, or a first team at
+ * the 1st/2nd level and T < 3, may not: NFF Kampreglement 2-7); w<k> / l<k> the winner / loser of tie k. One
+ * match: A at home. Two legs: B at home first, A in the second. Kinds: the rounds of a knockout of that many
+ * rounds (..., 0x33, 0x34, 0x35), slot = the tie's place among its round's ties. Results: fl26_swiss_tcup_result
+ * (fl26join's New Year mover asks). Calendar year (Norway): a round is this year's when its first match is. */
+/* lab 21/11/2026 (Argentina, ported to 0.4.0): up to 48 cups, 8 rounds, 64 ties; a round of more than 16 ties takes
+   several kinds. Extensions, all in the world file's numbers (`sline fl26_swiss_tcup ...`):
+   - tier word: bits 0-7 the tier, bit 8 TC_F_BETTER -- a tie level after it (the regulation has no extra time and no
+     shoot-out) goes to A, the better placed; never away goals (AFA: "el empate favorece al mejor ubicado");
+   - a round's legs byte: bits 0-1 the legs, bit 4 TC_LEG_RESEED -- its ties' sources are its field, paired 1 v N,
+     2 v N-1 ... by the general table of the cup's leagues (position in the zone, points, goal difference, goals:
+     the Primera Nacional's "Tabla general"), the forced seeds first (a source with TC_SRC_SEED: the final's loser);
+   - w / l of another cup: 0x20000000 | reg << 8 | tie (reg 0: this cup). */
+#define TC_MAX 48
+#define TC_MAXR 8
+#define TC_MAXT 128   /* lab 21/11/2026: the Primera C interzonal, 84 matches */
+#define TC_MAXK 19
+#define TC_SRC_TAB 0x10000000u
+#define TC_SRC_WIN 0x20000000u
+#define TC_SRC_LOSE 0x30000000u
+#define TC_SRC_SEED 0x08000000u
+#define TC_LEG_RESEED 0x10
+#define TC_F_BETTER 1
+#define TC_F_HOMEBEST 2   /* lab 21/11/2026: one-match ties: the better placed (general table) at home, whichever side it is */
+/* lab 23/11/2026 (Argentina's cups, GUIA-ARGENTINA-FL27.md 3.8-3.9):
+   - TC_F_TRI: three one-match ties of three clubs, a table of them (the Recopa de Campeones, reg. LPF 2026 art. 31): a win
+     in 90 minutes 3, on penalties 2, a defeat on penalties 1, in 90 minutes 0; level: goal difference, goals, fewer goals
+     against, then the order the clubs came in [adaptacao: fair play is not counted]. Its winner is kept as a final's;
+   - TC_SRC_ALT on a winner source: the tie's loser when the winner is in the round already (the Supercopa Argentina:
+     the Trofeo's runner-up when its winner also won the Copa Argentina);
+   - 0x90000000 | reg << 8 | n: the n-th club of the league this season, strongest squad first (the Copa Argentina's
+     field, filled in January: no table yet) [adaptacao: the AFA's criterion is not published];
+   - 0xA0000000 | reg << 8 | n: the n-th of the league's last final table kept (New Year), clubs still in it only (the
+     Liga's champion in the Supercopa Internacional, art. 30.5: no relegated club), the round's clubs passed over;
+   - 0x80000000 modes 4, 5, 6 of a group of six (Copa winner, SA winner, SA runner-up, SI winner, SI runner-up, Copa
+     runner-up): the Recopa's SA side, SI side and Copa side with art. 31's replacements;
+   - 0xB0000000 | reg << 8 | 0/1: the winner / runner-up of a cup's last final, kept (cupwin keys reg and 0xD000 | reg)
+     up to 400 days -- the Copa Argentina's: its new edition (January) empties last year's ties before the Supercopa
+     Argentina (November) and the Recopa (February) ask. */
+#define TC_F_TRI 4
+#define TC_SRC_ALT 0x04000000u
+/* lab 21/11/2026 (the LPF 2027: Apertura = rounds 1-15, Clausura = 16-30, each with its own table and play-offs): a
+   half of a league -- `sline fl26_swiss_lhalf <id> <reg> <round from> <round to> <extra reg> <extra day from> <extra
+   day to>`: the table of reg's matches of those rounds (+6) and of the extra reg's (the clásicos' round) dated in those
+   days; a tcup source 0x70000000 | id << 8 | pos is the pos-th of it (points, goal difference, goals) */
+#define LD_MAX 4
+typedef struct { uint16_t reg, n, d[64]; } ldates_t;   /* lab 21/11/2026: `sline fl26_swiss_ldates <reg> <n> <days x n>` */
+static ldates_t g_ld[LD_MAX]; static int g_nld = 0;
+__declspec(dllexport) int fl26_swiss_ldates(const uint32_t* v, int n)
+{
+  if (!v || n < 3 || g_nld >= LD_MAX || (int)v[1] != n - 2 || v[1] > 64) return g_nld;
+  ldates_t* L = &g_ld[g_nld++];
+  L->reg = (uint16_t)v[0]; L->n = (uint16_t)v[1];
+  for (int i = 0; i < L->n; i++) L->d[i] = (uint16_t)v[2 + i];
+  logf("fl26swiss: ldates -- reg %u: %u date(s) given", (unsigned)L->reg, (unsigned)L->n);
+  return g_nld;
+}
+static const ldates_t* ld_of(uint16_t id) { for (int i = 0; i < g_nld; i++) if (g_ld[i].reg == id) return &g_ld[i]; return 0; }
+#define LH_MAX 4
+typedef struct { uint16_t reg, r0, r1, xreg, xd0, xd1; } lhalf_t;
+static lhalf_t g_lh[LH_MAX]; static int g_nlh = 0;
+/* lab 21/11/2026: a ranked group: 0x40000000 | group << 8 | n -- the n-th best (general table) of the group's candidates
+   (`table` sources: the 2nds of the zones of four ...), the clubs already in the round passed over */
+#define TC_SRC_RANK 0x40000000u
+#define TC_MAXG 8
+#define TC_MAXGM 24
+typedef struct { uint8_t round, slot; uint32_t a, b; } tc_tie_t;
+typedef struct {
+  uint16_t reg, fill; uint8_t tier, flags; int nr; uint8_t legs[TC_MAXR], reseed[TC_MAXR], nch[TC_MAXR], kind[TC_MAXR][4];
+  uint16_t day[TC_MAXR][2];
+  int nt; tc_tie_t t[TC_MAXT];
+  int ng; uint8_t gn[TC_MAXG]; uint32_t gs[TC_MAXG][TC_MAXGM];   /* ranked groups of candidates (TC_SRC_RANK) */
+  uint16_t until;                                                  /* the last year it is played (0: every year) */
+  uint16_t from;                                                   /* the first year (0: every year): round 0's legs word >> 16 */
+  int made[TC_MAXR], reg_year;
+  int champ_year;                                                  /* lab 21/11/2026: its winner kept that year */
+  uint16_t y1; int n1; uint32_t a1[TC_MAXT], b1[TC_MAXT];          /* lab 23/11/2026: one year's first-round sides (tcupy) */
+} tcup_t;
+static tcup_t g_tc[TC_MAX]; static int g_ntc = 0;
+static unsigned char* find_rec(uint16_t id);
+/* reserve sides: club -> its first team (`reserve <club> <first team>`, fl26_swiss_reserve) */
+#define RSV_MAX 128
+static uint32_t g_rsv_club[RSV_MAX], g_rsv_parent[RSV_MAX]; static int g_nrsv = 0;
+/* the tier of each league of a regional pyramid (`rtier <reg> <tier>`, given with the reserves) */
+#define RT_MAX 64
+static uint16_t g_rt_reg[RT_MAX]; static uint8_t g_rt_tier[RT_MAX]; static int g_nrt = 0;
+/* v: pairs (club, first team), then 0, then pairs (league reg, tier) */
+__declspec(dllexport) int fl26_swiss_reserve(const uint32_t* v, int n)
+{
+  g_nrsv = g_nrt = 0;
+  int i = 0;
+  for (; v && i + 1 < n && v[i]; i += 2)
+    if (g_nrsv < RSV_MAX) { g_rsv_club[g_nrsv] = v[i] << 14; g_rsv_parent[g_nrsv] = v[i + 1] << 14; g_nrsv++; }   /* team ids: handles */
+  for (i++; v && i + 1 < n; i += 2)
+    if (g_nrt < RT_MAX) { g_rt_reg[g_nrt] = (uint16_t)v[i]; g_rt_tier[g_nrt] = (uint8_t)v[i + 1]; g_nrt++; }
+  logf("fl26swiss: reserve sides %d, pyramid leagues %d", g_nrsv, g_nrt);
+  return g_nrsv;
+}
+static uint32_t rsv_parent(uint32_t c)
+{
+  for (int k = 0; k < g_nrsv; k++) if (same_club(g_rsv_club[k], c)) return g_rsv_parent[k];
+  return 0;
+}
+/* the tier a club plays at now (its league's list), 0 unknown */
+static int rt_tier_of(uint32_t c)
+{
+  for (int k = 0; k < g_nrt; k++) {
+    unsigned char* rec = get_rec(g_rt_reg[k]);
+    unsigned n = rec ? rec_count(rec) : 0;
+    for (unsigned j = 0; j < n; j++) if (same_club(rec_clubs(rec)[j], c)) return g_rt_tier[k];
+  }
+  return 0;
+}
+/* may club c play at tier T (Kampreglement 2-7 (1) a/b) */
+static int rsv_may(uint32_t c, int T)
+{
+  uint32_t p = rsv_parent(c);
+  if (!p) return 1;
+  int pt = rt_tier_of(p);
+  if (!pt) return 1;
+  if (T <= pt) return 0;                      /* never the first team's level or above it */
+  if (pt <= 2 && T < 3) return 0;             /* a reserve of the two top levels stops at the 2. divisjon */
+  return 1;
+}
+static uint8_t tc_kind(const void* cv, int r);
+static tcup_t* tc_of(uint16_t reg);
+/* v: reg fill tier|flags<<8 nr (legs|reseed d1 d2)[nr] nt (round a b)[nt] */
+__declspec(dllexport) int fl26_swiss_tcup(const uint32_t* v, int n)
+{
+  if (!v || n < 5 || g_ntc >= TC_MAX) return g_ntc;
+  tcup_t* c = &g_tc[g_ntc];
+  memset(c, 0, sizeof *c);
+  int p = 0;
+  c->reg = (uint16_t)v[p++]; c->fill = (uint16_t)v[p++]; c->tier = (uint8_t)(v[p] & 0xff); c->flags = (uint8_t)(v[p] >> 8);
+  c->until = (uint16_t)(v[p] >> 16); p++;
+  c->nr = (int)v[p++];
+  if (c->nr < 1 || c->nr > TC_MAXR || n < p + 3 * c->nr + 1) { logf("fl26swiss: tcup -- bad line (%d values)", n); return g_ntc; }
+  for (int r = 0; r < c->nr; r++) {
+    c->legs[r] = (uint8_t)(v[p] & 3); c->reseed[r] = (v[p] & TC_LEG_RESEED) != 0; if (!r) c->from = (uint16_t)(v[p] >> 16); p++;
+    c->day[r][0] = (uint16_t)v[p++]; c->day[r][1] = (uint16_t)v[p++];
+  }
+  c->nt = (int)v[p++];
+  if (c->nt < 1 || c->nt > TC_MAXT || n < p + 3 * c->nt) { logf("fl26swiss: tcup -- bad tie count (%d values)", n); return g_ntc; }
+  int per[TC_MAXR] = { 0 };
+  for (int k = 0; k < c->nt; k++) {
+    c->t[k].round = (uint8_t)v[p++]; c->t[k].a = v[p++]; c->t[k].b = v[p++];
+    if (c->t[k].round >= c->nr) { logf("fl26swiss: tcup -- reg %u tie %d: round %u of %d", (unsigned)c->reg, k, c->t[k].round, c->nr); return g_ntc; }
+    c->t[k].slot = (uint8_t)per[c->t[k].round]++;
+  }
+  if (p < n) {                                   /* ng (count members...)[ng] */
+    c->ng = (int)v[p++];
+    if (c->ng > TC_MAXG) { logf("fl26swiss: tcup -- reg %u: %d groups", (unsigned)c->reg, c->ng); return g_ntc; }
+    for (int g = 0; g < c->ng; g++) {
+      int m = p < n ? (int)v[p++] : 0;
+      if (m > TC_MAXGM || p + m > n) { logf("fl26swiss: tcup -- reg %u: bad group %d", (unsigned)c->reg, g); return g_ntc; }
+      c->gn[g] = (uint8_t)m;
+      for (int j = 0; j < m; j++) c->gs[g][j] = v[p++];
+    }
+  }
+  if (p != n) { logf("fl26swiss: tcup -- reg %u: %d value(s) left over", (unsigned)c->reg, n - p); return g_ntc; }
+  /* the kinds, from the last round back (Norway's cups keep theirs: 0x35, 0x34, 0x33, 0x2e, 0x30) */
+  static const uint8_t TCK[TC_MAXK] = { 0x35, 0x34, 0x33, 0x2e, 0x30, 0x2d, 0x2c, 0x2b, 0x2a, 0x29, 0x28, 0x27, 0x26, 0x25,
+                                         0x24, 0x23, 0x22, 0x21, 0x20 };
+  int q = 0;
+  for (int r = c->nr - 1; r >= 0; r--) {
+    c->nch[r] = (uint8_t)(per[r] ? (per[r] + 15) / 16 : 1);
+    if (c->nch[r] > 4 || q + c->nch[r] > TC_MAXK) { logf("fl26swiss: tcup -- reg %u: too many ties for its kinds", (unsigned)c->reg); return g_ntc; }
+    for (int ch = 0; ch < c->nch[r]; ch++) c->kind[r][ch] = TCK[q++];
+  }
+  for (int r = 0; r < TC_MAXR; r++) c->made[r] = -1000;
+  c->reg_year = -1000; c->champ_year = -1000;
+  g_ntc++;
+  logf("fl26swiss: tcup -- reg %u: %d tie(s) in %d round(s), filled from day %u, tier %u%s", (unsigned)c->reg, c->nt, c->nr,
+       (unsigned)c->fill, (unsigned)c->tier, (c->flags & TC_F_BETTER) ? ", a level tie to the better placed" : "");
+  return g_ntc;
+}
+/* lab 23/11/2026 (the user: "the 2026 cups with their real clubs; from 2027 the rules"): `sline fl26_swiss_tcupy <reg>
+   <year> <n> <A B> x n` -- that year the first round's ties 0..n-1 take these sides (the real draw: Copa Argentina 2026,
+   10/12/2025; the 2026 super cups' clubs); other years the cup's own sources */
+static tcup_t* tc_of(uint16_t reg);
+__declspec(dllexport) int fl26_swiss_tcupy(const uint32_t* v, int n)
+{
+  if (!v || n < 3) return 0;
+  tcup_t* c = tc_of((uint16_t)v[0]);
+  int k = (int)v[2];
+  if (!c || k < 0 || k > TC_MAXT || n != 3 + 2 * k) { logf("fl26swiss: tcupy -- reg %u: no such cup or a bad line (%d values)", (unsigned)v[0], n); return 0; }
+  c->y1 = (uint16_t)v[1]; c->n1 = k;
+  for (int i = 0; i < k; i++) { c->a1[i] = v[3 + 2 * i]; c->b1[i] = v[4 + 2 * i]; }
+  logf("fl26swiss: tcupy -- reg %u: %d first-round tie(s) given for %u", (unsigned)c->reg, k, (unsigned)c->y1);
+  return k;
+}
+static uint8_t tc_kind(const void* cv, int r) { return ((const tcup_t*)cv)->kind[r][0]; }
+static tcup_t* tc_of(uint16_t reg) { for (int k = 0; k < g_ntc; k++) if (g_tc[k].reg == reg) return &g_tc[k]; return 0; }
+static int tc_fresh(const tcup_t* c, int r, int year) { return ic_fresh(c->reg, ko_round(c->reg, tc_kind(c, r)), year); }
+/* tie k's slot as made this year (or last: the New Year asks after the year turned) */
+static int tc_tie_slot(const tcup_t* c, int k, int year, uint32_t** sl_out)
+{
+  const tc_tie_t* t = &c->t[k];
+  unsigned char* rnd = ko_round(c->reg, c->kind[t->round][t->slot / 16]);
+  if (!rnd || !(ic_fresh(c->reg, rnd, year) || ic_fresh(c->reg, rnd, year - 1))) return 0;
+  int ns = ko_slots(rnd);
+  for (int s = 0; s < ns && s < 16; s++) {
+    uint32_t* sl = ko_slot(rnd, s);
+    if ((int)((sl[3] >> 22) & 0x1f) == t->slot % 16) { *sl_out = sl; return 1; }
+  }
+  return 0;
+}
+/* TC_F_BETTER: goals over the tie (extra time counted), then the last match's shoot-out, else A -- the better placed,
+   at home in the one match or in the second leg. Never away goals. 0 while a leg is to come */
+static uint32_t tc_better_winner(const tcup_t* c, const tc_tie_t* t, const uint32_t* sl)
+{
+  const uint16_t* ids = (const uint16_t*)(sl + 2);
+  unsigned char* m1 = ko_match(ids[0], c->reg);
+  unsigned char* m2 = ids[1] == 0xffff ? 0 : ko_match(ids[1], c->reg);
+  if (!m1 || !(m1[7] & 0x40) || (ids[1] != 0xffff && (!m2 || !(m2[7] & 0x40)))) return 0;
+  int two = c->legs[t->round] == 2 && m2;
+  uint32_t A = canon_club(two ? sl[1] : sl[0]), B = canon_club(two ? sl[0] : sl[1]);
+  int gA, gB;
+  if (two) { gB = ko_goals(m1, 0) + ko_goals(m2, 1); gA = ko_goals(m1, 1) + ko_goals(m2, 0); }
+  else { gA = ko_goals(m1, 0); gB = ko_goals(m1, 1); }
+  if (gA != gB) return gA > gB ? A : B;
+  const unsigned char* last = two ? m2 : m1;          /* A at home there */
+  if (last[0x1e] != last[0x21]) return last[0x1e] > last[0x21] ? A : B;
+  return A;
+}
+static int tc_result(const tcup_t* c, int k, int year, uint32_t* win, uint32_t* lose)
+{
+  uint32_t* sl;
+  if (!tc_tie_slot(c, k, year, &sl)) return 0;
+  uint32_t w = (c->flags & TC_F_BETTER) ? tc_better_winner(c, &c->t[k], sl) : rc_tie_winner(sl, c->reg);
+  if (!w) return 0;
+  uint32_t h = canon_club(sl[0]), a = canon_club(sl[1]);
+  *win = w; *lose = same_club(w, h) ? a : h;
+  return 1;
+}
+/* lab 22/11/2026: the result of a tie of season `year` exactly -- fl26join's New Year asks for the season just closed.
+   tcup_result takes this year's or last year's: at the 2028 New Year the calendar still read 2027, and a regional final
+   not made in 2027 answered with 2026's (two Interior clubs went 'up' again, the Interior began 2028 two short) */
+__declspec(dllexport) int fl26_swiss_tcup_result_y(uint32_t reg, uint32_t tie, uint32_t year, uint32_t* win, uint32_t* lose)
+{
+  tcup_t* c = tc_of((uint16_t)reg);
+  if (!c || (int)tie >= c->nt || !win || !lose) return 0;
+  const tc_tie_t* t = &c->t[tie];
+  unsigned char* rnd = ko_round(c->reg, c->kind[t->round][t->slot / 16]);
+  if (!rnd || !ic_fresh(c->reg, rnd, (int)year)) return 0;
+  return tc_result(c, (int)tie, (int)year, win, lose);
+}
+__declspec(dllexport) int fl26_swiss_tcup_result(uint32_t reg, uint32_t tie, uint32_t* win, uint32_t* lose)
+{
+  tcup_t* c = tc_of((uint16_t)reg);
+  if (!c || (int)tie >= c->nt || !win || !lose) return 0;
+  return tc_result(c, (int)tie, rc_cal_year(), win, lose);
+}
+/* a w / l source's tie decided: this cup's or another's */
+static int tc_src_result(const tcup_t* c, uint32_t s, int year, uint32_t* w, uint32_t* l)
+{
+  uint16_t r2 = (uint16_t)((s >> 8) & 0xffff);
+  const tcup_t* cc = r2 ? tc_of(r2) : c;
+  int k = (int)(s & 0xff);
+  if (!cc || k >= cc->nt) return 0;
+  return tc_result(cc, k, year, w, l);
+}
+typedef struct { int pos, pts, gd, gf; } tc_key_t;
+static int tc_gen_key(const tcup_t* c, uint32_t club, tc_key_t* k);
+static uint32_t tc_fil_source(const tcup_t* c, uint32_t s);
+static int lh_table(int hid, uint32_t* cl, tc_key_t* ky, int cap);
+static int tc_key_better(const tc_key_t* x, const tc_key_t* y);
+static uint16_t zn_host_of(uint16_t lg);
+static int zn_set(uint16_t host, uint16_t* out, int cap);
+/* a source on the round's making: 0 not ready / none */
+static uint32_t tc_source(const tcup_t* c, uint32_t s, int year, const uint32_t* used, int nused)
+{
+  uint32_t w, l;
+  if ((s & 0xf0000000u) == TC_SRC_WIN || (s & 0xf0000000u) == TC_SRC_LOSE) {
+    if (!tc_src_result(c, s, year, &w, &l)) return 0;
+    if ((s & TC_SRC_ALT) && (s & 0xf0000000u) == TC_SRC_WIN && has_club(used, (size_t)nused, w)) return l;
+    return (s & 0xf0000000u) == TC_SRC_WIN ? w : l;
+  }
+  if ((s & 0xf0000000u) == 0x90000000u) {        /* lab 23/11/2026: this season's clubs, strongest squad first */
+    uint16_t lg = (uint16_t)((s >> 8) & 0xffff); int want = (int)(s & 0xff);
+    int y0 = abs_day() - today();
+    for (int i = 0; i < g_nseed; i++) if (g_seed[i].reg == lg && g_seed[i].day < y0) g_seed[i].day = -1000000;   /* last year's order: anew */
+    final_t* f = seed_of(lg); unsigned char* rec = get_rec(lg);
+    unsigned n = f ? f->n : (rec ? rec_count(rec) : 0);
+    const uint32_t* cl = f ? f->club : (rec ? rec_clubs(rec) : 0);
+    if (!cl || !n || want < 1) return 0;
+    for (unsigned k = 0, i = (unsigned)(want - 1) % n; k < n; k++, i = (i + 1) % n) {
+      uint32_t x = canon_club(cl[i]);
+      if ((x >> 14) && rsv_may(x, c->tier) && !has_club(used, (size_t)nused, x)) return x;
+    }
+    return 0;
+  }
+  if ((s & 0xf0000000u) == 0xB0000000u) {        /* lab 23/11/2026: a cup's last winner / runner-up, kept */
+    uint16_t r2 = (uint16_t)((s >> 8) & 0xffff);
+    cupwin_t* w = cupwin_of((s & 1) ? (uint16_t)(0xD000u | r2) : r2);
+    int d = abs_day();
+    if (!w || !w->club || d < w->day || d - w->day > 400) return 0;
+    uint32_t x = canon_club(w->club);
+    return (x >> 14) ? x : 0;
+  }
+  if ((s & 0xf0000000u) == 0xA0000000u) {        /* lab 23/11/2026: last season's final table, clubs still in the league */
+    uint16_t lg = (uint16_t)((s >> 8) & 0xffff); int want = (int)(s & 0xff);
+    final_t* f = final_of(lg); unsigned char* rec = get_rec(lg);
+    int d = abs_day();
+    if (!f || !rec || want < 1 || want > f->n || d < f->day || d - f->day > 365) return 0;
+    for (int k = want - 1; k < f->n; k++) {
+      uint32_t x = canon_club(f->club[k]);
+      if (!(x >> 14) || has_club(used, (size_t)nused, x) || !has_club(rec_clubs(rec), rec_count(rec), x)) continue;
+      return x;
+    }
+    return 0;
+  }
+  if ((s & 0xf0000000u) == 0x80000000u) {        /* lab 21/11/2026: the Trofeo de Campeones' sides (reg. LPF 2026 art. 20-23) */
+    int mode = (int)((s >> 16) & 0xff), g = (int)((s >> 8) & 0xff);
+    if (mode >= 4) {                               /* lab 23/11/2026: the Recopa's sides (art. 31) */
+      if (g >= c->ng || c->gn[g] < 6) return 0;
+      uint32_t v6[6];
+      for (int j = 0; j < 6; j++) { v6[j] = tc_source(c, c->gs[g][j], year, 0, 0); if (!v6[j]) return 0; }
+      uint32_t copa = v6[0], sa = same_club(v6[1], copa) ? v6[2] : v6[1], si = v6[3];
+      if (same_club(si, copa) || same_club(si, sa)) si = v6[4];
+      if (same_club(si, copa) || same_club(si, sa)) si = v6[5];
+      return mode == 4 ? sa : mode == 5 ? si : mode == 6 ? copa : 0;
+    }
+    if (g >= c->ng || c->gn[g] < 5) return 0;
+    uint32_t v5[5];
+    for (int j = 0; j < 4; j++) { v5[j] = tc_source(c, c->gs[g][j], year, 0, 0); if (!v5[j]) return 0; }
+    int same = same_club(v5[0], v5[1]), vsame = same_club(v5[2], v5[3]);
+    if (mode == 1) return same && !vsame && !has_club(used, (size_t)nused, v5[2]) ? v5[2] : 0;   /* the tie-break: the Apertura's runner-up */
+    if (mode == 2) return same && !vsame && !has_club(used, (size_t)nused, v5[3]) ? v5[3] : 0;   /* ... v the Clausura's */
+    if (mode == 3) {                                 /* the Trofeo's second side */
+      if (!same) return v5[1];
+      if (vsame) return v5[2];
+      return tc_source(c, c->gs[g][4], year, used, nused);
+    }
+    return 0;
+  }
+  if ((s & 0xf0000000u) == 0x60000000u) return tc_fil_source(c, s);   /* lab 21/11/2026: by filiation, from the bottom */
+  if ((s & 0xf0000000u) == 0x70000000u) {        /* lab 21/11/2026: a half's table (the LPF's Apertura / Clausura) */
+    uint32_t cl[48]; tc_key_t ky[48];
+    int m = lh_table((int)((s >> 8) & 0xff), cl, ky, 48), want = (int)(s & 0xff), seen = 0;
+    for (int k = 0; k < m; k++) if (!has_club(used, (size_t)nused, cl[k]) && ++seen == want) return cl[k];
+    return 0;
+  }
+  if ((s & 0xf0000000u) == 0x50000000u) {        /* lab 21/11/2026: a fixed club (team id): the interzonal pairs */
+    uint32_t x = canon_club((s & 0xffffffu) << 14);
+    return (x >> 14) && !has_club(used, (size_t)nused, x) ? x : 0;
+  }
+  if ((s & 0xf0000000u) == TC_SRC_RANK) {     /* the n-th best of a group, the round's clubs passed over */
+    int g = (int)((s >> 8) & 0xff), want = (int)(s & 0xff);
+    if (g >= c->ng || want < 1) return 0;
+    uint32_t cl[TC_MAXGM]; tc_key_t ky[TC_MAXGM]; int m = 0;
+    for (int j = 0; j < c->gn[g]; j++) {
+      uint32_t x = tc_source(c, c->gs[g][j], year, 0, 0);
+      if (!x) continue;
+      cl[m] = x; tc_gen_key(c, x, &ky[m]); m++;
+    }
+    if (m < want) {   /* lab 23/11/2026: the zones are split again every New Year (fl26join rzones): the 3rds the builder saw
+                         (198-200 of the Regional's region 197) may be gone -- the same place of every zone of the set, then
+                         the next place, until the group has its clubs. 2027's 312 was never made for want of one */
+      uint16_t zs[96]; int nz = 0, base = 99;
+      for (int j = 0; j < c->gn[g]; j++) {
+        uint32_t q = c->gs[g][j];
+        if ((q & 0xf0000000u) != TC_SRC_TAB || (q & 0x80)) continue;
+        uint16_t lg = (uint16_t)((q >> 8) & 0xffff), host = lg;
+        host = zn_host_of(lg);
+        uint16_t set[72]; int ns = zn_set(host, set, 72);
+        for (int i = 0; i < ns; i++) { int dup = 0; for (int y = 0; y < nz; y++) dup |= zs[y] == set[i]; if (!dup && nz < 96) zs[nz++] = set[i]; }
+        if ((int)(q & 0x7f) < base) base = (int)(q & 0x7f);
+      }
+      for (int pl = base; pl < base + 4 && m < want && nz; pl++)
+        for (int i = 0; i < nz && m < TC_MAXGM; i++) {
+          uint32_t x = tc_source(c, TC_SRC_TAB | ((uint32_t)zs[i] << 8) | (uint32_t)pl, year, 0, 0);
+          if (!x) continue;
+          int dup = 0; for (int y = 0; y < m; y++) dup |= same_club(cl[y], x);
+          if (dup) continue;
+          cl[m] = x; tc_gen_key(c, x, &ky[m]); m++;
+        }
+      static int said = 0;
+      if (said++ < 8) logf("fl26swiss: tcup -- reg %u: ranked group %d short, widened to the %d zone(s) of its set: %d candidate(s)", (unsigned)c->reg, g, nz, m);
+    }
+    for (int i = 1; i < m; i++)
+      for (int j = i; j > 0 && tc_key_better(&ky[j], &ky[j - 1]); j--) {
+        tc_key_t t2 = ky[j]; ky[j] = ky[j - 1]; ky[j - 1] = t2; uint32_t u = cl[j]; cl[j] = cl[j - 1]; cl[j - 1] = u;
+      }
+    return want <= m ? cl[want - 1] : 0;
+  }
+  if ((s & 0xf0000000u) != TC_SRC_TAB) return 0;
+  uint16_t lg = (uint16_t)((s >> 8) & 0xffff); int pos = (int)(s & 0xff), seen = 0;
+  if (pos & 0x80) {   /* lab 21/11/2026: from the bottom (the last of a zone whose size changes: the desafiliacion) */
+    int rows = 0;
+    for (int rank = 1; rank <= 48; rank++) { const char* h = ""; if (!cwc_club(lg, rank, &h)) break; rows = rank; }
+    pos = rows - (pos & 0x7f) + 1;
+    if (pos < 1) return 0;
+    const char* h = "";
+    uint32_t x = cwc_club(lg, pos, &h);
+    return x && !has_club(used, (size_t)nused, canon_club(x)) ? canon_club(x) : 0;
+  }
+  {   /* lab 21/11/2026: the place itself first -- the Reválida's field (the 2nd phase's 5th-9th) asked the 5th, then the
+         6th ... and got the 5th, the 7th, the 9th, then nobody ("a club of the field missing"); the n-th not yet in the
+         round only when that club is in already */
+    const char* how = "";
+    uint32_t x = pos >= 1 ? cwc_club(lg, pos, &how) : 0;
+    if (x) { x = canon_club(x); if (rsv_may(x, c->tier) && !has_club(used, (size_t)nused, x)) return x; }
+  }
+  for (int rank = 1; rank <= 48; rank++) {
+    const char* how = "";
+    uint32_t x = cwc_club(lg, rank, &how);
+    if (!x) return 0;
+    x = canon_club(x);
+    if (!rsv_may(x, c->tier) || has_club(used, (size_t)nused, x)) continue;
+    if (++seen == pos) return x;
+  }
+  return 0;
+}
+/* the general table's key of a club among the cup's leagues (its place in its own, then points, goal difference,
+   goals scored); 0 when it is in none of them */
+static int tc_gen_key(const tcup_t* c, uint32_t club, tc_key_t* k)
+{
+  for (int i = 0; i < c->nt + c->ng; i++) {
+    uint32_t s2[TC_MAXGM]; int ns2 = 0;
+    if (i < c->nt) { s2[0] = c->t[i].a; s2[1] = c->t[i].b; ns2 = 2; }
+    else for (int j = 0; j < c->gn[i - c->nt]; j++) s2[ns2++] = c->gs[i - c->nt][j];
+    for (int z = 0; z < ns2; z++) {
+      if ((s2[z] & 0xf0000000u) != TC_SRC_TAB) continue;
+      uint16_t lg = (uint16_t)((s2[z] >> 8) & 0xffff);
+      unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(lg);
+      uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+      if (rows > 48) continue;
+      for (uint32_t j = 0; j < rows; j++) {
+        const unsigned char* r = t + j * 20;
+        if (!same_club(*(const uint32_t*)r, club)) continue;
+        uint64_t v = 0;
+        for (int b = 0; b < 6; b++) v |= (uint64_t)r[9 + b] << (8 * b);
+        int f = (int)(((v >> 24) & 63) | (((v >> 30) & 63) << 6)), a = (int)(((v >> 36) & 63) | (((v >> 42) & 63) << 6));
+        k->pos = (int)j + 1; k->pts = r[8]; k->gd = f - a; k->gf = f;
+        return 1;
+      }
+    }
+  }
+  for (int i = 0; i < c->nt; i++) {                       /* lab 21/11/2026: a half's place (the LPF's play-offs) */
+    uint32_t s2[2] = { c->t[i].a & ~TC_SRC_SEED, c->t[i].b & ~TC_SRC_SEED };
+    for (int z = 0; z < 2; z++) {
+      if ((s2[z] & 0xf0000000u) != 0x70000000u) continue;
+      uint32_t cl[48]; tc_key_t ky[48];
+      int m = lh_table((int)((s2[z] >> 8) & 0xff), cl, ky, 48);
+      for (int q = 0; q < m; q++) if (same_club(cl[q], club)) { *k = ky[q]; return 1; }
+    }
+  }
+  k->pos = 99; k->pts = k->gd = k->gf = -999;
+  return 0;
+}
+static int tc_key_better(const tc_key_t* x, const tc_key_t* y)
+{
+  if (x->pos != y->pos) return x->pos < y->pos;
+  if (x->pts != y->pts) return x->pts > y->pts;
+  if (x->gd != y->gd) return x->gd > y->gd;
+  return x->gf > y->gf;
+}
+static void tc_make(tcup_t* c, int r, int year)
+{
+  uint32_t A_[TC_MAXT], B_[TC_MAXT]; int slots[TC_MAXT], ns = 0;
+  uint32_t used[2 * TC_MAXT]; int nu = 0;
+  if (c->reseed[r]) {   /* the field, then 1 v N, 2 v N-1 ... by the general table, the forced seeds first */
+    uint32_t field[2 * TC_MAXT]; int forced[2 * TC_MAXT]; int nf = 0, nties = 0, tie_ix[TC_MAXT];
+    for (int k = 0; k < c->nt; k++) {
+      if (c->t[k].round != r) continue;
+      tie_ix[nties++] = k;
+      uint32_t s2[2] = { c->t[k].a, c->t[k].b };
+      for (int z = 0; z < 2; z++) {
+        uint32_t x = tc_source(c, s2[z] & ~TC_SRC_SEED, year, used, nu);
+        if (!x) { logf("fl26swiss: tcup -- reg %u round %d: a club of the field missing (tie %d, source %08x); not made", (unsigned)c->reg, r + 1, k, s2[z]); return; }
+        used[nu++] = x; field[nf] = x; forced[nf] = (s2[z] & TC_SRC_SEED) != 0; nf++;
+      }
+    }
+    uint32_t seed[2 * TC_MAXT]; int nsd = 0;
+    for (int i = 0; i < nf; i++) if (forced[i]) seed[nsd++] = field[i];
+    int nfree = 0; uint32_t rest[2 * TC_MAXT]; tc_key_t key[2 * TC_MAXT];
+    for (int i = 0; i < nf; i++) if (!forced[i]) { rest[nfree] = field[i]; tc_gen_key(c, field[i], &key[nfree]); nfree++; }
+    for (int i = 1; i < nfree; i++)            /* insertion sort, best first */
+      for (int j = i; j > 0 && tc_key_better(&key[j], &key[j - 1]); j--) {
+        tc_key_t tk = key[j]; key[j] = key[j - 1]; key[j - 1] = tk;
+        uint32_t tc2 = rest[j]; rest[j] = rest[j - 1]; rest[j - 1] = tc2;
+      }
+    for (int i = 0; i < nfree; i++) seed[nsd++] = rest[i];
+    for (int i = 0; i < nties; i++) {
+      A_[ns] = seed[i]; B_[ns] = seed[nsd - 1 - i]; slots[ns] = c->t[tie_ix[i]].slot; ns++;
+      logf("fl26swiss:   tcup reg %u round %d seeded: %d v %d -- %08x v %08x", (unsigned)c->reg, r + 1, i + 1, nsd - i, seed[i],
+           seed[nsd - 1 - i]);
+    }
+  } else {
+    for (int k = 0; k < c->nt; k++) {
+      if (c->t[k].round != r) continue;
+      int given = r == 0 && c->y1 == year && k < c->n1;           /* lab 23/11/2026: that year's real draw */
+      uint32_t A = tc_source(c, (given ? c->a1[k] : c->t[k].a) & ~TC_SRC_SEED, year, used, nu);
+      if (A) used[nu++] = A;
+      uint32_t B = tc_source(c, (given ? c->b1[k] : c->t[k].b) & ~TC_SRC_SEED, year, used, nu);
+      if (B) used[nu++] = B;
+      if (!A || !B) { logf("fl26swiss: tcup -- reg %u tie %d: a club missing (%08x / %08x); left out", (unsigned)c->reg, k, A, B); continue; }
+      if ((c->flags & TC_F_HOMEBEST) && c->legs[r] != 2) {      /* lab 21/11/2026: the better placed at home */
+        tc_key_t ka, kb; tc_gen_key(c, A, &ka); tc_gen_key(c, B, &kb);
+        if (tc_key_better(&kb, &ka)) { uint32_t t2 = A; A = B; B = t2; }
+      }
+      A_[ns] = A; B_[ns] = B; slots[ns] = c->t[k].slot; ns++;
+    }
+  }
+  if (r == 0) { ic_new_edition(c->reg, year, 1); ic_register_reg(c->reg, year, "tcup"); c->reg_year = year; }
+  if (!ns) { c->made[r] = year; return; }
+  kc_create_fn mk = (kc_create_fn)(uintptr_t)(g_base + CREATE_RVA);
+  static unsigned char ctx[256];
+  int made = 0;
+  for (int ch = 0; ch < c->nch[r]; ch++) {
+    uint8_t kind = c->kind[r][ch];
+    /* the maker reads tie t's clubs at 2t, 2t+1 of the vector: the full vector by slot within this kind */
+    uint32_t full[32]; unsigned nf = 0;
+    int maxslot = -1, any = -1;
+    for (int i = 0; i < ns; i++) if (slots[i] / 16 == ch) { if (slots[i] % 16 > maxslot) maxslot = slots[i] % 16; any = i; }
+    if (any < 0) continue;
+    for (int t = 0; t <= maxslot; t++) {
+      int i = any;
+      for (int j = 0; j < ns; j++) if (slots[j] / 16 == ch && slots[j] % 16 == t) i = j;
+      if (c->legs[r] == 2) { full[nf++] = B_[i]; full[nf++] = A_[i]; } else { full[nf++] = A_[i]; full[nf++] = B_[i]; }
+    }
+    struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec = { full, full + nf, full + nf };
+    for (int i = 0; i < ns; i++) {
+      if (slots[i] / 16 != ch) continue;
+      unsigned t = (unsigned)(slots[i] % 16);
+      if (c->legs[r] == 2) { made += mk(0, &vec, c->reg, kind, 0, t) != 0; made += mk(0, &vec, c->reg, kind, 1, t) != 0; }
+      else made += mk(0, &vec, c->reg, kind, 2, t) != 0;
+    }
+    unsigned char* rnd = ko_round(c->reg, kind);
+    int k = ko_slots(rnd);
+    for (int s = 0; s < k && s < 16; s++) {
+      uint32_t* sl = ko_slot(rnd, s);
+      unsigned t = (sl[3] >> 22) & 0x1f;
+      if (2 * t + 1 >= nf) continue;
+      uint32_t h = full[2 * t], a = full[2 * t + 1];
+      uint16_t* ids = (uint16_t*)(sl + 2);
+      sl[0] = h; sl[1] = a;
+      unsigned char* m1 = ko_match(ids[0], c->reg);
+      unsigned char* m2 = ids[1] == 0xffff ? 0 : ko_match(ids[1], c->reg);
+      if (m1) { *(uint32_t*)(m1 + 0x14) = h; *(uint32_t*)(m1 + 0x18) = a; }
+      if (m2) { *(uint32_t*)(m2 + 0x14) = a; *(uint32_t*)(m2 + 0x18) = h; }
+      if (m1) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(ctx, c->day[r][0], *(uint32_t*)m1);
+      if (m2) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(ctx, c->day[r][1], *(uint32_t*)m2);
+      logf("fl26swiss:   tcup reg %u round %d kind %#x tie slot %u: %08x v %08x, match %u/%u", (unsigned)c->reg, r + 1, kind, t,
+           h, a, (unsigned)ids[0], (unsigned)ids[1]);
+    }
+  }
+  c->made[r] = year;
+  {
+    uint32_t lst[48]; unsigned nl = 0;
+    for (int rr = 0; rr <= r; rr++)        /* every club of the edition so far: the reg's list */
+      for (int ch = 0; ch < c->nch[rr]; ch++) {
+        unsigned char* q = ko_round(c->reg, c->kind[rr][ch]);
+        int m = ko_slots(q);
+        for (int s = 0; s < m && s < 16; s++) {
+          uint32_t* sl = ko_slot(q, s);
+          for (int z = 0; z < 2; z++) if ((sl[z] >> 14) && nl < 48 && !has_club(lst, nl, canon_club(sl[z]))) lst[nl++] = canon_club(sl[z]);
+        }
+      }
+    ic_list(c->reg, lst, nl);
+  }
+  logf("fl26swiss: tcup -- day %d: reg %u round %d of %d made, %d tie(s) (%s), %d match(es)", today(), (unsigned)c->reg, r + 1,
+       c->nr, ns, c->legs[r] == 2 ? "two legs" : "one match", made);
+  sched_rebuild("tcup round made");
+}
+/* lab 21/11/2026: the clubs of cup `reg` this year by campaign -- the round each reached (its last tie's round + 1 when
+   it won that tie), then the general table; then the clubs of the cup's leagues that reached no round, by the general
+   table. For the New Year mover (the Interior's invitations: the best of each region in the Regional not promoted) */
+__declspec(dllexport) int fl26_swiss_tcup_rank(uint32_t reg, uint32_t* out, int cap)
+{
+  tcup_t* c = tc_of((uint16_t)reg);
+  if (!c || !out || cap < 1) return 0;
+  int year = rc_cal_year();
+  uint32_t cl[256]; int deep[256]; tc_key_t ky[256]; int m = 0;
+  for (int k = 0; k < c->nt; k++) {
+    uint32_t* sl;
+    if (!tc_tie_slot(c, k, year, &sl)) continue;
+    uint32_t w = 0, l = 0;
+    int dec = tc_result(c, k, year, &w, &l);
+    for (int z = 0; z < 2; z++) {
+      uint32_t x = canon_club(sl[z]);
+      if (!(x >> 14)) continue;
+      int d = c->t[k].round + 1 + (dec && same_club(x, w) ? 1 : 0), i = 0;
+      while (i < m && !same_club(cl[i], x)) i++;
+      if (i == m && m < 256) { cl[m] = x; deep[m] = d; tc_gen_key(c, x, &ky[m]); m++; }
+      else if (i < m && d > deep[i]) deep[i] = d;
+    }
+  }
+  for (int i = 0; i < c->nt + c->ng; i++) {               /* the leagues' clubs that reached no round */
+    uint32_t s2[TC_MAXGM]; int ns2 = 0;
+    if (i < c->nt) { s2[0] = c->t[i].a; s2[1] = c->t[i].b; ns2 = 2; }
+    else for (int j = 0; j < c->gn[i - c->nt]; j++) s2[ns2++] = c->gs[i - c->nt][j];
+    for (int z = 0; z < ns2; z++) {
+      if ((s2[z] & 0xf0000000u) != TC_SRC_TAB) continue;
+      unsigned char* rec = find_rec((uint16_t)((s2[z] >> 8) & 0xffff));
+      unsigned nl = rec ? rec_count(rec) : 0;
+      for (unsigned j = 0; j < nl && m < 256; j++) {
+        uint32_t x = canon_club(rec_clubs(rec)[j]);
+        int q = 0;
+        while (q < m && !same_club(cl[q], x)) q++;
+        if (q == m) { cl[m] = x; deep[m] = 0; tc_gen_key(c, x, &ky[m]); m++; }
+      }
+    }
+  }
+  for (int i = 1; i < m; i++)
+    for (int j = i; j > 0 && (deep[j] > deep[j - 1] || (deep[j] == deep[j - 1] && tc_key_better(&ky[j], &ky[j - 1]))); j--) {
+      tc_key_t t2 = ky[j]; ky[j] = ky[j - 1]; ky[j - 1] = t2;
+      uint32_t u = cl[j]; cl[j] = cl[j - 1]; cl[j - 1] = u;
+      int dd = deep[j]; deep[j] = deep[j - 1]; deep[j - 1] = dd;
+    }
+  int n = m < cap ? m : cap;
+  memcpy(out, cl, sizeof(uint32_t) * (size_t)n);
+  return n;
+}
+static void tcup_tick(void)
+{
+  if (!g_ntc || today() < 1) return;
+  {   /* lab 18/11/2026: once a session, each pyramid league's list v its table rows (a district that changed size) */
+    static int said = 0;
+    if (!said && g_nrt) {
+      said = 1;
+      char line[1200]; int q = 0;
+      for (int k = 0; k < g_nrt && q < 1150; k++) {
+        unsigned char* rec = find_rec(g_rt_reg[k]);
+        unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(g_rt_reg[k]);
+        q += snprintf(line + q, sizeof line - (size_t)q, " %u:%u/%u", (unsigned)g_rt_reg[k], rec ? rec_count(rec) : 0u,
+                      t ? *(uint32_t*)(t + 0x3c0) : 0u);
+      }
+      logf("fl26swiss: pyramid -- list/table rows (day %d):%s", today(), line);
+    }
+  }
+  int d = today(), year = rc_cal_year();
+  if (year < 0) return;
+  for (int k = 0; k < g_ntc; k++) {
+    tcup_t* c = &g_tc[k];
+    for (int r = 0; r < c->nr; r++) {
+      if (c->made[r] == year) continue;
+      if (c->until && year > c->until) continue;   /* lab 21/11/2026: a stage of one season (the Regional's final stage) */
+      if (c->from && year < c->from) continue;     /* ... or from one season on (the Interior's play-offs, 2027) */
+      int from = r == 0 ? c->fill : c->day[r - 1][c->legs[r - 1] == 2] + 1;
+      if (d < from || d >= c->day[r][0]) continue;
+      if (tc_fresh(c, r, year)) { c->made[r] = year; continue; }          /* made already (a save loaded) */
+      if (r > 0 && c->made[r - 1] != year && !tc_fresh(c, r - 1, year)) {   /* lab 23/11/2026: never from last year's */
+        int had = 0; for (int t = 0; t < c->nt; t++) had |= c->t[t].round == r - 1;   /* (round r-1 has ties of its own) */
+        if (had) continue;
+      }
+      int ready = 1; uint32_t w, l;                                      /* every source of the round decided */
+      for (int t = 0; t < c->nt && ready; t++) {
+        if (c->t[t].round != r) continue;
+        if (r == 0 && c->y1 == year && t < c->n1) continue;             /* lab 23/11/2026: given clubs */
+        uint32_t s2[2] = { c->t[t].a, c->t[t].b };
+        for (int z = 0; z < 2; z++)
+          if (((s2[z] & 0xf0000000u) == TC_SRC_WIN || (s2[z] & 0xf0000000u) == TC_SRC_LOSE)
+              && !tc_src_result(c, s2[z] & ~TC_SRC_SEED, year, &w, &l)) ready = 0;
+          else if ((s2[z] & 0xf0000000u) == 0x80000000u) {   /* lab 21/11/2026: the finals decided (and the tie-break, if any) */
+            int g = (int)((s2[z] >> 8) & 0xff), md = (int)((s2[z] >> 16) & 0xff);
+            if (g >= c->ng || c->gn[g] < (md >= 4 ? 6 : 5)) { ready = 0; continue; }
+            for (int j = 0; j < (md >= 4 ? 6 : 4) && ready; j++)
+              if (md >= 4 ? !tc_source(c, c->gs[g][j], year, 0, 0) : !tc_src_result(c, c->gs[g][j], year, &w, &l)) ready = 0;
+            if (ready && ((s2[z] >> 16) & 0xff) == 3) {
+              uint32_t a = tc_source(c, c->gs[g][0], year, 0, 0), b = tc_source(c, c->gs[g][1], year, 0, 0);
+              uint32_t va = tc_source(c, c->gs[g][2], year, 0, 0), vb = tc_source(c, c->gs[g][3], year, 0, 0);
+              if (same_club(a, b) && !same_club(va, vb) && !tc_src_result(c, c->gs[g][4], year, &w, &l)) ready = 0;
+            }
+          }
+      }
+      if (!ready) continue;
+      tc_make(c, r, year);
+    }
+    if (c->champ_year != year && (c->flags & TC_F_TRI) && c->nt == 3 && tc_fresh(c, c->nr - 1, year)) {   /* lab 23/11/2026 */
+      uint32_t cl[3] = { 0, 0, 0 }; int pts[3] = { 0 }, gf[3] = { 0 }, ga[3] = { 0 }, nc = 0, ok = 1;
+      for (int k = 0; k < 3 && ok; k++) {
+        uint32_t* sl;
+        if (!tc_tie_slot(c, k, year, &sl)) { ok = 0; break; }
+        const uint16_t* ids = (const uint16_t*)(sl + 2);
+        unsigned char* m = ko_match(ids[0], c->reg);
+        if (!m || !(m[7] & 0x40)) { ok = 0; break; }
+        uint32_t A = canon_club(sl[0]), B = canon_club(sl[1]);
+        int a = ko_goals(m, 0), b = ko_goals(m, 1), ia = -1, ib = -1;
+        for (int q = 0; q < nc; q++) { if (same_club(cl[q], A)) ia = q; if (same_club(cl[q], B)) ib = q; }
+        if (ia < 0 && nc < 3) { ia = nc; cl[nc++] = A; }
+        if (ib < 0 && nc < 3) { ib = nc; cl[nc++] = B; }
+        if (ia < 0 || ib < 0) { ok = 0; break; }
+        gf[ia] += a; ga[ia] += b; gf[ib] += b; ga[ib] += a;
+        if (a != b) pts[a > b ? ia : ib] += 3;
+        else { int pa = m[0x1e] > m[0x21]; pts[pa ? ia : ib] += 2; pts[pa ? ib : ia] += 1; }
+      }
+      if (ok && nc == 3) {
+        int best = 0;
+        for (int q = 1; q < 3; q++) {
+          int dq = gf[q] - ga[q], db = gf[best] - ga[best];
+          if (pts[q] != pts[best] ? pts[q] > pts[best] : dq != db ? dq > db : gf[q] != gf[best] ? gf[q] > gf[best] : ga[q] < ga[best]) best = q;
+        }
+        c->champ_year = year;
+        cupwin_t* cw = cupwin_of(c->reg);
+        if (!cw && g_ncupwin < CUPWIN_N) { cw = &g_cupwin[g_ncupwin++]; cw->reg = c->reg; }
+        if (cw) { cw->day = abs_day(); cw->club = cl[best]; state_store(); }
+        logf("fl26swiss: tcup -- day %d: reg %u (a triangular) won by %08x -- %08x %d pts %d:%d, %08x %d pts %d:%d, %08x %d pts %d:%d",
+             d, (unsigned)c->reg, cl[best], cl[0], pts[0], gf[0], ga[0], cl[1], pts[1], gf[1], ga[1], cl[2], pts[2], gf[2], ga[2]);
+      }
+    }
+    if (c->champ_year != year && c->nt > 0 && !(c->flags & TC_F_TRI)) {   /* lab 21/11/2026: the last tie decided -> the cup's winner kept (the LPF's places) */
+      uint32_t w = 0, l = 0;
+      if (c->t[c->nt - 1].round == c->nr - 1 && tc_fresh(c, c->nr - 1, year) && tc_result(c, c->nt - 1, year, &w, &l) && w) {
+        c->champ_year = year;
+        cupwin_t* cw = cupwin_of(c->reg);
+        if (!cw && g_ncupwin < CUPWIN_N) { cw = &g_cupwin[g_ncupwin++]; cw->reg = c->reg; }
+        if (cw) { cw->day = abs_day(); cw->club = w; state_store(); }
+        cupwin_t* cr = cupwin_of((uint16_t)(0xD000u | c->reg));   /* lab 23/11/2026: the runner-up too (0xB0000000 sources) */
+        if (!cr && g_ncupwin < CUPWIN_N) { cr = &g_cupwin[g_ncupwin++]; cr->reg = (uint16_t)(0xD000u | c->reg); }
+        if (cr) { cr->day = abs_day(); cr->club = l; state_store(); }
+        logf("fl26swiss: tcup -- day %d: reg %u's winner %08x kept (runner-up %08x)", d, (unsigned)c->reg, w, l);
+      }
+    }
+  }
+}
+static int tc_dates(uint64_t reg, void* vec, uint64_t* rv)
+{
+  tcup_t* c = tc_of((uint16_t)reg);
+  if (!c) return 0;
+  *rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | 17, vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  date_t* dd = (date_t*)v->b;
+  size_t k = 0;
+  for (int r = 0; r < c->nr; r++)
+    for (int ch = 0; ch < c->nch[r]; ch++) {
+      uint8_t kd = c->kind[r][ch];
+      if (c->legs[r] == 2) {
+        if (k < have) { dd[k].day = c->day[r][0]; dd[k].round = kd; dd[k].kind = 0; k++; }
+        if (k < have) { dd[k].day = c->day[r][1]; dd[k].round = kd; dd[k].kind = 1; k++; }
+      } else if (k < have) { dd[k].day = c->day[r][0]; dd[k].round = kd; dd[k].kind = 2; k++; }
+    }
+  v->e = v->b + k * sizeof(date_t);
+  return 1;
+}
+
+
+
+/* icup's super cup reads our 0.3.0 lab's split phases and its group-screen swap; neither is in 0.4.0: no split
+   behind an icup league here (Iceland stays on the 0.3.0 lab), nothing to swap back */
+static int split_ids(uint16_t total, uint16_t* regular, uint16_t* group0) { (void)total; *regular = 0; *group0 = 0; return 0; }
+static void lph_unswap_day(void) {}
+/* ==== end of the lab knockouts ==== */
+/* ==== lab 21/11/2026: a tcup as items of its league's Competition Info menu (from the 0.3.0 lab's kcpg, tcup only) ====
+ * The world file's `lphase <host league> <tcup reg> 1` puts the knockout behind an item of the host's menu (the user's
+ * rule: a play-off is an item of its league's popup, never a competition of its own -- the tcup's competition is left out
+ * of the list as the zones are). The item opens the native play-off page (flow "playoff"): the page asks for the
+ * competition's grouped phase (phkind, PAGE_GRP_RA) and gets the tcup's regulation; its tie list (libq_tlist_handler)
+ * gets that regulation once per kind holding this edition's ties; the round record each entry reads (the thunk
+ * 0x141579da0, called from 0x140af8acd with kind 0x35) is the entry's own kind (tcpg_fix_handler); a page starts where
+ * a round starts (libq_page_break); a round's title is `lpname <0xC000 + reg*8 + round> <text>` (tcpg_title). */
+#define KP_MAX 64
+typedef struct { uint16_t host, reg; uint8_t type; } kp_t;   /* type 1 knockout, 2 a phase league's table */
+static kp_t g_kp[KP_MAX]; static int g_nkp = 0;
+#define TCPG_FIX_THUNK 0x1579da0     /* jmp 0x141579ee0, then 11 int3: room for an absolute jmp */
+#define TCPG_FIX_RA    0xaf8acd      /* the page builder's call */
+#define TCPG_GROW_RVA  0x0ba63c0     /* vector<uint16_t> grow by n (the tie list's own) */
+#define TCPG_MAX       32
+typedef void (*tcpg_grow_fn)(void* vec, uint64_t n);
+static struct { int on, n, next; uint8_t kind[TCPG_MAX], round[TCPG_MAX], slots[TCPG_MAX]; uint16_t reg, regs[TCPG_MAX];
+                const unsigned char* start; } g_tcpg;
+static int g_tpg = -1;                  /* the tcup whose pages are being laid out (index in g_tc) */
+static int g_km_pick = -1;              /* the tcup of the item just chosen */
+static uint16_t g_km_phase = 0;         /* the phase league of the item just chosen (its table) */
+static uint16_t g_km_phase_host = 0;    /* ... in the menu of that league */
+static int g_km_half = -1;              /* the half of the item just chosen (lhview) */
+static uint32_t g_km_comp = 0xffffffffu;
+static int tcpg_build(void* out)
+{
+  struct { uint16_t *b, *e, *c; }* v = out;
+  g_tcpg.on = 0; g_tcpg.n = 0; g_tcpg.next = 0; g_tcpg.start = 0;
+  if (g_tpg < 0 || g_tpg >= g_ntc) return 0;
+  const tcup_t* c = &g_tc[g_tpg];
+  int y = rc_cal_year();
+  g_tcpg.reg = c->reg;
+  /* lab 21/11/2026: a final on a regulation of its own (`lphase <knockout> <final> 5`, the Federal A's Final do acesso
+     after the Zona Campeonato) is the last page(s) of its knockout's item, not an item of its own (the user's ask) */
+  const tcup_t* part[4]; int np = 0; part[np++] = c;
+  for (int i = 0; i < g_nkp && np < 4; i++)
+    if (g_kp[i].type == 5 && g_kp[i].host == c->reg && tc_of(g_kp[i].reg)) part[np++] = tc_of(g_kp[i].reg);
+  for (int p = 0; p < np; p++) {
+    const tcup_t* cc = part[p];
+    for (int r = 0; r < cc->nr; r++)
+      for (int ch = 0; ch < cc->nch[r] && g_tcpg.n < TCPG_MAX; ch++) {
+        unsigned char* rnd = ko_round(cc->reg, cc->kind[r][ch]);
+        if (ko_slots(rnd) < 1 || !(ic_fresh(cc->reg, rnd, y) || ic_fresh(cc->reg, rnd, y - 1))) continue;
+        g_tcpg.kind[g_tcpg.n] = cc->kind[r][ch]; g_tcpg.round[g_tcpg.n] = (uint8_t)(p * 32 + r); g_tcpg.slots[g_tcpg.n] = (uint8_t)ko_slots(rnd);
+        g_tcpg.regs[g_tcpg.n] = cc->reg;
+        g_tcpg.n++;
+        if (v->e == v->c) ((tcpg_grow_fn)(uintptr_t)(g_base + TCPG_GROW_RVA))(v, 1);
+        if (v->e) *v->e = cc->reg;
+        v->e++;
+      }
+  }
+  g_tcpg.on = g_tcpg.n > 0;
+  static int said = 0;
+  if (said++ < 12) {
+    char line[160]; int o = 0;
+    for (int k = 0; k < g_tcpg.n && o < 140; k++) o += snprintf(line + o, sizeof line - o, " %02x/%u", g_tcpg.kind[k], g_tcpg.slots[k]);
+    logf("fl26swiss: knockout pages -- reg %u: %d round record(s) (kind/ties):%s", (unsigned)c->reg, g_tcpg.n, line);
+  }
+  return g_tcpg.n;
+}
+unsigned char* tcpg_fix_handler(const uint16_t* reg, const uint32_t* kind)
+{
+  if ((uintptr_t)__builtin_return_address(0) == g_base + TCPG_FIX_RA && g_tcpg.on && reg && g_tcpg.next < g_tcpg.n
+      && *reg == g_tcpg.regs[g_tcpg.next]) {
+    uint16_t rr = g_tcpg.regs[g_tcpg.next];
+    uint32_t k = g_tcpg.kind[g_tcpg.next++];
+    return ((fixfind_fn)(uintptr_t)(g_base + FIXFIND_RVA))(&rr, &k);
+  }
+  return ((fixfind_fn)(uintptr_t)(g_base + FIXFIND_RVA))(reg, kind);
+}
+/* cur = the item just laid out, the next one at cur + 8: 1 when the next one opens another round, -1 not ours */
+static int tcpg_break(const unsigned char* cur, const unsigned char* end)
+{
+  if (!g_tcpg.on || !cur || cur + 16 > end) return -1;
+  if (!g_tcpg.start) g_tcpg.start = cur;
+  if (cur < g_tcpg.start) return -1;
+  long i = (long)((cur - g_tcpg.start) / 8), acc = 0;
+  int ra = -1, rb = -1;
+  for (int k = 0; k < g_tcpg.n; k++) {
+    if (ra < 0 && i < acc + g_tcpg.slots[k]) ra = g_tcpg.round[k];
+    if (rb < 0 && i + 1 < acc + g_tcpg.slots[k]) rb = g_tcpg.round[k];
+    acc += g_tcpg.slots[k];
+  }
+  if (ra < 0 || rb < 0) return -1;
+  return ra != rb;
+}
+static int tcpg_install(uint64_t exe_base)
+{
+  unsigned char* t = (unsigned char*)(uintptr_t)(exe_base + TCPG_FIX_THUNK);
+  static const unsigned char SIG[16] = { 0xe9, 0x3b, 0x01, 0x00, 0x00, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc };
+  if (memcmp(t, SIG, 16)) return 2;
+  DWORD old;
+  if (!VirtualProtect(t, 16, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  t[0] = 0xff; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)tcpg_fix_handler;
+  VirtualProtect(t, 16, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), t, 16);
+  return 0;
+}
+/* ==== end of the knockout pages (part 1) ==== */
+/* ==== lab 21/11/2026: a league phase that starts in the middle of the season (mphase) -- the Federal A's 2nd phase and
+ * the Reválida's 1st stage (GUIA-ARGENTINA-FL27.md 3.4), the way the Serie C's quadrangulares were proven (19/11/2026,
+ * brasil_engine.h cqleague): the phase is a real league of the world, asleep on placeholder clubs (fl26join `rlate`:
+ * its door refuses it and writes the placeholders back) until its fill day; then its list is written from the sources
+ * (as a tcup's: <reg>.<pos>, ranked groups), fl26join is told to let it in (fl26_join_late_open) and the game registers
+ * its season there and then (register_all 0x141343bf0): its rounds on its own calendar (rcal), its table, its scorers.
+ *   sline fl26_swiss_mphase <reg> <fill> <after> <n> <sources x n> [<ng> (<count> <members>)[ng]]
+ * after: a league whose last round must be played first (the 1st phase's zone the fill waits for), 0 none. */
+#define MP_MAX 8
+#define MP_MAXS 24
+#define REGALL_RVA 0x1343bf0   /* register_all(ctx, vec_u16* ids) */
+typedef void (*regall_fn)(void* ctx, void* ids);
+typedef struct { tcup_t ctx; uint16_t reg, fill, after; int n; uint32_t src[MP_MAXS]; int made; } mphase_t;
+static mphase_t g_mp[MP_MAX]; static int g_nmp = 0;
+__declspec(dllexport) int fl26_swiss_mphase(const uint32_t* v, int n)
+{
+  if (!v || n < 4 || g_nmp >= MP_MAX) return g_nmp;
+  mphase_t* m = &g_mp[g_nmp];
+  memset(m, 0, sizeof *m);
+  int p = 0;
+  m->reg = (uint16_t)v[p++]; m->fill = (uint16_t)v[p++]; m->after = (uint16_t)v[p++]; m->n = (int)v[p++];
+  if (m->n < 2 || m->n > MP_MAXS || p + m->n > n) { logf("fl26swiss: mphase -- bad line (%d values)", n); return g_nmp; }
+  for (int i = 0; i < m->n; i++) m->src[i] = v[p++];
+  m->ctx.reg = m->reg; m->ctx.tier = 0; m->ctx.nr = 0; m->ctx.nt = 0;
+  if (p < n) {
+    m->ctx.ng = (int)v[p++];
+    if (m->ctx.ng > TC_MAXG) { logf("fl26swiss: mphase -- reg %u: %d groups", (unsigned)m->reg, m->ctx.ng); return g_nmp; }
+    for (int g = 0; g < m->ctx.ng; g++) {
+      int k = p < n ? (int)v[p++] : 0;
+      if (k > TC_MAXGM || p + k > n) { logf("fl26swiss: mphase -- reg %u: bad group", (unsigned)m->reg); return g_nmp; }
+      m->ctx.gn[g] = (uint8_t)k;
+      for (int j = 0; j < k; j++) m->ctx.gs[g][j] = v[p++];
+    }
+  }
+  /* the general key reads the leagues of the sources: they are given as one tie each */
+  for (int i = 0; i + 1 < m->n && m->ctx.nt < TC_MAXT; i += 2) { m->ctx.t[m->ctx.nt].a = m->src[i]; m->ctx.t[m->ctx.nt].b = m->src[i + 1]; m->ctx.nt++; }
+  m->made = -1000;
+  g_nmp++;
+  logf("fl26swiss: mphase -- reg %u: %d club(s) from the tables, filled from day %u", (unsigned)m->reg, m->n, (unsigned)m->fill);
+  return g_nmp;
+}
+/* every club of league reg has played all its matches (the table's rows: played = legs x (clubs - 1)) */
+static int mp_league_over(uint16_t reg)
+{
+  unsigned char* rec = find_rec(reg);
+  unsigned char* t = rec ? ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg) : 0;
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+  if (!rows || rows > 48) return 0;
+  unsigned legs = (*(uint32_t*)(rec + 0x308) >> 29) & 7;
+  unsigned want = (legs ? legs : 2) * (rows - 1);
+  for (uint32_t j = 0; j < rows; j++) if (t[j * 20 + 0x0f] < want) return 0;
+  return 1;
+}
+/* lab 21/11/2026 (the 2027 promotions, La Gaceta 22/10/2026): "el antepenúltimo entre los equipos directamente
+   afiliados" -- the clubs of direct filiation (`sline fl26_swiss_filiation <team ids>`), and a tcup source
+   0x60000000 | dir << 7 | n: among the clubs of the leagues the cup's group 0 names (its members' leagues), of direct
+   (dir 1) or indirect (dir 0) filiation, the n-th from the bottom of the general table */
+#define FIL_MAX 128
+static uint32_t g_fil[FIL_MAX]; static int g_nfil = 0;
+__declspec(dllexport) int fl26_swiss_filiation(const uint32_t* v, int n)
+{
+  g_nfil = 0;
+  for (int i = 0; v && i < n && g_nfil < FIL_MAX; i++) g_fil[g_nfil++] = v[i] << 14;
+  logf("fl26swiss: filiation -- %d club(s) of direct filiation", g_nfil);
+  return g_nfil;
+}
+static int fil_direct(uint32_t c) { for (int i = 0; i < g_nfil; i++) if ((g_fil[i] >> 14) == (c >> 14)) return 1; return 0; }
+static uint32_t tc_fil_source(const tcup_t* c, uint32_t s)
+{
+  int dir = (s >> 7) & 1, want = (int)(s & 0x7f);
+  if (!c->ng || want < 1) return 0;
+  uint32_t cl[96]; tc_key_t ky[96]; int m = 0;
+  for (int j = 0; j < c->gn[0]; j++) {
+    if ((c->gs[0][j] & 0xf0000000u) != TC_SRC_TAB) continue;
+    unsigned char* rec = find_rec((uint16_t)((c->gs[0][j] >> 8) & 0xffff));
+    unsigned nl = rec ? rec_count(rec) : 0;
+    for (unsigned q = 0; q < nl && m < 96; q++) {
+      uint32_t x = canon_club(rec_clubs(rec)[q]);
+      if (!(x >> 14) || fil_direct(x) != dir) continue;
+      cl[m] = x; tc_gen_key(c, x, &ky[m]); m++;
+    }
+  }
+  for (int i = 1; i < m; i++)
+    for (int j = i; j > 0 && tc_key_better(&ky[j], &ky[j - 1]); j--) {
+      tc_key_t t2 = ky[j]; ky[j] = ky[j - 1]; ky[j - 1] = t2; uint32_t u = cl[j]; cl[j] = cl[j - 1]; cl[j - 1] = u;
+    }
+  return want <= m ? cl[m - want] : 0;
+}
+__declspec(dllexport) int fl26_swiss_lhalf(const uint32_t* v, int n)
+{
+  if (!v || n != 7 || v[0] >= LH_MAX) return g_nlh;
+  lhalf_t* h = &g_lh[v[0]];
+  h->reg = (uint16_t)v[1]; h->r0 = (uint16_t)v[2]; h->r1 = (uint16_t)v[3]; h->xreg = (uint16_t)v[4]; h->xd0 = (uint16_t)v[5]; h->xd1 = (uint16_t)v[6];
+  if ((int)v[0] >= g_nlh) g_nlh = (int)v[0] + 1;
+  logf("fl26swiss: lhalf %u -- reg %u rounds %u..%u (+ reg %u on days %u..%u)", v[0], v[1], v[2], v[3], v[4], v[5], v[6]);
+  return g_nlh;
+}
+/* half h's table this season: clubs and keys, best first */
+static int lh_table(int hid, uint32_t* cl, tc_key_t* ky, int cap)
+{
+  if (hid < 0 || hid >= g_nlh || !g_lh[hid].reg) return 0;
+  const lhalf_t* h = &g_lh[hid];
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return 0;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap2 = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  unsigned char* rec = find_rec(h->reg);
+  if (!blk || !cap2 || cap2 > 200000 || !rec) return 0;
+  int year = *(uint16_t*)(rec + 0x2fc), m = 0;
+  for (unsigned j = 0; j < rec_count(rec) && m < cap; j++) {      /* every club of the league, from 0 */
+    cl[m] = canon_club(rec_clubs(rec)[j]); ky[m].pos = 0; ky[m].pts = ky[m].gd = ky[m].gf = 0; m++;
+  }
+  for (uint32_t i = 0; i < cap2; i++) {
+    const unsigned char* mt = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)mt == 0xffff || !(mt[7] & 0x40)) continue;
+    uint16_t rg = *(const uint16_t*)(mt + 4);
+    if (*(const uint16_t*)(mt + 8) != year && rg == h->reg) continue;
+    if (rg == h->reg) { if (mt[6] < h->r0 || mt[6] > h->r1) continue; }
+    else if (h->xreg && rg == h->xreg) {
+      int mo = mt[10], dd = mt[11];
+      if (mo < 1 || mo > 12 || *(const uint16_t*)(mt + 8) != year) continue;
+      int doy = MONTH0[mo - 1] + dd - 1;
+      if (doy < h->xd0 || doy > h->xd1) continue;
+    } else continue;
+    uint32_t side[2] = { *(const uint32_t*)(mt + 0x14), *(const uint32_t*)(mt + 0x18) };
+    int g[2] = { mt[0x1c], mt[0x1f] };
+    for (int z = 0; z < 2; z++)
+      for (int k = 0; k < m; k++)
+        if (same_club(cl[k], side[z])) {
+          ky[k].pts += g[z] > g[1 - z] ? 3 : g[z] == g[1 - z] ? 1 : 0; ky[k].gd += g[z] - g[1 - z]; ky[k].gf += g[z]; break;
+        }
+  }
+  for (int i = 1; i < m; i++)
+    for (int j = i; j > 0; j--) {
+      tc_key_t* a = &ky[j - 1]; tc_key_t* b = &ky[j];
+      if (b->pts < a->pts || (b->pts == a->pts && (b->gd < a->gd || (b->gd == a->gd && b->gf <= a->gf)))) break;
+      tc_key_t t2 = *a; *a = *b; *b = t2; uint32_t u = cl[j]; cl[j] = cl[j - 1]; cl[j - 1] = u;
+    }
+  for (int i = 0; i < m; i++) ky[i].pos = i + 1;
+  return m;
+}
+static int mp_year_matches(uint16_t reg, int year)
+{
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return 0;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return 0;
+  int n = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m != 0xffff && *(const uint16_t*)(m + 4) == reg && *(const uint16_t*)(m + 8) == year) n++;
+  }
+  return n;
+}
+static void mphase_tick(void)
+{
+  if (!g_nmp || today() < 1) return;
+  int d = today(), year = rc_cal_year();
+  if (year < 0) return;
+  for (int k = 0; k < g_nmp; k++) {
+    mphase_t* m = &g_mp[k];
+    if (m->made == year || d < m->fill) continue;
+    if (m->after && !mp_league_over(m->after)) continue;
+    {   /* lab 21/11/2026: a save loaded after the fill -- filled and registered again, the phase's matches were gone
+           (day 356: 251..254 "filled ... and registered", then 0 matches each) */
+      int have = mp_year_matches(m->reg, year);
+      if (have > 0) { m->made = year; logf("fl26swiss: mphase -- day %d: reg %u already has %d match(es) of %d (a loaded save); left as it is", d, (unsigned)m->reg, have, year); continue; }
+    }
+    uint32_t cl[MP_MAXS]; int nc = 0, ok = 1;
+    for (int i = 0; i < m->n && ok; i++) {
+      uint32_t sv = m->src[i] & ~TC_SRC_SEED;
+      if ((sv & 0xf0000000u) == TC_SRC_TAB && (sv & 0x40)) {   /* <reg>.<p> | 0x40: the rest of the zone from place p */
+        const char* how = "";
+        uint16_t lg = (uint16_t)((sv >> 8) & 0xffff);
+        /* lab 23/11/2026: the rest stops at the zone's own size (its table's rows, else its list) -- past it cwc_club
+           fell to other sources and 2027's Reválida Zona B (254) got 17 clubs, the Promocional's 8 among them: two of
+           them were then 'relegated' from the Federal A and the Interior began 2028 two short */
+        int lim = 48;
+        { unsigned char* zr = get_rec(lg); unsigned char* zt = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(lg);
+          uint32_t rows = zt ? *(uint32_t*)(zt + 0x3c0) : 0;
+          if (rows && rows <= 48) lim = (int)rows; else if (zr) lim = (int)rec_count(zr);
+          if (zr && (int)rec_count(zr) < lim && rec_count(zr) > 0) lim = (int)rec_count(zr); }
+        for (int rank = (int)(sv & 0x3f); rank <= lim && nc < MP_MAXS; rank++) {
+          uint32_t x = cwc_club(lg, rank, &how);
+          if (!x) break;
+          x = canon_club(x);
+          if (!has_club(cl, (size_t)nc, x)) cl[nc++] = x;
+        }
+        continue;
+      }
+      uint32_t x = tc_source(&m->ctx, sv, year, cl, nc);
+      if (!x) { ok = 0; break; }
+      cl[nc++] = x;
+    }
+    m->made = year;
+    if (!ok) { logf("fl26swiss: mphase -- day %d: reg %u: a place has no club; not filled", d, (unsigned)m->reg); continue; }
+    u32vec va = { cl, cl + nc, cl + nc };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(m->reg, &va, 1);
+    run_flush();
+    HMODULE j = GetModuleHandleA("fl26join.dll");
+    typedef int (*open_fn)(uint32_t);
+    open_fn op = j ? (open_fn)(void*)GetProcAddress(j, "fl26_join_late_open") : 0;
+    int opened = op ? op(m->reg) : 0;
+    uint16_t ids[1] = { m->reg };
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { ids, ids + 1, ids + 1 };
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+    run_flush();
+    logf("fl26swiss: mphase -- day %d: reg %u filled with %d club(s) (%08x %08x ...) and registered%s", d, (unsigned)m->reg, nc,
+         cl[0], cl[1], opened ? "" : " -- fl26join did not open it (no rlate line?)");
+    sched_rebuild("mphase registered");
+  }
+}
+/* ==== end of mphase ==== */
+/* ==== lab 21/11/2026: interzonal matches that count in the zones' tables (izone) -- the Primera Nacional's rival
+ * (one, home and away) and the Primera C's three (GUIA-ARGENTINA-FL27.md 3.2, 3.5): "el partido interzonal suma en la
+ * tabla de la zona de cada club". The matches are a tcup's (fixed pairs: source 0x50000000 | team id), shown as an
+ * item of the league's popup; the zones' tables are the game's: 0x140fcb660(table, reg) builds the rows from the
+ * league's matches in 0x140fc8560 and sorts them after. Hooked there, the played interzonal matches of the season are
+ * added to the rows of the clubs of that zone (played, points, won/drawn/lost, won at home, goals for and against),
+ * before the game's sort -- so the order, the positions and the live table are the game's own.
+ *   sline fl26_swiss_izone <tcup reg> <n> <zone regs x n>
+ * A row: +0 the club, +8 the points, +9..+0x0e six-bit counts from the bottom (won, lost, drawn, won at home) then the
+ * goals for and against as twelve bits each, +0x0f the matches played (ssum_rows reads it the same). */
+#define IZ_MAX 4
+typedef struct { uint16_t reg; int n; uint16_t lg[8]; } iz_t;
+static iz_t g_iz[IZ_MAX]; static int g_niz = 0;
+__declspec(dllexport) int fl26_swiss_izone(const uint32_t* v, int n)
+{
+  if (!v || n < 3 || g_niz >= IZ_MAX) return g_niz;
+  iz_t* z = &g_iz[g_niz];
+  z->reg = (uint16_t)v[0]; z->n = (int)v[1];
+  if (z->n < 1 || z->n > 8 || n != 2 + z->n) { logf("fl26swiss: izone -- bad line (%d values)", n); return g_niz; }
+  for (int i = 0; i < z->n; i++) z->lg[i] = (uint16_t)v[2 + i];
+  g_niz++;
+  logf("fl26swiss: izone -- the matches of reg %u count in %d zone table(s)", (unsigned)z->reg, z->n);
+  return g_niz;
+}
+static void iz_row_add(unsigned char* row, int me, int them, int home)
+{
+  uint64_t v = 0;
+  for (int b = 0; b < 6; b++) v |= (uint64_t)row[9 + b] << (8 * b);
+  unsigned won = v & 63, lost = (v >> 6) & 63, drawn = (v >> 12) & 63, hwon = (v >> 18) & 63;
+  unsigned gf = (v >> 24) & 0xfff, ga = (v >> 36) & 0xfff;
+  if (me > them) { won++; if (home) hwon++; row[8] = (unsigned char)(row[8] + 3); }
+  else if (me == them) { drawn++; row[8] = (unsigned char)(row[8] + 1); }
+  else lost++;
+  gf += (unsigned)me; ga += (unsigned)them;
+  v = (uint64_t)(won & 63) | (uint64_t)(lost & 63) << 6 | (uint64_t)(drawn & 63) << 12 | (uint64_t)(hwon & 63) << 18
+    | (uint64_t)(gf & 0xfff) << 24 | (uint64_t)(ga & 0xfff) << 36;
+  for (int b = 0; b < 6; b++) row[9 + b] = (unsigned char)(v >> (8 * b));
+  row[0x0f]++;
+}
+static void iz_add(unsigned char* t, uint16_t reg)
+{
+  if (!t || !g_niz) return;
+  const iz_t* z = 0;
+  for (int k = 0; k < g_niz && !z; k++) for (int i = 0; i < g_iz[k].n; i++) if (g_iz[k].lg[i] == reg) z = &g_iz[k];
+  if (!z) return;
+  uint32_t rows = *(uint32_t*)(t + 0x3c0);
+  if (!rows || rows > 48) return;
+  unsigned char* rec = find_rec(reg);
+  int year = rec ? *(uint16_t*)(rec + 0x2fc) : -1;
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return;
+  int added = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m == 0xffff || *(const uint16_t*)(m + 4) != z->reg || !(m[7] & 0x40)) continue;
+    if (year > 0 && *(const uint16_t*)(m + 8) != year && *(const uint16_t*)(m + 8) != year - 1) continue;
+    uint32_t side[2] = { *(const uint32_t*)(m + 0x14), *(const uint32_t*)(m + 0x18) };
+    int goals[2] = { m[0x1c], m[0x1f] };
+    for (int j = 0; j < 2; j++)
+      for (uint32_t r = 0; r < rows; r++)
+        if (same_club(*(uint32_t*)(t + r * 20), side[j])) { iz_row_add(t + r * 20, goals[j], goals[1 - j], j == 0); added++; break; }
+  }
+  static int said = 0;
+  if (added && said++ < 12) logf("fl26swiss: izone -- table of reg %u: %d interzonal result(s) added", (unsigned)reg, added);
+}
+#define TBUILD_RVA 0xfc8560          /* the table's rows from the league's matches (called by 0x140fcb660) */
+static const unsigned char SIG_TBUILD[21] = { 0x48, 0x89, 0x5c, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x57, 0x48, 0x83,
+                                              0xec, 0x20, 0x48, 0x8b, 0xf1, 0x0f, 0xb7, 0xfa };
+typedef uint64_t (*tbuild_fn)(void*, uint64_t, uint64_t, uint64_t);
+unsigned char* g_tramp_tbuild = 0;
+uint64_t tbuild_handler(void* t, uint64_t reg, uint64_t a3, uint64_t a4)
+{
+  uint64_t r = ((tbuild_fn)(uintptr_t)g_tramp_tbuild)(t, reg, a3, a4);
+  iz_add((unsigned char*)t, (uint16_t)reg);
+  return r;
+}
+/* ==== end of izone ==== */
+/* ==== lab 21/11/2026: the Apertura's and the Clausura's tables on the game's league table screen (lhview) ====
+ * `lphase <league> <half id> 4` puts an item "Apertura" / "Clausura" (`lpname <0xBF00 + half id> <name>`) in the league's
+ * menu. Chosen, the league table screen of that league is set up over the half's rows: the live table of the league
+ * (0x141579b90, what the screen reads) is given the half's rows -- each club's own row with its played, won, drawn,
+ * lost, won at home, goals and points of the half, in the half's order, the place at +4 -- and the annual rows go back
+ * when the user chooses another item, another table is set up, a day goes by or two minutes pass (the game rebuilds
+ * the live table from the matches after every match day anyway: 0x140fcb660). */
+static unsigned char g_lhv_save[48 * 20]; static uint32_t g_lhv_rows = 0; static uint16_t g_lhv_reg = 0;
+static int g_lhv_on = 0; static DWORD g_lhv_tick = 0; static int g_lhv_day = -1;
+static void lhv_restore(const char* why)
+{
+  if (!g_lhv_on) return;
+  g_lhv_on = 0;
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(g_lhv_reg);
+  if (!t || *(uint32_t*)(t + 0x3c0) != g_lhv_rows) return;
+  memcpy(t, g_lhv_save, (size_t)g_lhv_rows * 20);
+  static int said = 0;
+  if (said++ < 8) logf("fl26swiss: lhview -- the annual table of reg %u back (%s)", (unsigned)g_lhv_reg, why);
+}
+static void lhv_check(void)
+{
+  if (g_lhv_on && (GetTickCount() - g_lhv_tick > 120000u || abs_day() != g_lhv_day)) lhv_restore("time");
+}
+static int lhv_overlay(int hid)
+{
+  if (hid < 0 || hid >= g_nlh || !g_lh[hid].reg) return 0;
+  const lhalf_t* h = &g_lh[hid];
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(h->reg);
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+  if (!rows || rows > 48) return 0;
+  lhv_restore("another half");
+  memcpy(g_lhv_save, t, (size_t)rows * 20); g_lhv_rows = rows; g_lhv_reg = h->reg;
+  int pl[48] = { 0 }, w[48] = { 0 }, d[48] = { 0 }, l[48] = { 0 }, hw[48] = { 0 }, gf[48] = { 0 }, ga[48] = { 0 };
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  unsigned char* rec = find_rec(h->reg);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff || !blk || !rec) return 0;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  int year = *(uint16_t*)(rec + 0x2fc);
+  for (uint32_t i = 0; i < cap && cap <= 200000; i++) {
+    const unsigned char* mt = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)mt == 0xffff || !(mt[7] & 0x40) || *(const uint16_t*)(mt + 8) != year) continue;
+    uint16_t rg = *(const uint16_t*)(mt + 4);
+    if (rg == h->reg) { if (mt[6] < h->r0 || mt[6] > h->r1) continue; }
+    else if (h->xreg && rg == h->xreg) {
+      int mo = mt[10], dd = mt[11];
+      if (mo < 1 || mo > 12) continue;
+      int doy = MONTH0[mo - 1] + dd - 1;
+      if (doy < h->xd0 || doy > h->xd1) continue;
+    } else continue;
+    uint32_t side[2] = { *(const uint32_t*)(mt + 0x14), *(const uint32_t*)(mt + 0x18) };
+    int g2[2] = { mt[0x1c], mt[0x1f] };
+    for (int z = 0; z < 2; z++)
+      for (uint32_t k = 0; k < rows; k++)
+        if (same_club(*(uint32_t*)(g_lhv_save + k * 20), side[z])) {
+          pl[k]++; gf[k] += g2[z]; ga[k] += g2[1 - z];
+          if (g2[z] > g2[1 - z]) { w[k]++; if (z == 0) hw[k]++; } else if (g2[z] == g2[1 - z]) d[k]++; else l[k]++;
+          break;
+        }
+  }
+  int ord[48];
+  for (uint32_t k = 0; k < rows; k++) ord[k] = (int)k;
+  for (uint32_t i = 1; i < rows; i++)
+    for (uint32_t j = i; j > 0; j--) {
+      int a = ord[j - 1], b = ord[j];
+      int pa = 3 * w[a] + d[a], pb = 3 * w[b] + d[b];
+      if (pb < pa || (pb == pa && (gf[b] - ga[b] < gf[a] - ga[a] || (gf[b] - ga[b] == gf[a] - ga[a] && gf[b] <= gf[a])))) break;
+      ord[j - 1] = b; ord[j] = a;
+    }
+  for (uint32_t k = 0; k < rows; k++) {
+    int s = ord[k];
+    unsigned char* row = t + k * 20;
+    memcpy(row, g_lhv_save + s * 20, 20);
+    *(uint32_t*)(row + 4) = k + 1;
+    row[8] = (unsigned char)(3 * w[s] + d[s]);
+    uint64_t v = (uint64_t)(w[s] & 63) | (uint64_t)(l[s] & 63) << 6 | (uint64_t)(d[s] & 63) << 12 | (uint64_t)(hw[s] & 63) << 18
+               | (uint64_t)(gf[s] & 0xfff) << 24 | (uint64_t)(ga[s] & 0xfff) << 36;
+    for (int b = 0; b < 6; b++) row[9 + b] = (unsigned char)(v >> (8 * b));
+    row[0x0f] = (unsigned char)pl[s];
+  }
+  g_lhv_on = 1; g_lhv_tick = GetTickCount(); g_lhv_day = abs_day();
+  static int said = 0;
+  if (said++ < 8) logf("fl26swiss: lhview -- reg %u shows half %d (%u rows)", (unsigned)h->reg, hid, rows);
+  return 1;
+}
+/* ==== end of lhview ==== */
 /* B236: a cup of ours goes by its played final -- the two clubs its match was played between and
    its score -- before the game's rights code, which named the club the holder knocked out in the
    semi-final as the CAF Champions League's winner, and the CAF Super Cup was played without the
@@ -8734,10 +10723,19 @@ static int libq_item_want(void)
   return d >= 182 ? (libq_any_live() ? 1 : -1) : 0;
 }
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
+static int tcpg_phase(uint32_t comp, uint16_t* out);
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
   uintptr_t ra = (uintptr_t)__builtin_return_address(0);
   uint64_t r = phkind_core(comp, kind, ra);
+  {   /* lab 21/11/2026: a knockout item of a league's menu (tcpg) */
+    uint16_t tr;
+    if (comp && kind == 0 && __builtin_return_address(0) == (void*)(uintptr_t)(g_base + PAGE_GRP_RA) && tcpg_phase(*comp, &tr)) {
+      static int said_tp = 0;
+      if (said_tp++ < 12) logf("fl26swiss: knockout pages -- comp %u: the chosen item's regulation %u", *comp, (unsigned)tr);
+      return (r & ~0xffffull) | tr;
+    }
+  }
   if (!comp) return r;
   if (ra == g_base + MENU_GRP_RA) { g_ci_native = (uint16_t)r; g_ci_native_comp = *comp; }
   /* an extra Competition Info item was picked (ci_sel_handler): its page shows that round */
@@ -8984,8 +10982,13 @@ static const unsigned char SIG_TXTGET[14] = {
   0x4c, 0x8b, 0x41, 0x08, 0x45, 0x33, 0xc9, 0x45, 0x8b, 0x10, 0x49, 0x8d, 0x40, 0x08 };
 typedef const char* (*txtget_fn)(void* table, uint64_t index);
 unsigned char* g_tramp_txtget = 0;
+static const char* lpn_text_name(int k);
 const char* txtget_handler(void* table, uint64_t index)
 {
+  if ((uint16_t)index >= 0xfd00u && (uint16_t)index < 0xfd00u + 512u) {   /* lab 21/11/2026: lpname texts (the lookup gets a u16 index, as LP_TEXT below: the first test showed "NoString") */
+    const char* nm = lpn_text_name((int)((uint16_t)index - 0xfd00u));
+    if (nm) return nm;
+  }
   if ((uint16_t)index == (uint16_t)LP_TEXT) return "League Phase";
   if ((uint16_t)index == (uint16_t)QR3_TEXT) return "3rd Qualifying Round";
   if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
@@ -9230,6 +11233,9 @@ static void libq_tlist_handler(uint64_t phase, void* out)
     return;
   }
 
+  g_tcpg.on = 0;   /* lab 21/11/2026: a knockout item's pages */
+  if (!g_libq_tlist_only && g_tpg >= 0 && g_tpg < g_ntc && (uint16_t)phase == g_tc[g_tpg].reg && out && tcpg_build(out) > 0)
+    return;
   if (g_libq_tlist_only) {
     g_libq_tlist_hit = 1;
     f((phase & ~0xffffull) | g_libq_tlist_only, out);
@@ -9299,6 +11305,10 @@ static uint64_t libq_page_break(const unsigned char* cur,
                                 const unsigned char* end)
 {
   if (!cur || cur + 16 > end) return 0;
+  {
+    int kb = tcpg_break(cur, end);   /* lab 21/11/2026 */
+    if (kb >= 0) return (uint64_t)kb;
+  }
 
   unsigned char* o =
       (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
@@ -9598,6 +11608,542 @@ static uint32_t ci_live_comp(uint16_t reg)
   return r ? *(uint32_t*)(r + 0x80) : CI_NO_COMP;
 }
 
+/* ---- lab 20/11/2026: the zones of one competition (Argentina's Primera Nacional A/B, the Regional's regions) ----
+   The world file's `lphase <host> <zone> 3` and `lpname <reg> <name>` (fl26swiss.lua). In Mod Studio 0.4.0 each zone is a
+   league of its own (a group set, fl26chain); here (1) Competition Info's list shows the host only (libq_skipph_handler
+   below), and (2) the league table screen -- setup 0x140aeda10, vtable 0x1426844b8, its regulation at +0xa8, one row per
+   club of the table, no 10-row page (found 20/11 by the screen probe and a scan of the 928 screens' setups) -- pages the
+   zones with L1/R1 (its +0xf8 / +0x100 were the empty 0x141794410): each zone whole, its name in the title. */
+#define ZN_MAX 512   /* lab 21/11/2026: the zones, the knockout items' and rounds' names */
+typedef struct { uint16_t host, reg; } zn_t;
+static zn_t g_zn[ZN_MAX]; static int g_nzn = 0;
+typedef struct { uint16_t reg; char name[48]; } znn_t;
+static znn_t g_znn[ZN_MAX]; static int g_nznn = 0;
+__declspec(dllexport) int fl26_swiss_lphase(const uint32_t* v, int n)
+{
+  g_nzn = 0; g_nkp = 0;
+  for (int i = 0; v && i + 2 < n && g_nzn < ZN_MAX; i += 3)
+    if (v[i] && v[i + 1] && v[i] <= 0xffff && v[i + 1] <= 0xffff && v[i + 2] == 3) {
+      g_zn[g_nzn].host = (uint16_t)v[i]; g_zn[g_nzn].reg = (uint16_t)v[i + 1]; g_nzn++;
+    } else if (v[i] && v[i + 1] && v[i] <= 0xffff && v[i + 1] <= 0xffff && (v[i + 2] == 1 || v[i + 2] == 2 || v[i + 2] == 4 || v[i + 2] == 5) && g_nkp < KP_MAX) {
+      g_kp[g_nkp].host = (uint16_t)v[i]; g_kp[g_nkp].reg = (uint16_t)v[i + 1]; g_kp[g_nkp].type = (uint8_t)v[i + 2]; g_nkp++;   /* lab 21/11/2026 */
+    }
+  logf("fl26swiss: zones -- %d zone(s) of a competition (lphase), paged with L1/R1 on its table; %d knockout item(s)", g_nzn, g_nkp);
+  return g_nzn;
+}
+__declspec(dllexport) int fl26_swiss_lphase_name(uint32_t reg, const char* name)
+{
+  if (!reg || reg > 0xffff || !name || !*name) return g_nznn;
+  int k = 0;
+  while (k < g_nznn && g_znn[k].reg != reg) k++;
+  if (k == ZN_MAX) return g_nznn;
+  g_znn[k].reg = (uint16_t)reg; snprintf(g_znn[k].name, sizeof g_znn[k].name, "%s", name);
+  if (k == g_nznn) g_nznn++;
+  return g_nznn;
+}
+static const char* zn_name(uint16_t reg)
+{
+  for (int k = 0; k < g_nznn; k++) if (g_znn[k].reg == reg) return g_znn[k].name;
+  return 0;
+}
+static uint16_t zn_host(uint16_t reg)
+{
+  for (int i = 0; i < g_nzn; i++) if (g_zn[i].reg == reg || g_zn[i].host == reg) return g_zn[i].host;
+  return 0;
+}
+/* lab 21/11/2026 (ported from ms030's B-Norway phlist_handler): Gols / Assistencias / the participants panel ("Times
+   participantes" of Selecionar competicao) take 0x140c6b9b0(a1, &regs, comp, ...), the competition's phase regulations;
+   a competition whose league has zones (lphase host zone 3) gets every zone added -- the first screen test (Argentina,
+   21/11) listed the host zone only: 15 of the Interior's 64, 18 of the Primera Nacional's 36 */
+#define PHLIST_RVA 0xc6b9b0
+static const unsigned char SIG_PHLIST[17] = {
+  0x48, 0x89, 0x5c, 0x24, 0x08, 0x44, 0x89, 0x44, 0x24, 0x18, 0x55, 0x56, 0x57, 0x48, 0x83, 0xec, 0x20 };
+typedef uint64_t (*phlist_fn)(uint64_t a1, void* vec, uint64_t comp, uint64_t a4);
+unsigned char* g_tramp_phlist = 0;
+uint64_t phlist_handler(uint64_t a1, void* vec, uint64_t comp, uint64_t a4)
+{
+  uint64_t r = ((phlist_fn)(uintptr_t)g_tramp_phlist)(a1, vec, comp, a4);
+  comp &= 0xffffffffu;
+  {   static int probe = 0;   /* lab 21/11/2026: probe -- who asks, for what (the first screen test logged no use) */
+      if (probe++ < 40) {
+        uint16_t** pv = (uint16_t**)vec; int nv = pv && pv[0] && pv[1] >= pv[0] ? (int)(pv[1] - pv[0]) : -1;
+        logf("fl26swiss: zones -- phase list probe: comp %u, %d reg(s) [%u %u], from %llx", (unsigned)comp, nv,
+             nv > 0 ? pv[0][0] : 0, nv > 1 ? pv[0][1] : 0, (unsigned long long)((uintptr_t)__builtin_return_address(0) - g_base));
+      } }
+  if (!vec || !g_nzn) return r;
+  uint16_t host = 0;
+  for (int i = 0; i < g_nzn && !host; i++) if (ci_live_comp(g_zn[i].host) == (uint32_t)comp) host = g_zn[i].host;
+  if (!host) return r;
+  uint16_t** v = (uint16_t**)vec; int added = 0;
+  for (int i = 0; i < g_nzn; i++) {
+    if (g_zn[i].host != host || !find_rec(g_zn[i].reg)) continue;
+    int have = 0;
+    for (uint16_t* q = v[0]; q && q < v[1]; q++) if (*q == g_zn[i].reg) have = 1;
+    if (!have) { ((push16_fn)(uintptr_t)(g_base + PUSH16_RVA))(vec, &g_zn[i].reg); added++; }
+  }
+  static int said = 0;
+  if (added && said++ < 12) logf("fl26swiss: zones -- phase list of comp %u (league %u): %d zone(s) added", (unsigned)comp, (unsigned)host, added);
+  return r;
+}
+static uint16_t zn_host_of(uint16_t lg) { for (int i = 0; i < g_nzn; i++) if (g_zn[i].reg == lg) return g_zn[i].host; return lg; }
+static int zn_set(uint16_t host, uint16_t* out, int cap)
+{
+  int n = 0;
+  out[n++] = host;
+  for (int i = 0; i < g_nzn && n < cap; i++) if (g_zn[i].host == host && find_rec(g_zn[i].reg)) out[n++] = g_zn[i].reg;
+  return n;
+}
+/* ==== lab 21/11/2026: ported from ms030 (B-Serie D 19/11, B-Norway 18-19/11) -- the participants panel and the
+   goals / assists rankings of a league with zones; ms040 had lost both (the Interior's panel showed 15 of its 64) ==== */
+/* a rel32 call at exe+ra to exe+want is pointed at handler through a stub within 2 GB of the exe */
+static int call_retarget(uint64_t exe_base, uint32_t ra, uint32_t want, void* handler)
+{
+  unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + ra);
+  if (c[0] != 0xe8 || (uint64_t)(uintptr_t)(c + 5) + *(int32_t*)(c + 1) != exe_base + want) return 2;
+  unsigned char* st = 0;
+  for (uint64_t k = 1; k < 512 && !st; k++) {
+    uint64_t at = (exe_base - k * 0x100000ull) & ~0xffffull;
+    st = (unsigned char*)VirtualAlloc((void*)(uintptr_t)at, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  }
+  if (!st) return 3;
+  int64_t rel = (int64_t)(uintptr_t)st - (int64_t)(uintptr_t)(c + 5);
+  if (rel > 0x7fffffffll || rel < -0x80000000ll) return 4;
+  st[0] = 0x48; st[1] = 0xb8; *(uint64_t*)(st + 2) = (uint64_t)(uintptr_t)handler; st[10] = 0xff; st[11] = 0xe0;
+  DWORD old;
+  if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return 5;
+  *(int32_t*)(c + 1) = (int32_t)rel;
+  VirtualProtect(c, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), c, 5);
+  return 0;
+}
+/* the host and its zones that have a table this season */
+static int zn_live(uint16_t host, uint16_t* out, int cap)
+{
+  int n = zn_set(host, out, cap), k = n > 0 ? 1 : 0;
+  for (int i = 1; i < n; i++) {
+    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(out[i]);
+    if (t && *(uint32_t*)(t + 0x3c0) > 0) out[k++] = out[i];
+  }
+  return k;
+}
+/* Info. da Competicao's "Times participantes": 0x140b08e20(self, &out, &regs), regs a u16 vector of regulations, every
+   one's clubs listed once; called at 0x140b09388 and 0x140b094ce. A host with zones gets its live zones after it. */
+#define PLIST_RVA 0xb08e20
+#define PLIST_CALL1_RVA 0xb09388
+#define PLIST_CALL2_RVA 0xb094ce
+typedef void (*plist_fn)(void* self, void* out, void* regs);
+void plist_handler(void* self, void* out, uint16_t** regs)
+{
+  if (regs && regs[0] && regs[1] > regs[0] && regs[1] - regs[0] < 64) {
+    uint16_t buf[512]; int n = 0, added = 0;
+    for (uint16_t* r = regs[0]; r < regs[1] && n < 440; r++) {
+      buf[n++] = *r;
+      uint16_t rg[72]; int g = zn_live(*r, rg, 72);
+      if (g > 1) for (int k = 1; k < g && n < 512; k++) { buf[n++] = rg[k]; added++; }
+    }
+    if (added) {
+      uint16_t* v[3] = { buf, buf + n, buf + n };
+      static int said = 0;
+      if (said++ < 8) logf("fl26swiss: participants -- reg %u: %d zone(s) added", (unsigned)regs[0][0], added);
+      ((plist_fn)(uintptr_t)(g_base + PLIST_RVA))(self, out, v);
+      return;
+    }
+  }
+  ((plist_fn)(uintptr_t)(g_base + PLIST_RVA))(self, out, regs);
+}
+/* Classif. por gols / assistencias reads ONE regulation's ranking: 0x14157c5d0(reg, rec+0x2fc, assists) -> 40 rows of
+   0x14 bytes (+0 player, +8 club, +0xc place, +0x10 goals/assists), the count at +0x320; the call at 0x140b1768b gets
+   a player's numbers summed over the host, its zones, its phase leagues (lphase 2, and their zones) and its knockouts
+   (lphase 1, and the finals on their pages) -- the best 40 kept */
+#define RANK_CALL_RVA 0xb1768b
+#define RANK_RVA 0x157c5d0
+#define RANK_ROWS 40
+#define RANK_ACC 640
+typedef unsigned char* (*rank_fn)(uint64_t reg, uint64_t key, uint64_t assists);
+static unsigned char g_rank_buf[0x400];
+typedef struct { uint32_t player; unsigned key; unsigned char row[0x14]; } rank_acc_t;
+static rank_acc_t g_rank_acc[RANK_ACC];
+static unsigned rank_key(const unsigned char* r) { return *(const uint32_t*)(r + 0x10); }
+static int rank_add(uint16_t* rg, int n, int cap, uint16_t r)
+{
+  for (int k = 0; k < n; k++) if (rg[k] == r) return n;
+  if (n < cap && find_rec(r)) rg[n++] = r;
+  return n;
+}
+unsigned char* rank_handler(uint64_t reg, uint64_t key, uint64_t assists)
+{
+  rank_fn orig = (rank_fn)(uintptr_t)(g_base + RANK_RVA);
+  unsigned char* L = orig(reg, key, assists);
+  uint16_t host = (uint16_t)reg;
+  uint16_t rg[96]; int n = zn_set(host, rg, 96);
+  for (int i = 0; i < g_nkp && n < 96; i++) {
+    if (g_kp[i].host != host || (g_kp[i].type != 1 && g_kp[i].type != 2)) continue;
+    n = rank_add(rg, n, 96, g_kp[i].reg);
+    for (int z = 0; z < g_nzn && n < 96; z++) if (g_zn[z].host == g_kp[i].reg) n = rank_add(rg, n, 96, g_zn[z].reg);
+    for (int f = 0; f < g_nkp && n < 96; f++) if (g_kp[f].type == 5 && g_kp[f].host == g_kp[i].reg) n = rank_add(rg, n, 96, g_kp[f].reg);
+  }
+  if (n < 2 || !L) return L;
+  unsigned na = 0, summed = 0;
+  for (int k = 0; k < n; k++) {
+    unsigned char* G = L;
+    if (k) {
+      unsigned char* rec = find_rec(rg[k]);
+      if (!rec) continue;
+      G = orig(rg[k], *(uint16_t*)(rec + 0x2fc), assists);
+      if (!G) continue;
+    }
+    unsigned m = *(uint32_t*)(G + 0x320);
+    for (unsigned i = 0; i < m && i < RANK_ROWS; i++) {
+      const unsigned char* r = G + i * 0x14;
+      uint32_t pl = *(const uint32_t*)r;
+      unsigned j = 0;
+      while (j < na && g_rank_acc[j].player != pl) j++;
+      if (j < na) { g_rank_acc[j].key += rank_key(r); summed++; continue; }
+      if (na >= RANK_ACC) continue;
+      g_rank_acc[na].player = pl; g_rank_acc[na].key = rank_key(r); memcpy(g_rank_acc[na].row, r, 0x14); na++;
+    }
+  }
+  for (unsigned a = 1; a < na; a++)
+    for (unsigned b = a; b > 0 && g_rank_acc[b].key > g_rank_acc[b - 1].key; b--) { rank_acc_t t = g_rank_acc[b]; g_rank_acc[b] = g_rank_acc[b - 1]; g_rank_acc[b - 1] = t; }
+  unsigned char* B = g_rank_buf; unsigned nb = na < RANK_ROWS ? na : RANK_ROWS;
+  memset(B, 0, sizeof g_rank_buf);
+  for (unsigned i = 0; i < nb; i++) {
+    memcpy(B + i * 0x14, g_rank_acc[i].row, 0x14);
+    *(uint32_t*)(B + i * 0x14 + 0x10) = g_rank_acc[i].key;
+  }
+  for (unsigned i = 0; i < nb; i++)
+    *(uint32_t*)(B + i * 0x14 + 0xc) = (i && rank_key(B + i * 0x14) == rank_key(B + (i - 1) * 0x14))
+                                       ? *(uint32_t*)(B + (i - 1) * 0x14 + 0xc) : i + 1;
+  memcpy(B + 0x320, &nb, 4);
+  static int said = 0;
+  if (said++ < 8) logf("fl26swiss: ranking -- reg %u and %d other phase(s): %u player(s), %u row(s) summed", (unsigned)host, n - 1, nb, summed);
+  return B;
+}
+/* ==== end of the ms030 port ==== */
+/* a zone's competition, not its host's: left out of Competition Info's list */
+static int zn_hidden_comp(uint32_t comp)
+{
+  for (int i = 0; i < g_nkp; i++) {   /* lab 21/11/2026: a knockout behind its league's item */
+    if (g_kp[i].type == 4) continue;   /* a half: its id, no regulation of its own */
+    unsigned char* kr = find_rec(g_kp[i].reg); unsigned char* hr = find_rec(g_kp[i].host);
+    if (kr && hr && *(uint32_t*)(kr + 0x80) == comp && *(uint32_t*)(hr + 0x80) != comp) return 1;
+  }
+  for (int i = 0; i < g_nzn; i++) {
+    unsigned char* zr = find_rec(g_zn[i].reg); unsigned char* hr = find_rec(g_zn[i].host);
+    if (zr && hr && *(uint32_t*)(zr + 0x80) == comp && *(uint32_t*)(hr + 0x80) != comp) return 1;
+  }
+  return 0;
+}
+#define LTAB_VT_RVA     0x26844b8
+#define LTAB_BUTTON_RVA 0xe40fa0ull     /* screen_set_button(self, button, mode): [[self+0x88]+0x120+4*button] */
+#define LTAB_HDR_DRAW   0xe52850ull     /* the header's redraw */
+#define LTAB_HDR_LAST   0x351ae28ull    /* the competition it drew last */
+#define LTAB_SETUP_RVA  0xaeda10
+#define LTAB_EMPTY_RVA  0x1794410
+#define LTAB_TITLE_PTR  0x36f9a98       /* the header object: its text (a std::string) at +0x20, redraw flag +0x41 */
+#define LTAB_SASSIGN    0x402370        /* std::string::assign(str, ptr, len) */
+typedef void (*ltab_fn)(void* self);
+typedef void* (*ltab_sassign_fn)(void* str, const char* p, size_t n);
+/* the pager's place on the league table vs the group screen was measured in the lab (21/11/2026) with a probe that
+   dumped both widgets; it is out of this build */
+static void pg_dump(const char* who, unsigned char* hl, unsigned char* pg) { (void)who; (void)hl; (void)pg; }
+static unsigned char* pg_headline(void* self, const char* name)
+{
+  typedef unsigned char* (*root_fn)(void*);
+  typedef unsigned char* (*find_fn)(void*, const char*);
+  unsigned char* root = ((root_fn)(uintptr_t)(g_base + 0xe3dc90))(self);
+  if (!root) return 0;
+  void* fo = root + 0x98;
+  return ((find_fn)(uintptr_t)(*(uint64_t*)(*(uint64_t*)fo + 8)))(fo, name);
+}
+void grp_r1_probe(void* self)
+{
+  ((void (*)(void*))(uintptr_t)(g_base + 0xaf6b40))(self);
+  unsigned char* hl = pg_headline(self, *(const char**)(uintptr_t)(g_base + 0x34acd08));
+  unsigned char* pg = hl ? ((unsigned char* (*)(unsigned char*))(uintptr_t)(g_base + 0xe543b0))(hl) : 0;
+  pg_dump("groups", hl, pg);
+}
+/* the L1/R1 + "1/8" badges of the group screen (20/11/2026, REA): its page refresh 0x140af6c60 takes the "headline" widget
+   of the screen (0x140e3dc90(self)->+0x98 find), its pager 0x140e543b0(headline) -- only when headline+0xe0 is set by
+   the layout -- and shows page/total with 0x140e5af00(pager, page, total). The league table's headline is asked the same;
+   if its layout left +0xe0 at 0 we try with it set, and put it back when there is no pager. */
+static void ltab_pager(void* self, int page, int total)
+{
+  typedef unsigned char* (*root_fn)(void*);
+  typedef unsigned char* (*find_fn)(void*, const char*);
+  typedef unsigned char* (*pager_fn)(unsigned char*);
+  typedef void (*show_fn)(unsigned char*, uint32_t, uint32_t);
+  unsigned char* root = ((root_fn)(uintptr_t)(g_base + 0xe3dc90))(self);
+  if (!root) return;
+  void* fo = root + 0x98;
+  unsigned char* hl = ((find_fn)(uintptr_t)(*(uint64_t*)(*(uint64_t*)fo + 8)))(fo, (const char*)(uintptr_t)(g_base + 0x2684018));
+  static int said = 0;
+  if (!hl) { if (said++ < 4) logf("fl26swiss: zones -- pager: no headline"); return; }
+  int forced = 0;
+  unsigned char* pg = ((pager_fn)(uintptr_t)(g_base + 0xe543b0))(hl);
+  if (!pg && *(int32_t*)(hl + 0xe0) == 0) {
+    *(int32_t*)(hl + 0xe0) = 1; forced = 1;
+    pg = ((pager_fn)(uintptr_t)(g_base + 0xe543b0))(hl);
+    if (!pg) *(int32_t*)(hl + 0xe0) = 0;
+  }
+  if (said++ < 4) logf("fl26swiss: zones -- pager: %s%s (%d/%d)", pg ? "shown" : "none in the layout", forced ? ", +0xe0 forced" : "",
+                       page, total);
+  if (pg) ((show_fn)(uintptr_t)(g_base + 0xe5af00))(pg, (uint32_t)page, (uint32_t)total);
+  pg_dump("league", hl, pg);
+}
+static void ltab_title(void* self)
+{
+  uint16_t reg = *(uint16_t*)((char*)self + 0xa8), host = zn_host(reg);
+  if (!host) return;
+  unsigned char* hdr = *(unsigned char**)(uintptr_t)(g_base + LTAB_TITLE_PTR);
+  unsigned char* hr = find_rec(host);
+  if (!hdr || !hr) return;
+  const char* zn = zn_name(reg);
+  char t[120];
+  typedef const char* (*recname_fn)(unsigned char* rec);           /* the league's name as the screen takes it */
+  const char* nm = ((recname_fn)(uintptr_t)(g_base + 0x14c98b0))(hr);
+  uint16_t s[ZN_MAX]; int n = zn_set(host, s, ZN_MAX), k = 0;
+  while (k < n && s[k] != reg) k++;
+  snprintf(t, sizeof t, "%s%s%s", nm ? nm : "", zn ? " - " : "", zn ? zn : "");
+  if (n > 1) ltab_pager(self, k + 1, n);
+  ((ltab_sassign_fn)(uintptr_t)(g_base + LTAB_SASSIGN))(hdr + 0x20, t, strlen(t));
+  *(uint32_t*)(hdr + 0x18) = *(uint32_t*)(hr + 0x80);    /* the host's competition: its crest on every zone */
+  hdr[0x41] = 1;
+}
+/* the header is drawn by 0x140e52850 only when the screen changes (0x140e434fd) and only when its competition (+0x18)
+   differs from the one drawn last (0x14351ae28): after L1/R1 we clear that and draw it again (20/11/2026, REA) */
+static void ltab_title_redraw(void)
+{
+  *(uint32_t*)(uintptr_t)(g_base + LTAB_HDR_LAST) = 0xffffffffu;
+  ((void (*)(uint64_t, uint64_t, uint64_t, uint64_t))(uintptr_t)(g_base + LTAB_HDR_DRAW))(0, 0, 0, 0);
+}
+void ltab_setup_handler(void* self)
+{
+  if (g_km_half >= 0 && *(uint16_t*)((char*)self + 0xa8) == g_km_phase_host) lhv_overlay(g_km_half);
+  else lhv_restore("another table");
+  if (g_km_phase && *(uint16_t*)((char*)self + 0xa8) == g_km_phase_host) {   /* lab 21/11/2026: a phase item's table */
+    *(uint16_t*)((char*)self + 0xa8) = g_km_phase;
+    static int said_lt = 0;
+    if (said_lt++ < 8) logf("fl26swiss: league table -- the phase %u instead of %u", (unsigned)g_km_phase, (unsigned)g_km_phase_host);
+  }
+  ((ltab_fn)(uintptr_t)(g_base + LTAB_SETUP_RVA))(self);
+  ltab_title(self);
+  if (g_lhv_on && *(uint16_t*)((char*)self + 0xa8) == g_lhv_reg && g_km_half >= 0) {   /* lab 21/11/2026: "Liga - Apertura" */
+    unsigned char* hdr = *(unsigned char**)(uintptr_t)(g_base + LTAB_TITLE_PTR);
+    unsigned char* hr = find_rec(g_lhv_reg);
+    const char* hn = zn_name((uint16_t)(0xBF00u + (unsigned)g_km_half));
+    if (hdr && hr && hn) {
+      typedef const char* (*recname_fn)(unsigned char* rec);
+      const char* nm = ((recname_fn)(uintptr_t)(g_base + 0x14c98b0))(hr);
+      char tt[120]; snprintf(tt, sizeof tt, "%s - %s", nm ? nm : "", hn);
+      ((ltab_sassign_fn)(uintptr_t)(g_base + LTAB_SASSIGN))(hdr + 0x20, tt, strlen(tt));
+      hdr[0x41] = 1;
+    }
+  }
+  /* the shoulder buttons (20/11/2026, REA): the screens' input dispatch 0x140e3c810 calls vtable +0x1a8 (button 6, L1) and
+     +0x1b0 (button 7, R1) -- our v+0xf8/+0x100, v being the vtable +0xb0 -- only when [[self+0x88]+0x120+4*button] is set;
+     the group screen's setup 0x140af6130 sets both with 0x140e40fa0(self, 6|7, 2) when it has more than one page, the
+     league table screen never does (R1 did nothing). The +0x110 we set before is another field: the table closed. */
+  if (zn_set(zn_host(*(uint16_t*)((char*)self + 0xa8)), (uint16_t[2]){0}, 2) > 1) {
+    typedef void (*btn_fn)(void* self, int button, int mode);
+    ((btn_fn)(uintptr_t)(g_base + LTAB_BUTTON_RVA))(self, 6, 2);
+    ((btn_fn)(uintptr_t)(g_base + LTAB_BUTTON_RVA))(self, 7, 2);
+  }
+}
+static void ltab_page(void* self, int dir)
+{
+  uint16_t cur = *(uint16_t*)((char*)self + 0xa8), host = zn_host(cur);
+  if (!host) return;
+  uint16_t s[ZN_MAX]; int n = zn_set(host, s, ZN_MAX);
+  if (n < 2) return;
+  int k = 0;
+  while (k < n && s[k] != cur) k++;
+  k = ((k + dir) % n + n) % n;
+  *(uint16_t*)((char*)self + 0xa8) = s[k];
+  *(uint64_t*)((char*)self + 0x98) = *(uint64_t*)((char*)self + 0x90);   /* the rows the setup fills again */
+  *(uint64_t*)((char*)self + 0xb8) = *(uint64_t*)((char*)self + 0xb0);   /* the prompts it pushes again */
+  ltab_setup_handler(self);
+  ltab_title_redraw();
+  static int said = 0;
+  if (said++ < 12) logf("fl26swiss: zones -- table of reg %u: %s to reg %u (%d of %d)", (unsigned)cur, dir > 0 ? "R1" : "L1",
+                        (unsigned)s[k], k + 1, n);
+}
+void ltab_l1(void* self) { ltab_page(self, -1); }
+void ltab_r1(void* self) { ltab_page(self, +1); }
+static int ltab_install(uint64_t exe_base)
+{
+  uint64_t* vt = (uint64_t*)(uintptr_t)(exe_base + LTAB_VT_RVA);
+  if (vt[0x28 / 8] != exe_base + LTAB_SETUP_RVA) return -1;
+  if (vt[0xf8 / 8] != exe_base + LTAB_EMPTY_RVA || vt[0x100 / 8] != exe_base + LTAB_EMPTY_RVA) return -2;
+  DWORD old;
+  if (!VirtualProtect(&vt[0x28 / 8], 0x100 - 0x28 + 8, PAGE_READWRITE, &old)) return -3;
+  vt[0x28 / 8] = (uint64_t)(uintptr_t)ltab_setup_handler;
+  vt[0xf8 / 8] = (uint64_t)(uintptr_t)ltab_l1;
+  vt[0x100 / 8] = (uint64_t)(uintptr_t)ltab_r1;
+  VirtualProtect(&vt[0x28 / 8], 0x100 - 0x28 + 8, old, &old);
+  uint64_t* gv = (uint64_t*)(uintptr_t)(exe_base + 0x26861e8);      /* the group screen's R1 (probe) */
+  if (gv[0x100 / 8] == exe_base + 0xaf6b40 && VirtualProtect(&gv[0x100 / 8], 8, PAGE_READWRITE, &old)) {
+    gv[0x100 / 8] = (uint64_t)(uintptr_t)grp_r1_probe;
+    VirtualProtect(&gv[0x100 / 8], 8, old, &old);
+  }
+  return 0;
+}
+
+/* ==== lab 23/11/2026: a level of the competition LIST (Competition Info), ported from the estaduais prototype
+   (fork-unificado estaduais_list.h v8, proven on Brazil 19/10/2026). `sline fl26_swiss_lvmenu <entry reg> <n> <reg...>`:
+   the entry's competition stands in the country's list for the n competitions, which leave that list; choosing it shows
+   them in place (no transition), each with its own popup; Cancel brings the country's list back, the entry in focus.
+   Argentina: "Torneo Regional Federal Amateur" -> the Regional's eight regions. The menu's class MenuModeCompeSelect,
+   vtable 0x14268cd40, its slots and the list calls are the same bytes in FL27 (checked 22/11/2026). ==== */
+#define LV_VT_RVA      0x268cd40
+#define LV_READY       0xd8
+#define LV_ACTIVE      0x138
+#define LV_CONFIRM     0x188
+#define LV_CANCEL      0x190
+#define LV_APPEND_RVA  0xc6cbb0
+#define LV_RENDER_RVA  0xc6bc30
+#define LV_COUNT_RVA   0xe41fe0
+#define LV_FOCUS_RVA   0xe41240
+#define LV_INDEX_RVA   0xe3d140
+#define LV_MAXC 64
+#define LV_MAXM 32
+typedef struct { uint32_t cid; uint16_t reg; uint16_t pad; uint32_t extra; } lv_choice_t;
+typedef void (*lv_vfn)(void* self);
+typedef uint64_t (*lv_ready_fn)(void* self);
+static uint16_t g_lv_entry, g_lv_mem[LV_MAXM]; static int g_nlv_mem;
+static lv_vfn lv_orig_active, lv_orig_confirm, lv_orig_cancel; static lv_ready_fn lv_orig_ready;
+static int lv_level, lv_pending, lv_entry_idx, lv_nsaved; static void* lv_obj; static uint32_t lv_extra;
+static lv_choice_t lv_saved[LV_MAXC];
+static uint32_t lv_cid(uint16_t reg) { unsigned char* r = find_rec(reg); return r ? *(uint32_t*)(r + 0x80) : 0xffffffffu; }
+/* a member's competition: out of the country's list while the entry is there */
+static int lv_member_comp(uint32_t comp)
+{
+  if (!g_lv_entry || comp == 0xffffffffu) return 0;
+  for (int i = 0; i < g_nlv_mem; i++) if (lv_cid(g_lv_mem[i]) == comp) return 1;
+  return 0;
+}
+static lv_choice_t* lv_vec(void* self, int* n)
+{
+  unsigned char* s = (unsigned char*)self;
+  lv_choice_t* b = *(lv_choice_t**)(s + 0x90), * e = *(lv_choice_t**)(s + 0x98);
+  *n = (b && e >= b && e - b < 512) ? (int)(e - b) : 0;
+  return b;
+}
+static int lv_has_entry(void* self, int* at)
+{
+  int n; lv_choice_t* b = lv_vec(self, &n); uint32_t ec = lv_cid(g_lv_entry);
+  for (int i = 0; i < n; i++) if (b[i].cid == ec) { if (at) *at = i; return 1; }
+  return 0;
+}
+static void lv_fill(void* self, const lv_choice_t* c, int n)
+{
+  unsigned char* s = (unsigned char*)self;
+  *(lv_choice_t**)(s + 0x98) = *(lv_choice_t**)(s + 0x90);
+  for (int i = 0; i < n; i++) ((void (*)(void*, const lv_choice_t*))(uintptr_t)(g_base + LV_APPEND_RVA))(s + 0x90, &c[i]);
+}
+static int lv_members(lv_choice_t* out)
+{
+  int n = 0;
+  for (int i = 0; i < g_nlv_mem && n < LV_MAXC; i++) {
+    uint32_t c = lv_cid(g_lv_mem[i]);
+    if (c == 0xffffffffu) continue;
+    out[n].cid = c; out[n].reg = 0xffff; out[n].pad = 0; out[n].extra = lv_extra; n++;
+  }
+  return n;
+}
+static void lv_show(void* self, const lv_choice_t* c, int n, int focus, const char* what)
+{
+  lv_fill(self, c, n);
+  int have; lv_vec(self, &have);
+  ((void (*)(void*))(uintptr_t)(g_base + LV_RENDER_RVA))(self);
+  ((void (*)(void*, int, int, uint8_t, int))(uintptr_t)(g_base + LV_COUNT_RVA))(self, 0, have, 1, 0);
+  if (focus < 0 || focus >= have) focus = 0;
+  if (have) ((void (*)(void*, int, int, int))(uintptr_t)(g_base + LV_FOCUS_RVA))(self, 0, focus, 1);
+  logf("fl26swiss: list level -- %s: %d item(s) in place (menu %p), focus %d", what, have, self, focus);
+}
+static void lv_active(void* self)
+{
+  if (lv_pending) {
+    int p = lv_pending; lv_pending = 0;
+    if (p == 1) { lv_choice_t c[LV_MAXC]; int n = lv_members(c); lv_level = 1; lv_obj = self; lv_show(self, c, n, 0, "the entry's competitions"); }
+    else { lv_level = 0; lv_obj = 0; lv_show(self, lv_saved, lv_nsaved, lv_entry_idx, "the country's list again"); }
+  }
+  lv_orig_active(self);
+}
+static void lv_confirm(void* self)
+{
+  int idx = ((int (*)(void*))(uintptr_t)(g_base + LV_INDEX_RVA))(self);
+  int n; lv_choice_t* b = lv_vec(self, &n);
+  if (!g_lv_entry || lv_pending || idx < 0 || idx >= n) { lv_orig_confirm(self); return; }
+  if (lv_level == 0 && b[idx].cid == lv_cid(g_lv_entry)) {
+    lv_nsaved = n < LV_MAXC ? n : LV_MAXC;
+    memcpy(lv_saved, b, sizeof(lv_choice_t) * (size_t)lv_nsaved);
+    lv_entry_idx = idx; lv_extra = b[idx].extra; lv_pending = 1;
+    logf("fl26swiss: list level -- entry %u chosen (item %d of %d): its competitions next", (unsigned)g_lv_entry, idx, n);
+    return;                                   /* no popup for the entry */
+  }
+  if (lv_level == 1) logf("fl26swiss: list level -- competition %u chosen (item %d): its popup", b[idx].cid, idx);
+  lv_orig_confirm(self);
+}
+static void lv_cancel(void* self)
+{
+  if (lv_level == 1 && !lv_pending) { lv_pending = 2; logf("fl26swiss: list level -- back to the country's list"); return; }
+  lv_orig_cancel(self);
+}
+/* a menu made anew (back from a popup's pages, or from the countries): the level again only when coming back
+   (self+0xe8, the flag the focus restore reads) with the entry in its list */
+static uint64_t lv_ready(void* self)
+{
+  unsigned char* s = (unsigned char*)self;
+  if (lv_level == 1 && self != lv_obj) {
+    int at;
+    if (s[0xe8] && lv_has_entry(self, &at)) {
+      int n; lv_choice_t* b = lv_vec(self, &n);
+      lv_nsaved = n < LV_MAXC ? n : LV_MAXC;
+      memcpy(lv_saved, b, sizeof(lv_choice_t) * (size_t)lv_nsaved);
+      lv_entry_idx = at;
+      lv_choice_t c[LV_MAXC]; int k = lv_members(c);
+      lv_fill(self, c, k); lv_obj = self;
+      logf("fl26swiss: list level -- the level put in the new menu before it shows (%d)", k);
+    } else { lv_level = 0; lv_obj = 0; }
+  }
+  return lv_orig_ready(self);
+}
+static int lv_swap(void** slot, void* fn, uintptr_t want, void** orig, const char* what)
+{
+  DWORD old;
+  if (*(uintptr_t*)slot != g_base + want) {
+    logf("fl26swiss: list level -- the menu's %s slot is %llx, not %llx: not installed", what,
+         (unsigned long long)(*(uintptr_t*)slot - g_base + 0x140000000ull), (unsigned long long)(want + 0x140000000ull));
+    return 0;
+  }
+  if (!VirtualProtect(slot, 8, PAGE_READWRITE, &old)) return 0;
+  *orig = *slot; *slot = fn;
+  VirtualProtect(slot, 8, old, &old);
+  return 1;
+}
+static int lv_install(void)
+{
+  if (lv_orig_confirm) return 1;
+  unsigned char* vt = (unsigned char*)(uintptr_t)(g_base + LV_VT_RVA);
+  int ok = lv_swap((void**)(vt + LV_CONFIRM), (void*)lv_confirm, 0xb08cb0, (void**)&lv_orig_confirm, "Confirm")
+        && lv_swap((void**)(vt + LV_CANCEL), (void*)lv_cancel, 0xca7010, (void**)&lv_orig_cancel, "Cancel")
+        && lv_swap((void**)(vt + LV_ACTIVE), (void*)lv_active, 0x1794410, (void**)&lv_orig_active, "active")
+        && lv_swap((void**)(vt + LV_READY), (void*)lv_ready, 0xb08b70, (void**)&lv_orig_ready, "ready");
+  logf("fl26swiss: list level -- the menu (vtable 14268cd40): Confirm/Cancel/active/ready %s", ok ? "swapped" : "NOT all swapped");
+  return ok;
+}
+__declspec(dllexport) int fl26_swiss_lvmenu(const uint32_t* v, int n)
+{
+  if (!v || n < 2) return 0;
+  g_lv_entry = (uint16_t)v[0]; g_nlv_mem = 0;
+  for (int i = 0; i < (int)v[1] && 2 + i < n && g_nlv_mem < LV_MAXM; i++) g_lv_mem[g_nlv_mem++] = (uint16_t)v[2 + i];
+  int ok = g_base ? lv_install() : 0;
+  logf("fl26swiss: list level -- entry %u over %d competition(s)%s", (unsigned)g_lv_entry, g_nlv_mem, ok ? "" : " (menu NOT swapped)");
+  return g_nlv_mem;
+}
+/* ==== end of the list level ==== */
+
 static uint64_t libq_skipph_handler(uint64_t reg)
 {
   unsigned char* r = find_rec((uint16_t)reg);
@@ -9614,6 +12160,26 @@ static uint64_t libq_skipph_handler(uint64_t reg)
     return 0;
 
   uint32_t comp = *(uint32_t*)(r + 0x80);
+  if (zn_hidden_comp(comp)) return 1;             /* lab 20/11/2026: a zone is in its host's table (L1/R1) */
+  if (lv_member_comp(comp)) return 1;             /* lab 23/11/2026: behind its entry (a level of the list) */
+  {   /* lab 23/11/2026: a tcup that is a competition of its own, before its first season (the Recopa de Campeones) */
+    int y = rc_cal_year();
+    for (int k = 0; k < g_ntc && y > 0; k++) {
+      const tcup_t* c = &g_tc[k];
+      unsigned char* cr = c->from && y < c->from ? find_rec(c->reg) : 0;
+      if (cr && *(uint32_t*)(cr + 0x80) == comp) return 1;
+    }
+  }
+  {   /* lab 21/11/2026: a league asleep this season (fl26join's rsleep: its placeholder clubs only) is not listed --
+         the Interior of Argentina showed in 2026, the season before it exists */
+      static int (*asleep)(uint32_t) = 0; static int looked = 0;
+      if (!looked) { HMODULE j = GetModuleHandleA("fl26join.dll"); asleep = j ? (int (*)(uint32_t))(void*)GetProcAddress(j, "fl26_join_asleep") : 0; looked = 1; }
+      if (asleep && asleep((uint32_t)(uint16_t)reg)) {
+        static int said = 0;
+        if (said++ < 6) logf("fl26swiss: Info Database -- league %u asleep this season, not listed", (unsigned)(uint16_t)reg);
+        return 1;
+      }
+  }
   int i = ci_helper_lpre(comp, ci_live_comp);
   if (i < 0) return 0;
 
@@ -10422,7 +12988,7 @@ static int cup_league(uint16_t id)
 }
 /* rest positions count from g_org: 1 July (182) for an August-May season, 1 January for a
    calendar-year one -- whichever keeps the league's rounds in order */
-static uint32_t g_org = 182;
+static uint32_t g_org = 182;   /* (declared above, for wday) */
 static uint32_t rpos(uint32_t d) { return (d + 365 - g_org) % 365; }
 static int in_order(const date_t* r, uint32_t n)
 {
@@ -10634,6 +13200,54 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
 #define RCAL_SEASON1 219          /* Saturday 8 August, the first weekend of a new career */
 typedef struct { uint16_t reg, first, last, b0, b1, days, also, eu; } rcal_t;
 static rcal_t g_rcal[MAX_RCAL]; static int g_nrcal = 0;
+/* lab 20/11/2026 (the user: a log of the matches): every day a league with a real calendar played on, its matches so
+   far (the table's played column summed / 2) -- a league that stops mid-season or never plays shows it */
+static uint16_t g_games_mp[MAX_RCAL]; static int g_games_day = -1;
+static void lpf_probe(void)   /* lab 21/11/2026: what the game's Liga Profesional (reg 30) is in FL27, once a session */
+{
+  static int done = 0;
+  if (done) return;
+  unsigned char* r30 = find_rec(30);
+  if (!r30) return;
+  done = 1;
+  uint32_t comp = *(uint32_t*)(r30 + 0x80);
+  logf("fl26swiss: LPF probe -- reg 30: comp %u, %u listed, +0x308 %08x (legs %u), +0x30c %08x (clubs %u), +0x2f8 %08x, +0x304 %08x",
+       comp, rec_count(r30), *(uint32_t*)(r30 + 0x308), *(uint32_t*)(r30 + 0x308) >> 29, *(uint32_t*)(r30 + 0x30c),
+       *(uint32_t*)(r30 + 0x30c) & 0x7f, *(uint32_t*)(r30 + 0x2f8), *(uint32_t*)(r30 + 0x304));
+  for (int id = 1; id < 2048; id++) {
+    unsigned char* r = find_rec((uint16_t)id);
+    if (!r || *(uint32_t*)(r + 0x80) != comp) continue;
+    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))((uint16_t)id);
+    uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+    logf("fl26swiss: LPF probe --   reg %d of comp %u: %u listed, legs %u, clubs %u, table rows %u, type %02x %02x, matches %d (%d to play)",
+         id, comp, rec_count(r), *(uint32_t*)(r + 0x308) >> 29, *(uint32_t*)(r + 0x30c) & 0x7f, rows, r[9], r[0x0a],
+         ccup_matches((uint16_t)id), ccup_unplayed((uint16_t)id));
+  }
+}
+static void games_tick(void)
+{
+  int d = today();
+  if (d >= 1) lpf_probe();
+  lhv_check();
+  if (d < 1 || d == g_games_day || !g_nrcal) return;
+  g_games_day = d;
+  {   /* lab 21/11/2026: fl26join keeps the LPF's whole table for the New Year (the game empties it before the mover) */
+    static void (*snap)(void) = 0; static int looked = 0;
+    if (!looked) { HMODULE j = GetModuleHandleA("fl26join.dll"); snap = j ? (void (*)(void))(void*)GetProcAddress(j, "fl26_join_ext_snap") : 0; looked = 1; }
+    if (snap) snap();
+  }
+  char line[1900]; int q = 0; line[0] = 0;
+  for (int i = 0; i < g_nrcal && i < MAX_RCAL; i++) {
+    if (q > 1500) { logf("fl26swiss: games -- day %d (season %d), matches so far by league:%s", d, lpre_year(), line); q = 0; line[0] = 0; }
+    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(g_rcal[i].reg);
+    uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0; unsigned sum = 0;
+    if (t && rows <= 64) for (uint32_t k = 0; k < rows; k++) sum += t[k * 20 + 0x0f];
+    sum /= 2;
+    if (sum != g_games_mp[i]) { g_games_mp[i] = (uint16_t)sum;
+      q += snprintf(line + q, sizeof line - (size_t)q, " %u:%u", (unsigned)g_rcal[i].reg, sum); }
+  }
+  if (q) logf("fl26swiss: games -- day %d (season %d), matches so far by league:%s", d, lpre_year(), line);
+}
 __declspec(dllexport) int fl26_swiss_rcal(const uint16_t* v, int n)
 {
   if ((!v && n) || n < 0) return -1;
@@ -12347,9 +14961,154 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
    item leads to (12.10., in game: the old reading never fired, every item opened the current round).
    Our items lead to "playoff" like the native grouped-phase item, so a "playoff" answer while our
    menu is up takes the chosen index from +0xd8. */
+/* ==== lab 21/11/2026: the knockout pages (part 2) -- the host's menu, the choice, the round titles ==== */
+#define LPN_TEXT0 0x3a2fd00u           /* text ids of our names (lpname): LPN_TEXT0 + k, txtget_handler answers them */
+static uint32_t lpn_text(uint16_t reg)
+{
+  for (int k = 0; k < g_nznn; k++) if (g_znn[k].reg == reg) return LPN_TEXT0 + (uint32_t)k;
+  return 0;
+}
+static ci_vec_t* g_km_vec = 0; static int g_km_n = 0; static int g_km_tc[32];
+#define CIMENU2_RVA 0x1520040          /* the Competition Info menu of one regulation (Base de dados -> Info. da Competicao) */
+typedef uint64_t (*cimenu2_fn)(ci_vec_t* v, uint16_t* reg, uint64_t flag);
+unsigned char* g_tramp_cimenu2 = 0;
+/* lab 21/11/2026: a knockout item (type 1) whose regulation is a page of another knockout (`lphase <ko> <final> 5`) */
+static int kp_is_page(kp_t k)
+{
+  if (k.type != 1) return 0;
+  for (int i = 0; i < g_nkp; i++) if (g_kp[i].type == 5 && g_kp[i].reg == k.reg) return 1;
+  return 0;
+}
+uint64_t ci_menu2_handler(ci_vec_t* v, uint16_t* reg, uint64_t flag)
+{
+  uint64_t r = ((cimenu2_fn)(uintptr_t)g_tramp_cimenu2)(v, reg, flag);
+  g_km_vec = 0; g_km_n = 0;
+  if (!reg || !v || !v->b || v->e <= v->b) return r;
+  uint32_t comp = ci_live_comp(*reg);
+  int n = (int)(v->e - v->b), add = 0;
+  for (int i = 0; i < g_nkp; i++)
+    if (g_kp[i].type != 5 && !kp_is_page(g_kp[i]) && ci_live_comp(g_kp[i].host) == comp && (g_kp[i].type == 4 ? 1 : g_kp[i].type == 2 ? find_rec(g_kp[i].reg) != 0 : tc_of(g_kp[i].reg) != 0)) add++;
+  if (!add) return r;
+  if (n + add > 30) add = 30 - n;
+  for (int k = 0; k < 32; k++) g_km_tc[k] = -1;
+  int own = 0;   /* lab 23/11/2026: the Copa Argentina, the super cups, the Recopa -- a knockout that is its own competition */
+  for (int i = 0; i < g_nkp; i++) if (g_kp[i].type == 1 && g_kp[i].host == g_kp[i].reg && ci_live_comp(g_kp[i].host) == comp) own = 1;
+  int pos = own ? 0 : 1, pushed = 0;
+  for (int i = 0; i < g_nkp && pushed < add; i++) {
+    if (g_kp[i].type == 5 || kp_is_page(g_kp[i]) || ci_live_comp(g_kp[i].host) != comp) continue;
+    if (g_kp[i].type == 2 || g_kp[i].type == 4) {   /* a phase league / a half: the table item's own flow, its name */
+      if ((g_kp[i].type == 2 && !find_rec(g_kp[i].reg)) || v->b[0].cap != 15) continue;
+      ci_item_t it = v->b[0];
+      uint16_t key = g_kp[i].type == 4 ? (uint16_t)(0xBF00u + g_kp[i].reg) : (uint16_t)(0x8000u | g_kp[i].reg);
+      if (lpn_text(key)) it.text = lpn_text(key);   /* its item name (lpname 0x8000+reg, 0xBF00+half) */
+      unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(g_kp[i].type == 4 ? g_kp[i].host : g_kp[i].reg);
+      it.en = (uint8_t)(t && *(uint32_t*)(t + 0x3c0) > 0 && v->b[0].en);
+      ((cipush_fn)(uintptr_t)(g_base + CIPUSH_RVA))(v, &it);
+      int m = (int)(v->e - v->b);
+      if (m != n + 1) { logf("fl26swiss: knockout pages -- phase item not added (vector %d -> %d)", n, m); break; }
+      ci_item_t last = v->b[m - 1];
+      memmove(v->b + pos + 1, v->b + pos, (size_t)(m - 1 - pos) * sizeof(ci_item_t));
+      v->b[pos] = last;
+      memmove(g_km_tc + pos + 1, g_km_tc + pos, (size_t)(31 - pos) * sizeof g_km_tc[0]);
+      g_km_tc[pos] = -1000 - i;
+      n = m; pos++; pushed++;
+      continue;
+    }
+    tcup_t* tc = tc_of(g_kp[i].reg);
+    if (!tc) continue;
+    ci_item_t it; memset(&it, 0, sizeof it);
+    it.type = 0;
+    it.text = lpn_text(tc->reg) ? lpn_text(tc->reg) : 0x3a20010u;      /* its lpname, else the game's "Play-offs" */
+    int y = rc_cal_year();
+    it.en = (uint8_t)(tc_fresh(tc, 0, y) || tc_fresh(tc, 0, y - 1));   /* grey until its first round is made */
+    memcpy(it.buf, "playoff", 8); it.size = 7; it.cap = 15;
+    ((cipush_fn)(uintptr_t)(g_base + CIPUSH_RVA))(v, &it);
+    int m = (int)(v->e - v->b);
+    if (m != n + 1) { logf("fl26swiss: knockout pages -- item not added (vector %d -> %d)", n, m); break; }
+    ci_item_t last = v->b[m - 1];
+    memmove(v->b + pos + 1, v->b + pos, (size_t)(m - 1 - pos) * sizeof(ci_item_t));
+    v->b[pos] = last;
+    memmove(g_km_tc + pos + 1, g_km_tc + pos, (size_t)(31 - pos) * sizeof g_km_tc[0]);
+    g_km_tc[pos] = (int)(tc - g_tc);
+    n = m; pos++; pushed++;
+  }
+  if (own && pushed && n >= 3) {   /* the league items of its native menu ("Tabela V-D", "Classificacao"): out */
+    char fl[2][17]; uint32_t tx[2];
+    for (int k = 0; k < 2; k++) {
+      const ci_item_t* it = &v->b[pushed + k];
+      tx[k] = it->text;
+      snprintf(fl[k], sizeof fl[k], "%s", it->cap == 15 ? it->buf : "(long)");
+    }
+    memmove(v->b + pushed, v->b + pushed + 2, (size_t)(n - pushed - 2) * sizeof(ci_item_t));
+    v->e -= 2; n -= 2;
+    memmove(g_km_tc + pushed, g_km_tc + pushed + 2, (size_t)(30 - pushed) * sizeof g_km_tc[0]);
+    static int said_own = 0;
+    if (said_own++ < 8) logf("fl26swiss: knockout pages -- comp %u is a cup of its own: its knockout first, items %08x '%s' and %08x '%s' out", comp, tx[0], fl[0], tx[1], fl[1]);
+  }
+  g_km_vec = v; g_km_n = n; g_km_comp = comp;
+  static int said = 0;
+  if (said++ < 12) logf("fl26swiss: knockout pages -- menu of reg %u (comp %u): %d item(s) added", (unsigned)*reg, comp, pushed);
+  return r;
+}
+/* the choice: an item of ours -> its tcup's pages (phkind answers its regulation, see tcpg_phase) */
+static void tcpg_choice(unsigned char* flow, const char* e)
+{
+  g_km_pick = -1; g_km_phase = 0;
+  if (!g_km_vec || !flow || !e) return;
+  unsigned char* lctx = *(unsigned char**)(flow + 0x88);
+  int lidx = lctx ? *(int32_t*)(lctx + 0xd8) : -1;
+  int tag = lidx >= 0 && lidx < g_km_n && lidx < 32 ? g_km_tc[lidx] : -1;
+  lhv_restore("another item");
+  g_km_half = -1;
+  if (tag <= -1000 && -1000 - tag < g_nkp && g_kp[-1000 - tag].type == 4) {   /* a half's table */
+    g_km_half = g_kp[-1000 - tag].reg; g_km_phase_host = g_kp[-1000 - tag].host;
+    return;
+  }
+  if (tag <= -1000 && -1000 - tag < g_nkp) {
+    g_km_phase = g_kp[-1000 - tag].reg; g_km_phase_host = g_kp[-1000 - tag].host;
+    static int said_ph = 0;
+    if (said_ph++ < 12) logf("fl26swiss: phase item %d chosen: league %u (in the menu of %u)", lidx, (unsigned)g_km_phase, (unsigned)g_km_phase_host);
+    return;
+  }
+  if (strcmp(e, "playoff")) return;
+  if (tag >= 0) g_km_pick = tag;
+  static int said = 0;
+  if (said++ < 12) logf("fl26swiss: knockout pages -- item %d chosen: tcup %d", lidx, g_km_pick);
+}
+/* phkind: the page builder asks for the chosen item's competition's grouped phase -> the tcup's regulation */
+static int tcpg_phase(uint32_t comp, uint16_t* out)
+{
+  if (g_km_pick < 0 || g_km_pick >= g_ntc || comp != g_km_comp) return 0;
+  g_tpg = g_km_pick;
+  *out = g_tc[g_tpg].reg;
+  return 1;
+}
+/* the match / page title 0x14152a590(out string, &info{reg, ?, kind}, ...): a tcup round's own name */
+#define KCT_RVA 0x152a590
+static const unsigned char SIG_KCT[17] = { 0x40,0x55,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8d,0x6c,0x24,0xe0 };
+typedef uint64_t (*kct_fn)(void*, void*, uint64_t, uint64_t, uint64_t, uint64_t);
+unsigned char* g_tramp_kct = 0;
+uint64_t kct_handler(void* out, void* info, uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6)
+{
+  uint64_t r = ((kct_fn)(uintptr_t)g_tramp_kct)(out, info, a3, a4, a5, a6);
+  if (!info || !out) return r;
+  const tcup_t* tc = tc_of(*(uint16_t*)info);
+  uint32_t kind = *(const uint16_t*)((const unsigned char*)info + 4);
+  for (int rr = 0; tc && rr < tc->nr; rr++)
+    for (int ch = 0; ch < tc->nch[rr]; ch++)
+      if (tc->kind[rr][ch] == kind) {
+        const char* nm = zn_name((uint16_t)(0xC000u + (uint32_t)tc->reg * 8u + (uint32_t)rr));
+        if (nm) ((ltab_sassign_fn)(uintptr_t)(g_base + LTAB_SASSIGN))(out, nm, strlen(nm));
+        return r;
+      }
+  return r;
+}
+static const char* lpn_text_name(int k) { return k >= 0 && k < g_nznn ? g_znn[k].name : 0; }
+/* ==== end of the knockout pages (part 2) ==== */
 unsigned char* ci_sel_handler(unsigned char* flow)
 {
   unsigned char* e = ((cisel_fn)(uintptr_t)g_tramp_cisel)(flow);
+  tcpg_choice(flow, (const char*)e);   /* lab 21/11/2026: an item of ours -> its knockout's pages */
   if (!e || !flow || !g_ci_vec || strcmp((const char*)e, "playoff")) return e;
   unsigned char* ctx = *(unsigned char**)(flow + 0x88);
   if (!ctx) return e;
@@ -13093,6 +15852,11 @@ uint64_t date_handler(uint64_t reg, void* vec)
     int ko, k = ccup_of(id, &ko);
     if (k >= 0 && ccup_world(&g_ccup[k])) return ccup_dates(k, ko, id, reg, vec);
   }
+  if (vec) {   /* lab 21/11/2026: the knockouts on one regulation */
+    { uint64_t rrv; if (rc_dates(reg, vec, &rrv)) return rrv; }
+    { uint64_t irv; if (ic_dates(reg, vec, &irv)) return irv; }
+    { uint64_t trv; if (tc_dates(reg, vec, &trv)) return trv; }
+  }
   if (vec) {
     /* a league cup's pre-round: reg 2's records (the same tie of it), on the pre-round's days */
     int tk, li = lpre_of(id, &tk);
@@ -13239,6 +16003,18 @@ uint64_t date_handler(uint64_t reg, void* vec)
       for (size_t i = 0; i < have && i < 16; i++)
         logf("fl26swiss:   date %u: day %u round %u kind %u", (unsigned)i, r[i].day, r[i].round, r[i].kind);
     }
+    return rv;
+  }
+  if (vec && ld_of(id)) {   /* lab 21/11/2026: a league's dates given one by one (the LPF: 15 + 14 Saturdays) */
+    uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+    const ldates_t* L = ld_of(id);
+    vec_t* v = (vec_t*)vec;
+    size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    date_t* dd = (date_t*)v->b;
+    for (size_t i = 0; i < have && i < L->n; i++) { dd[i].day = L->d[i]; dd[i].round = (uint32_t)i; }
+    static int said = 0;
+    if (!said++) logf("fl26swiss: reg %u -- its %u dates given (%u in the vector), first %u, last %u", (unsigned)id, L->n,
+                      (unsigned)have, L->d[0], L->d[L->n - 1]);
     return rv;
   }
   if (vec && (our_league(id) || eudate(id))) {
@@ -15675,6 +18451,15 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: League Phase text live (@%llx)", (unsigned long long)(exe_base + TXTGET_RVA));
   else
     logf("fl26swiss: League Phase text NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + PHLIST_RVA), SIG_PHLIST, 17, (void*)phlist_handler, &g_tramp_phlist))
+    logf("fl26swiss: zones -- phase list hook live (@%llx)", (unsigned long long)(exe_base + PHLIST_RVA));
+  else
+    logf("fl26swiss: zones -- phase list hook NOT installed (signature)");
+  { int p1 = call_retarget(exe_base, PLIST_CALL1_RVA, PLIST_RVA, (void*)plist_handler);
+    int p2 = call_retarget(exe_base, PLIST_CALL2_RVA, PLIST_RVA, (void*)plist_handler);
+    logf("fl26swiss: participants -- zones %s (%d %d)", p1 || p2 ? "NOT all redirected" : "redirected", p1, p2); }
+  { int rr = call_retarget(exe_base, RANK_CALL_RVA, RANK_RVA, (void*)rank_handler);
+    logf("fl26swiss: ranking -- goals/assists of zones and phases %s (%d)", rr ? "NOT merged" : "merged", rr); }
   if (!hook((unsigned char*)(uintptr_t)(exe_base + PHNAME_RVA), SIG_PHNAME, 17, (void*)phname_handler, &g_tramp_phname))
     logf("fl26swiss: play-off names live (@%llx)", (unsigned long long)(exe_base + PHNAME_RVA));
   else
@@ -15733,6 +18518,17 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     else logf("fl26swiss: one-match pre-round post-match page routing NOT installed (%d)", sp);
   }
 
+  {   /* lab 21/11/2026: the knockout pages */
+    int tp = tcpg_install(exe_base);
+    int hm = hook((unsigned char*)(uintptr_t)(exe_base + CIMENU2_RVA), SIG_CIMENU, 17, (void*)ci_menu2_handler, &g_tramp_cimenu2);
+    int ht = hook((unsigned char*)(uintptr_t)(exe_base + KCT_RVA), SIG_KCT, 17, (void*)kct_handler, &g_tramp_kct);
+    logf("fl26swiss: knockout pages -- round records %s, menu %s, round titles %s", tp ? "NOT installed" : "live",
+         hm ? "NOT installed" : "live", ht ? "NOT installed" : "live");
+    int hz = hook((unsigned char*)(uintptr_t)(exe_base + TBUILD_RVA), SIG_TBUILD, 21, (void*)tbuild_handler, &g_tramp_tbuild);
+    logf("fl26swiss: izone -- interzonal results in the zones' tables %s", hz ? "NOT installed" : "live");
+  }
+  { int zr = ltab_install(exe_base);              /* lab 20/11/2026 */
+    logf("fl26swiss: zones -- league table screen L1/R1 %s (%d)", zr ? "NOT installed" : "installed", zr); }
   {
     int lr = libq_skipph_install(exe_base);
 

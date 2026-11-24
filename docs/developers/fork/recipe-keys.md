@@ -41,6 +41,7 @@ Rules that hold for every key:
 | `saudi_august` | bool | the older form of `game_seasons: ["Saudi Arabia"]` | as above |
 | `preseason_cups` | list of {name, clubs, logo} | July knockouts of 4 or 8 invited clubs | `ccup` |
 | `ccup_names`, `ccup_logos` | {"6": ..., "7": ..., "0": ...} | names and pictures of the continental cups the world builds | `ccup ... name=` |
+| `country_rules` | list of names, `["argentina"]` | a country's own rules run inside Build on the tables and the world file just written (`tools/argentina`, [argentina.md](argentina.md)); a league package with those leagues carries it | `lphase`, `lpname`, `sline`, `jline`, `confsub`, `confsubnames`, tables, emblems |
 | `caf_super_cup`, `caf_super_cup_logo` | bool (default true), picture | the CAF Super Cup when both CAF cups exist | `ccup` |
 | `editable_kits` | bool | new clubs get plain kits of their own that Edit mode can paint, not lent licensed ones (#112) | tables |
 | `country_order` | `"az"` or a list of country names | League order in Select Team / Kick Off / Edit | `order`, `kickorder` |

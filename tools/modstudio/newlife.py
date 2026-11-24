@@ -1152,9 +1152,9 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
         who[j] = ("g", g) if g else ("n", i) if is_nl else ("o", j)
     own = [j for j in range(old_n) if who[j][0] == "o"]
     total = len(E["clubs"]) + len(game_clubs(E, info)) + len(own)
-    if not B.CLUBS_MIN <= total <= B.CLUBS_MAX:
+    if not B.clubs_min(E) <= total <= B.CLUBS_MAX:
         raise Error("%s would have %d clubs with NewLife %s; a league takes %d to %d" % (
-            name, total, rel.meta.get("version", ""), B.CLUBS_MIN, B.CLUBS_MAX))
+            name, total, rel.meta.get("version", ""), B.clubs_min(E), B.CLUBS_MAX))
     pl = recipe.setdefault("players", {})
     own_vals = {j: {key: (list(x.get(key) or []) + [e] * old_n)[j] for key, e in PLACE_LISTS} for j in own}
     own_pl = {j: pl.get(P.new_key(name, j)) for j in own}

@@ -285,6 +285,11 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     if game in ("fl26", "fl27"):
         man["game"] = game
     json.dump(man, open(os.path.join(tmp, "manifest.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    # 23.11.2026: a country's own rules travel with its leagues (the Argentine pyramid's knockouts, cups and mover:
+    # tools/argentina); the person who adds the package builds them too
+    rules = [r for r in recipe.get("country_rules") or [] if any(L.get("country", "").lower() == r for L in out_r["leagues"])]
+    if rules:
+        out_r["country_rules"] = rules
     json.dump(out_r, open(os.path.join(tmp, "recipe.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     part = out + ".part"
     with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
@@ -596,6 +601,10 @@ def add(recipe, man, piece, folder, rename=None):
         for k, v in vals.items():
             dst.setdefault(k, {}).update(v)
         got["edits"][kind] = list(vals)
+    for r in piece.get("country_rules") or []:          # 23.11.2026: the rules its leagues need (see export)
+        if r not in (recipe.get("country_rules") or []):
+            recipe.setdefault("country_rules", []).append(r)
+            got.setdefault("country_rules", []).append(r)
     recipe.setdefault("packs", {})[tag] = got
     return tag
 
@@ -626,6 +635,11 @@ def remove(recipe, tag):
     for kind, keys in (got.get("edits") or {}).items():
         for k in keys:
             (recipe.get("edits") or {}).get(kind, {}).pop(k, None)
+    for r in got.get("country_rules") or []:            # the rules it brought, and nothing else
+        if r in (recipe.get("country_rules") or []):
+            recipe["country_rules"].remove(r)
+    if "country_rules" in recipe and not recipe["country_rules"]:
+        recipe.pop("country_rules")
     return names
 
 

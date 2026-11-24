@@ -925,7 +925,7 @@ class LeagueDialog(Dialog):
         self.country.completer().setFilterMode(Qt.MatchContains)      # "korea" finds both
         self.form.addRow(_("Country"), self.country)
         self.clubs = QSpinBox()
-        self.clubs.setRange(1 if L.get("others") else B.CLUBS_MIN, B.OTHERS_MAX if L.get("others") else B.CLUBS_MAX)
+        self.clubs.setRange(1 if L.get("others") else B.clubs_min(L), B.OTHERS_MAX if L.get("others") else B.CLUBS_MAX)
         self.clubs.setValue(L.get("clubs", 12))
         self.form.addRow(_("Clubs"), self.clubs)
         self.form.addRow("", hint(_("up to 28 clubs meet up to 4 times (54 rounds at most); 29 to 32 clubs "
@@ -1261,7 +1261,7 @@ class LeagueDialog(Dialog):
                   self.lcup_logo, self.po_logo):
             w.setEnabled(not loose)
         n = self.clubs.value()
-        self.clubs.setRange(1 if loose else B.CLUBS_MIN, B.OTHERS_MAX if loose else B.CLUBS_MAX)
+        self.clubs.setRange(1 if loose else B.clubs_min(self.league), B.OTHERS_MAX if loose else B.CLUBS_MAX)
         self.clubs.setValue(n)
         on = self.exhibition.isChecked() or loose
         if on:
@@ -1305,10 +1305,10 @@ class LeagueDialog(Dialog):
         else:
             L.pop("split", None)
             L["legs"] = self.legs.value()
-        if not self.is_others() and not L.get("split") and not L.get("apertura")                 and L["legs"] > B.max_legs(L["clubs"]):
+        if not self.is_others() and not L.get("split") and not L.get("apertura")                 and L["legs"] > B.max_legs(L["clubs"], B.clubs_min(L)):
             # #7 (06.11.): the round list holds 54 rounds the game was seen to play (B.ROUNDS_MAX)
             error(self, "League", _("%d clubs meet %d times at most: a league plays %d rounds at most.")
-                  % (L["clubs"], B.max_legs(L["clubs"]), B.ROUNDS_MAX))
+                  % (L["clubs"], B.max_legs(L["clubs"], B.clubs_min(L)), B.ROUNDS_MAX))
             return
         L["exchange"] = self.exchange.value()
         same = [x for x in self.project.recipe["leagues"] if x is not self.orig and self.above.currentData() is not None

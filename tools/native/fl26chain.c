@@ -681,7 +681,7 @@ static int remove_handle(uint32_t* list, int n, uint32_t h)
  * Nothing moves when any check fails (a league without standings or clubs, counts that do not
  * add up, a club that would be in two leagues or in none, a list past 48), and the log says why. */
 #define MAX_GSETS  64
-#define MAX_GSIDE  32
+#define MAX_GSIDE  96   /* lab 20/11/2026: 32 -> 96, Argentina's Regional is one division of 70 zones */
 #define MAX_GL     512      /* leagues the sets and play-offs name */
 #define MAX_HOMES  16384
 typedef struct {

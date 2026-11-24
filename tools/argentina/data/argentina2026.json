@@ -1,0 +1,3096 @@
+{
+ "_sobre": "Argentina 2026 para o FL27 (lab). Fontes em fontes/; ligação NewLife 1.6b4 por scripts/casar2.py + manuais. nl=null -> clube novo (elenco Transfermarkt ou genérico). Filiação: AMBA=direta, resto=indireta [a confirmar exceções históricas].",
+ "temporada": 2026,
+ "liga_profesional": {
+  "fonte": "banco do FL27 (reg 30, cid 22)",
+  "clubes": 30
+ },
+ "primera_nacional": {
+  "zonas": {
+   "Zona A": [
+    {
+     "nome": "Godoy Cruz",
+     "nl": "1924",
+     "nl_nome": "Godoy Cruz",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Ferro Carril Oeste",
+     "nl": "109363",
+     "nl_nome": "Club Ferro Carril Oeste",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Deportivo Morón",
+     "nl": "98363",
+     "nl_nome": "Club Deportivo Morón",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Deportivo Madryn",
+     "nl": "99871",
+     "nl_nome": "Dep. Madryn",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Colón",
+     "nl": "98355",
+     "nl_nome": "Colón",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Almirante Brown",
+     "nl": "98358",
+     "nl_nome": "Club Almirante Brown",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Ciudad de Bolívar",
+     "nl": "100031",
+     "nl_nome": "Club Ciudad de Bolívar",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Estudiantes (BA)",
+     "nl": "98536",
+     "nl_nome": "Club Atlético Estudiantes de Buenos Aires",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Chaco For Ever",
+     "nl": "98544",
+     "nl_nome": "Chaco For Ever",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Los Andes",
+     "nl": "98369",
+     "nl_nome": "Club Atlético Los Andes",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "All Boys",
+     "nl": "98367",
+     "nl_nome": "Club Atlético All Boys",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "San Telmo",
+     "nl": "104634",
+     "nl_nome": "Club Atlético San Telmo",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Mitre (SdE)",
+     "nl": "99891",
+     "nl_nome": "Club Atlético Mitre de Santiago del Estero",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Racing (C)",
+     "nl": "104637",
+     "nl_nome": "Club Atlético Racing de Córdoba",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Defensores de Belgrano",
+     "nl": "104629",
+     "nl_nome": "Def. de Belgrano",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Central Norte (S)",
+     "nl": "99832",
+     "nl_nome": "Club Atlético Central Norte de Salta",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Acassuso",
+     "nl": "109828",
+     "nl_nome": "Club Atlético Acassuso",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "San Miguel",
+     "nl": "98540",
+     "nl_nome": "Club Atlético San Miguel",
+     "filiacao": "direta"
+    }
+   ],
+   "Zona B": [
+    {
+     "nome": "Tristán Suárez",
+     "nl": "104636",
+     "nl_nome": "Tristán Suárez",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Atlanta",
+     "nl": "98534",
+     "nl_nome": "Club Atlético Atlanta",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Temperley",
+     "nl": "104616",
+     "nl_nome": "Club Atlético Temperley",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Gimnasia y Esgrima (J)",
+     "nl": "98384",
+     "nl_nome": "Club Atlético Gimnasia y Esgrima de Jujuy",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Ferrocarril Midland",
+     "nl": "109834",
+     "nl_nome": "Midland",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Deportivo Maipú",
+     "nl": "99838",
+     "nl_nome": "Club Deportivo Maipú",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Colegiales",
+     "nl": "109822",
+     "nl_nome": "Club Atlético Colegiales",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Gimnasia y Tiro (S)",
+     "nl": "98356",
+     "nl_nome": "Gimnasia y Tiro",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "San Martín (SJ)",
+     "nl": "1925",
+     "nl_nome": "Club Atlético San Martín de San Juan",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "San Martín (T)",
+     "nl": "98357",
+     "nl_nome": "Club Atlético San Martín de Tucumán",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Atlético de Rafaela",
+     "nl": "98359",
+     "nl_nome": "Atl. Rafaela",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Agropecuario",
+     "nl": "99941",
+     "nl_nome": "Agropecuario Argentino",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Quilmes",
+     "nl": "98366",
+     "nl_nome": "Quilmes Atlético Club",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Chacarita Juniors",
+     "nl": "98368",
+     "nl_nome": "Chacarita Jrs.",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Almagro",
+     "nl": "98533",
+     "nl_nome": "Club Almagro",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Patronato",
+     "nl": "104622",
+     "nl_nome": "Patronato",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Nueva Chicago",
+     "nl": "98365",
+     "nl_nome": "Nueva Chicago",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Güemes (SdE)",
+     "nl": "99906",
+     "nl_nome": "Club Atlético Güemes de Santiago del Estero",
+     "filiacao": "indireta"
+    }
+   ]
+  },
+  "interzonal": [
+   [
+    "Ciudad de Bolívar",
+    "Agropecuario"
+   ],
+   [
+    "Chaco For Ever",
+    "Gimnasia y Esgrima (J)"
+   ],
+   [
+    "Racing (C)",
+    "San Martín (SJ)"
+   ],
+   [
+    "Ferro Carril Oeste",
+    "Atlanta"
+   ],
+   [
+    "Deportivo Morón",
+    "Almagro"
+   ],
+   [
+    "Almirante Brown",
+    "Tristán Suárez"
+   ],
+   [
+    "San Miguel",
+    "Colegiales"
+   ],
+   [
+    "Los Andes",
+    "Temperley"
+   ],
+   [
+    "All Boys",
+    "Nueva Chicago"
+   ],
+   [
+    "Estudiantes (BA)",
+    "Chacarita Juniors"
+   ],
+   [
+    "Deportivo Madryn",
+    "San Martín (T)"
+   ],
+   [
+    "Colón",
+    "Patronato"
+   ],
+   [
+    "San Telmo",
+    "Quilmes"
+   ],
+   [
+    "Godoy Cruz",
+    "Deportivo Maipú"
+   ],
+   [
+    "Central Norte (S)",
+    "Gimnasia y Tiro (S)"
+   ],
+   [
+    "Mitre (SdE)",
+    "Güemes (SdE)"
+   ],
+   [
+    "Defensores de Belgrano",
+    "Atlético de Rafaela"
+   ],
+   [
+    "Acassuso",
+    "Ferrocarril Midland"
+   ]
+  ],
+  "inicio": "13/02/2026"
+ },
+ "primera_c": {
+  "zonas": {
+   "Zona A": [
+    {
+     "nome": "Berazategui",
+     "nl": "104627",
+     "nl_nome": "Berazategui",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Centro Español",
+     "nl": "109842",
+     "nl_nome": "Centro Español",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Argentino de Rosario",
+     "nl": "104626",
+     "nl_nome": "Club Atlético Argentino de Rosario",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Estrella del Sur",
+     "nl": "103189",
+     "nl_nome": "Club Estrella del Sur de Alejandro Korn",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Lugano",
+     "nl": "109847",
+     "nl_nome": "Club Atlético Lugano",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Mercedes",
+     "nl": "99914",
+     "nl_nome": "Club Mercedes",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Defensores de Cambaceres",
+     "nl": "109823",
+     "nl_nome": "Def. Cambaceres",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Deportivo Paraguayo",
+     "nl": "109857",
+     "nl_nome": "Dep. Paraguayo",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "J.J. Urquiza",
+     "nl": "109835",
+     "nl_nome": "J.J. Urquiza",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Juventud Unida",
+     "nl": "109846",
+     "nl_nome": "Juv. Unida",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "L.N. Alem",
+     "nl": "104633",
+     "nl_nome": "L.N. Alem",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Puerto Nuevo",
+     "nl": "109849",
+     "nl_nome": "Puerto Nuevo",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Sacachispas",
+     "nl": "109850",
+     "nl_nome": "Sacachispas Fútbol Club",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Victoriano Arenas",
+     "nl": "109852",
+     "nl_nome": "Victoriano Arenas",
+     "filiacao": "direta"
+    }
+   ],
+   "Zona B": [
+    {
+     "nome": "Atlas",
+     "nl": "109861",
+     "nl_nome": "Club Atlético Atlas",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Luján",
+     "nl": "109837",
+     "nl_nome": "Club Luján",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Muñiz",
+     "nl": "109848",
+     "nl_nome": "Muñiz",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Claypole",
+     "nl": "109843",
+     "nl_nome": "Club Atlético Claypole",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Central Córdoba (R)",
+     "nl": "98361",
+     "nl_nome": "Club Atlético Central Córdoba de Rosario",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "El Porvenir",
+     "nl": "98543",
+     "nl_nome": "Club El Porvenir",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Deportivo Español",
+     "nl": "109026",
+     "nl_nome": "Dep. Español",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Central Ballester",
+     "nl": "109841",
+     "nl_nome": "Ctral. Ballester",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "General Lamadrid",
+     "nl": "104632",
+     "nl_nome": "Gral. Lamadrid",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Sportivo Barracas",
+     "nl": "109851",
+     "nl_nome": "Club Sportivo Barracas",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Cañuelas",
+     "nl": "109830",
+     "nl_nome": "Cañuelas Fútbol Club",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Leones",
+     "nl": "103891",
+     "nl_nome": "Club Leones de Rosario",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Yupanqui",
+     "nl": "109854",
+     "nl_nome": "Yupanqui",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Fénix",
+     "nl": "109840",
+     "nl_nome": "Club Atlético Fénix",
+     "filiacao": "direta"
+    }
+   ]
+  }
+ },
+ "federal_a": {
+  "zonas": {
+   "Zona 1": [
+    {
+     "nome": "9 de Julio (R)",
+     "nl": "109860",
+     "nl_nome": "Club Atlético 9 de Julio de Rafaela",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Atlético Escobar",
+     "nl": "111165",
+     "nl_nome": "Atlético Escobar",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Defensores de Belgrano (VR)",
+     "nl": "99870",
+     "nl_nome": "Club Defensores de Belgrano de Villa Ramallo",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Douglas Haig",
+     "nl": "98364",
+     "nl_nome": "Douglas Haig",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "El Linqueño",
+     "nl": "99843",
+     "nl_nome": "El Linqueño",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Gimnasia y Esgrima (C)",
+     "nl": "99929",
+     "nl_nome": "Club S.C. y D. Gimnasia y Esgrima de Chivilcoy",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Gimnasia y Esgrima (CdU)",
+     "nl": "98541",
+     "nl_nome": "Club Gimnasia y Esgrima de Concepción del Uruguay",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Independiente (C)",
+     "nl": "99904",
+     "nl_nome": "Club Atlético Independiente de Chivilcoy",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Sportivo Belgrano",
+     "nl": "99845",
+     "nl_nome": "Sp. Belgrano",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Sportivo Las Parejas",
+     "nl": "99878",
+     "nl_nome": "Sp. Las Parejas",
+     "filiacao": "indireta"
+    }
+   ],
+   "Zona 2": [
+    {
+     "nome": "Bartolomé Mitre (P)",
+     "nl": "99909",
+     "nl_nome": "Club Atlético Bartolomé Mitre de Posadas",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Boca Unidos",
+     "nl": "99836",
+     "nl_nome": "Boca Unidos",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Defensores de Vilelas",
+     "nl": "110130",
+     "nl_nome": "Club Atlético Defensores de Vilelas",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Juventud Antoniana",
+     "nl": "98537",
+     "nl_nome": "Juv. Antoniana",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "San Martín (F)",
+     "nl": "99897",
+     "nl_nome": "Club Sportivo General San Martín de Formosa",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Sarmiento (LB)",
+     "nl": "99877",
+     "nl_nome": "Club Atlético Sarmiento de La Banda",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Sarmiento (R)",
+     "nl": "99900",
+     "nl_nome": "Club Atlético Sarmiento de Resistencia",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Sol de América (F)",
+     "nl": "99905",
+     "nl_nome": "Club Sol de América de Formosa",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Tucumán Central",
+     "nl": "103521",
+     "nl_nome": "Tucumán Central",
+     "filiacao": "indireta"
+    }
+   ],
+   "Zona 3": [
+    {
+     "nome": "Argentino (MM)",
+     "nl": "99931",
+     "nl_nome": "Club Deportivo Argentino de Monte Maíz",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Atenas (RC)",
+     "nl": "99879",
+     "nl_nome": "Club Sportivo y Biblioteca Atenas de Río Cuarto",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Cipolletti",
+     "nl": "98535",
+     "nl_nome": "Club Cipolletti",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Costa Brava",
+     "nl": "99965",
+     "nl_nome": "Club Atlético Costa Brava de General Pico",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Deportivo Rincón",
+     "nl": "99999",
+     "nl_nome": "Club Deportivo Rincón",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "FADEP",
+     "nl": "100016",
+     "nl_nome": "Fundación Amigos por el Deporte",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Huracán Las Heras",
+     "nl": "98545",
+     "nl_nome": "Club Atlético Huracán de Las Heras",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Juventud Unida Universitario",
+     "nl": "109858",
+     "nl_nome": "Juv. Unida Universitario",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "San Martín (SM)",
+     "nl": "98539",
+     "nl_nome": "Atlético Club San Martín de Mendoza",
+     "filiacao": "indireta"
+    }
+   ],
+   "Zona 4": [
+    {
+     "nome": "Alvarado",
+     "nl": "99835",
+     "nl_nome": "Alvarado",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Círculo Deportivo",
+     "nl": "99907",
+     "nl_nome": "Círculo Deportivo",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Germinal",
+     "nl": "99852",
+     "nl_nome": "Club Atlético Germinal de Rawson",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Guillermo Brown",
+     "nl": "109867",
+     "nl_nome": "Club Guillermo Brown de Puerto Madryn",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Kimberley",
+     "nl": "99896",
+     "nl_nome": "Club Atlético Kimberley",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Olimpo",
+     "nl": "98538",
+     "nl_nome": "Olimpo",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Ramón Santamarina",
+     "nl": "99834",
+     "nl_nome": "Santamarina",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Sol de Mayo (V)",
+     "nl": "99859",
+     "nl_nome": "Club Social y Deportivo Sol de Mayo de Viedma",
+     "filiacao": "indireta"
+    },
+    {
+     "nome": "Villa Mitre",
+     "nl": "98542",
+     "nl_nome": "Villa Mitre",
+     "filiacao": "indireta"
+    }
+   ]
+  },
+  "inicio": "20/03/2026",
+  "rebaixados_2026": [
+   "Ramón Santamarina",
+   "Sarmiento (R)",
+   "Sol de Mayo (V)",
+   "Tucumán Central"
+  ]
+ },
+ "promocional": {
+  "zonas": {
+   "Zona A": [
+    {
+     "nome": "SAT",
+     "nl": "110043",
+     "nl_nome": "S.A.T.",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Defensores de Glew",
+     "nl": "110365",
+     "nl_nome": "Club Atlético Defensores de Glew",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Deportivo Metalúrgico",
+     "nl": "110377",
+     "nl_nome": "Dep. Metalúrgico",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Náutico Hacoaj",
+     "nl": "110206",
+     "nl_nome": "Club Náutico Hacoaj",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Estrella de Berisso",
+     "nl": "110064",
+     "nl_nome": "Club Atlético Estrella de Berisso",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Atlético Pilar",
+     "nl": "110221",
+     "nl_nome": "Club Atlético Pilar",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Juventud de Bernal",
+     "nl": "110413",
+     "nl_nome": "Club Social y Deportivo Juventud de Bernal",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Provincial (EL)",
+     "nl": "110605",
+     "nl_nome": "Club Unión Deportivo Provincial de Lobos",
+     "filiacao": "direta"
+    }
+   ],
+   "Zona B": [
+    {
+     "nome": "Barrancas FC",
+     "nl": "110604",
+     "nl_nome": "Barrancas F.C.",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Uribelarrea FC",
+     "nl": "103821",
+     "nl_nome": "Uribe Fútbol Club",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "FC Ezeiza",
+     "nl": "110606",
+     "nl_nome": "Fútbol Club Ezeiza",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Buenos Aires City",
+     "nl": null,
+     "nl_nome": null,
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Belgrano (Z)",
+     "nl": "110202",
+     "nl_nome": "Club Atlético Belgrano de Zárate",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Alumni (LH)",
+     "nl": "110440",
+     "nl_nome": "Club Alumni de Los Hornos",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Control Orientado",
+     "nl": null,
+     "nl_nome": null,
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Las Mandarinas",
+     "nl": "110128",
+     "nl_nome": "Club Deportivo y Fomento Las Mandarinas",
+     "filiacao": "direta"
+    },
+    {
+     "nome": "Everton (LP)",
+     "nl": "110051",
+     "nl_nome": "Club Everton de La Plata",
+     "filiacao": "direta"
+    }
+   ]
+  },
+  "inicio": "23/05/2026"
+ },
+ "primera_b": {
+  "clubes": [
+   {
+    "nome": "Arsenal Fútbol Club de Sarandí",
+    "nl": "98360",
+    "nl_nome": "Arsenal Fútbol Club de Sarandí",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Sportivo Italiano",
+    "nl": "98362",
+    "nl_nome": "Club Sportivo Italiano",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Deportivo Armenio",
+    "nl": "98546",
+    "nl_nome": "Club Deportivo Armenio",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Camioneros",
+    "nl": "99846",
+    "nl_nome": "Camioneros",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Real Pilar Fútbol Club",
+    "nl": "100009",
+    "nl_nome": "Real Pilar Fútbol Club",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Atlético Argentino de Quilmes",
+    "nl": "104625",
+    "nl_nome": "Club Atlético Argentino de Quilmes",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Atlético Brown de Adrogué",
+    "nl": "104628",
+    "nl_nome": "Club Atlético Brown de Adrogué",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Sportivo Dock Sud",
+    "nl": "104630",
+    "nl_nome": "Club Sportivo Dock Sud",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Flandria",
+    "nl": "104631",
+    "nl_nome": "Flandria",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Atlético Talleres de Remedios de Escalada",
+    "nl": "104635",
+    "nl_nome": "Club Atlético Talleres de Remedios de Escalada",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Dep. Merlo",
+    "nl": "109808",
+    "nl_nome": "Dep. Merlo",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Atlético Ituzaingó",
+    "nl": "109827",
+    "nl_nome": "Club Atlético Ituzaingó",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Atlético Argentino de Merlo",
+    "nl": "109829",
+    "nl_nome": "Club Atlético Argentino de Merlo",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Comunicaciones",
+    "nl": "109831",
+    "nl_nome": "Club Comunicaciones",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Dep. Laferrere",
+    "nl": "109832",
+    "nl_nome": "Dep. Laferrere",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Excursionistas",
+    "nl": "109833",
+    "nl_nome": "Excursionistas",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Liniers",
+    "nl": "109836",
+    "nl_nome": "Liniers",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Social y Deportivo San Martín de Burzaco",
+    "nl": "109838",
+    "nl_nome": "Club Social y Deportivo San Martín de Burzaco",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Club Villa Dálmine",
+    "nl": "109839",
+    "nl_nome": "Club Villa Dálmine",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Defensores Unidos",
+    "nl": "109844",
+    "nl_nome": "Defensores Unidos",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "UAI Urquiza",
+    "nl": "109845",
+    "nl_nome": "UAI Urquiza",
+    "filiacao": "direta"
+   },
+   {
+    "nome": "Villa San Carlos",
+    "nl": "109853",
+    "nl_nome": "Villa San Carlos",
+    "filiacao": "direta"
+   }
+  ]
+ },
+ "regional": {
+  "regioes": {
+   "Norte": {
+    "Zona 1": [
+     {
+      "nome": "Club Atlético Central Norte",
+      "nl": "110055",
+      "nl_nome": "Club Atlético Central Norte de Tucumán",
+      "filiacao": "indireta",
+      "cidade": "San Miguel de Tucumán",
+      "provincia": "Tucumán"
+     },
+     {
+      "nome": "Concepción Fútbol Club",
+      "nl": "109987",
+      "nl_nome": "Concepción Fútbol Club",
+      "filiacao": "indireta",
+      "cidade": "Concepción",
+      "provincia": "Tucumán"
+     },
+     {
+      "nome": "Club Atlético Trancas",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Trancas",
+      "provincia": "Tucumán"
+     },
+     {
+      "nome": "Club Atlético San Antonio",
+      "nl": "100007",
+      "nl_nome": "Club Atlético San Antonio de Ranchillos",
+      "filiacao": "indireta",
+      "cidade": "Ranchillos",
+      "provincia": "Tucumán"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Club Ateneo Parroquial Alderetes",
+      "nl": "103842",
+      "nl_nome": "Ateneo Parroquial",
+      "filiacao": "indireta",
+      "cidade": "Alderetes",
+      "provincia": "Tucumán"
+     },
+     {
+      "nome": "Club Atlético Estación Experimental",
+      "nl": "103515",
+      "nl_nome": "Club Atlético Estación Experimental de Tucumán",
+      "filiacao": "indireta",
+      "cidade": "Las Talitas",
+      "provincia": "Tucumán"
+     },
+     {
+      "nome": "Club Atlético San Pablo",
+      "nl": "103045",
+      "nl_nome": "Club Atlético San Pablo de Tucumán",
+      "filiacao": "indireta",
+      "cidade": "San Pablo",
+      "provincia": "Tucumán"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Club Deportivo Villa San Antonio",
+      "nl": "100022",
+      "nl_nome": "Club Deportivo Villa San Antonio de Salta",
+      "filiacao": "indireta",
+      "cidade": "Salta",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Atlético Libertad",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Campo Santo",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club General Pizarro",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Orán",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Sportivo Pocitos",
+      "nl": "103177",
+      "nl_nome": "Sp. Pocitos",
+      "filiacao": "indireta",
+      "cidade": "Salvador Mazza",
+      "provincia": "Salta"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Club Los Cachorros",
+      "nl": "110304",
+      "nl_nome": "Club Los Cachorros de Salta",
+      "filiacao": "indireta",
+      "cidade": "Salta",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Atlético Libertad",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San José de Metán",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Deportivo El Galpón",
+      "nl": "110334",
+      "nl_nome": "Dep. El Galpón",
+      "filiacao": "indireta",
+      "cidade": "El Galpón",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Atlético Vialidad",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Rosario de la Frontera",
+      "provincia": "Salta"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Atlético Mitre",
+      "nl": "99947",
+      "nl_nome": "Club Atlético Mitre de Salta",
+      "filiacao": "indireta",
+      "cidade": "Salta",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Ceferino Fútbol Club",
+      "nl": "103843",
+      "nl_nome": "Ceferino Fútbol Club de Salta",
+      "filiacao": "indireta",
+      "cidade": "Salta",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Atlético La Florida",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Cafayate",
+      "provincia": "Salta"
+     },
+     {
+      "nome": "Club Atlético Redes de la Patria",
+      "nl": "110337",
+      "nl_nome": "Redes de La Patria",
+      "filiacao": "indireta",
+      "cidade": "El Bordo",
+      "provincia": "Salta"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Gimnasia y Tiro de Yavi",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "La Quiaca",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Social, Cultural y Deportivo Los Perales",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San Salvador de Jujuy",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Deportivo Luján",
+      "nl": "110227",
+      "nl_nome": "Club Deportivo Luján de Jujuy",
+      "filiacao": "indireta",
+      "cidade": "San Salvador de Jujuy",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Juventus Fútbol Club",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Humahuaca",
+      "provincia": "Jujuy"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Asociación Atlética La Mona 44",
+      "nl": "110481",
+      "nl_nome": "Asociación Atlética La Mona 44 de Perico",
+      "filiacao": "indireta",
+      "cidade": "Perico",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Atlético Talleres",
+      "nl": "109859",
+      "nl_nome": "Club Atlético Talleres de Perico",
+      "filiacao": "indireta",
+      "cidade": "Perico",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Asociación Cultural y Deportiva Altos Hornos Zapla",
+      "nl": "99862",
+      "nl_nome": "Altos Hornos Zapla",
+      "filiacao": "indireta",
+      "cidade": "Palpalá",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Defensores de Fraile Pintado",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Fraile Pintado",
+      "provincia": "Jujuy"
+     }
+    ],
+    "Zona 8": [
+     {
+      "nome": "Club Sportivo Alberdi",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Libertador General San Martín",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Atlético Central Norte",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Libertador General San Martín",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Sociedad de Tiro y Gimnasia",
+      "nl": "110177",
+      "nl_nome": "Club Sociedad de Tiro y Gimnasia de San Pedro",
+      "filiacao": "indireta",
+      "cidade": "San Pedro de Jujuy",
+      "provincia": "Jujuy"
+     },
+     {
+      "nome": "Club Atlético San Pedro",
+      "nl": "102337",
+      "nl_nome": "Club Atlético San Pedro de Jujuy",
+      "filiacao": "indireta",
+      "cidade": "San Pedro de Jujuy",
+      "provincia": "Jujuy"
+     }
+    ]
+   },
+   "Litoral Norte": {
+    "Zona 1": [
+     {
+      "nome": "Club Social y Deportivo Libertad",
+      "nl": "110518",
+      "nl_nome": "Club Social y Deportivo Libertad de Clorinda",
+      "filiacao": "indireta",
+      "cidade": "Clorinda",
+      "provincia": "Formosa"
+     },
+     {
+      "nome": "Club Municipal de Laishí",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San Francisco de Laishí",
+      "provincia": "Formosa"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Asociación Civil Club Atlético Estrellas de Laishi",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San Francisco de Laishí",
+      "provincia": "Formosa"
+     },
+     {
+      "nome": "Club Atlético Estudiantes",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Pirané",
+      "provincia": "Formosa"
+     },
+     {
+      "nome": "Club Deportivo Municipal",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "La Leonesa",
+      "provincia": "Chaco"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Club Atlético Resistencia Central",
+      "nl": "99935",
+      "nl_nome": "Resistencia Central",
+      "filiacao": "indireta",
+      "cidade": "Resistencia",
+      "provincia": "Chaco"
+     },
+     {
+      "nome": "Club Atlético Central Norte Argentino",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Resistencia",
+      "provincia": "Chaco"
+     },
+     {
+      "nome": "Club Deportivo Luján",
+      "nl": "110619",
+      "nl_nome": "Club Deportivo Luján de Resistencia",
+      "filiacao": "indireta",
+      "cidade": "Resistencia",
+      "provincia": "Chaco"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Avenida Fútbol Club",
+      "nl": "100028",
+      "nl_nome": "Avenida F.C.",
+      "filiacao": "indireta",
+      "cidade": "Villa Ángela",
+      "provincia": "Chaco"
+     },
+     {
+      "nome": "Club Deportivo Comercio",
+      "nl": "99994",
+      "nl_nome": "Club Deportivo Comercio de Santa Sylvina",
+      "filiacao": "indireta",
+      "cidade": "Santa Sylvina",
+      "provincia": "Chaco"
+     },
+     {
+      "nome": "Club Sportivo Cultural",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Juan José Castelli",
+      "provincia": "Chaco"
+     },
+     {
+      "nome": "Club Atlético Union y Fuerza",
+      "nl": "110584",
+      "nl_nome": "Club Atlético Unión y Fuerza de Corzuela",
+      "filiacao": "indireta",
+      "cidade": "Corzuela",
+      "provincia": "Chaco"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Deportivo Mandiyú",
+      "nl": "99946",
+      "nl_nome": "Club Deportivo Mandiyú",
+      "filiacao": "indireta",
+      "cidade": "Corrientes",
+      "provincia": "Corrientes"
+     },
+     {
+      "nome": "Club Atlético Huracán Corrientes",
+      "nl": "98385",
+      "nl_nome": "Huracán Corrientes",
+      "filiacao": "indireta",
+      "cidade": "Corrientes",
+      "provincia": "Corrientes"
+     },
+     {
+      "nome": "Club Sportivo Unión",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Bella Vista",
+      "provincia": "Corrientes"
+     },
+     {
+      "nome": "Huracán Football Club",
+      "nl": "99942",
+      "nl_nome": "Huracán Foot-Ball Club de Goya",
+      "filiacao": "indireta",
+      "cidade": "Goya",
+      "provincia": "Corrientes"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Social y Sportivo Surubí",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Goya",
+      "provincia": "Corrientes"
+     },
+     {
+      "nome": "Club Sportivo Santa Lucía",
+      "nl": "100029",
+      "nl_nome": "Sp. Santa Lucía",
+      "filiacao": "indireta",
+      "cidade": "Santa Lucía",
+      "provincia": "Corrientes"
+     },
+     {
+      "nome": "Lipton Football Club",
+      "nl": "110141",
+      "nl_nome": "Lipton F.C.",
+      "filiacao": "indireta",
+      "cidade": "Corrientes",
+      "provincia": "Corrientes"
+     },
+     {
+      "nome": "Club Atlético San Lorenzo",
+      "nl": "102860",
+      "nl_nome": "Club Atlético San Lorenzo de Monte Caseros",
+      "filiacao": "indireta",
+      "cidade": "Monte Caseros",
+      "provincia": "Corrientes"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Club Social y Deportivo Nacional",
+      "nl": "110357",
+      "nl_nome": "Club Deportivo Nacional de Puerto Piray",
+      "filiacao": "indireta",
+      "cidade": "Puerto Piray",
+      "provincia": "Misiones"
+     },
+     {
+      "nome": "Club Atlético La Picada",
+      "nl": "110273",
+      "nl_nome": "Club Atlético La Picada de Posadas",
+      "filiacao": "indireta",
+      "cidade": "Posadas",
+      "provincia": "Misiones"
+     },
+     {
+      "nome": "Club Deportivo Jorge Gibson Brown",
+      "nl": "99902",
+      "nl_nome": "Jorge Gibson Brown",
+      "filiacao": "indireta",
+      "cidade": "Posadas",
+      "provincia": "Misiones"
+     },
+     {
+      "nome": "La Cantera Fútbol Club",
+      "nl": "103490",
+      "nl_nome": "La Cantera Fútbol Club de Posadas",
+      "filiacao": "indireta",
+      "cidade": "Posadas",
+      "provincia": "Misiones"
+     }
+    ],
+    "Zona 8": [
+     {
+      "nome": "Club Deportivo Guaraní Antonio Franco",
+      "nl": "99874",
+      "nl_nome": "Guaraní Antonio Franco",
+      "filiacao": "indireta",
+      "cidade": "Posadas",
+      "provincia": "Misiones"
+     },
+     {
+      "nome": "Club Mutual Crucero del Norte",
+      "nl": "99844",
+      "nl_nome": "Crucero del Norte",
+      "filiacao": "indireta",
+      "cidade": "Garupá",
+      "provincia": "Misiones"
+     },
+     {
+      "nome": "Club Deportivo y Cultural Barrio Obrero",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Puerto Esperanza",
+      "provincia": "Misiones"
+     }
+    ]
+   },
+   "Litoral Sur": {
+    "Zona 1": [
+     {
+      "nome": "Club Sanjustino",
+      "nl": "99940",
+      "nl_nome": "Club Sanjustino",
+      "filiacao": "indireta",
+      "cidade": "San Justo",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Club Colón",
+      "nl": "99980",
+      "nl_nome": "Club Colón de San Justo",
+      "filiacao": "indireta",
+      "cidade": "San Justo",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "San Lorenzo Foot-Ball Club",
+      "nl": "111270",
+      "nl_nome": "San Lorenzo Foot Ball Club de Esperanza",
+      "filiacao": "indireta",
+      "cidade": "Esperanza",
+      "provincia": "Santa Fe"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Asociación Deportiva Juventud",
+      "nl": "102859",
+      "nl_nome": "Asociación Deportiva Juventud de Esperanza",
+      "filiacao": "indireta",
+      "cidade": "Esperanza",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Cosmos Fútbol Club",
+      "nl": "110307",
+      "nl_nome": "Cosmos Fútbol Club de Santa Fe",
+      "filiacao": "indireta",
+      "cidade": "Santa Fe",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Club Atlético Ciclón Racing",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Santa Fe",
+      "provincia": "Santa Fe"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Club Atlético San Jorge Mutual y Social",
+      "nl": "99867",
+      "nl_nome": "Club Atlético San Jorge Mutual y Social",
+      "filiacao": "indireta",
+      "cidade": "San Jorge",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Puerto San Martín Fútbol",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Puerto General San Martín",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Club Sportivo Ben Hur",
+      "nl": "104621",
+      "nl_nome": "Club Sportivo Ben Hur de Rafaela",
+      "filiacao": "indireta",
+      "cidade": "Rafaela",
+      "provincia": "Santa Fe"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Los Andes Foot Ball Club",
+      "nl": "99995",
+      "nl_nome": "Sociedad Italia Deportiva Los Andes de Alcorta",
+      "filiacao": "indireta",
+      "cidade": "Alcorta",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Club Sportivo Bernardino Rivadavia",
+      "nl": "110054",
+      "nl_nome": "Club Sportivo Rivadavia de Venado Tuerto",
+      "filiacao": "indireta",
+      "cidade": "Venado Tuerto",
+      "provincia": "Santa Fe"
+     },
+     {
+      "nome": "Club Studebaker Mutual Social y Biblioteca",
+      "nl": "110176",
+      "nl_nome": "Club Studebaker de Villa Cañás",
+      "filiacao": "indireta",
+      "cidade": "Villa Cañás",
+      "provincia": "Santa Fe"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Atlético Neuquén Club",
+      "nl": "110556",
+      "nl_nome": "Atlético Neuquén Club de Paraná",
+      "filiacao": "indireta",
+      "cidade": "Paraná",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Atlético Paraná",
+      "nl": "99865",
+      "nl_nome": "Club Atlético Paraná",
+      "filiacao": "indireta",
+      "cidade": "Paraná",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Atlético Belgrano",
+      "nl": "110155",
+      "nl_nome": "Club Atlético Belgrano de Paraná",
+      "filiacao": "indireta",
+      "cidade": "Paraná",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Centro Paraná de Ex Alumnos de Don Bosco",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Paraná",
+      "provincia": "Entre Ríos"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Atlético Libertad",
+      "nl": "99993",
+      "nl_nome": "Club Atlético Libertad de Concordia",
+      "filiacao": "indireta",
+      "cidade": "Concordia",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Comunicaciones Concordia",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Concordia",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Defensores de Pronunciamiento",
+      "nl": "99903",
+      "nl_nome": "Def. de Pronunciamiento",
+      "filiacao": "indireta",
+      "cidade": "Pronunciamiento",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Recreativo San Jorge",
+      "nl": "102543",
+      "nl_nome": "Club Recreativo San Jorge de Villa Elisa",
+      "filiacao": "indireta",
+      "cidade": "Villa Elisa",
+      "provincia": "Entre Ríos"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Club Social y Deportivo Achirense",
+      "nl": "99960",
+      "nl_nome": "Dep. Achirense",
+      "filiacao": "indireta",
+      "cidade": "Colonia Las Achiras",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Atlético Sauce",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Colón",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Parque Sur",
+      "nl": "102871",
+      "nl_nome": "Club Parque Sur de Concepción del Uruguay",
+      "filiacao": "indireta",
+      "cidade": "Concepción del Uruguay",
+      "provincia": "Entre Ríos"
+     },
+     {
+      "nome": "Club Deportivo Juventud Unida",
+      "nl": "99875",
+      "nl_nome": "Club Deportivo Juventud Unida de Gualeguaychú",
+      "filiacao": "indireta",
+      "cidade": "Gualeguaychú",
+      "provincia": "Entre Ríos"
+     }
+    ]
+   },
+   "Centro": {
+    "Zona 1": [
+     {
+      "nome": "Club Atlético Villa Nueva",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Monte Quemado",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Juventud Unida Triángulo",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Monte Quemado",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético Campo Gallo",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Campo Gallo",
+      "provincia": "Santiago del Estero"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "La Ensenada Club",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Quimilí",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético Social Pinto",
+      "nl": "99921",
+      "nl_nome": "Dep. Pinto",
+      "filiacao": "indireta",
+      "cidade": "Pinto",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético Unión Lugones",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Lugones",
+      "provincia": "Santiago del Estero"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Club Atlético 25 de Mayo",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Termas de Río Hondo",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético Central Argentino",
+      "nl": "100012",
+      "nl_nome": "Club Atlético Central Argentino de La Banda",
+      "filiacao": "indireta",
+      "cidade": "La Banda",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético San Jorge",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "El Arenal",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Talleres Fútbol Club",
+      "nl": "110351",
+      "nl_nome": "Talleres Fútbol Club de Nueva Esperanza",
+      "filiacao": "indireta",
+      "cidade": "Nueva Esperanza",
+      "provincia": "Santiago del Estero"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Club Deportivo Los Verdes",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "El Mojón",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético San Martín",
+      "nl": "102544",
+      "nl_nome": "Club Atlético San Martín de El Ojito",
+      "filiacao": "indireta",
+      "cidade": "El Ojito",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Escuela de Fútbol Infantil Diego Armando (FIDA)",
+      "nl": "103155",
+      "nl_nome": "Fútbol Infantil Diego Armando de El Arenal",
+      "filiacao": "indireta",
+      "cidade": "El Arenal",
+      "provincia": "Santiago del Estero"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Atlético Frías",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Frías",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Sportivo Loreto",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Loreto",
+      "provincia": "Santiago del Estero"
+     },
+     {
+      "nome": "Club Atlético Unión Santiago",
+      "nl": "99972",
+      "nl_nome": "Unión Santiago",
+      "filiacao": "indireta",
+      "cidade": "Santiago del Estero",
+      "provincia": "Santiago del Estero"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Deportivo Américo Tesorieri",
+      "nl": "110433",
+      "nl_nome": "Club Deportivo Américo Tesorieri de Catamarca",
+      "filiacao": "indireta",
+      "cidade": "San Fernando del Valle de Catamarca",
+      "provincia": "Catamarca"
+     },
+     {
+      "nome": "Club Sportivo Villa Cubas",
+      "nl": "110018",
+      "nl_nome": "Sp. Villa Cubas",
+      "filiacao": "indireta",
+      "cidade": "San Fernando del Valle de Catamarca",
+      "provincia": "Catamarca"
+     },
+     {
+      "nome": "Club Deportivo Defensores de Esquiú",
+      "nl": "110287",
+      "nl_nome": "Club Defensores de Esquiú",
+      "filiacao": "indireta",
+      "cidade": "San José de Piedra Blanca",
+      "provincia": "Catamarca"
+     },
+     {
+      "nome": "Club Atlético San Martín",
+      "nl": "100025",
+      "nl_nome": "Club Atlético San Martín de El Bañado",
+      "filiacao": "indireta",
+      "cidade": "El Bañado",
+      "provincia": "Catamarca"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Club Social y Deportivo Progreso",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Tinogasta",
+      "provincia": "Catamarca"
+     },
+     {
+      "nome": "Club Social y Cultural San Lorenzo de Pomán",
+      "nl": "110345",
+      "nl_nome": "Club Social y Cultural San Lorenzo de Pomán",
+      "filiacao": "indireta",
+      "cidade": "Villa de Pomán",
+      "provincia": "Catamarca"
+     },
+     {
+      "nome": "Club Atlético San Luis",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "La Puntilla",
+      "provincia": "Catamarca"
+     },
+     {
+      "nome": "Club Atlético Defensores de La Boca",
+      "nl": "99971",
+      "nl_nome": "Club Atlético Defensores de La Boca de La Rioja",
+      "filiacao": "indireta",
+      "cidade": "La Rioja",
+      "provincia": "La Rioja"
+     }
+    ],
+    "Zona 8": [
+     {
+      "nome": "Club Atlético y Social Obras Sanitarias",
+      "nl": "103542",
+      "nl_nome": "Club Atl. y Soc. Obras Sanitarias de Mina Clavero",
+      "filiacao": "indireta",
+      "cidade": "Mina Clavero",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético Juventud Unida",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Mina Clavero",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Social y Deportivo Sarmiento",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Villa Dolores",
+      "provincia": "Córdoba"
+     }
+    ],
+    "Zona 9": [
+     {
+      "nome": "Club Atlético Canalense",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Canals",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético Alumni",
+      "nl": "99831",
+      "nl_nome": "Club Atlético Alumni de Villa María",
+      "filiacao": "indireta",
+      "cidade": "Villa María",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético y Biblioteca Silvio Pellico",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Silvio Pellico",
+      "provincia": "Córdoba"
+     }
+    ],
+    "Zona 10": [
+     {
+      "nome": "Club Atlético Camioneros",
+      "nl": "101992",
+      "nl_nome": "Club Atlético Camioneros de Córdoba",
+      "filiacao": "indireta",
+      "cidade": "Córdoba",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético Argentino",
+      "nl": "110037",
+      "nl_nome": "Club Atlético Argentino de Marcos Juárez",
+      "filiacao": "indireta",
+      "cidade": "Marcos Juárez",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Sportivo Suardi",
+      "nl": "102865",
+      "nl_nome": "Club Sportivo Suardi",
+      "filiacao": "indireta",
+      "cidade": "Suardi",
+      "provincia": "Santa Fe"
+     }
+    ],
+    "Zona 11": [
+     {
+      "nome": "Club Atlético General Paz Juniors",
+      "nl": "104620",
+      "nl_nome": "General Paz Jrs.",
+      "filiacao": "indireta",
+      "cidade": "Córdoba",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético Escuela Presidente Roca",
+      "nl": "99924",
+      "nl_nome": "Club Atlético Escuela Presidente Roca de Córdoba",
+      "filiacao": "indireta",
+      "cidade": "Córdoba",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético Quilmes",
+      "nl": "103488",
+      "nl_nome": "Club Atlético Quilmes de Villa Allende",
+      "filiacao": "indireta",
+      "cidade": "Villa Allende",
+      "provincia": "Córdoba"
+     },
+     {
+      "nome": "Club Atlético Unión",
+      "nl": "100026",
+      "nl_nome": "Club Deportivo y Cultural Unión de Oncativo",
+      "filiacao": "indireta",
+      "cidade": "Oncativo",
+      "provincia": "Córdoba"
+     }
+    ]
+   },
+   "Cuyo": {
+    "Zona 1": [
+     {
+      "nome": "Sport Club Quiroga",
+      "nl": "110339",
+      "nl_nome": "S.C. Quiroga",
+      "filiacao": "indireta",
+      "cidade": "San Rafael",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Huracán de San Rafael",
+      "nl": "99917",
+      "nl_nome": "Club Atlético Huracán de San Rafael",
+      "filiacao": "indireta",
+      "cidade": "San Rafael",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Social y Deportivo Goudge",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San Rafael",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Sport Club Pacífico",
+      "nl": "99945",
+      "nl_nome": "Sport Club Pacífico de General Alvear",
+      "filiacao": "indireta",
+      "cidade": "General Alvear",
+      "provincia": "Mendoza"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Club Sportivo La Consulta",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "La Consulta",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Sport Club San Carlos",
+      "nl": "110158",
+      "nl_nome": "Sport Club San Carlos",
+      "filiacao": "indireta",
+      "cidade": "Villa San Carlos",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Social y Deportivo Vialidad Nacional",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Malargüe",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Deportivo Malargüe",
+      "nl": "99958",
+      "nl_nome": "Club Deportivo Malargüe",
+      "filiacao": "indireta",
+      "cidade": "Malargüe",
+      "provincia": "Mendoza"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Club Atlético Argentino",
+      "nl": "104623",
+      "nl_nome": "Club Atlético Argentino de Mendoza",
+      "filiacao": "indireta",
+      "cidade": "San José",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Atlético Palmira",
+      "nl": "109998",
+      "nl_nome": "Club Atlético Palmira",
+      "filiacao": "indireta",
+      "cidade": "Palmira",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Social y Deportivo Montecaseros",
+      "nl": "110124",
+      "nl_nome": "Dep. Montecaseros",
+      "filiacao": "indireta",
+      "cidade": "Montecaseros",
+      "provincia": "Mendoza"
+     },
+     {
+      "nome": "Club Deportivo La Libertad",
+      "nl": "99975",
+      "nl_nome": "Club Social y Deportivo La Libertad de Mendoza",
+      "filiacao": "indireta",
+      "cidade": "Rivadavia",
+      "provincia": "Mendoza"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Club General San Martín",
+      "nl": "102545",
+      "nl_nome": "Club Deportivo General San Martín de Merlo",
+      "filiacao": "indireta",
+      "cidade": "Villa de Merlo",
+      "provincia": "San Luis"
+     },
+     {
+      "nome": "Club Deportivo Naschel Unidos",
+      "nl": "110454",
+      "nl_nome": "Naschel Unidos",
+      "filiacao": "indireta",
+      "cidade": "Naschel",
+      "provincia": "San Luis"
+     },
+     {
+      "nome": "Club Defensores de Belgrano",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Justo Daract",
+      "provincia": "San Luis"
+     },
+     {
+      "nome": "Club Alianza Futbolística",
+      "nl": "110001",
+      "nl_nome": "Club Alianza Futbolística de Villa Mercedes",
+      "filiacao": "indireta",
+      "cidade": "Villa Mercedes",
+      "provincia": "San Luis"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Social y Deportivo Estrella Roja",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Candelaria",
+      "provincia": "San Luis"
+     },
+     {
+      "nome": "La Totora Fútbol Club",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Candelaria",
+      "provincia": "San Luis"
+     },
+     {
+      "nome": "Club Social Colocasi",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San Francisco del Monte de Oro",
+      "provincia": "San Luis"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Atlético Unión",
+      "nl": "99880",
+      "nl_nome": "Club Atlético Unión de Villa Krause",
+      "filiacao": "indireta",
+      "cidade": "Villa Krause",
+      "provincia": "San Juan"
+     },
+     {
+      "nome": "Club Sportivo Desamparados",
+      "nl": "109883",
+      "nl_nome": "Desamparados",
+      "filiacao": "indireta",
+      "cidade": "San Juan",
+      "provincia": "San Juan"
+     },
+     {
+      "nome": "Club Atlético General Belgrano",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Media Agua",
+      "provincia": "San Juan"
+     }
+    ]
+   },
+   "Bonaerense Pampeana Norte": {
+    "Zona 1": [
+     {
+      "nome": "Club Nápoli Argentino",
+      "nl": "103486",
+      "nl_nome": "Napoli Argentino",
+      "filiacao": "indireta",
+      "cidade": "Chascomús",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Chascomús",
+      "nl": "110086",
+      "nl_nome": "Club Atlético Chascomús",
+      "filiacao": "indireta",
+      "cidade": "Chascomús",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Fomento Los Hornos",
+      "nl": "110639",
+      "nl_nome": "C.F. Los Hornos",
+      "filiacao": "indireta",
+      "cidade": "La Plata",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Polideportivo Gonnet",
+      "nl": "103487",
+      "nl_nome": "Polideportivo Gonnet",
+      "filiacao": "indireta",
+      "cidade": "Gonnet",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Club Atlético San Lorenzo de Villa Castells",
+      "nl": "103194",
+      "nl_nome": "Club San Lorenzo de Villa Castells",
+      "filiacao": "indireta",
+      "cidade": "Gonnet",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "SETIA FC",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Ezeiza",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Estrella del Sur",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "San Vicente",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Unión y Fuerza",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Magdalena",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Centro de Formación y Aprendizaje 11 de Febrero",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Zárate",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Monte Grande Football Club",
+      "nl": "111264",
+      "nl_nome": "Monte Grande F.C",
+      "filiacao": "indireta",
+      "cidade": "Monte Grande",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Social Cultural y Deportivo Martinez Moreno",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "El Jagüel",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Club Sportivo Baradero",
+      "nl": "99990",
+      "nl_nome": "Club Sportivo Baradero",
+      "filiacao": "indireta",
+      "cidade": "Baradero",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Baradero",
+      "nl": "99930",
+      "nl_nome": "Club Atlético Baradero",
+      "filiacao": "indireta",
+      "cidade": "Baradero",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Mitre",
+      "nl": "102401",
+      "nl_nome": "Club Atlético Mitre de San Pedro",
+      "filiacao": "indireta",
+      "cidade": "San Pedro",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Paraná Fútbol Club",
+      "nl": "102555",
+      "nl_nome": "Paraná Fútbol Club de San Pedro",
+      "filiacao": "indireta",
+      "cidade": "San Pedro",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Recreativo Carmen de Areco",
+      "nl": "110331",
+      "nl_nome": "Club Atlético El Carmen",
+      "filiacao": "indireta",
+      "cidade": "Carmen de Areco",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Sportsman",
+      "nl": "110259",
+      "nl_nome": "Club Atlético Sportsman de Carmen de Areco",
+      "filiacao": "indireta",
+      "cidade": "Carmen de Areco",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Social y Deportivo El Frontón",
+      "nl": "110002",
+      "nl_nome": "El Frontón",
+      "filiacao": "indireta",
+      "cidade": "San Andrés de Giles",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Asociación Cristiana de Fútbol Argentino",
+      "nl": "103215",
+      "nl_nome": "Asoc. Cristiana",
+      "filiacao": "indireta",
+      "cidade": "José Ingenieros",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Compañía General",
+      "nl": "99916",
+      "nl_nome": "Club Atlético Compañía General de Salto",
+      "filiacao": "indireta",
+      "cidade": "Salto",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Defensores de Salto",
+      "nl": "99893",
+      "nl_nome": "Club Defensores de Salto",
+      "filiacao": "indireta",
+      "cidade": "Salto",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético 9 de Julio",
+      "nl": "110429",
+      "nl_nome": "Club Deportivo y Social 9 de Julio de Chacabuco",
+      "filiacao": "indireta",
+      "cidade": "Chacabuco",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club San Martín",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Chacabuco",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Club Somisa",
+      "nl": "110389",
+      "nl_nome": "Club Somisa de San Nicolás",
+      "filiacao": "indireta",
+      "cidade": "San Nicolás de los Arroyos",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Paraná",
+      "nl": "102552",
+      "nl_nome": "Club Atlético Paraná de San Nicolás",
+      "filiacao": "indireta",
+      "cidade": "San Nicolás de los Arroyos",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Juventud",
+      "nl": "109889",
+      "nl_nome": "Club Atlético Juventud de Pergamino",
+      "filiacao": "indireta",
+      "cidade": "Pergamino",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Racing",
+      "nl": "99952",
+      "nl_nome": "Racing Club de Pergamino",
+      "filiacao": "indireta",
+      "cidade": "Pergamino",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 8": [
+     {
+      "nome": "Club Atlético Independencia",
+      "nl": "110475",
+      "nl_nome": "Independencia Fútbol Club de San Pedro",
+      "filiacao": "indireta",
+      "cidade": "San Pedro",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club de Regatas San Nicolás",
+      "nl": "99915",
+      "nl_nome": "Club Regatas de San Nicolás",
+      "filiacao": "indireta",
+      "cidade": "San Nicolás de los Arroyos",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Deportivo Tricolor",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Wilde",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 9": [
+     {
+      "nome": "Club Atlético Rivadavia",
+      "nl": "99833",
+      "nl_nome": "Club Rivadavia de Lincoln",
+      "filiacao": "indireta",
+      "cidade": "Lincoln",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Academia Javier Mascherano",
+      "nl": "102457",
+      "nl_nome": "Academia Mascherano",
+      "filiacao": "indireta",
+      "cidade": "Lincoln",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Social Ascensión",
+      "nl": "110277",
+      "nl_nome": "Social Ascensión",
+      "filiacao": "indireta",
+      "cidade": "Ascensión",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 10": [
+     {
+      "nome": "Viamonte Fútbol Club",
+      "nl": "102403",
+      "nl_nome": "Viamonte Fútbol Club de Los Toldos",
+      "filiacao": "indireta",
+      "cidade": "Los Toldos",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Villa Belgrano",
+      "nl": "110117",
+      "nl_nome": "Club Atlético Villa Belgrano de Junín",
+      "filiacao": "indireta",
+      "cidade": "Junín",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Carlos Casares",
+      "nl": "99978",
+      "nl_nome": "Atl. Carlos Casares",
+      "filiacao": "indireta",
+      "cidade": "Carlos Casares",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 11": [
+     {
+      "nome": "Club Deportivo SOMRA",
+      "nl": "110676",
+      "nl_nome": "Dep. SOMRA",
+      "filiacao": "indireta",
+      "cidade": "Tortuguitas",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Social y Deportivo La Fraternidad",
+      "nl": "103063",
+      "nl_nome": "La Fraternidad",
+      "filiacao": "indireta",
+      "cidade": "Ingeniero Maschwitz",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Bajo San Isidro",
+      "nl": "111265",
+      "nl_nome": "Bajo San Isidro",
+      "filiacao": "indireta",
+      "cidade": "San Isidro",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Deportivo Malvinas",
+      "nl": "99959",
+      "nl_nome": "Club Social Cultural y Deportivo Malvinas",
+      "filiacao": "indireta",
+      "cidade": "Ingeniero Adolfo Sourdeaux",
+      "provincia": "Buenos Aires"
+     }
+    ]
+   },
+   "Bonaerense Pampeana Sur": {
+    "Zona 1": [
+     {
+      "nome": "Club Atlético All Boys",
+      "nl": "99881",
+      "nl_nome": "Club Atlético All Boys de Santa Rosa",
+      "filiacao": "indireta",
+      "cidade": "Santa Rosa",
+      "provincia": "La Pampa"
+     },
+     {
+      "nome": "Club Atlético Santa Rosa",
+      "nl": "99894",
+      "nl_nome": "Club Atlético Santa Rosa",
+      "filiacao": "indireta",
+      "cidade": "Santa Rosa",
+      "provincia": "La Pampa"
+     },
+     {
+      "nome": "Club Ferro Carril Oeste",
+      "nl": "99882",
+      "nl_nome": "Club Atlético Ferro Carril Oeste de General Pico",
+      "filiacao": "indireta",
+      "cidade": "General Pico",
+      "provincia": "La Pampa"
+     },
+     {
+      "nome": "Club Atlético All Boys",
+      "nl": "102208",
+      "nl_nome": "Club Atlético All Boys de Trenel",
+      "filiacao": "indireta",
+      "cidade": "Trenel",
+      "provincia": "La Pampa"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Club Atlético Villegas",
+      "nl": "102553",
+      "nl_nome": "Club Atlético Villegas",
+      "filiacao": "indireta",
+      "cidade": "General Villegas",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Santa Rita",
+      "nl": "103158",
+      "nl_nome": "Club Santa Rita de Piedritas",
+      "filiacao": "indireta",
+      "cidade": "Piedritas",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Fútbol Club Trenque Lauquen",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Trenque Lauquen",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Club Atlético Huracán",
+      "nl": "99830",
+      "nl_nome": "Club Atlético Huracán de Ingeniero White",
+      "filiacao": "indireta",
+      "cidade": "Ingeniero White",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Sarmiento",
+      "nl": "110032",
+      "nl_nome": "Club Sarmiento de Pigüé",
+      "filiacao": "indireta",
+      "cidade": "Pigüé",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Ferro Carril Sud",
+      "nl": "99873",
+      "nl_nome": "Fútbol Club Ferro Carril Sud de Olavarría",
+      "filiacao": "indireta",
+      "cidade": "Olavarría",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Club Atlético Quilmes",
+      "nl": "110047",
+      "nl_nome": "Club Atlético Quilmes de Mar del Plata",
+      "filiacao": "indireta",
+      "cidade": "Mar del Plata",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Deportivo Norte",
+      "nl": "99911",
+      "nl_nome": "Club Deportivo Norte de Mar del Plata",
+      "filiacao": "indireta",
+      "cidade": "Mar del Plata",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Defensores de Valeria del Mar",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Valeria del Mar",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Atlético Independiente",
+      "nl": "110298",
+      "nl_nome": "Club Atlético Independiente de San Cayetano",
+      "filiacao": "indireta",
+      "cidade": "San Cayetano",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Ministerio",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Quequén",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Villa Díaz Vélez",
+      "nl": "103530",
+      "nl_nome": "Villa Díaz Vélez",
+      "filiacao": "indireta",
+      "cidade": "Necochea",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Embajadores de Olavarría",
+      "nl": "99977",
+      "nl_nome": "Club Embajadores de Olavarría",
+      "filiacao": "indireta",
+      "cidade": "Olavarría",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Racing Athletic Club",
+      "nl": "109890",
+      "nl_nome": "Racing Athletic Club de Olavarría",
+      "filiacao": "indireta",
+      "cidade": "Olavarría",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Balonpié Fútbol Club",
+      "nl": "102152",
+      "nl_nome": "Balonpié Fútbol Club de Bolívar",
+      "filiacao": "indireta",
+      "cidade": "Bolívar",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Club Social y Deportivo Loma Negra",
+      "nl": "110035",
+      "nl_nome": "Club Social y Deportivo Loma Negra de Olavarría",
+      "filiacao": "indireta",
+      "cidade": "Olavarría",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Estudiantes",
+      "nl": "110049",
+      "nl_nome": "Club Atlético Estudiantes de Olavarría",
+      "filiacao": "indireta",
+      "cidade": "Olavarría",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Social y Deportivo El Fortín",
+      "nl": "110045",
+      "nl_nome": "Club Social y Deportivo El Fortín de Olavarría",
+      "filiacao": "indireta",
+      "cidade": "Olavarría",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Atlético Argentinos",
+      "nl": "99863",
+      "nl_nome": "Club Atlético Argentinos de 25 de Mayo",
+      "filiacao": "indireta",
+      "cidade": "25 de Mayo",
+      "provincia": "Buenos Aires"
+     }
+    ]
+   },
+   "Patagónica": {
+    "Zona 1": [
+     {
+      "nome": "Club Deportivo y Cultural General San Martín",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Río Grande",
+      "provincia": "Tierra del Fuego"
+     },
+     {
+      "nome": "Club Social Cultural y Deportivo Camioneros",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Río Grande",
+      "provincia": "Tierra del Fuego"
+     },
+     {
+      "nome": "Club Deportivo Estrella Austral",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Río Grande",
+      "provincia": "Tierra del Fuego"
+     }
+    ],
+    "Zona 2": [
+     {
+      "nome": "Asociación Civil Deportiva Augusto Lasserre",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Ushuaia",
+      "provincia": "Tierra del Fuego"
+     },
+     {
+      "nome": "Club Atlético Social y Deportivo Camioneros de Ushuaia",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Ushuaia",
+      "provincia": "Tierra del Fuego"
+     },
+     {
+      "nome": "Asociación Atlética Trabajadores de Entidades Deportivas y Civiles (AATEDyC)",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Ushuaia",
+      "provincia": "Tierra del Fuego"
+     }
+    ],
+    "Zona 3": [
+     {
+      "nome": "Santa Cruz Fútbol Club",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Río Turbio",
+      "provincia": "Santa Cruz"
+     },
+     {
+      "nome": "Escorpión Fútbol Club",
+      "nl": "103548",
+      "nl_nome": "Escorpión F.C.",
+      "filiacao": "indireta",
+      "cidade": "Río Gallegos",
+      "provincia": "Santa Cruz"
+     },
+     {
+      "nome": "Club Social y Deportivo Esperanza",
+      "nl": "102853",
+      "nl_nome": "Club Deportivo Esperanza de El Calafate",
+      "filiacao": "indireta",
+      "cidade": "El Calafate",
+      "provincia": "Santa Cruz"
+     },
+     {
+      "nome": "Club Social y Deportivo Bancruz",
+      "nl": "99849",
+      "nl_nome": "Bancruz",
+      "filiacao": "indireta",
+      "cidade": "Río Gallegos",
+      "provincia": "Santa Cruz"
+     }
+    ],
+    "Zona 4": [
+     {
+      "nome": "Asociación Atlético Boxing Club",
+      "nl": "99848",
+      "nl_nome": "Boxing Club",
+      "filiacao": "indireta",
+      "cidade": "Río Gallegos",
+      "provincia": "Santa Cruz"
+     },
+     {
+      "nome": "Club Atlético San Julián",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Puerto San Julián",
+      "provincia": "Santa Cruz"
+     },
+     {
+      "nome": "Club Social y Deportivo Río Mayo",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Río Mayo",
+      "provincia": "Santa Cruz"
+     }
+    ],
+    "Zona 5": [
+     {
+      "nome": "Club Atlético Rada Tilly",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Rada Tilly",
+      "provincia": "Chubut"
+     },
+     {
+      "nome": "Club Atlético Huracán",
+      "nl": "109888",
+      "nl_nome": "Club Atlético Huracán de Comodoro Rivadavia",
+      "filiacao": "indireta",
+      "cidade": "Comodoro Rivadavia",
+      "provincia": "Chubut"
+     },
+     {
+      "nome": "Comisión de Actividades Infantiles",
+      "nl": "109825",
+      "nl_nome": "Comisión de Actividades Infantiles",
+      "filiacao": "indireta",
+      "cidade": "Comodoro Rivadavia",
+      "provincia": "Chubut"
+     },
+     {
+      "nome": "Club Atlético Jorge Newbery",
+      "nl": "99854",
+      "nl_nome": "Club Atlético Jorge Newbery de Comodoro Rivadavia",
+      "filiacao": "indireta",
+      "cidade": "Comodoro Rivadavia",
+      "provincia": "Chubut"
+     }
+    ],
+    "Zona 6": [
+     {
+      "nome": "Club Social y Deportivo Juan José Moreno",
+      "nl": "100011",
+      "nl_nome": "Club Social y Deportivo Juan José Moreno",
+      "filiacao": "indireta",
+      "cidade": "Puerto Madryn",
+      "provincia": "Chubut"
+     },
+     {
+      "nome": "Club Empleados de Comercio",
+      "nl": "103820",
+      "nl_nome": "Club Empleados de Comercio de Trelew",
+      "filiacao": "indireta",
+      "cidade": "Trelew",
+      "provincia": "Chubut"
+     },
+     {
+      "nome": "Club Social y Deportivo Roca",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Rawson",
+      "provincia": "Chubut"
+     }
+    ],
+    "Zona 7": [
+     {
+      "nome": "Club Social y Deportivo Coronel Fontana",
+      "nl": "99954",
+      "nl_nome": "Dep. Fontana",
+      "filiacao": "indireta",
+      "cidade": "Trevelin",
+      "provincia": "Chubut"
+     },
+     {
+      "nome": "Asociación Civil Club Deportivo Cruz del Sur",
+      "nl": "99869",
+      "nl_nome": "Cruz del Sur",
+      "filiacao": "indireta",
+      "cidade": "San Carlos de Bariloche",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Deportivo Estudiantes Unidos",
+      "nl": "99847",
+      "nl_nome": "Club Deportivo Estudiantes Unidos de Bariloche",
+      "filiacao": "indireta",
+      "cidade": "San Carlos de Bariloche",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Asociación Civil Cultural y Deportiva Puerto Moreno",
+      "nl": "110370",
+      "nl_nome": "Club Puerto Moreno de Bariloche",
+      "filiacao": "indireta",
+      "cidade": "San Carlos de Bariloche",
+      "provincia": "Río Negro"
+     }
+    ],
+    "Zona 8": [
+     {
+      "nome": "Club Atlético Talleres",
+      "nl": "110181",
+      "nl_nome": "Club Atlético Talleres de San Antonio Oeste",
+      "filiacao": "indireta",
+      "cidade": "San Antonio Oeste",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Social y Deportivo Villalonga",
+      "nl": "99963",
+      "nl_nome": "Dep. Villalonga",
+      "filiacao": "indireta",
+      "cidade": "Villalonga",
+      "provincia": "Buenos Aires"
+     },
+     {
+      "nome": "Club Social y Atlético Jorge Newbery",
+      "nl": "109982",
+      "nl_nome": "Club Social y Deportivo Jorge Newbery de Patagones",
+      "filiacao": "indireta",
+      "cidade": "Carmen de Patagones",
+      "provincia": "Buenos Aires"
+     }
+    ],
+    "Zona 9": [
+     {
+      "nome": "Club Social y Deportivo Sportsman Club",
+      "nl": "110111",
+      "nl_nome": "Social y Deportivo Sportsman Club de Choele Choel",
+      "filiacao": "indireta",
+      "cidade": "Choele Choel",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Atlético Chimpay",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Chimpay",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Social y Deportivo Luis Beltrán",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Luis Beltrán",
+      "provincia": "Río Negro"
+     }
+    ],
+    "Zona 10": [
+     {
+      "nome": "Club Atlético Social y Deportivo Darwin",
+      "nl": null,
+      "nl_nome": null,
+      "filiacao": "indireta",
+      "cidade": "Darwin",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Deportivo Independiente",
+      "nl": "110053",
+      "nl_nome": "Club Deportivo Independiente de Río Colorado",
+      "filiacao": "indireta",
+      "cidade": "Río Colorado",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Atlético Regina",
+      "nl": "99858",
+      "nl_nome": "Club Atlético Regina",
+      "filiacao": "indireta",
+      "cidade": "Villa Regina",
+      "provincia": "Río Negro"
+     }
+    ],
+    "Zona 11": [
+     {
+      "nome": "Club Deportivo La Amistad",
+      "nl": "99976",
+      "nl_nome": "Asociación Deportiva La Amistad de Cipolletti",
+      "filiacao": "indireta",
+      "cidade": "Cipolletti",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Unión Alem Progresista",
+      "nl": "109979",
+      "nl_nome": "Unión Alem Progresista",
+      "filiacao": "indireta",
+      "cidade": "Allen",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Social y Deportivo General Roca",
+      "nl": "99872",
+      "nl_nome": "Dep. Roca",
+      "filiacao": "indireta",
+      "cidade": "General Roca",
+      "provincia": "Río Negro"
+     },
+     {
+      "nome": "Club Atlético San Patricio",
+      "nl": "102371",
+      "nl_nome": "San Patricio del Chañar",
+      "filiacao": "indireta",
+      "cidade": "San Patricio del Chañar",
+      "provincia": "Neuquén"
+     }
+    ],
+    "Zona 12": [
+     {
+      "nome": "Club Atlético Maronese",
+      "nl": "99855",
+      "nl_nome": "Club Atlético Maronese de Neuquén",
+      "filiacao": "indireta",
+      "cidade": "Neuquén",
+      "provincia": "Neuquén"
+     },
+     {
+      "nome": "Club Atlético Independiente",
+      "nl": "99841",
+      "nl_nome": "Club Atlético Independiente de Neuquén",
+      "filiacao": "indireta",
+      "cidade": "Neuquén",
+      "provincia": "Neuquén"
+     },
+     {
+      "nome": "Club Río Grande",
+      "nl": "110551",
+      "nl_nome": "Club Río Grande de Neuquén",
+      "filiacao": "indireta",
+      "cidade": "Neuquén",
+      "provincia": "Neuquén"
+     },
+     {
+      "nome": "Club Social y Deportivo Alianza",
+      "nl": "99856",
+      "nl_nome": "Club Social y Deportivo Alianza de Cutral Co",
+      "filiacao": "indireta",
+      "cidade": "Cutral Có",
+      "provincia": "Neuquén"
+     }
+    ]
+   }
+  },
+  "tabelas": "regional2026_zonas.json"
+ },
+ "interior": {
+  "nasce": 2027,
+  "composicao": "4 rebaixados do Federal A 2026 + 12 do Regional 2026 + 48 convidados (6 por regiao, campanha no Regional 2026)"
+ }
+}
