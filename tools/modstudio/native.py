@@ -155,10 +155,16 @@ def patch_binary(path, offset, hex_bytes):
     return json.loads(_fl27mm.patch_binary(os.fspath(path), offset, hex_bytes))
 
 
-def assets_list(root, limit=600):
+def assets_list(root, limit=600, family=None):
     if _fl27mm is None:
         raise RuntimeError("The Rust manager extension is not built")
-    return json.loads(_fl27mm.assets_list(os.fspath(root), limit))
+    return json.loads(_fl27mm.assets_list(os.fspath(root), limit, family))
+
+
+def kit_preview(model, atlas, view="three-quarter", size=512):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.kit_preview(os.fspath(model), os.fspath(atlas), view, size)
 
 
 def asset_preview(model, view="three-quarter", size=512):

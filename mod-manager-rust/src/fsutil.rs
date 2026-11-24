@@ -11,6 +11,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rayon::prelude::*;
 
@@ -75,6 +76,110 @@ pub fn files(root: &Path) -> Vec<PathBuf> {
     collected
 }
 
+fn next_entry(stack: &mut Vec<fs::ReadDir>) -> Option<fs::DirEntry> {
+    loop {
+        match stack.last_mut()?.next() {
+            Some(Ok(entry)) => return Some(entry),
+            Some(Err(_)) => {}
+            None => {
+                stack.pop();
+            }
+        }
+    }
+}
+
+fn walk_map<T, F>(
+    root: &Path,
+    limit: usize,
+    found: &AtomicUsize,
+    map: &F,
+) -> Vec<T>
+where
+    T: Send,
+    F: Fn(&Path) -> Option<T> + Sync,
+{
+    let mut results = Vec::new();
+    let mut stack = Vec::new();
+    if let Ok(entries) = fs::read_dir(root) {
+        stack.push(entries);
+    }
+    while found.load(Ordering::Relaxed) < limit {
+        let Some(entry) = next_entry(&mut stack) else { break };
+        let path = entry.path();
+        match entry.file_type() {
+            Ok(kind) if kind.is_dir() => {
+                if let Ok(entries) = fs::read_dir(path) {
+                    stack.push(entries);
+                }
+            }
+            Ok(_) => {
+                if let Some(value) = map(&path) {
+                    if found.fetch_add(1, Ordering::Relaxed) < limit {
+                        results.push(value);
+                    }
+                }
+            }
+            Err(_) => {
+                if path.is_dir() {
+                    if let Ok(entries) = fs::read_dir(path) {
+                        stack.push(entries);
+                    }
+                } else if let Some(value) = map(&path) {
+                    if found.fetch_add(1, Ordering::Relaxed) < limit {
+                        results.push(value);
+                    }
+                }
+            }
+        }
+    }
+    results
+}
+
+/// Map files as they are found, stopping when `limit` values have been
+/// produced instead of retaining every path in a large tree.
+pub fn find_map<T, F>(root: &Path, limit: usize, map: F) -> Vec<T>
+where
+    T: Send,
+    F: Fn(&Path) -> Option<T> + Sync,
+{
+    if limit == 0 {
+        return Vec::new();
+    }
+
+    let target = target_units();
+    let mut frontier = vec![root.to_path_buf()];
+    let mut results = Vec::new();
+    while frontier.len() < target {
+        let mut next = Vec::new();
+        for dir in &frontier {
+            let (dirs, files) = read_children(dir);
+            next.extend(dirs);
+            for path in files {
+                if let Some(value) = map(&path) {
+                    results.push(value);
+                    if results.len() == limit {
+                        return results;
+                    }
+                }
+            }
+        }
+        if next.is_empty() {
+            return results;
+        }
+        frontier = next;
+    }
+
+    let remaining = limit - results.len();
+    let found = AtomicUsize::new(0);
+    let rest: Vec<Vec<T>> = frontier
+        .par_iter()
+        .map(|dir| walk_map(dir, remaining, &found, &map))
+        .collect();
+    results.extend(rest.into_iter().flatten());
+    results.truncate(limit);
+    results
+}
+
 /// Total bytes and file count under `root`, stopping early at `cap` files so a
 /// summary never pays for a full enumeration of a huge tree.
 pub fn stats(root: &Path, cap: usize) -> (u64, usize) {
@@ -129,6 +234,15 @@ mod tests {
         assert_eq!(found, expected);
         assert_eq!(stats(&root, 10_000), (144, 144));
         assert_eq!(stats(&root, 10).1, 10);
+        let visited = AtomicUsize::new(0);
+        let limited = find_map(&root, 10, |p| {
+            visited.fetch_add(1, Ordering::Relaxed);
+            Some(p.to_path_buf())
+        });
+        assert_eq!(limited.len(), 10);
+        assert!(visited.load(Ordering::Relaxed) < expected.len());
+        assert!(find_map(&root, 0, |p| Some(p.to_path_buf())).is_empty());
+        assert!(find_map(&root, 10, |_| None::<PathBuf>).is_empty());
         let _ = fs::remove_dir_all(&root);
     }
 

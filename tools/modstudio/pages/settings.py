@@ -2,8 +2,8 @@
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit, QPlainTextEdit,
-                               QPushButton, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit,
+                               QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QWidget)
 
 from .. import i18n
 import siderdir
@@ -24,9 +24,28 @@ class Settings(Page):
         w = QWidget()
         form = QFormLayout(w)
         form.setLabelAlignment(Qt.AlignRight)
+        form.addRow(section("Appearance"), QLabel(""))
+        self.text_size = QComboBox()
+        for label, value in ((_("Standard"), "normal"), (_("Larger"), "large"),
+                             (_("Largest"), "extra-large")):
+            self.text_size.addItem(label, value)
+        self.text_size.currentIndexChanged.connect(self.set_appearance)
+        form.addRow(_("Text size"), self.text_size)
+        self.accent = QComboBox()
+        for label, value in ((_("Blue"), "blue"), (_("Teal"), "teal"),
+                             (_("Violet"), "violet"), (_("Amber"), "amber")):
+            self.accent.addItem(label, value)
+        self.accent.currentIndexChanged.connect(self.set_appearance)
+        form.addRow(_("Accent color"), self.accent)
+        self.contrast_box = QCheckBox(_("Increase contrast"))
+        self.contrast_box.toggled.connect(self.set_appearance)
+        form.addRow("", self.contrast_box)
+        reset_appearance = QPushButton(_("Reset appearance"))
+        reset_appearance.clicked.connect(self.reset_appearance)
+        form.addRow("", reset_appearance)
         self.folder = QComboBox()
         self.folder.setEditable(True)
-        self.folder.setMinimumWidth(520)
+        self.folder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         b = QPushButton(_("Browse..."))
         b.clicked.connect(self.pick_game)
         use = QPushButton(_("Use this folder"))
@@ -50,7 +69,8 @@ class Settings(Page):
         form.addRow(_("Language"), row(self.lang))
         # 0.2.4 (mato 15.10.): the save folder goes with the world in the game (saves.py)
         form.addRow(section("Master League careers"), QLabel(""))
-        self.per_world = QCheckBox(_("Each world keeps its own careers (the save folder is switched with the world)"))
+        self.per_world = QCheckBox(_("Separate careers per world"))
+        self.per_world.setToolTip(_("Switching worlds also switches the career-save folder."))
         self.per_world.toggled.connect(self.set_per_world)
         form.addRow("", self.per_world)
         # the folder is the game's (FL26's or FL27's): refresh() writes it again after a switch of the game
@@ -79,15 +99,19 @@ class Settings(Page):
         self.log.hide()
         form.addRow("", self.log)
         form.addRow(section("Program"), QLabel(""))
-        self.anim_box = QCheckBox(_("Animations (pages, buttons and dialogs come in softly)"))
+        self.anim_box = QCheckBox(_("Animations"))
+        self.anim_box.setToolTip(_("Pages, buttons and dialogs come in softly."))
         self.anim_box.toggled.connect(self.set_animations)
         form.addRow("", self.anim_box)
         from ..app import APPDIR
         op = QPushButton(_("Open the program's settings folder"))
         op.clicked.connect(lambda: os.startfile(APPDIR) if os.path.isdir(APPDIR) else None)
         form.addRow("", row(op))
-        self.outer.addWidget(w)
-        self.outer.addStretch(1)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setWidget(w)
+        self.outer.addWidget(scroll)
 
     def refresh(self):
         g = self.app.game
@@ -137,6 +161,16 @@ class Settings(Page):
         self.anim_box.blockSignals(True)
         self.anim_box.setChecked(bool(self.app.settings.get("animations", True)))
         self.anim_box.blockSignals(False)
+        self.text_size.blockSignals(True)
+        self.text_size.setCurrentIndex(max(0, self.text_size.findData(
+            self.app.settings.get("text_size", "normal"))))
+        self.text_size.blockSignals(False)
+        self.accent.blockSignals(True)
+        self.accent.setCurrentIndex(max(0, self.accent.findData(self.app.settings.get("accent", "blue"))))
+        self.accent.blockSignals(False)
+        self.contrast_box.blockSignals(True)
+        self.contrast_box.setChecked(bool(self.app.settings.get("high_contrast", False)))
+        self.contrast_box.blockSignals(False)
         p = getattr(self.app, "project", None)
         if p is not None and p.base:
             n = len(p.game_cl)
@@ -179,6 +213,24 @@ class Settings(Page):
         self.app.settings["animations"] = bool(on)
         anim.set_on(on)
         self.app.save_settings()
+
+    def set_appearance(self, *_):
+        self.app.settings["text_size"] = self.text_size.currentData() or "normal"
+        self.app.settings["accent"] = self.accent.currentData() or "blue"
+        self.app.settings["high_contrast"] = self.contrast_box.isChecked()
+        from .. import theme
+        theme.apply(QApplication.instance(), self.app.settings)
+        self.app.save_settings()
+
+    def reset_appearance(self):
+        for control in (self.text_size, self.accent, self.contrast_box):
+            control.blockSignals(True)
+        self.text_size.setCurrentIndex(self.text_size.findData("normal"))
+        self.accent.setCurrentIndex(self.accent.findData("blue"))
+        self.contrast_box.setChecked(False)
+        for control in (self.text_size, self.accent, self.contrast_box):
+            control.blockSignals(False)
+        self.set_appearance()
 
     def set_per_world(self, on):
         from .. import saves

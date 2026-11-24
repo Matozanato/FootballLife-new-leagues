@@ -202,6 +202,11 @@ pub fn kind_hint(kind: &str) -> (&'static str, &'static str, Vec<&'static str>) 
             "cpk.root",
             vec!["livecpk/root/<name>/Asset/model/character/face/real"],
         ),
+        "kits" => (
+            "Kit texture pack for uniform atlases",
+            "cpk.root",
+            vec!["livecpk/root/<name>/Asset/model/character/uniform/texture"],
+        ),
         _ => (
             "A pack folder with an .ini or .cpk inside",
             "cpk.root",
@@ -943,11 +948,14 @@ mod tests {
         assert!(d.join("My Script/README.txt").is_file());
 
         // Every kind must end with nothing missing.
-        for kind in ["cpk", "lua", "mesh", "generic"] {
+        for kind in ["cpk", "lua", "mesh", "kits", "generic"] {
             let got = new_pack(&d, &format!("Pack {kind}"), kind).unwrap();
             assert!(got.missing.is_empty(), "{kind} scaffold incomplete: {:?}", got.missing);
             assert!(Path::new(&got.dir).is_dir(), "{kind} pack folder absent");
         }
+        assert!(d.join(
+            "livecpk/root/Pack kits/Asset/model/character/uniform/texture"
+        ).is_dir());
         let _ = fs::remove_dir_all(&d);
     }
 

@@ -9,7 +9,8 @@ use std::time::SystemTime;
 
 use base64::Engine;
 use fl27mm::{binread, conflict, cpk, ftex, gamemap, ini, order, packs, pesdb, wesys};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 type CmdResult<T> = Result<T, String>;
 
@@ -35,6 +36,59 @@ fn stamp(path: &Path) -> (u64, SystemTime) {
 
 fn e<E: std::fmt::Display>(err: E) -> String {
     format!("{err:#}")
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct UiPreferences {
+    text_size: String,
+    accent: String,
+    high_contrast: bool,
+}
+
+impl Default for UiPreferences {
+    fn default() -> Self {
+        Self {
+            text_size: "normal".into(),
+            accent: "blue".into(),
+            high_contrast: false,
+        }
+    }
+}
+
+impl UiPreferences {
+    fn validate(&self) -> CmdResult<()> {
+        if !matches!(self.text_size.as_str(), "normal" | "large" | "extra-large") {
+            return Err(format!("unsupported text size: {}", self.text_size));
+        }
+        if !matches!(self.accent.as_str(), "blue" | "teal" | "violet" | "amber") {
+            return Err(format!("unsupported accent: {}", self.accent));
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn preferences_load(app: tauri::AppHandle) -> CmdResult<UiPreferences> {
+    let path = app.path().app_config_dir().map_err(e)?.join("preferences.json");
+    match std::fs::read(&path) {
+        Ok(bytes) => {
+            let preferences: UiPreferences = serde_json::from_slice(&bytes).map_err(e)?;
+            preferences.validate()?;
+            Ok(preferences)
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(UiPreferences::default()),
+        Err(err) => Err(e(err)),
+    }
+}
+
+#[tauri::command]
+fn preferences_save(app: tauri::AppHandle, preferences: UiPreferences) -> CmdResult<()> {
+    preferences.validate()?;
+    let path = app.path().app_config_dir().map_err(e)?.join("preferences.json");
+    std::fs::create_dir_all(path.parent().ok_or_else(|| "invalid config path".to_string())?)
+        .map_err(e)?;
+    let data = serde_json::to_vec_pretty(&preferences).map_err(e)?;
+    std::fs::write(path, data).map_err(e)
 }
 
 #[derive(Serialize)]
@@ -805,7 +859,7 @@ struct KindHint {
 
 #[tauri::command(async)]
 fn studio_kinds() -> Vec<KindHint> {
-    ["cpk", "lua", "mesh", "generic"]
+    ["cpk", "lua", "mesh", "kits", "generic"]
         .iter()
         .map(|k| {
             let (hint, hook, layout) = fl27mm::studio::kind_hint(k);
@@ -900,16 +954,21 @@ fn bin_patch(file: String, offset: usize, hex: String) -> CmdResult<serde_json::
 /// List editable assets under a folder, grouped by family. Bounded so a scan of
 /// a 200 GB install cannot hang the UI.
 #[tauri::command]
-fn asset_list(root: String, limit: Option<usize>) -> CmdResult<serde_json::Value> {
+fn asset_list(
+    root: String,
+    limit: Option<usize>,
+    family: Option<String>,
+) -> CmdResult<serde_json::Value> {
     let cap = limit.unwrap_or(400);
-    let mut out = Vec::new();
-    for p in fl27mm::fsutil::files(Path::new(&root)) {
-        let Some(e) = fl27mm::assets::entry(&p) else { continue };
-        out.push(e);
-        if out.len() >= cap {
-            break;
+    let out = fl27mm::fsutil::find_map(Path::new(&root), cap, |path| {
+        if family
+            .as_deref()
+            .is_some_and(|wanted| wanted != fl27mm::assets::family(path).name())
+        {
+            return None;
         }
-    }
+        fl27mm::assets::entry(path)
+    });
     Ok(serde_json::json!({ "items": out, "shown": out.len(), "cap": cap }))
 }
 
@@ -923,6 +982,157 @@ fn asset_replace(
     bytes: Vec<u8>,
 ) -> CmdResult<fl27mm::assets::Report> {
     fl27mm::assets::replace(Path::new(&file), &bytes, width, height).map_err(e)
+}
+
+fn rgba_png(width: u32, height: u32, rgba: &[u8]) -> CmdResult<Vec<u8>> {
+    let expected = (width as usize)
+        .checked_mul(height as usize)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "PNG dimensions overflow".to_string())?;
+    if width == 0 || height == 0 || rgba.len() != expected {
+        return Err(format!("invalid RGBA image: {width}x{height}, {} bytes", rgba.len()));
+    }
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut bytes, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder.write_header().map_err(e)?.write_image_data(rgba).map_err(e)?;
+    }
+    Ok(bytes)
+}
+
+fn kit_atlas(path: &Path) -> CmdResult<fl27mm::ftex::Ftex> {
+    if fl27mm::assets::family(path) != fl27mm::assets::Family::Kit {
+        return Err(format!("{} is not classified as a kit texture", path.display()));
+    }
+    fl27mm::ftex::Ftex::read(path).map_err(e)
+}
+
+fn decode_png_rgba(path: &Path) -> CmdResult<(u32, u32, Vec<u8>)> {
+    let file = std::fs::File::open(path).map_err(e)?;
+    let mut decoder = png::Decoder::new(file);
+    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = decoder.read_info().map_err(e)?;
+    let (width, height) = (reader.info().width, reader.info().height);
+    let pixel_count = (width as usize)
+        .checked_mul(height as usize)
+        .ok_or_else(|| "PNG dimensions overflow".to_string())?;
+    if width == 0 || height == 0 || pixel_count > 67_108_864 {
+        return Err(format!("PNG dimensions {width}x{height} are outside the supported range"));
+    }
+    let mut encoded = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut encoded).map_err(e)?;
+    if info.bit_depth != png::BitDepth::Eight {
+        return Err("PNG decoder did not produce 8-bit pixels".into());
+    }
+    let source = &encoded[..info.buffer_size()];
+    let mut rgba = Vec::with_capacity(pixel_count * 4);
+    match info.color_type {
+        png::ColorType::Rgba => rgba.extend_from_slice(source),
+        png::ColorType::Rgb => {
+            for pixel in source.chunks_exact(3) {
+                rgba.extend_from_slice(pixel);
+                rgba.push(255);
+            }
+        }
+        png::ColorType::Grayscale => {
+            for &value in source {
+                rgba.extend_from_slice(&[value, value, value, 255]);
+            }
+        }
+        png::ColorType::GrayscaleAlpha => {
+            for pixel in source.chunks_exact(2) {
+                rgba.extend_from_slice(&[pixel[0], pixel[0], pixel[0], pixel[1]]);
+            }
+        }
+        png::ColorType::Indexed => return Err("PNG palette was not expanded".into()),
+    }
+    if rgba.len() != pixel_count * 4 {
+        return Err("PNG decoder returned an incomplete pixel buffer".into());
+    }
+    Ok((width, height, rgba))
+}
+
+/// Render a uniform mesh with the selected kit atlas rather than its installed
+/// texture bindings; this makes UV/atlas mismatches visible before replacement.
+#[tauri::command]
+async fn kit_preview(
+    model: String,
+    atlas: String,
+    view: String,
+    size: usize,
+) -> CmdResult<serde_json::Value> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use fl27mm::render::{self, Camera, Mode, Texture};
+        let model_path = PathBuf::from(model);
+        let atlas_path = PathBuf::from(atlas);
+        if !(128..=1024).contains(&size) {
+            return Err("preview size must be between 128 and 1024 pixels".into());
+        }
+        let mut models = render::load_scene(&model_path).map_err(e)?;
+        render::keep_texturable(&mut models);
+        let ftex = kit_atlas(&atlas_path)?;
+        let (width, height, rgba) = ftex.to_rgba(0).map_err(e)?;
+        let texture = Texture { rgba: &rgba, w: width as usize, h: height as usize };
+        let camera = match view.as_str() {
+            "front" => Camera::front(),
+            "back" => Camera::back(),
+            "profile" => Camera::profile(),
+            _ => Camera::three_quarter(),
+        };
+        let (mut pixels, skipped) =
+            render::render_report(&models, Some(&texture), None, &camera, Mode::Textured, size, size);
+        for pixel in pixels.chunks_exact_mut(4) {
+            pixel[3] = 255;
+        }
+        let image = rgba_png(size as u32, size as u32, &pixels)?;
+        let meshes = render::all_meshes(&models);
+        Ok(serde_json::json!({
+            "image": format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(image)),
+            "models": models.len(),
+            "meshes": meshes.len(),
+            "vertices": meshes.iter().map(|mesh| mesh.positions.len()).sum::<usize>(),
+            "atlas_width": width,
+            "atlas_height": height,
+            "format": format!("{:?}", ftex.format),
+            "mips": ftex.mips.len(),
+            "untextured": skipped,
+        }))
+    })
+    .await
+    .map_err(e)?
+}
+
+/// Export the selected kit atlas as a PNG work template without modifying it.
+#[tauri::command]
+fn kit_export_template(atlas: String, destination: String) -> CmdResult<serde_json::Value> {
+    let source = Path::new(&atlas);
+    let texture = kit_atlas(source)?;
+    let (width, height, rgba) = texture.to_rgba(0).map_err(e)?;
+    let image = rgba_png(width, height, &rgba)?;
+    std::fs::write(Path::new(&destination), image).map_err(e)?;
+    Ok(serde_json::json!({
+        "path": destination,
+        "width": width,
+        "height": height,
+        "format": format!("{:?}", texture.format),
+    }))
+}
+
+/// Apply a PNG design to a kit atlas. The core retains the original format,
+/// dimensions and mip chain and creates a backup before writing.
+#[tauri::command]
+async fn kit_replace_png(atlas: String, image: String) -> CmdResult<fl27mm::assets::Report> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let atlas_path = PathBuf::from(atlas);
+        let image_path = PathBuf::from(image);
+        kit_atlas(&atlas_path)?;
+        let (width, height, rgba) = decode_png_rgba(&image_path)?;
+        fl27mm::assets::replace(&atlas_path, &rgba, width, height).map_err(e)
+    })
+    .await
+    .map_err(e)?
 }
 
 /// Render a model with its own bound textures, so an edit can be seen on the
@@ -1186,6 +1396,7 @@ pub fn run() {
         .manage(Cache::default())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            preferences_load, preferences_save,
             detect_game, scan, order_report, save_order, conflict_report,
             cpk_list, cpk_extract, cpk_pack,
             tex_info, tex_preview, tex_convert,
@@ -1197,9 +1408,59 @@ pub fn run() {
             studio_remove, studio_reveal,
             bin_patch,
             asset_list, asset_replace, asset_preview,
+            kit_preview, kit_export_template, kit_replace_png,
             gani_read, gani_rate, gani_set_key, rig_read,
             menu_check, menu_link, menu_clone,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the FL27 mod manager");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preferences_reject_unknown_values() {
+        assert!(UiPreferences::default().validate().is_ok());
+        assert!(UiPreferences {
+            text_size: "giant".into(),
+            ..UiPreferences::default()
+        }
+        .validate()
+        .is_err());
+        assert!(UiPreferences {
+            accent: "#ff0000".into(),
+            ..UiPreferences::default()
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[test]
+    fn kit_png_decoder_expands_rgb_pixels_to_rgba() {
+        let mut bytes = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut bytes, 2, 1);
+            encoder.set_color(png::ColorType::Rgb);
+            encoder.set_depth(png::BitDepth::Eight);
+            encoder
+                .write_header()
+                .unwrap()
+                .write_image_data(&[10, 20, 30, 40, 50, 60])
+                .unwrap();
+        }
+        let path = std::env::temp_dir().join(format!(
+            "fl27mm-kit-png-{}-{}.png",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::write(&path, bytes).unwrap();
+        let decoded = decode_png_rgba(&path);
+        std::fs::remove_file(path).unwrap();
+        assert_eq!(decoded.unwrap(), (2, 1, vec![10, 20, 30, 255, 40, 50, 60, 255]));
+    }
 }

@@ -19,6 +19,7 @@
 
   <div class="shell">
     <nav class="tabs">
+      <input id="navFilter" type="search" placeholder="Find a tool" aria-label="Filter tools" />
       <button data-tab="map" class="active">Game map</button>
       <button data-tab="packs">Pack order</button>
       <button data-tab="conflicts">Conflicts</button>
@@ -26,8 +27,11 @@
       <button data-tab="textures">Textures</button>
       <button data-tab="tables">Tables</button>
       <button data-tab="assets">Assets</button>
+      <button data-tab="kits">Kit Studio</button>
       <button data-tab="menu">Menu maker</button>
       <button data-tab="studio">Mod Studio</button>
+      <button data-tab="settings">Preferences</button>
+      <div id="navEmpty" class="muted" hidden>No tools match.</div>
       <div class="spacer"></div>
       <div id="health" class="health"></div>
     </nav>
@@ -223,6 +227,50 @@
           </div>
         </div>
       </section>
+
+      <section id="tab-kits" class="tab">
+        <div class="toolbar">
+          <input id="kitRoot" type="text" spellcheck="false" placeholder="Kit texture folder (pack or livecpk root)" />
+          <button id="kitBrowseRoot" class="ghost">Browse</button>
+          <button id="kitScan">Find kit textures</button>
+          <input id="kitFilter" type="search" placeholder="Filter kits" />
+          <span id="kitCount" class="muted"></span>
+        </div>
+        <p class="hint">Select a uniform atlas and a shirt model to preview UV placement. Export a PNG template, edit it, then apply it back; the original format, size and mip chain are preserved and backed up.</p>
+        <div class="toolbar">
+          <input id="kitModel" type="text" spellcheck="false" placeholder="Shirt model folder or FMDL file" />
+          <button id="kitBrowseModel" class="ghost">Browse model</button>
+          <input id="kitAtlas" type="text" spellcheck="false" placeholder="Selected uniform .ftex atlas" />
+          <button id="kitBrowseAtlas" class="ghost">Browse atlas</button>
+          <select id="kitView" aria-label="Kit preview angle">
+            <option value="three-quarter">Three-quarter</option>
+            <option value="front">Front</option>
+            <option value="back">Back</option>
+            <option value="profile">Profile</option>
+          </select>
+          <button id="kitPreview">Preview kit</button>
+        </div>
+        <div class="toolbar">
+          <button id="kitExport" class="ghost" disabled>Export PNG template…</button>
+          <input id="kitImage" type="text" spellcheck="false" placeholder="Edited PNG atlas" />
+          <button id="kitBrowseImage" class="ghost">Choose PNG</button>
+          <button id="kitApply" disabled>Apply atlas…</button>
+        </div>
+        <div class="toolbar">
+          <input id="kitPackName" type="text" spellcheck="false" placeholder="New kit pack name" />
+          <button id="kitCreatePack" class="ghost">Create kit pack scaffold</button>
+          <span id="kitPackStatus" class="muted"></span>
+        </div>
+        <div class="kitsplit">
+          <div id="kitTree" class="tree"></div>
+          <div class="kitwork">
+            <div id="kitSummary" class="panel"></div>
+            <div class="preview kitpreview"><img id="kitImagePreview" alt="Kit atlas on model preview" /></div>
+            <div id="kitReport" class="panel"></div>
+          </div>
+        </div>
+      </section>
+
       <section id="tab-menu" class="tab">
         <div class="toolbar">
           <input id="menuRoot" type="text" spellcheck="false" placeholder="Menu set folder (has common/script/flow)" />
@@ -231,6 +279,8 @@
           <button id="menuBaseBrowse" class="ghost">Browse base</button>
           <button id="menuCheck">Check navigation</button>
           <span id="menuCount" class="muted"></span>
+          <span class="sep"></span>
+          <button id="menuInspectBin" class="ghost">Inspect compiled .bin…</button>
         </div>
         <div id="menuFindings" class="findings"></div>
         <div id="menuGraph" class="graph"></div>
@@ -331,6 +381,32 @@
           </div>
         </div>
         <div id="studioReport" class="panel"></div>
+      </section>
+
+      <section id="tab-settings" class="tab">
+        <h2>Appearance and accessibility</h2>
+        <p class="hint">These preferences are saved by the Rust app and applied across every tool.</p>
+        <div class="settings-grid">
+          <label for="prefTextSize">Text size</label>
+          <select id="prefTextSize">
+            <option value="normal">Standard</option>
+            <option value="large">Larger</option>
+            <option value="extra-large">Largest</option>
+          </select>
+          <label for="prefAccent">Accent theme</label>
+          <select id="prefAccent">
+            <option value="blue">Blue</option>
+            <option value="teal">Teal</option>
+            <option value="violet">Violet</option>
+            <option value="amber">Amber</option>
+          </select>
+          <span>Contrast</span>
+          <label class="check"><input id="prefContrast" type="checkbox" /> Increase contrast</label>
+        </div>
+        <div class="toolbar">
+          <button id="prefReset" class="ghost">Reset appearance</button>
+          <span id="prefStatus" class="preference-status" role="status">Loading saved preferences…</span>
+        </div>
       </section>
 
       <section id="tab-tables" class="tab">

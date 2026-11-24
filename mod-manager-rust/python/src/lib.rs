@@ -776,19 +776,28 @@ fn patch_binary(py: Python<'_>, path: PathBuf, offset: usize, hex: String) -> Py
     serde_json::to_string_pretty(&report).map_err(|error| PyOSError::new_err(error.to_string()))
 }
 
-#[pyfunction]
-fn assets_list(py: Python<'_>, root: PathBuf, limit: Option<usize>) -> PyResult<String> {
+#[pyfunction(signature = (root, limit=None, family=None))]
+fn assets_list(
+    py: Python<'_>,
+    root: PathBuf,
+    limit: Option<usize>,
+    family: Option<String>,
+) -> PyResult<String> {
     let rows = py
         .detach(move || {
             if !root.is_dir() {
                 anyhow::bail!("asset folder is not a directory: {}", root.display());
             }
             let cap = limit.unwrap_or(600).clamp(1, 5000);
-            let items = fl27mm::fsutil::files(&root)
-                .into_iter()
-                .filter_map(|path| assets::entry(&path))
-                .take(cap)
-                .collect::<Vec<_>>();
+            let items = fl27mm::fsutil::find_map(&root, cap, |path| {
+                if family
+                    .as_deref()
+                    .is_some_and(|wanted| wanted != assets::family(path).name())
+                {
+                    return None;
+                }
+                assets::entry(path)
+            });
             let shown = items.len();
             Ok::<_, anyhow::Error>(serde_json::json!({
                 "items": items,
@@ -798,6 +807,97 @@ fn assets_list(py: Python<'_>, root: PathBuf, limit: Option<usize>) -> PyResult<
         })
         .map_err(|error| PyOSError::new_err(error.to_string()))?;
     serde_json::to_string_pretty(&rows).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn kit_preview(
+    py: Python<'_>,
+    model: PathBuf,
+    atlas: PathBuf,
+    view: String,
+    size: usize,
+) -> PyResult<(
+    Py<PyBytes>,
+    usize,
+    usize,
+    usize,
+    u32,
+    u32,
+    String,
+    usize,
+    Vec<String>,
+)> {
+    if !(128..=1024).contains(&size) {
+        return Err(PyOSError::new_err(
+            "preview size must be between 128 and 1024 pixels",
+        ));
+    }
+    let (png_bytes, models_count, meshes_count, vertices, width, height, format, mips, skipped) =
+        py.detach(move || {
+            use render::{Camera, Mode, Texture};
+            if assets::family(&atlas) != assets::Family::Kit {
+                anyhow::bail!("{} is not classified as a kit texture", atlas.display());
+            }
+            let mut models = render::load_scene(&model)?;
+            render::keep_texturable(&mut models);
+            let ftex = ftex::Ftex::read(&atlas)?;
+            let (width, height, rgba) = ftex.to_rgba(0)?;
+            let texture = Texture {
+                rgba: &rgba,
+                w: width as usize,
+                h: height as usize,
+            };
+            let camera = match view.as_str() {
+                "front" => Camera::front(),
+                "back" => Camera::back(),
+                "profile" => Camera::profile(),
+                _ => Camera::three_quarter(),
+            };
+            let (mut pixels, skipped) = render::render_report(
+                &models,
+                Some(&texture),
+                None,
+                &camera,
+                Mode::Textured,
+                size,
+                size,
+            );
+            for pixel in pixels.chunks_exact_mut(4) {
+                pixel[3] = 255;
+            }
+            let mut png_bytes = Vec::new();
+            {
+                let mut encoder = png::Encoder::new(&mut png_bytes, size as u32, size as u32);
+                encoder.set_color(png::ColorType::Rgba);
+                encoder.set_depth(png::BitDepth::Eight);
+                encoder.write_header()?.write_image_data(&pixels)?;
+            }
+            let meshes = render::all_meshes(&models);
+            let vertices = meshes.iter().map(|mesh| mesh.positions.len()).sum();
+            Ok::<_, anyhow::Error>((
+                png_bytes,
+                models.len(),
+                meshes.len(),
+                vertices,
+                width,
+                height,
+                ftex.format.name().to_string(),
+                ftex.mips.len(),
+                skipped,
+            ))
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    Ok((
+        PyBytes::new(py, &png_bytes).unbind(),
+        models_count,
+        meshes_count,
+        vertices,
+        width,
+        height,
+        format,
+        mips,
+        skipped,
+    ))
 }
 
 #[pyfunction]
@@ -1269,6 +1369,7 @@ fn _fl27mm(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(binary_section_table, module)?)?;
     module.add_function(wrap_pyfunction!(patch_binary, module)?)?;
     module.add_function(wrap_pyfunction!(assets_list, module)?)?;
+    module.add_function(wrap_pyfunction!(kit_preview, module)?)?;
     module.add_function(wrap_pyfunction!(asset_preview, module)?)?;
     module.add_function(wrap_pyfunction!(asset_replace, module)?)?;
     module.add_function(wrap_pyfunction!(animation_read, module)?)?;

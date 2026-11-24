@@ -4,6 +4,18 @@ The FL27 Mod Manager inspects and edits a Football Life 27 install: pack order,
 conflicts, game tables, containers, textures, 3D models, animations and menu
 navigation. Everything it claims, it can show you.
 
+## 1.4.0
+
+### Kit Studio and appearance controls
+
+- Added kit-atlas scanning, 3D preview, PNG template export, and PNG replacement
+  with format, dimensions and mip chain preserved and a source backup created.
+- Added a kit-pack scaffold for Sider uniform textures.
+- Added saved text-size, accent-theme and contrast preferences, plus searchable
+  tool navigation and a compiled-menu inspection shortcut from Menu Maker.
+- Bounded asset browsing by filtering families before texture decoding and
+  stopping scans at the result cap.
+
 ## 1.3.2
 
 ### Skeletons and rigs are decoded

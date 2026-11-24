@@ -29,6 +29,7 @@ class _ToolDeck(QWidget):
         "Textures": "Preview and inspect supported texture files.",
         "Tables": "Read PES data tables, containers, and binary files.",
         "Assets": "Browse and replace supported menu and game assets.",
+        "Kit Studio": "Preview uniform textures, export templates, and create kit packs.",
         "Menu maker": "Check menu links, clone screens, and inspect compiled atlases.",
         "Mod Studio": "Browse mod files and manage registered packs.",
     }
@@ -160,11 +161,13 @@ class _ReportView(QWidget):
 
         split = QSplitter(Qt.Horizontal)
         self.tree = QTreeWidget()
+        self.tree.setObjectName("jsonReportTree")
         self.tree.setHeaderLabels([_("Report"), _("Value")])
         self.tree.setAlternatingRowColors(True)
         self.tree.itemSelectionChanged.connect(self._show_details)
         split.addWidget(self.tree)
         self.details = QTreeWidget()
+        self.details.setObjectName("jsonReportDetails")
         self.details.setHeaderLabels([_("Selected item details"), _("Value")])
         self.details.setAlternatingRowColors(True)
         split.addWidget(self.details)
@@ -294,6 +297,8 @@ class ModManager(Page):
         self._studio_tree_generation = 0
         self._studio_entries_for = None
         self._asset_entries = []
+        self._kit_entries = []
+        self._kit_scanned = False
         self._animation_path = ""
         self.tabs = _ToolDeck()
         self.outer.addWidget(self.tabs, 1)
@@ -305,6 +310,7 @@ class ModManager(Page):
         self._make_texture_tab()
         self._make_tables_tab()
         self._make_assets_tab()
+        self._make_kit_tab()
         self._make_menu_tab()
         self._make_studio_tab()
         self.tabs.currentChanged.connect(lambda _index: self.refresh())
@@ -1109,6 +1115,208 @@ class ModManager(Page):
         self._output("assets", dv)
         split.addWidget(detail)
         layout.addWidget(split, 1)
+
+    def _make_kit_tab(self):
+        layout = self._tab("Kit Studio")
+        self.kit_root = QLineEdit(os.path.join(self._addons(), "livecpk"))
+        self.kit_root.setPlaceholderText(_("Kit pack or livecpk folder"))
+        browse_root = QPushButton(_("Choose folder..."))
+        browse_root.clicked.connect(
+            lambda: self._choose_into(self.kit_root, _("Choose kit pack or livecpk folder"))
+        )
+        scan = QPushButton(_("Find kit textures"))
+        scan.clicked.connect(self.list_kit_assets)
+        self.kit_search = QLineEdit()
+        self.kit_search.setPlaceholderText(_("Filter kit atlas paths"))
+        self.kit_search.textChanged.connect(self.filter_kit_assets)
+        layout.addWidget(row(self.kit_root, browse_root, scan, stretch=False))
+        layout.addWidget(row(self.kit_search, stretch=False))
+        layout.addWidget(hint(_("Select an atlas and shirt model to preview UV placement. "
+                                "PNG edits are checked for matching dimensions and backed up.")))
+
+        self.kit_model = QLineEdit()
+        self.kit_model.setPlaceholderText(_("Shirt model (.fmdl)"))
+        browse_model = QPushButton(_("Choose model..."))
+        browse_model.clicked.connect(
+            lambda: self._choose_file_into(self.kit_model, "FMDL models (*.fmdl);;All files (*)")
+        )
+        self.kit_view = QComboBox()
+        for label, value in (("Three-quarter", "three-quarter"), ("Front", "front"),
+                             ("Back", "back"), ("Profile", "profile")):
+            self.kit_view.addItem(_(label), value)
+        preview = QPushButton(_("Preview kit"))
+        preview.clicked.connect(self.preview_kit)
+        layout.addWidget(row(self.kit_model, browse_model, self.kit_view, preview, stretch=False))
+
+        self.kit_pack_name = QLineEdit()
+        self.kit_pack_name.setPlaceholderText(_("New kit pack name"))
+        create_pack = QPushButton(_("Create kit pack scaffold"))
+        create_pack.clicked.connect(self.create_kit_pack)
+        layout.addWidget(row(self.kit_pack_name, create_pack, stretch=False))
+
+        split = QSplitter(Qt.Horizontal)
+        self.kit_tree = QTreeWidget()
+        self.kit_tree.setHeaderLabels([_("Kit atlas"), _("Format"), _("Size")])
+        self.kit_tree.itemSelectionChanged.connect(self.show_kit_asset)
+        split.addWidget(self.kit_tree)
+
+        detail = QWidget()
+        detail_layout = QVBoxLayout(detail)
+        detail_layout.setContentsMargins(0, 0, 0, 0)
+        self.kit_image = QLabel()
+        self.kit_image.setAlignment(Qt.AlignCenter)
+        self.kit_image.setMinimumHeight(220)
+        detail_layout.addWidget(self.kit_image)
+        export = QPushButton(_("Export PNG template..."))
+        export.clicked.connect(self.export_kit_template)
+        apply_image = QPushButton(_("Apply edited PNG..."))
+        apply_image.clicked.connect(self.apply_kit_image)
+        detail_layout.addWidget(row(export, apply_image, stretch=False))
+        self._output("kits", detail_layout)
+        split.addWidget(detail)
+        split.setStretchFactor(0, 1)
+        split.setStretchFactor(1, 2)
+        layout.addWidget(split, 1)
+
+    def list_kit_assets(self):
+        root = self.kit_root.text().strip()
+        if not root:
+            self.say(_("Choose a kit pack or livecpk folder first."), "warn")
+            return
+
+        def done(result):
+            self._kit_entries = [
+                entry for entry in result.get("items", [])
+                if entry.get("family") == "kits"
+                and entry.get("path", "").lower().endswith(".ftex")
+            ]
+            self._kit_scanned = True
+            self.filter_kit_assets()
+            self._show("kits", {
+                "found": len(self._kit_entries),
+                "scan_limit": result.get("cap", 600),
+                "root": root,
+            })
+
+        self._run(_("Finding kit textures..."),
+                  lambda: native.assets_list(root, 600, "kits"), done)
+
+    def filter_kit_assets(self):
+        if not hasattr(self, "kit_tree"):
+            return
+        self.kit_tree.clear()
+        query = self.kit_search.text().strip().casefold()
+        for entry in self._kit_entries:
+            path = entry.get("path", "")
+            if query and query not in path.casefold():
+                continue
+            dimensions = "%sx%s" % (entry.get("width", 0), entry.get("height", 0))
+            item = QTreeWidgetItem([
+                os.path.basename(path), str(entry.get("format", "")),
+                "%s · %s" % (dimensions, entry.get("bytes", 0)),
+            ])
+            item.setData(0, Qt.UserRole, entry)
+            self.kit_tree.addTopLevelItem(item)
+
+    def _selected_kit_asset(self):
+        items = self.kit_tree.selectedItems()
+        entry = items[0].data(0, Qt.UserRole) if items else {}
+        return entry if isinstance(entry, dict) else {}
+
+    def show_kit_asset(self):
+        entry = self._selected_kit_asset()
+        if entry:
+            self._show("kits", entry)
+
+    def preview_kit(self):
+        model = self.kit_model.text().strip()
+        atlas = self._selected_kit_asset().get("path", "")
+        if not model or not atlas:
+            self.say(_("Choose a shirt model and select a kit atlas first."), "warn")
+            return
+
+        def done(result):
+            (png, models, meshes, vertices, width, height, texture_format,
+             mips, untextured) = result
+            self.kit_image.setPixmap(QPixmap.fromImage(QImage.fromData(png)).scaled(
+                600, 460, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self._show("kits", {
+                "models": models, "meshes": meshes, "vertices": vertices,
+                "atlas": "%sx%s %s · %s mip(s)" % (width, height, texture_format, mips),
+                "untextured": untextured,
+            })
+
+        self._run(_("Rendering kit preview..."),
+                  lambda: native.kit_preview(model, atlas, self.kit_view.currentData(), 700), done)
+
+    def export_kit_template(self):
+        atlas = self._selected_kit_asset().get("path", "")
+        if not atlas:
+            self.say(_("Select a kit atlas first."), "warn")
+            return
+        destination, _selected = QFileDialog.getSaveFileName(
+            self, _("Export kit atlas template"),
+            os.path.splitext(os.path.basename(atlas))[0] + ".png",
+            "PNG images (*.png)",
+        )
+        if not destination:
+            return
+
+        def done(result):
+            width, height, rgba = result
+            image = QImage(rgba, width, height, width * 4, QImage.Format_RGBA8888).copy()
+            if not image.save(destination, "PNG"):
+                self.say(_("Could not save the PNG template to %s.") % destination, "err")
+                return
+            self.say(_("Exported a %(width)s×%(height)s PNG template to %(path)s.")
+                     % {"width": width, "height": height, "path": destination}, "ok")
+
+        self._run(_("Exporting kit template..."),
+                  lambda: native.texture_preview(atlas, 0), done)
+
+    def apply_kit_image(self):
+        entry = self._selected_kit_asset()
+        atlas = entry.get("path", "")
+        if not atlas or not entry.get("editable"):
+            self.say(_("Select an editable kit atlas first."), "warn")
+            return
+        source = self._file(title=_("Choose edited kit PNG"), filters="PNG images (*.png)")
+        if not source:
+            return
+        image = QImage(source).convertToFormat(QImage.Format_RGBA8888)
+        if image.isNull():
+            self.say(_("Could not read the selected PNG."), "err")
+            return
+        width, height = image.width(), image.height()
+        rgba = bytes(image.constBits())[:image.sizeInBytes()]
+        if not ask(self, "Apply kit design",
+                   _("Replace %(atlas)s with this PNG? The Rust manager backs up the original "
+                     "and requires matching dimensions.") % {"atlas": atlas}):
+            return
+        self._run(_("Applying kit design..."),
+                  lambda: native.asset_replace(atlas, width, height, rgba),
+                  lambda result: self._show("kits", result))
+
+    def create_kit_pack(self):
+        name = self.kit_pack_name.text().strip()
+        addons = self._addons()
+        if not name or not addons:
+            self.say(_("Enter a kit pack name and choose a game install first."), "warn")
+            return
+        if not ask(self, "Create kit pack",
+                   _("Create the kit texture pack %(name)s under %(addons)s?")
+                   % {"name": name, "addons": addons}):
+            return
+
+        def done(result):
+            if result.get("missing"):
+                self.say(_("Kit pack scaffold is missing: %s") % ", ".join(result["missing"]), "err")
+                return
+            self.kit_pack_name.clear()
+            self.say(_("Created kit pack folder: %s") % result.get("dir", ""), "ok")
+
+        self._run(_("Creating kit pack scaffold..."),
+                  lambda: native.studio_new_pack(addons, name, "kits"), done)
 
     def list_assets(self):
         root = self.assets_root.text().strip()
@@ -1923,6 +2131,8 @@ class ModManager(Page):
         elif current == _("Game map") and self.map_tree.topLevelItemCount() == 0:
             if self.map_root.text().strip() and native.available():
                 self.load_game_map()
+        elif current == _("Kit Studio") and not self._kit_scanned and native.available():
+            self.list_kit_assets()
         elif current == _("Mod Studio"):
             if self.studio_tree.topLevelItemCount() == 0 and self.studio_root.text().strip() \
                     and native.available():
@@ -1935,11 +2145,11 @@ class ModManager(Page):
     def refresh_current(self):
         index = self.tabs.currentIndex()
         handlers = (self.load_game_map, self.scan_packs, self.find_conflicts, self.inspect_cpk,
-                    self.inspect_texture, self._refresh_tables, self.list_assets, self.check_menu,
-                    self.load_studio_tree)
+                    self.inspect_texture, self._refresh_tables, self.list_assets, self.list_kit_assets,
+                    self.check_menu, self.load_studio_tree)
         if 0 <= index < len(handlers):
             handlers[index]()
-        if index == 8:
+        if index == 9:
             self.load_studio_entries()
 
     def _refresh_tables(self):

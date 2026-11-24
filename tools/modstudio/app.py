@@ -1712,7 +1712,7 @@ def main():
     from PySide6.QtGui import QGuiApplication
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
-    theme.apply(app)
+    theme.apply(app, load_settings())
     # one Mod Studio at a time: the program takes a few seconds to unpack itself, a second
     # click in that time started a second one, and the two wrote over each other's settings
     lock = None

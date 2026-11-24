@@ -31,6 +31,77 @@ let state = {
   tex: null,
 };
 
+const DEFAULT_PREFERENCES = { text_size: "normal", accent: "blue", high_contrast: false };
+const ACCENT_THEMES = {
+  blue: { accent: "#4AA3FF", hover: "#2A72CC", selection: "#23466c" },
+  teal: { accent: "#35C7B0", hover: "#238C7E", selection: "#123D3D" },
+  violet: { accent: "#B38CFF", hover: "#805DC0", selection: "#32264B" },
+  amber: { accent: "#FFC15A", hover: "#B38130", selection: "#46351C" },
+};
+let preferences = { ...DEFAULT_PREFERENCES };
+
+function applyPreferences() {
+  const root = document.documentElement;
+  const theme = ACCENT_THEMES[preferences.accent] || ACCENT_THEMES.blue;
+  const scale = { normal: 1, large: 1.15, "extra-large": 1.3 }[preferences.text_size] || 1;
+  root.style.setProperty("--accent", theme.accent);
+  root.style.setProperty("--accent-hover", theme.hover);
+  root.style.setProperty("--selection", theme.selection);
+  root.style.setProperty("--text-scale", String(scale));
+  document.body.dataset.highContrast = String(!!preferences.high_contrast);
+}
+
+function showPreferenceStatus(message, failed = false) {
+  const status = $("prefStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("err", failed);
+  status.classList.toggle("ok", !failed);
+}
+
+async function loadPreferences() {
+  try {
+    preferences = await invoke("preferences_load");
+    $("prefTextSize").value = preferences.text_size;
+    $("prefAccent").value = preferences.accent;
+    $("prefContrast").checked = preferences.high_contrast;
+    applyPreferences();
+    showPreferenceStatus("Preferences loaded.");
+  } catch (err) {
+    applyPreferences();
+    showPreferenceStatus("Could not load preferences: " + String(err), true);
+  }
+}
+
+async function savePreferences() {
+  preferences = {
+    text_size: $("prefTextSize").value,
+    accent: $("prefAccent").value,
+    high_contrast: $("prefContrast").checked,
+  };
+  applyPreferences();
+  showPreferenceStatus("Saving…");
+  try {
+    await invoke("preferences_save", { preferences });
+    showPreferenceStatus("Saved.");
+  } catch (err) {
+    showPreferenceStatus("Could not save preferences: " + String(err), true);
+  }
+}
+
+function initPreferences() {
+  applyPreferences();
+  $("prefTextSize").addEventListener("change", savePreferences);
+  $("prefAccent").addEventListener("change", savePreferences);
+  $("prefContrast").addEventListener("change", savePreferences);
+  $("prefReset").addEventListener("click", () => {
+    $("prefTextSize").value = DEFAULT_PREFERENCES.text_size;
+    $("prefAccent").value = DEFAULT_PREFERENCES.accent;
+    $("prefContrast").checked = DEFAULT_PREFERENCES.high_contrast;
+    savePreferences();
+  });
+}
+
 function say(msg, kind) {
   const s = $("status");
   s.textContent = msg;
@@ -303,6 +374,19 @@ document.querySelectorAll(".tabs button").forEach((b) => {
   });
 });
 
+function filterTools() {
+  const query = $("navFilter").value.trim().toLowerCase();
+  const buttons = [...document.querySelectorAll(".tabs button[data-tab]")];
+  let visible = 0;
+  buttons.forEach((button) => {
+    const show = !query || button.textContent.toLowerCase().includes(query);
+    button.hidden = !show;
+    if (show) visible++;
+  });
+  $("navEmpty").hidden = visible !== 0;
+}
+$("navFilter").addEventListener("input", filterTools);
+
 // Keyboard: Ctrl+1..9 jumps to a tab, Ctrl+R refreshes the view that is on
 // screen. Typed into the editor these are left to the editor's own handlers.
 document.addEventListener("keydown", (ev) => {
@@ -311,7 +395,7 @@ document.addEventListener("keydown", (ev) => {
   const inEditor = target && target.id === "code";
   const inField = target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
   if (/^[1-9]$/.test(ev.key)) {
-    const tabs = document.querySelectorAll(".tabs button");
+    const tabs = [...document.querySelectorAll(".tabs button[data-tab]")].filter((b) => !b.hidden);
     const b = tabs[Number(ev.key) - 1];
     if (b) { ev.preventDefault(); b.click(); }
     return;
@@ -1812,6 +1896,7 @@ function initStudio() {
 }
 
 async function boot() {
+  await loadPreferences();
   const restoreTab = () => {
     // Back where the user left the app, rather than always on Game map. This
     // used to be skipped whenever detection found nothing, so the app also
@@ -1861,6 +1946,8 @@ $("pickGame").addEventListener("click", async () => {
 });
 
 $("rescan").addEventListener("click", () => rescan());
+initPreferences();
+boot();
 
 async function rescan() {
   const typed = $("gamePath").value.trim();
@@ -2018,6 +2105,148 @@ async function assetReplace() {
   }
 }
 
+// ---------------------------------------------------------------- kit studio
+
+const kitState = { items: [], selected: null, root: "" };
+
+async function kitScan() {
+  if (!$("kitRoot").value.trim() && state.packsRoot) $("kitRoot").value = state.packsRoot;
+  const root = $("kitRoot").value.trim();
+  if (!root) return say("Choose a kit pack or livecpk root first.", "err");
+  if (kitState.root && kitState.root.toLowerCase() !== root.toLowerCase()) {
+    kitState.selected = null;
+    $("kitAtlas").value = "";
+    $("kitExport").disabled = true;
+    $("kitApply").disabled = true;
+    $("kitImagePreview").removeAttribute("src");
+    $("kitSummary").textContent = "";
+    $("kitReport").textContent = "";
+  }
+  kitState.root = root;
+  const report = await busy("Finding kit textures", () =>
+    invoke("asset_list", { root, limit: 600, family: "kits" }));
+  kitState.items = report.items.filter((item) =>
+    item.family === "kits" && item.path.toLowerCase().endsWith(".ftex"));
+  renderKitList();
+  $("kitCount").textContent = `${kitState.items.length} kit atlas(es) found · scan limit ${report.cap}`;
+  if (!kitState.items.length) {
+    $("kitSummary").textContent = "No kit .ftex atlases were found. Try a Sider pack or a folder under uniform/texture.";
+    say("No kit atlases found in that folder.", "warn");
+  } else {
+    say(`Found ${kitState.items.length} kit atlas(es).`, "ok");
+  }
+}
+
+function renderKitList() {
+  const box = $("kitTree");
+  box.innerHTML = "";
+  const query = $("kitFilter").value.trim().toLowerCase();
+  const items = kitState.items.filter((item) => item.path.toLowerCase().includes(query));
+  items.slice(0, 600).forEach((item) => {
+    const row = el("div", "tnode" + (kitState.selected === item.path ? " selected" : ""));
+    row.title = item.path;
+    row.appendChild(el("span", null, baseName(item.path)));
+    row.appendChild(el("span", "muted", `${item.width}×${item.height} · ${item.format} · ${fmtBytes(item.bytes)}`));
+    row.addEventListener("click", () => {
+      kitState.selected = item.path;
+      $("kitAtlas").value = item.path;
+      $("kitExport").disabled = false;
+      $("kitApply").disabled = false;
+      $("kitSummary").textContent =
+        `${item.path}\n${item.width}×${item.height} · ${item.format} · ${item.editable ? "editable" : "read-only"}`;
+      renderKitList();
+    });
+    box.appendChild(row);
+  });
+  if (!items.length) box.appendChild(el("div", "muted", query ? "No kit atlases match." : "Scan a folder to list kit atlases."));
+}
+
+function kitScanSelectionSummary() {
+  const atlas = $("kitAtlas").value.trim();
+  const item = kitState.items.find((candidate) => candidate.path === atlas);
+  $("kitSummary").textContent = item
+    ? `${item.path}\n${item.width}×${item.height} · ${item.format}`
+    : atlas ? `${atlas}\nAtlas metadata will be checked when you preview or edit it.` : "";
+}
+
+async function kitPreview() {
+  const model = $("kitModel").value.trim();
+  const atlas = $("kitAtlas").value.trim();
+  if (!model || !atlas) return say("Choose both a shirt model and a kit atlas.", "warn");
+  try {
+    const report = await busy("Rendering kit preview", () => invoke("kit_preview", {
+      model, atlas, view: $("kitView").value, size: 700,
+    }));
+    $("kitImagePreview").src = report.image;
+    $("kitReport").textContent =
+      `${report.models} model file(s) · ${report.meshes} meshes · ${report.vertices.toLocaleString()} vertices\n` +
+      `Atlas ${report.atlas_width}×${report.atlas_height} · ${report.format} · ${report.mips} mip(s)` +
+      (report.untextured.length ? `\nUntextured parts: ${report.untextured.join(", ")}` : "");
+    say("Rendered the selected atlas on the shirt model.", "ok");
+  } catch (err) {
+    $("kitImagePreview").removeAttribute("src");
+    $("kitReport").textContent = "";
+    say(String(err), "err");
+  }
+}
+
+async function kitExportTemplate() {
+  const atlas = $("kitAtlas").value.trim();
+  if (!atlas) return say("Select a kit atlas first.", "warn");
+  const destination = await dialog.save({
+    title: "Export kit atlas template",
+    defaultPath: baseName(atlas).replace(/\.ftex$/i, ".png"),
+    filters: [{ name: "PNG image", extensions: ["png"] }],
+  });
+  if (!destination) return;
+  try {
+    const result = await busy("Exporting PNG template", () =>
+      invoke("kit_export_template", { atlas, destination }));
+    say(`Exported ${result.width}×${result.height} template to ${result.path}.`, "ok");
+  } catch (err) {
+    say(String(err), "err");
+  }
+}
+
+async function kitApplyImage() {
+  const atlas = $("kitAtlas").value.trim();
+  const image = $("kitImage").value.trim();
+  if (!atlas || !image) return say("Choose a kit atlas and an edited PNG first.", "warn");
+  const yes = await dialog.ask(
+    `Apply this PNG to ${baseName(atlas)}? The original atlas will be backed up first.`,
+    { title: "Apply kit design" });
+  if (!yes) return;
+  try {
+    const result = await busy("Encoding kit atlas", () => invoke("kit_replace_png", { atlas, image }));
+    $("kitReport").textContent =
+      `${result.width}×${result.height} · ${result.format} · ${result.mips} mip(s)\n` +
+      `${result.changed_pixels.toLocaleString()} changed pixels · backup: ${result.backup}`;
+    say(`Updated kit atlas; backup saved to ${result.backup}.`, "ok");
+  } catch (err) {
+    say(String(err), "err");
+  }
+}
+
+async function kitCreatePack() {
+  const name = $("kitPackName").value.trim();
+  if (!name) return say("Enter a name for the kit pack.", "warn");
+  if (!state.addons) return say("Choose a game install before creating a kit pack.", "warn");
+  const yes = await dialog.ask(
+    `Create a kit texture pack scaffold under ${state.addons}? Existing files are left untouched.`,
+    { title: "Create kit pack" });
+  if (!yes) return;
+  try {
+    const result = await busy("Creating kit pack", () =>
+      invoke("studio_new_pack", { addons: state.addons, name, kind: "kits" }));
+    if (result.missing.length) throw new Error("Scaffold incomplete: " + result.missing.join(", "));
+    $("kitPackStatus").textContent = `${result.dir} · ${result.note}`;
+    $("kitPackName").value = "";
+    say(`Created kit pack folder ${result.dir}.`, "ok");
+  } catch (err) {
+    $("kitPackStatus").textContent = String(err);
+    say(String(err), "err");
+  }
+}
 
 // ---------------------------------------------------------------- animations
 //
@@ -2511,6 +2740,57 @@ $("menuLink").addEventListener("click", menuRepoint);
 $("menuSearch").addEventListener("input", renderMenuList);
 $("menuGroup").addEventListener("change", renderMenuList);
 $("menuClone").addEventListener("click", menuClone);
+$("menuInspectBin").addEventListener("click", async () => {
+  const file = await pick({
+    title: "Choose a compiled menu .bin",
+    filters: [{ name: "Compiled menu binary", extensions: ["bin"] }],
+  });
+  if (!file) return;
+  $("binPath").value = file;
+  document.querySelector('[data-tab="tables"]').click();
+  await runBin();
+});
+$("kitBrowseRoot").addEventListener("click", async () => {
+  const dir = await pick({ directory: true, title: "Choose a kit pack or livecpk root" });
+  if (dir) { $("kitRoot").value = dir; kitScan(); }
+});
+$("kitRoot").addEventListener("keydown", (ev) => { if (ev.key === "Enter") kitScan(); });
+$("kitScan").addEventListener("click", kitScan);
+$("kitFilter").addEventListener("input", renderKitList);
+$("kitBrowseModel").addEventListener("click", async () => {
+  const path = await pick({ directory: true, title: "Choose the shirt model folder" });
+  if (path) $("kitModel").value = path;
+});
+$("kitBrowseAtlas").addEventListener("click", async () => {
+  const path = await pick({
+    title: "Choose a uniform kit atlas",
+    filters: [{ name: "Fox Engine texture", extensions: ["ftex"] }],
+  });
+  if (!path) return;
+  $("kitAtlas").value = path;
+  kitState.selected = path;
+  $("kitExport").disabled = false;
+  $("kitApply").disabled = false;
+  renderKitList();
+  kitScanSelectionSummary();
+});
+$("kitAtlas").addEventListener("input", () => {
+  const selected = $("kitAtlas").value.trim();
+  $("kitExport").disabled = !selected;
+  $("kitApply").disabled = !selected;
+  kitScanSelectionSummary();
+});
+$("kitPreview").addEventListener("click", kitPreview);
+$("kitExport").addEventListener("click", kitExportTemplate);
+$("kitBrowseImage").addEventListener("click", async () => {
+  const path = await pick({
+    title: "Choose the edited kit atlas PNG",
+    filters: [{ name: "PNG image", extensions: ["png"] }],
+  });
+  if (path) $("kitImage").value = path;
+});
+$("kitApply").addEventListener("click", kitApplyImage);
+$("kitCreatePack").addEventListener("click", kitCreatePack);
 $("assetBrowse").addEventListener("click", async () => {
   const dir = await pick({ directory: true });
   if (dir) { $("assetRoot").value = dir; assetScan(); }

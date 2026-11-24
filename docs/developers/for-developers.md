@@ -16,13 +16,13 @@ Making your own version of Mod Studio: see [forking.md](forking.md) and its chap
   build a world. Regenerating the patch set needs `capstone`.
 - FL Mod Studio from source (`python tools/modstudio_main.py`) needs `PySide6`, `Pillow` and
   `py7zr`; making the release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and
-  zig for the DLLs. The release build also needs the Rust toolchain to compile the PyO3 Mod Manager
-  and diagnostics. The release `.exe` needs nothing.
+  zig for the DLLs. The release build also needs the Rust toolchain to compile the PyO3 Mod Manager,
+  Kit Studio and diagnostics. The release `.exe` needs nothing.
 
-To build the optional Rust Mod Manager and diagnostics for a source run, install `maturin` and run
-`maturin develop --release --manifest-path python/Cargo.toml` from `mod-manager-rust/` in an
-active virtual environment. Without that extension, the rest of Mod Studio continues to work
-normally.
+To build the optional Rust Mod Manager, Kit Studio and diagnostics for a source run, install
+`maturin` and run `maturin develop --release --manifest-path python/Cargo.toml` from
+`mod-manager-rust/` in an active virtual environment. Without that extension, the rest of Mod
+Studio continues to work normally.
 - Windows. The tools were only ever run on Windows.
 
 ## Repository layout
@@ -45,7 +45,7 @@ tools/modstudio/    FL Mod Studio (tools/modstudio_main.py starts it from source
                     tools/mszip.py makes the release zip) and the League Builder behind it
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
 mod-manager-rust/   Rust mod-manager core, CLI, Tauri UI and the PyO3 extension used by
-                    FL Mod Studio's diagnostics
+                    FL Mod Studio's Mod Manager and Kit Studio
 tools/native/       the C source of the six DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
 guides/<lang>/      the user guides: install-a-pack, make-your-own-leagues, mod-studio-guide
