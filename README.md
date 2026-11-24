@@ -20,7 +20,7 @@ No Mod Studio yet? Start with [Download & start](#download--start).
 > crests, logos and scoreboards, in one zip that Mod Studio installs. No Build needed.
 > **[Download and install GigaPack](docs/gigapack.md)** · [clubs with real kits](docs/gigapack-real-kits-1.0.md)
 
-[![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
+[![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M) [![YouTube](https://img.shields.io/badge/YouTube-@matozanato-ff0000?logo=youtube&logoColor=white)](https://www.youtube.com/@matozanato)
 
 [![Latest release](https://img.shields.io/github/v/release/Matozanato/FootballLife-new-leagues?display_name=release&label=release&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Matozanato/FootballLife-new-leagues/total?label=downloads&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases)
@@ -133,6 +133,7 @@ In English: [questions (FAQ)](docs/faq.md) · [known issues](docs/known-issues.m
 - **Questions** (how do I ..., does this work with ...): the [FAQ](docs/faq.md), then the
   [Discord](https://discord.gg/StQqtk3G3M) (FL Mod Studio): questions, help, new versions, and new
   GitHub issues posted there as they come in.
+- **Videos:** [YouTube @matozanato](https://www.youtube.com/@matozanato).
 - **Bugs:** open a [GitHub issue](https://github.com/Matozanato/FootballLife-new-leagues/issues).
   In Mod Studio, **Diagnostics → Run the checks → Copy a report** puts everything useful in the
   clipboard; paste it into the issue. The [testing guide](docs/developers/testing-guide.md#what-to-send)
