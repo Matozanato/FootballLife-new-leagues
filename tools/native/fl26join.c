@@ -1876,9 +1876,101 @@ static const unsigned char SIG_TEARDOWN[14] = {   /* mov [rsp+10],rdx; push rbp/
 unsigned char* g_tramp_teardown = 0;
 static uint16_t g_td_list[MAX_LIST];
 static vec16_t  g_td_vec;
+static int g_rollback_only;
+
+/* The daily driver supplies its original context. Bypass the list-expansion
+ * hook so a replacement Caribbean draw cannot close other competitions. */
+__declspec(dllexport) int fl26_join_close_caribbean(void* ctx, const uint16_t* ids)
+{
+  typedef char (*native_teardown_fn)(void*, vec16_t*);
+  if (!ctx || !g_tramp_teardown || !ids || ids[0]<176 || ids[0]>1023 ||
+      ids[1]!=ids[0]+1024 || ids[2]!=ids[0]+2048 ||
+      ids[3]<176 || ids[3]>1023 || ids[3]==ids[0]) return 0;
+  uint16_t exact[4];
+  memcpy(exact,ids,sizeof exact);
+  vec16_t list={exact,exact+4,exact+4};
+  ((native_teardown_fn)(uintptr_t)g_tramp_teardown)(ctx,&list);
+  return 1;
+}
+
+__declspec(dllexport) int fl26_join_close_central_probe(void* ctx, const uint16_t* ids)
+{
+  typedef char (*native_teardown_fn)(void*, vec16_t*);
+  if (!ctx || !g_tramp_teardown || !ids) return 0;
+  const int masters[]={0,5,6};
+  for (int i=0;i<3;i++)
+    if (ids[masters[i]]<176 || ids[masters[i]]>1023) return 0;
+  for (int i=1;i<5;i++) if (ids[i]!=ids[0]+1024*i) return 0;
+  for (int i=1;i<3;i++) if (ids[6+i]!=ids[6]+1024*i) return 0;
+  for (int i=1;i<9;i++)
+    for (int j=0;j<i;j++) if (ids[i]==ids[j]) return 0;
+  uint16_t exact[9];
+  memcpy(exact,ids,sizeof exact);
+  vec16_t list={exact,exact+9,exact+9};
+  ((native_teardown_fn)(uintptr_t)g_tramp_teardown)(ctx,&list);
+  return 1;
+}
+/* Roll back the isolated six-master Leagues Cup registration as one edition. */
+__declspec(dllexport) int fl26_join_rollback_leagues(void* ctx, const uint16_t* masters)
+{
+  typedef char (*native_teardown_fn)(void*, vec16_t*);
+  if (!ctx || !g_tramp_teardown) return 0;
+  if (!masters) return 1; /* Readiness query before any native registration. */
+  uint16_t ids[60];
+  for (int b=0;b<6;b++) {
+    if (masters[b]<176 || masters[b]>1023) return 0;
+    for (int i=0;i<b;i++) if (masters[i]==masters[b]) return 0;
+    for (int t=0;t<10;t++) ids[b*10+t]=masters[b]+1024*t;
+  }
+  vec16_t list={ids,ids+60,ids+60};
+  ((native_teardown_fn)(uintptr_t)g_tramp_teardown)(ctx,&list);
+  return 1;
+}
+
+__declspec(dllexport) int fl26_join_rollback_leagues_stage_ids(void* ctx, uint16_t master, unsigned ties)
+{
+  typedef char (*native_teardown_fn)(void*, vec16_t*);
+  if (!ctx || !g_tramp_teardown || master<176 || master>1023 || (ties!=2 && ties!=4)) return 0;
+  uint16_t ids[5];
+  int n=(int)ties+1;
+  for (int i=0;i<n;i++) ids[i]=master+1024*i;
+  vec16_t list={ids,ids+n,ids+n};
+  ((native_teardown_fn)(uintptr_t)g_tramp_teardown)(ctx,&list);
+  return 1;
+}
+
+__declspec(dllexport) int fl26_join_rollback_leagues_stage(void* ctx, uint16_t master)
+{
+  return master>=706 && master<=708 && fl26_join_rollback_leagues_stage_ids(ctx,master,master==706 ? 4 : 2);
+}
+
+__declspec(dllexport) int fl26_join_close_leagues_edition_ids(void* ctx, const uint16_t* masters)
+{
+  typedef char (*native_teardown_fn)(void*, vec16_t*);
+  if (!ctx || !g_tramp_teardown || !masters) return 0;
+  uint16_t ids[71], *p=ids;
+  for (int i=0;i<9;i++) {
+    uint16_t reg=masters[i];
+    if (reg<176 || reg>1023) return 0;
+    for (int j=0;j<i;j++) if (masters[j]==reg) return 0;
+    int ties=i<6 ? 9 : i==6 ? 4 : 2;
+    for (int t=0;t<=ties;t++) *p++=(uint16_t)(reg+1024*t);
+  }
+  vec16_t list={ids,p,p};
+  ((native_teardown_fn)(uintptr_t)g_tramp_teardown)(ctx,&list);
+  return 1;
+}
+
+__declspec(dllexport) int fl26_join_close_leagues_edition(void* ctx)
+{
+  const uint16_t masters[]={700,701,702,703,704,705,706,707,708};
+  return fl26_join_close_leagues_edition_ids(ctx,masters);
+}
+
 vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
 {
   (void)ctx;
+  if (g_rollback_only) return in;
   if (!in || !in->b || in->e < in->b) return in;
   int n = (int)(in->e - in->b), k = 0, euro = 0, changed = 0;
   if (n + g_nids + g_ntd_extra + MOVED_N > MAX_LIST) return in;
@@ -2019,6 +2111,17 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
 /* 0 ok; 2/3/4 = register_all hook signature/alloc/protect; 12/13/14 the same for enter_season;
    22/23/24 the builder; 32/33/34 the door; 42/43/44 the flag setter; 52/53/54 the New Year close; 62/63/64 the season-end mover; 72/73/74 the teardown; 9 = bad configuration.
    `logpath` may be NULL or empty: then the log lives in memory only, drained by the loader. */
+/* Cup-only worlds need the original teardown entry point, without league hooks. */
+__declspec(dllexport) int fl26_join_install_rollback(uint64_t exe_base)
+{
+  if (!exe_base) return 9;
+  if (g_tramp_teardown) return g_base==exe_base ? 0 : 9;
+  g_base=exe_base;
+  g_rollback_only=1;
+  return hook((unsigned char*)(uintptr_t)(exe_base+TEARDOWN_RVA), SIG_TEARDOWN, 14,
+              (void*)teardown_handler,&g_tramp_teardown);
+}
+
 __declspec(dllexport) int fl26_join_install(uint64_t exe_base, uint64_t cave_addr,
                                             const uint16_t* ids, int nids, const char* logpath)
 {

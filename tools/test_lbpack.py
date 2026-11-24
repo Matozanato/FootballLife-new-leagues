@@ -28,8 +28,46 @@ def main():
         at = [text.index("-- ==== %s.lua ====" % p) for p in parts]
         ok("%s: all %d parts, in order" % (name, len(parts)), at == sorted(at))
         ok("%s: init calls each part's init" % name, "p[2].init(ctx)" in wrapper)
+    runtime_sources()
+    livecpk_switch()
     portraits()
     print("%d cases passed" % N)
+
+
+def runtime_sources():
+    from pathlib import Path
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory() as sibling:
+        dest = Path(sibling) / "sider"
+        dest.mkdir()
+        modules = ("fl26swiss", "fl26joindll", "fl26catlist")
+        for name in modules:
+            (dest / (name + ".lua")).write_text("-- old sibling copy")
+        with patch.object(P, "PUBLIC", sibling), patch.object(P, "is_public", return_value=False):
+            ok("CONCACAF loaders and catlist come from the current checkout", all(
+                Path(P.source(name)).is_relative_to(Path(P.REPO)) for name in modules))
+
+
+def livecpk_switch():
+    from contextlib import redirect_stdout
+    from io import StringIO
+    from pathlib import Path
+    from unittest.mock import patch
+    import siderroot
+    with tempfile.TemporaryDirectory() as scratch:
+        ini = Path(scratch) / "sider.ini"
+        for required in (False, True):
+            ini.write_text('[sider]\nlivecpk.enabled = 0\ncpk.root = "./livecpk/_FL26Previous"\n')
+            args = ["siderroot", "_FL26Next"] + (["--require-livecpk"] if required else [])
+            with patch.object(siderroot, "INI", str(ini)), patch.object(sys, "argv", args), redirect_stdout(StringIO()):
+                assert siderroot.main() == 0
+            content = ini.read_text()
+            ok("explicit LiveCPK setting is preserved unless the world requires it",
+               f"livecpk.enabled = {int(required)}" in content and '#cpk.root' in content)
+    catlist = Path(P.source("fl26catlist")).read_text(encoding="utf-8")
+    guard = catlist.split("local function install_links(world)", 1)[1].split("local stub", 1)[0]
+    ok("catlist empty-links guard uses Sider-supported iteration",
+       "pairs(down)" in guard and not re.search(r"\bnext\s*\(", guard))
 
 
 def portraits():

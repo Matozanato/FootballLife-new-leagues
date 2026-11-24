@@ -96,6 +96,16 @@ int main(void)
   add_pre(901, 900, 0, 0, 0);         /* the league cup's pre-round, in the cup's competition */
   add_pre(950, 960, 0, 0, 0);         /* its cup 960 has no record */
 
+  g_cq_enabled = 1;
+  g_cq.ko = 623;
+  g_cq.pre = 707;
+  expect(cq_ci_round_one(517, test_comp, 1, 22), "Round One belongs under the main CONCACAF cup", 517);
+  expect(!cq_ci_round_one(765, test_comp, 1, 22), "Round One is not a separate helper cup", 765);
+  expect(!cq_ci_round_one(5, test_comp, 1, 22), "Libertadores menu remains separate", 5);
+  expect(!cq_ci_round_one(517, test_comp, 0, 22), "no current confirmed field hides the item", 517);
+  expect(!cq_ci_round_one(517, test_comp, 1, 21), "no incomplete tie list", 517);
+  g_cq_enabled = 0;
+
   const uint32_t hidden[] = { 763, 764, 765, 768, 512, 540, 541, 542 };
   for (unsigned i = 0; i < sizeof hidden / sizeof *hidden; i++)
     expect(ci_helper_lpre(hidden[i], test_comp) >= 0, "helper competition listed in Competition Info", hidden[i]);

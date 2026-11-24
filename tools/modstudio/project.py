@@ -44,6 +44,18 @@ def rename_in(recipe, old, new):
     for L in recipe["leagues"]:
         if L.get("above") == old:
             L["above"] = new
+    concacaf = recipe.get("concacaf")
+    if isinstance(concacaf, dict) and isinstance(concacaf.get("sources"), dict):
+        for role, sources in concacaf["sources"].items():
+            if isinstance(sources, list):
+                concacaf["sources"][role] = [new if source == old else source for source in sources]
+    if isinstance(concacaf, dict) and concacaf.get("version") in (2, 3):
+        rename = {old: new, "cup:" + old: "cup:" + new}
+        for branch in ("regional_access", "champions_access"):
+            for rows in concacaf.get(branch, {}).values():
+                for row in rows:
+                    if row["source"] in rename:
+                        row["source"] = rename[row["source"]]
     recipe.setdefault("players", {})
     # D17 (20.11.2026): every section keyed by a club of the league, "<league>/<n>" -- not only the
     # squads: club_money (FL 2027 budget, fame, fans) kept the old name, so after a Build the ten
@@ -906,6 +918,8 @@ class Project(QObject):
         r.setdefault("leagues", [])
         r.setdefault("edits", {})
         r.setdefault("players", {})
+        if (r.get("concacaf") or {}).get("version") in (2, 3):
+            r["concacaf"] = B.concacaf.integration_configuration(r["concacaf"])
         self._let_go(r)
         self.recipe, self.path, self.dirty = r, None if copy else path, False
         try:

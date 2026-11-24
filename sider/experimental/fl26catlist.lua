@@ -483,7 +483,11 @@ local function install_links(world)
       end
     end
   end
-  if n == 0 and next(down) == nil then return end
+  if n == 0 then
+    local has_down = false
+    for _ in pairs(down) do has_down = true; break end
+    if not has_down then return end
+  end
   for _, s in ipairs(LINKS) do
     local got = bin2hex(memory.read(s[1], #s[2] / 2))
     if got ~= s[2] then

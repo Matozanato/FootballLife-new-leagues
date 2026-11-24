@@ -50,6 +50,7 @@ import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import mkleague as M
+import concacaf
 
 R_BACK, R_GROUP, R_GROUPS = 0x06, 0x0a, 0x10
 REPLICA_STEP, NO_GROUP = 1024, 255
@@ -74,6 +75,8 @@ def parse(spec):
     if len(bits) not in (7, 8, 9, 10):
         raise SystemExit("--cup wants NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like]]], got %r" % spec)
     name, code, cid, reg, ko, groups, entry = bits[:7]
+    if code == concacaf.CODE:
+        raise SystemExit(concacaf.BUILD_BLOCKED)
     conf = int(bits[7]) if len(bits) >= 8 and bits[7] else None
     region = int(bits[8]) if len(bits) >= 9 and bits[8] else None
     like = int(bits[9]) if len(bits) == 10 and bits[9] else None

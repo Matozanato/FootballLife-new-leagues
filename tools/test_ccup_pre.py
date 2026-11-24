@@ -1,11 +1,12 @@
 """A continental cup's preliminary round ("europe_pre", 11.11.2026): ccup_plan with marked places, the
 world file's lpre line. Offline; nothing of a game is read or written.
 
-mato, 11.11.2026: every African and CONCACAF country needs a way into its continent's cups, and a cup
-holds 32 (16 for the CONCACAF knockout) -- the clubs past the direct places play one-match ties first.
+The generic preliminary-round planner serves cups such as the CAF competitions.
+CONCACAF uses its own 27-club engine.
 """
 import os
 import sys
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import leaguebuilder as B
@@ -82,31 +83,40 @@ ok("without marks: 32 clubs, no round, and a note about the places that get none
 ok("a mark on a place the cup has not got changes nothing",
    B.ccup_plan(own, room, pre={(999, 1, CL): 1})[0] == plain)
 
-# --- the CONCACAF Champions Cup: a knockout of 16, all of it from the round; the shipped MLS places
-#     make the round up to 32 and are its strongest
-K = list(range(401, 427))                 # 26 champions
-own13 = [(r, 1, CONCACAF, 0) for r in K]
-c13 = next(c for c in B.ccup_plan(own13, {r: 10 for r in K}, pre={(r, 1, CONCACAF): i + 1 for i, r in enumerate(K)})[0]
-           if c["number"] == CONCACAF)
-mls = [tuple(e) for e in next(f for c, _n, _code, _conf, f in fl26world.CCUPS if c == CONCACAF)[:6]]
-ok("a knockout of 16 with no groups, every place a tie's winner",
-   c13["groups"] == 0 and len(c13["entry"]) == 16 and all(e[0] == "pre" for e in c13["entry"]))
-ok("the bracket: the first tie's winner v the last's", [e[1] for e in c13["entry"][:4]] == [0, 15, 1, 14])
-ok("16 ties: 26 champions and the first 6 shipped places",
-   len(c13["pre"]["ties"]) == 16
-   and sorted(tuple(e) for t in c13["pre"]["ties"] for e in t) == sorted(mls + [(r, 1) for r in K]))
-ok("the shipped places are the strongest: each meets one of the weakest champions",
-   [tuple(t[1]) for t in c13["pre"]["ties"][:6]] == mls
-   and [tuple(t[0]) for t in c13["pre"]["ties"][:6]] == [(r, 1) for r in K[:-7:-1]])
+# --- exercise the generic knockout path with a synthetic cup: the same seeds,
+#     inherited entry ordering, bracket order and overflow checks.
+KNOCKOUT = 90
+fill = [(51, p) for p in range(1, 13)]
+with patch.object(fl26world, "CCUPS", [(KNOCKOUT, "Test knockout", "TEST_KO", 6, fill)]), \
+     patch.object(fl26world, "CCUP_KNOCKOUT", {KNOCKOUT}):
+    K = list(range(401, 427))                 # 26 champions
+    own_ko = [(r, 1, KNOCKOUT, 0) for r in K]
+    cko = next(c for c in B.ccup_plan(own_ko, {r: 10 for r in K}, pre={(r, 1, KNOCKOUT): i + 1 for i, r in enumerate(K)})[0]
+               if c["number"] == KNOCKOUT)
+    mls = fill[:6]
+    ok("a knockout of 16 with no groups, every place a tie's winner",
+       cko["groups"] == 0 and len(cko["entry"]) == 16 and all(e[0] == "pre" for e in cko["entry"]))
+    ok("the bracket: the first tie's winner v the last's", [e[1] for e in cko["entry"][:4]] == [0, 15, 1, 14])
+    ok("16 ties: 26 champions and the first 6 shipped places",
+       len(cko["pre"]["ties"]) == 16
+       and sorted(tuple(e) for t in cko["pre"]["ties"] for e in t) == sorted(mls + [(r, 1) for r in K]))
+    ok("the shipped places are the strongest: each meets one of the weakest champions",
+       [tuple(t[1]) for t in cko["pre"]["ties"][:6]] == mls
+       and [tuple(t[0]) for t in cko["pre"]["ties"][:6]] == [(r, 1) for r in K[:-7:-1]])
 
-# --- more marked places than the round takes: the weakest get none, and it says so
-K2 = list(range(401, 441))                # 40 champions
-c40, n40 = B.ccup_plan([(r, 1, CONCACAF, 0) for r in K2], {r: 10 for r in K2},
-                       pre={(r, 1, CONCACAF): i + 1 for i, r in enumerate(K2)})
-c40 = next(c for c in c40 if c["number"] == CONCACAF)
-ok("40 marked places: 32 play, the 8 with the weakest seeds get none (noted)",
-   len(c40["pre"]["ties"]) == 16 and (K2[32], 1) not in [tuple(e) for t in c40["pre"]["ties"] for e in t]
-   and any("the last 8 get none" in n for n in n40))
+    # --- more marked places than the round takes: the weakest get none, and it says so
+    K2 = list(range(401, 441))                # 40 champions
+    c40, n40 = B.ccup_plan([(r, 1, KNOCKOUT, 0) for r in K2], {r: 10 for r in K2},
+                           pre={(r, 1, KNOCKOUT): i + 1 for i, r in enumerate(K2)})
+    c40 = next(c for c in c40 if c["number"] == KNOCKOUT)
+    ok("40 marked places: 32 play, the 8 with the weakest seeds get none (noted)",
+       len(c40["pre"]["ties"]) == 16 and (K2[32], 1) not in [tuple(e) for t in c40["pre"]["ties"] for e in t]
+       and any("the last 8 get none" in n for n in n40))
+
+# --- target 13 cannot be redirected to the generic one-match preliminary round
+actual = B.ccup_plan([(401, 1, CONCACAF, 0)], {401: 10}, pre={(401, 1, CONCACAF): 1})[0][0]
+ok("CONCACAF is the dedicated 27-place engine", actual["participants"] == 27
+   and actual["code"] == "FL_CONCACAF" and actual["entry"] == [] and "pre" not in actual)
 
 # --- no size fits: built without the round, with a note
 few, nfew = B.ccup_plan([(301, 1, CL, 0), (302, 1, CL, 0), (303, 1, CL, 0), (304, 1, CL, 0), (305, 1, CL, 0)],

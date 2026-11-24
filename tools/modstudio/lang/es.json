@@ -43,7 +43,7 @@
   "The project changed while reviewing UEFA Ranking. Open the ranking again; nothing was applied.": "El proyecto cambió durante la revisión del ranking UEFA. Abre el ranking de nuevo; no se aplicó nada.",
   "Enable Libertadores new format, Sudamericana and Recopa Sudamericana": "Activar nuevo formato de Libertadores, Sudamericana y Recopa Sudamericana",
   "Cannot auto-set continental places": "No se pueden asignar los cupos continentales automáticamente",
-  "Auto set continental places": "Asignar cupos continentales automáticamente",
+  "Auto-assign qualification places": "Asignar cupos continentales automáticamente",
   "Fixed quotas for all ten playable CONMEBOL top divisions. Requires Modern CONMEBOL; changes only the CUPS draft.": "Cuotas fijas para las diez primeras divisiones jugables de CONMEBOL. Requiere CONMEBOL moderno; solo modifica el borrador de COPAS.",
   "No qualification places were changed.": "No se modificó ningún cupo de clasificación.",
   "Enable Modern CONMEBOL competitions before using automatic allocation.": "Activa Competiciones CONMEBOL modernas antes de usar la asignación automática.",

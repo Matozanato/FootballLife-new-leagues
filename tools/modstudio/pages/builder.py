@@ -655,7 +655,7 @@ class EuropeTable(QWidget):
         self.modern = modern
         self.preserve_legacy = preserve_legacy
         self.changed = None             # called when a place changes (the European places counter)
-        self.competitions = continental_place_choices(competitions or fl26world.COMPETITIONS, modern)
+        self.competitions = continental_place_choices(fl26world.COMPETITIONS if competitions is None else competitions, modern)
         self.cup_winner = bool(cup_winner)
         self.position_label = position_label
         v = QVBoxLayout(self)
@@ -714,7 +714,7 @@ class EuropeTable(QWidget):
             # a place the list does not offer (Libertadores qualifying with the modern CONMEBOL
             # competitions on) is shown as it is, so OK keeps it: it became the first entry, a
             # Champions League place, without a word (review of #146). Build says what is wrong
-            name = dict(fl26world.COMPETITIONS).get(int(comp))
+            name = B.concacaf.CUP_NAMES.get(int(comp)) or dict(fl26world.COMPETITIONS).get(int(comp))
             cb.addItem(_(name) if name else _("Competition %d") % int(comp), int(comp))
             i = cb.count() - 1
             if self.preserve_legacy:
@@ -1179,7 +1179,9 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Formation"), self.formation)
         self.form.addRow("", hint(_("how the league's clubs line up: a copy of the tactics of a club of the "
                                     "game with that formation; a club can have its own (Edit club)")))
-        self.europe = EuropeTable(L.get("europe"), self.clubs.value(), modern=modern_conmebol(project))
+        choices = [(target, name) for target, name in fl26world.COMPETITIONS if target != B.concacaf.TARGET]
+        self.europe = EuropeTable(L.get("europe"), self.clubs.value(), modern=modern_conmebol(project),
+                                  competitions=choices)
         self.form.addRow(_("Europe"), self.europe)
         self.form.addRow("", hint(_("league position -> European competition, for a top division; "
                                     "leave it empty for lower tiers. The country's cup winner: take the "

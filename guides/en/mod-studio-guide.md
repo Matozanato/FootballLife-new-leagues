@@ -1,5 +1,25 @@
 # FL Mod Studio — user guide
 
+## CONCACAF in FL27
+
+Open **My world ? Cups ? Continental ? CONCACAF**. Champions Cup is always listed. Check the boxes for the regional cups you want. Regional cups can run independently, and each ready regional cup supplies places to Champions Cup if Champions Cup itself is built.
+
+| Competition | What to configure |
+| --- | --- |
+| CONCACAF Champions Cup | Fill the domestic Round of 16 and Round One places shown in **Allocation overview**. The complete field is 27 clubs, including automatic regional qualifiers. |
+| Leagues Cup | Enable it and provide compatible MLS and Liga MX leagues. Its annual field is fixed at 18 clubs from each league. |
+| CONCACAF Central American Cup | Enable it and assign 20 individual places from eligible Central American leagues and their domestic cups. |
+| CONCACAF Caribbean Cup | Enable it and assign 10 individual places from eligible Caribbean leagues and their domestic cups. |
+
+In **Qualification**, select a league and choose **Add place**. One row assigns one position, or **Cup winner** when the league has an eligible domestic cup. Assign different positions to different competitions. For example, a Guatemalan league can send positions 1 and 2 to different Champions Cup rounds, and positions 3, 4 and 6 plus its cup winner to Central American Cup. Keep assigning places until the required totals are met. Positions 3, 4 and 6 refer to those exact positions.
+
+**Auto-assign qualification places** creates an editable draft. It keeps ready regional allocations, tries to complete enabled regional cups and redistributes places among eligible leagues that exist in the world. No country has a reserved minimum. One Jamaican league with enough clubs can supply all ten Caribbean Cup places. When a regional cup can be built, the automatic Champions Cup assignment excludes all domestic sources in its region, even leagues with zero places in that cup. Manual assignments may still use those leagues. MLS and Liga MX remain eligible for Champions Cup when Leagues Cup is enabled.
+
+Use **Apply** to keep the draft, then save the recipe. Use **Discard** to abandon the draft or **Undo** and **Redo** to revert or reapply it. **Check current competition plan** shows which cups can be built. An incomplete cup is omitted while the rest of the world builds. Build never fills vacant places automatically. For example, with only Leagues Cup ready, Champions Cup needs four domestic Round of 16 places and 20 domestic Round One places. With all three ready, it needs two and 13.
+
+The competition list has the standard **Name**, **Logo**, **Dark Mode Logo** and **Light Mode Logo** controls. These affect appearance. Leagues Cup keeps its fixed sporting format and has no qualification rows.
+
+
 > **English** · [hrvatski](../hr/mod-studio-guide.md) · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
 > **New in 0.4.0 or just updated?** [Quick start for 0.4.0 (FL26 and FL27)](quick-start-0.4.0.md) · older: [quick start for 0.3.0](quick-start-0.3.0.md).

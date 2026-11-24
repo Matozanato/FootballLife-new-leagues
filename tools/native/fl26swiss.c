@@ -44,6 +44,46 @@
 #include "fl26savedir.h"
 #include "fl26swiss_table.h"
 #include "fl26swiss_draw.h"
+#include "fl26concacaf.h"
+#include "fl26caribbean.h"
+static car_config g_car;
+static int g_car_enabled;
+static void car_tick(void);
+static void car_tick_with_context(void* ctx);
+static void car_native_regs(uint16_t ids[4]);
+static void car_capture(void);
+static uint16_t g_ca_group, g_ca_ko, g_ca_pre, g_ca_ids[9];
+static uint16_t g_ca_leagues[7];
+static int g_ca_dynamic;
+static int g_ca_busy;
+#include "fl26leagues_phase.h"
+static lc_phase g_lc;
+static int g_lc_enabled, g_lc_busy;
+static int g_lc_confirm_timeline=-1, g_lc_confirm_year;
+static void lc_tick(void* ctx);
+static int day_cap(void);
+static int day_load(int d);
+static void ca_tick(void* ctx);
+static void ca_capture_domestic(int force);
+static int ca_domestic_feeds(uint16_t id);
+static int ca_owned(uint16_t reg)
+{
+  if (g_ca_group)
+    for (int i=0;i<9;i++) if (g_ca_ids[i]==reg) return 1;
+  return 0;
+}
+static int real_club(uint32_t v);
+
+static cq_config g_cq;
+static int g_cq_enabled;
+static int g_cq_blocked;
+static int g_cq_hooks;
+static void cq_tick(void* started, const char* route);
+static void cq_capture(int teardown);
+static int calyear(uint16_t id);
+static void cq_keep_champion(void);
+static int cq_completed_native(int today, int edition, const uint32_t* clubs);
+static const unsigned char* car_matches(uint32_t* cap);
 
 #define GEN_RVA   0x13f3e00    /* bool build_generic_schedule(ctx, u16 reg id, u8 flag) */
 #define GRID_RVA  0x13f30f0    /* void alloc_grid(ctx) -- legs x N x N cells, cleared     */
@@ -122,12 +162,14 @@ static volatile uint32_t g_stat[5];
    test's sider.log (29.10.) while the ties were there. 1 MB, and the lines lost are counted
    and reported at the next drain. */
 static char g_log[1 << 20]; static volatile int g_log_len = 0;
-static volatile uint32_t g_log_lost = 0;
+static uint32_t g_log_lost = 0;
+static SRWLOCK g_log_lock = SRWLOCK_INIT;
 static void logf(const char* fmt, ...)
 {
   char line[256]; va_list ap; va_start(ap, fmt);
   int n = vsnprintf(line, sizeof line, fmt, ap); va_end(ap);
   if (n <= 0) return; if (n >= (int)sizeof line) n = sizeof line - 1;
+  AcquireSRWLockExclusive(&g_log_lock);
   /* a test with fl26swiss-trace.on in the game's folder: every line also straight to
      fl26swiss-trace.log, so a crash under Fast Forward (nothing drained for months) leaves them */
   static int tr = -1; static FILE* tf;
@@ -140,9 +182,12 @@ static void logf(const char* fmt, ...)
     static FILE* of;
     if (!of) of = fopen("fl26swiss-overflow.log", "a");
     if (of) { fwrite(line, 1, n, of); fputc('\n', of); fflush(of); }
-    g_log_lost++; return;
+    g_log_lost++;
+    ReleaseSRWLockExclusive(&g_log_lock);
+    return;
   }
   memcpy(g_log + g_log_len, line, n); g_log_len += n; g_log[g_log_len++] = '\n';
+  ReleaseSRWLockExclusive(&g_log_lock);
 }
 
 static int ours(uint16_t reg)
@@ -301,6 +346,22 @@ char gen_handler(void* ctx, uint64_t reg, uint64_t flag)
 {
   g_stat[0]++;
   uint16_t id = (uint16_t)reg;
+  if (ctx && ((g_car_enabled && (id==g_car.group+1024 || id==g_car.group+2048)) ||
+              (g_ca_group && (id&1023)==g_ca_group && id>1024 && ca_owned(id)))) {
+    vec_t* clubs=(vec_t*)((unsigned char*)ctx+OFF_CLUBS);
+    if (!clubs->b || clubs->e-clubs->b!=5*sizeof(uint32_t)) return 0;
+    *(uint32_t*)((unsigned char*)ctx+OFF_LEGS)=1;
+    ((grid_fn)(uintptr_t)(g_base+GRID_RVA))(ctx);
+    for (unsigned day=0;day<5;day++) for (unsigned pair=1;pair<=2;pair++) {
+      unsigned home,away;
+      car_pair(day,pair,&home,&away);
+      cell_t* h=cell_at(ctx,0,home,away), *a=cell_at(ctx,0,away,home);
+      if (!h || !a) return 0;
+      h->md=a->md=day; h->side=0; a->side=1;
+    }
+    *(uint32_t*)((unsigned char*)ctx+OFF_MATCHDAYS)=5;
+    return 1;
+  }
   if (ctx && european(id)) {
     vec_t* cl = (vec_t*)((unsigned char*)ctx + OFF_CLUBS);
     seen_once(0, id, (cl->b && cl->e >= cl->b) ? (size_t)(cl->e - cl->b) / 4 : 0);
@@ -1434,6 +1495,7 @@ static int abs_day(void)
    the same session it put the first-season list into the next summer's league phases too. */
 #define FIRST_SUMMER_END 300
 static int game_date(void);
+static int concacaf_career_start(int gd);
 static int first_summer_over(void)
 {
   int gn = game_date();
@@ -4658,6 +4720,7 @@ static int ccup_behind(uint16_t ereg, uint16_t lg[2], uint8_t rank[2], uint16_t 
    pre-round) is told by those alone, as before. */
 static int ccup_tier(const ccup_t* c)
 {
+  if (g_car_enabled && c->ko==g_car.ko) return 1;
   int own = 0, pre1 = 0;
   for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++) {
     if (c->erank[e] == 1) return 0;
@@ -4738,11 +4801,16 @@ static unsigned world_cup_clubs(uint32_t* out, unsigned cap)
   return n;
 }
 
-__declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
+static int ccup_register_rows(const uint16_t* v, int n, const car_config* car, int append)
 {
   /* per cup: reg, ko, groups, entries, then (reg, position) per entry */
   if ((!v && n) || n < 0) return -1;
-  g_nccup = 0;
+  if (!append) {
+    g_nccup = 0;
+    g_car_enabled = 0;
+    g_cq_enabled = 0;
+    g_cq_blocked = 0;
+  }
   g_ccup_gen++;
   size_t p = 0;
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
@@ -4778,9 +4846,11 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
       g_nccup++;
       continue;
     }
-    if (c->groups > CCUP_MAX_GROUPS || c->n != 4u * c->groups) {
-      logf("fl26swiss: cup %u -- %u group(s) and %u entries do not make groups of four; left out",
-           (unsigned)c->reg, (unsigned)c->groups, (unsigned)c->n);
+    unsigned per_group=((car && c->reg==car->group && c->ko==car->ko) ||
+                        (g_ca_group && c->reg==g_ca_group && c->ko==g_ca_ko)) ? 5u : 4u;
+    if (c->groups > CCUP_MAX_GROUPS || c->n != per_group * c->groups) {
+      logf("fl26swiss: cup %u -- %u group(s) and %u entries do not make groups of %u; left out",
+           (unsigned)c->reg, (unsigned)c->groups, (unsigned)c->n, per_group);
       continue;
     }
     logf("fl26swiss: cup %u (knockout %u) from the world file: %u groups, %u entries", (unsigned)c->reg,
@@ -4788,6 +4858,43 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
     g_nccup++;
   }
   return g_nccup;
+}
+
+static int ccup_register(const uint16_t* v, int n, const car_config* car)
+{
+  return ccup_register_rows(v,n,car,0);
+}
+
+__declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
+{
+  return ccup_register(v,n,0);
+}
+
+__declspec(dllexport) const unsigned int fl26_swiss_caribbean_access_abi=3;
+__declspec(dllexport) const unsigned int fl26_swiss_regional_places_abi=1;
+__declspec(dllexport) int fl26_swiss_ccup_caribbean(const uint16_t* v, int words, int n,
+                                                   const uint16_t* contract, int length)
+{
+  car_config car;
+  if (!g_cq_hooks || !car_parse(&car,contract,length) || !v ||
+      n<1 || n>MAX_CCUP || words<4) return -1;
+  int pos=0, matched=0;
+  for (int i=0;i<n;i++) {
+    if (words-pos<4) return -1;
+    unsigned reg=v[pos], ko=v[pos+1], groups=v[pos+2], entries=v[pos+3];
+    if (words-pos-4<2*(int)entries) return -1;
+    if (reg==car.group || reg==car.ko || ko==car.group || ko==car.ko) {
+      if (reg!=car.group || ko!=car.ko || groups!=2 || entries!=10 || matched++) return -1;
+    }
+    pos+=4+2*(int)entries;
+  }
+  if (pos!=words || matched!=1) return -1;
+  int accepted=ccup_register(v,n,&car);
+  g_car=car;
+  g_car_enabled=1;
+  logf("fl26swiss: Caribbean contract v%u accepted: group %u, knockout %u, two groups of five",
+       car.exact+1,car.group,car.ko);
+  return accepted;
 }
 
 /* The options per cup, n records of u32: knockout id, fill day, national (0/1), the number of
@@ -4981,7 +5088,7 @@ static int season_ord(int d);
 static uint16_t lpre_tie(const lpre_t* l, int k) { return (uint16_t)(l->reg + 1024 * (k + 1)); }
 /* Normal legacy pre-rounds expose eight replicas. Libertadores aliases and the
    Sudamericana one-match first stage expose exactly the rows generated for them. */
-static int lpre_rows(const lpre_t* l) { return (l->alias || l->single || l->poko || l->ties > LPRE_TIES) ? l->ties : LPRE_TIES; }
+static int lpre_rows(const lpre_t* l) { return (l->reg==g_ca_pre || l->alias || l->single || l->poko || l->ties > LPRE_TIES) ? l->ties : LPRE_TIES; }
 /* which pre-round a regulation belongs to (0-based; *tie -1 for the master), -1 none */
 static int lpre_of(uint16_t id, int* tie)
 {
@@ -5023,12 +5130,12 @@ static int lpre_matches(const lpre_t* l)
 }
 
 static void po_fill(void);          /* the Match Results play-off ids, below */
-__declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
+static int lpre_register(const uint16_t* v, int n, int append)
 {
   /* per pre-round: reg, the cup's knockout, fill day, the two legs' days, entries, then
      (reg, position) per entry. Called after fl26_swiss_ccup: the cup must be in its list. */
   if ((!v && n) || n < 0) return -1;
-  g_nlpre = 0;
+  if (!append) g_nlpre = 0;
   size_t p = 0;
   for (int i = 0; i < n; i++) {
     uint16_t reg = v[p], ko = v[p + 1], fill = v[p + 2], d1 = v[p + 3], d2 = v[p + 4];
@@ -5061,6 +5168,11 @@ __declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
   }
   po_fill();                        /* the Match Results title: the pre-rounds are play-offs */
   return g_nlpre;
+}
+
+__declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
+{
+  return lpre_register(v,n,0);
 }
 
 /* Optional same-source fallback for an lpre cup-winner entry. Each record is
@@ -5892,6 +6004,9 @@ static int lpre_claimed(uint16_t league, uint32_t club)
 static void lpre_fill(int i)
 {
   lpre_t* l = &g_lpre[i];
+  if (g_lc_enabled && lc_owns(&g_lc,l->reg)) return;
+  if (g_ca_pre && l->reg==g_ca_pre) return;
+  if ((g_cq_enabled || g_cq_blocked) && l->reg == g_cq.pre) return; /* never fall back to generic qualification */
   int d = today();
   if (d < 1) return;
   if (l->poko) {
@@ -6086,8 +6201,527 @@ static void poko_ko(int i, void* started)
        (unsigned)c->reg, d, buf[0], buf[1], ccup_matches(c->ko));
 }
 
-static void lpre_fill_days(void)
+/* CONCACAF v1: one primary knockout and one technical eleven-tie helper.
+ * Snapshot in the existing checksummed, save/user/date-scoped state journal.
+ * Synthetic result key is not a game regulation, nor a championship history. */
+#define CQ_SNAPSHOT 0xfffdu
+#define CQ_RESULT(reg) ((uint16_t)(0xf000u | (reg)))
+#define CQ_NATIVE_REGS 13
+
+static int cq_native_regs(uint16_t ids[CQ_NATIVE_REGS])
 {
+  int tie=-1;
+  int i=g_cq_enabled ? lpre_of(g_cq.pre,&tie) : -1;
+  if (i<0 || tie>=0 || g_lpre[i].ko!=g_cq.ko || lpre_rows(&g_lpre[i])!=11) return 0;
+  ids[0]=g_cq.ko;
+  ids[1]=g_cq.pre;
+  for (int j=0;j<11;j++) ids[2+j]=lpre_tie(&g_lpre[i],j);
+  return CQ_NATIVE_REGS;
+}
+
+static int cq_native_has(const uint16_t* ids, int n, uint16_t reg)
+{
+  for (int i=0;i<n;i++) if (ids[i]==reg) return 1;
+  return 0;
+}
+
+static int cq_teardown_filter(uint16_t* out, const uint16_t* in, int n,
+                              const uint16_t* keep, int nkeep)
+{
+  int count=0;
+  for (int i=0;i<n;i++) if (!cq_native_has(keep,nkeep,in[i])) out[count++]=in[i];
+  return count;
+}
+
+static int cq_teardown_append(uint16_t* list, int n, const uint16_t* close, int nclose)
+{
+  for (int i=0;i<nclose;i++) if (!cq_native_has(list,n,close[i])) list[n++]=close[i];
+  return n;
+}
+
+static int ko_mdate(const unsigned char* m);
+static uint32_t ko_final_winner(uint16_t reg);
+static int ca_cup_finish(uint16_t reg, uint32_t rules, uint32_t champion, int gd, int creation);
+static int ca_feeder(cq_source* source, int edition, int gd, int creation, int publish);
+static int lc_feeder(cq_source* source, int edition, int gd, int creation);
+__declspec(dllexport) const uint32_t fl26_swiss_concacaf_abi = CQ_VERSION;
+__declspec(dllexport) const uint32_t fl26_swiss_concacaf_access_abi = 2;
+__declspec(dllexport) int fl26_swiss_concacaf_version(void) { return CQ_VERSION; }
+__declspec(dllexport) int fl26_swiss_concacaf(const uint16_t* v, int words)
+{
+  static cq_config candidate;
+  if (!cq_parse(&candidate,v,words)) return -1;
+  int feeder=0, central=0, leagues=0;
+  for (int i=0;i<candidate.ns;i++) {
+    const cq_source* s=&candidate.source[i];
+    if (s->kind==CQ_CARIBBEAN && (!g_car_enabled || s->reg!=g_car.ko || feeder++)) return -2;
+    if (s->kind==CQ_CENTRAL && (!g_ca_dynamic || s->reg!=g_ca_ko || central++)) return -2;
+    if (s->kind==CQ_LEAGUES && (!g_lc_enabled || s->reg!=g_lc.ko[2] || leagues++)) return -2;
+    if (s->kind<CQ_CENTRAL && ca_owned(s->reg)) return -2;
+  }
+  if ((g_car_enabled && feeder!=1) || (g_ca_group && central!=1) ||
+      ca_owned(candidate.ko) || ca_owned(candidate.pre)) return -2;
+  g_cq=candidate; g_cq_enabled=0; g_cq_blocked=1;
+  if (!g_cq_hooks) { logf("fl26swiss: CONCACAF ERROR: a required native hook is unavailable; do not load this career"); return -3; }
+  const unsigned char* bs=(const unsigned char*)(g_base+MATCH_BASE_SITE);
+  const unsigned char* cs=(const unsigned char*)(g_base+MATCH_CAP_SITE);
+  if (bs[0]!=0x48 || bs[1]!=0x8d || bs[2]!=0x88 || cs[0]!=0x81 || cs[1]!=0xff) {
+    logf("fl26swiss: CONCACAF ERROR: unsupported match-table layout; contract rejected"); return -4;
+  }
+  int li=-1, ci=-1;
+  for (int i=0;i<g_nlpre;i++) if (g_lpre[i].reg==candidate.pre && g_lpre[i].ko==candidate.ko && g_lpre[i].ties==11) li=i;
+  for (int i=0;i<g_nccup;i++) if (g_ccup[i].ko==candidate.ko && !g_ccup[i].groups && g_ccup[i].n==16) ci=i;
+  if (li<0 || ci<0) return -2;
+  g_cq_enabled=1; g_cq_blocked=0;
+  logf("fl26swiss: CONCACAF contract v1 accepted: 27 places, 22 Round One, 5 byes, pre %u -> knockout %u",
+       g_cq.pre,g_cq.ko);
+  return CQ_VERSION;
+}
+/* The total holds standings; its first phase holds live membership. */
+static uint16_t cq_membership_reg(uint16_t reg)
+{
+  const ssum_t* sum = ssum_of(reg);
+  return sum ? sum->part[0] : reg;
+}
+
+static int cq_source_feeds(uint16_t reg, uint16_t id)
+{
+  if (reg == id) return 1;
+  const ssum_t* sum = ssum_of(reg);
+  if (sum) for (int p = 0; p < SSUM_PARTS; p++)
+    if (sum->part[p] && sum->part[p] == id) return 1;
+  return 0;
+}
+
+/* Keep qualification results separately from shared standings and cup histories.
+ * Date them by the last completed fixture, not by the day the table was read. */
+static void cq_capture(int teardown)
+{
+  if (!g_cq_enabled) return;
+  int gd=game_date(), ad=abs_day();
+  if (gd<0 || ad<0) return;
+  static int last=-1, timeline=-1;
+  if (!teardown && last==gd && timeline==g_timeline) return;
+  last=gd; timeline=g_timeline;
+  int cutoff=cq_edition_fill(gd,g_cq.fill)-365;
+  if (gd%365<g_cq.fill) cutoff+=365; /* legacy fill calendar */
+  const unsigned char* bs=(const unsigned char*)(g_base+MATCH_BASE_SITE);
+  const unsigned char* cs=(const unsigned char*)(g_base+MATCH_CAP_SITE);
+  if (bs[0]!=0x48 || bs[1]!=0x8d || bs[2]!=0x88 || cs[0]!=0x81 || cs[1]!=0xff) return;
+  uint32_t base=*(const uint32_t*)(bs+3), cap=*(const uint32_t*)(cs+2);
+  unsigned char* owner=(unsigned char*)((owner_fn)(uintptr_t)(g_base+OWNER_RVA))();
+  unsigned char* blk=owner ? *(unsigned char**)(owner+0x48) : 0;
+  if (!blk || !cap || cap>200000) return;
+  int count[1024]={0}, newest[1024]={0}, invalid[1024]={0};
+  for (uint32_t i=0;i<cap;i++) {
+    const unsigned char* m=blk+base+(size_t)i*MATCH_STRIDE;
+    if (*(const uint16_t*)m==0xffff) continue;
+    uint16_t reg=*(const uint16_t*)(m+4);
+    if (reg>=1024) continue;
+    int date=ko_mdate(m);
+    /* Do not truncate a phase at New Year. A newly registered phase can block
+     * recapture, but its presence cannot erase a completed journal entry. */
+    if (!(m[7]&0x40) || date<0 || date>gd ||
+        (g_cq.fill==CQ_JANUARY_FILL ? date<=gd-365 : date<=cutoff)) {
+      invalid[reg]=1; continue;
+    }
+    count[reg]++;
+    if (date>newest[reg]) newest[reg]=date;
+  }
+  int changed=0;
+  for (int i=0;i<g_cq.ns;i++) {
+    const cq_source* source=&g_cq.source[i];
+    if (source->kind>=CQ_CARIBBEAN) continue;
+    const ssum_t* sum=ssum_of(source->reg);
+    uint16_t regs[SSUM_PARTS]={source->reg};
+    int nr=1;
+    if (sum) {
+      nr=0;
+      while (nr<SSUM_PARTS && sum->part[nr]) { regs[nr]=sum->part[nr]; nr++; }
+    }
+    int total=0, completed=0;
+    uint32_t winner=0;
+    if (source->kind==1 && g_cq.explicit_access==2) {
+      const unsigned char* rec=get_rec(source->reg);
+      if (!rec) continue;
+      winner=winner_now(source->reg);
+      if (!real_club(winner)) winner=ko_final_winner(source->reg);
+      if (!real_club(winner)) continue;
+      completed=ca_cup_finish(source->reg,*(const uint32_t*)(rec+0x304),winner,gd,gd-364);
+      total=completed>=0;
+    } else for (int p=0;p<nr;p++) {
+      uint16_t reg=regs[p];
+      if (reg>=1024 || invalid[reg] || !count[reg]) { total=0; break; }
+      total+=count[reg];
+      if (newest[reg]>completed) completed=newest[reg];
+    }
+    if (!total) continue;
+    uint16_t key=CQ_RESULT(source->reg);
+    int day=ad-(gd-completed);
+    if (source->kind) {
+      cupwin_t* f=cupwin_of(key);
+      if (f && f->day>=day) continue;
+      if (!winner) winner=ko_final_winner(source->reg);
+      if (!(winner>>14)) continue;
+      if (!f) {
+        if (g_ncupwin>=CUPWIN_N) continue;
+        f=&g_cupwin[g_ncupwin++];
+      }
+      f->reg=key; f->day=day; f->club=canon_club(winner);
+    } else {
+      final_t* f=final_of(key);
+      if (f && f->day>=day) continue;
+      final_t result;
+      int played=0;
+      if (!count_table(regs,nr,&result,&played) || played!=total) continue;
+      if (!f && !(f=final_new(key))) continue;
+      result.reg=key; result.day=day;
+      *f=result;
+    }
+    changed=1;
+  }
+  if (changed) state_store();
+}
+static int cq_pools(int first, int edition, int gd, int built, int career_start)
+{
+  state_sync();
+  int ad=abs_day();
+  for (int i=0;i<g_cq.ns;i++) {
+    cq_source* s=&g_cq.source[i]; s->n=0; s->status=0;
+    if (s->kind==CQ_LEAGUES) {
+      s->status=lc_feeder(s,edition,gd,career_start) ? 1 : 2;
+      continue;
+    }
+    if (s->kind==CQ_CENTRAL) {
+      s->status=ca_feeder(s,edition,gd,career_start,1) ? 1 : 2;
+      continue;
+    }
+    if (s->kind==CQ_CARIBBEAN) {
+      if (!g_car_enabled || s->reg!=g_car.ko) return 0;
+      final_t* podium=final_of(CAR_PODIUM);
+      int completed=podium ? gd-(ad-podium->day) : -1;
+      if (podium && podium->n==4 && cq_unique(podium->club,4) &&
+          car_previous_year(completed,gd)) {
+        for (int p=0;p<4;p++) {
+          uint32_t club=canon_club(podium->club[p]);
+          if (real_club(club)) s->club[s->n++]=club;
+        }
+        if (s->n>=3) s->status=1;
+      } else if (first && built>=(gd/365-1)*365+CAR_GROUP_FIRST) s->status=1;
+      else s->status=2;
+      continue;
+    }
+    unsigned char* r=get_rec(cq_membership_reg(s->reg));
+    if (!r) return 0;
+    if (s->kind) {
+      uint16_t domestic=s->parent ? g_cq.source[s->parent-1].reg : s->reg;
+      cupwin_t* w=cupwin_of(CQ_RESULT(s->reg));
+      int completed=w ? gd-(ad-w->day) : -1;
+      if (w && completed>=built && cq_result_fresh(completed,edition,gd)) { s->club[s->n++]=canon_club(w->club); s->status=1; }
+      else if (first && (g_cq.fill==CQ_JANUARY_FILL
+                        ? cq_source_bootstrap(career_start,edition,calyear(cq_membership_reg(domestic)))
+                        : cq_summer_bootstrap(career_start,edition,calyear(cq_membership_reg(domestic)))))
+        s->status=1;
+      else s->status=2;
+    } else {
+      final_t* f=final_of(CQ_RESULT(s->reg));
+      int completed=f ? gd-(ad-f->day) : -1;
+      if (g_car_enabled && s->region==2 && !cq_result_fresh(completed,edition,gd)) {
+        f=final_of(CAR_DOMESTIC(s->reg));
+        completed=f ? gd-(ad-f->day) : -1;
+      }
+      if (f && completed>=built && cq_result_fresh(completed,edition,gd)) {
+        s->n=f->n; memcpy(s->club,f->club,s->n*sizeof(uint32_t)); s->status=1;
+      } else if (g_cq.fill==CQ_JANUARY_FILL
+                   ? cq_source_bootstrap(career_start,edition,
+                          calyear(cq_membership_reg(s->reg)) || (s->reg==51 && ssum_of(51)))
+                   : cq_summer_bootstrap(career_start,edition,calyear(cq_membership_reg(s->reg)))) {
+        unsigned n=rec_count(r); if (!n || n>CQ_RANKS) return 0;
+        s->n=(uint16_t)n; memcpy(s->club,rec_clubs(r),n*sizeof(uint32_t)); s->status=1;
+      } else s->status=2;
+    }
+    for (int j=0;j<s->n;j++) s->club[j]=canon_club(s->club[j]);
+    if (s->n && !cq_unique(s->club,s->n)) return 0;
+    if (!s->kind && s->status==1) {
+      uint32_t current[CQ_RANKS]; unsigned n=rec_count(r);
+      if (!n || n>CQ_RANKS) return 0;
+      for (unsigned j=0;j<n;j++) current[j]=canon_club(rec_clubs(r)[j]);
+      if (g_cq.explicit_access==2) {
+        for (unsigned j=0;j<s->n;j++)
+          if (!cq_has(current,n,s->club[j])) s->club[j]=0;
+      } else {
+        int updated=cq_current_ranking(s->club,s->n,current,(int)n);
+        if (!updated) return 0;
+        s->n=(uint16_t)updated;
+      }
+    }
+  }
+  for (int i=0;i<g_cq.ns;i++) if (g_cq.source[i].kind==1 && g_cq.source[i].n) {
+    uint32_t club=g_cq.source[i].club[0]; int eligible=0;
+    for (int j=0;j<g_cq.ns;j++) if (!g_cq.source[j].kind) {
+      unsigned char* league=get_rec(cq_membership_reg(g_cq.source[j].reg));
+      if (league && has_club(rec_clubs(league),rec_count(league),club)) eligible=1;
+    }
+    if (g_cq.explicit_access==2 ? !real_club(club) : !eligible) return 0;
+  }
+  return 1;
+}
+static int cq_central_field(const final_t* field, int edition, int gd, int creation)
+{
+  for (int i=0;i<g_cq.ns;i++) if (g_cq.source[i].kind==CQ_CENTRAL) {
+    cq_source source={.reg=g_cq.source[i].reg};
+    return ca_feeder(&source,edition,gd,creation,0) &&
+           cq_central_snapshot(&g_cq,i,&source,field->club);
+  }
+  return 1;
+}
+
+static void cq_tick(void* started, const char* route)
+{
+  if (!g_cq_enabled) return;
+  int gd=game_date(), d=today();
+  int built=concacaf_career_start(gd);
+  int edition=cq_edition_fill(gd,g_cq.fill);
+  int window=cq_qualification_open(gd,edition,g_cq.days[0]);
+  static int seen_timeline=-1, seen_window=-1, seen_route;
+  if (seen_timeline!=g_timeline || seen_window!=window) {
+    seen_timeline=g_timeline; seen_window=window; seen_route=0;
+  }
+  int route_bit=route[0]=='d' ? 1 : route[0]=='l' ? 2 : 4;
+  if (!(seen_route & route_bit)) {
+    seen_route |= route_bit;
+    logf("fl26swiss: CONCACAF tick (%s): game year %d day %d, fill %u, in window %d, date offset 0x%x",
+         route, gd<0 ? -1 : gd/365, d, g_cq.fill, window, TODAY_OFF);
+  }
+  if (built<0 || d<1 || d>=365) return;
+  int year=lpre_year();
+  unsigned char* pre=get_rec(g_cq.pre), *ko=get_rec(g_cq.ko);
+  if (!pre || !ko) {
+    static int said=-1;
+    if (window && said!=year) {
+      said=year;
+      logf("fl26swiss: CONCACAF ERROR: required regulation missing from career (pre %u live %d, knockout %u live %d)",
+           g_cq.pre,pre!=0,g_cq.ko,ko!=0);
+    }
+    return;
+  }
+  int li=-1, ci=-1;
+  for (int i=0;i<g_nlpre;i++) if (g_lpre[i].reg==g_cq.pre) li=i;
+  for (int i=0;i<g_nccup;i++) if (g_ccup[i].ko==g_cq.ko) ci=i;
+  if (li<0 || ci<0) {
+    static int said=-1;
+    if (said!=year) {
+      said=year;
+      logf("fl26swiss: CONCACAF ERROR: runtime registry missing (pre index %d, knockout index %d)",li,ci);
+    }
+    return;
+  }
+  lpre_t* l=&g_lpre[li];
+  final_t* snapshot=final_of(CQ_SNAPSHOT);
+  int ad=abs_day(), saved_date=snapshot ? gd-(ad-snapshot->day) : -1;
+  if (g_cq.fill!=CQ_JANUARY_FILL && snapshot && built>=0 && cq_edition_fill(saved_date,g_cq.fill)<built) {
+    static int said=-1;
+    if (said!=edition) {
+      said=edition;
+      logf("fl26swiss: CONCACAF ERROR: a previous runtime registered an edition before this career began; preserve this save and start a clean career");
+    }
+    return;
+  }
+  int saved=snapshot && cq_snapshot_valid(snapshot->club,snapshot->n,saved_date,gd,edition,g_cq.days[0]);
+  if (saved && !cq_central_field(snapshot,edition,gd,built)) saved=0;
+  int pm=lpre_matches(l);
+  int km=ccup_matches(g_cq.ko);
+  if (pm < 0 || km < 0) {
+    static int said=-1;
+    if ((window || saved) && said!=year) {
+      said=year;
+      logf("fl26swiss: CONCACAF match table unavailable: pre %u count %d, knockout %u count %d",
+           g_cq.pre,pm,g_cq.ko,km);
+    }
+    return;
+  }
+  if (!saved) {
+    g_ccup_nf[ci]=0; l->nclub=0; l->filled_year=-1; l->ko_year=-1;
+    if (!window || (built>=0 && edition<built)) return;
+    /* An old career or missing state must never be seeded around existing fixtures. */
+    if (pm!=0 || km!=0) {
+      static int said=-1;
+      if (said!=year) {
+        said=year; logf("fl26swiss: CONCACAF ERROR: fixtures exist without this season's 27-club snapshot; incompatible career or premature draw; left untouched");
+      }
+      return;
+    }
+    cq_capture(0);
+    uint32_t field[27];
+    int first=cq_first_edition(built,edition);
+    static int attempt=-1;
+    if (attempt!=year) {
+      attempt=year;
+      if (snapshot && saved_date>=0 && saved_date<edition)
+        logf("fl26swiss: CONCACAF previous edition has zero Round One and knockout fixtures before qualification");
+      logf("fl26swiss: CONCACAF qualification check: pre %u and knockout %u live, matches %d/%d, career built %d/%d, prior snapshot %d, first edition %d",
+           g_cq.pre,g_cq.ko,pm,km,built<0 ? -1 : built/365,built<0 ? -1 : built%365,snapshot!=0,first);
+    }
+    int ok=cq_pools(first,edition,gd,built,built) ? cq_resolve(&g_cq,field) : 0;
+    if (ok!=1) {
+      static int said=-1;
+      if (said!=year) { said=year; logf("fl26swiss: CONCACAF qualification %s: no exact field installed; fresh completed domestic results required",
+                                                        ok<0 ? "PENDING" : "ERROR"); }
+      return;
+    }
+    if (!snapshot) { snapshot=final_new(CQ_SNAPSHOT); if (!snapshot) return; snapshot->reg=CQ_SNAPSHOT; }
+    snapshot->n=27; snapshot->day=abs_day(); memcpy(snapshot->club,field,sizeof field);
+    state_store();
+    logf("fl26swiss: CONCACAF season %d: 27 unique qualifiers retained, 5 direct + 22 Round One (edition %d)",year,
+         cq_edition_day(edition,g_cq.days[0])/365);
+    for (int i=0;i<g_cq.ns;i++) if (g_cq.source[i].kind==CQ_CENTRAL)
+      logf("fl26swiss: Central American Cup handover into Champions Cup %d: %s",edition/365,
+           g_cq.source[i].n ? "prior edition verified, one bye and five Round One berths" : "first-edition reallocation");
+    for (int i=0;i<27;i++) logf("fl26swiss: CONCACAF qualifier %d %08x %s",i+1,field[i],i<5 ? "direct" : "Round One");
+    saved=1;
+  }
+  if (!saved) return;
+  memcpy(g_ccup_field[ci],snapshot->club,27*sizeof(uint32_t)); g_ccup_nf[ci]=27;
+  /* Match state is authoritative after a reload; never rely on an in-memory year flag. */
+  if (cq_can_register(gd,edition,g_cq.days[0],pm,km)) {
+    uint32_t* field=snapshot->club;
+    u32vec v={field+5,field+27,field+27};
+    for (int j=0;j<11;j++) ((freetab_fn)(uintptr_t)(g_base+FREETAB_RVA))(0,lpre_tie(l,j));
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(l->reg,&v,1);
+    for (int j=0;j<11;j++) {
+      u32vec t={field+5+2*j,field+7+2*j,field+7+2*j};
+      ((setclr_fn)(uintptr_t)g_tramp_setcl)(lpre_tie(l,j),&t,1);
+    }
+    memcpy(l->club,field+5,22*sizeof(uint32_t)); l->nclub=22; l->filled_year=year;
+    start_stage(0,l->reg);
+    uint16_t id=l->reg;
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } regs={&id,&id+1,&id+1};
+    ((regall_fn)(uintptr_t)(g_base+REGALL_RVA))(0,&regs); run_flush();
+    if (lpre_matches(l)==0) {
+      uint16_t ids[11]; for (int j=0;j<11;j++) ids[j]=lpre_tie(l,j);
+      regs.b=ids; regs.e=regs.c=ids+11;
+      ((regall_fn)(uintptr_t)(g_base+REGALL_RVA))(0,&regs); run_flush();
+    }
+    int first_leg=cq_edition_day(edition,g_cq.days[0]), second_leg=cq_edition_day(edition,g_cq.days[1]);
+    logf("fl26swiss: CONCACAF Round One registered: 11 two-leg ties, %d match records; expected dates %d/%d and %d/%d (year/day)",
+         lpre_matches(l),first_leg/365,first_leg%365,second_leg/365,second_leg%365);
+  }
+  if (km>0 || gd<cq_edition_day(edition,g_cq.days[1])) return;
+  uint32_t winners[11], clubs[22], bracket[16]; int matches[11]={0}, left[11]={0};
+  unsigned legs[11]={0}, dates[11]={0};
+  const unsigned char* scores[11][2]={{0}};
+  for (int j=0;j<11;j++) {
+    uint16_t id=lpre_tie(l,j); unsigned char* t=get_rec(id);
+    if (!t || rec_count(t)!=2) return;
+    memcpy(clubs+2*j,rec_clubs(t),2*sizeof(uint32_t));
+    if (!cq_has(snapshot->club+5,22,clubs[2*j]) || !cq_has(snapshot->club+5,22,clubs[2*j+1])) return;
+  }
+  const unsigned char* bs=(const unsigned char*)(g_base+MATCH_BASE_SITE);
+  const unsigned char* cs=(const unsigned char*)(g_base+MATCH_CAP_SITE);
+  if (bs[0]!=0x48 || bs[1]!=0x8d || bs[2]!=0x88 || cs[0]!=0x81 || cs[1]!=0xff) return;
+  uint32_t base=*(const uint32_t*)(bs+3), cap=*(const uint32_t*)(cs+2);
+  unsigned char* owner=(unsigned char*)((owner_fn)(uintptr_t)(g_base+OWNER_RVA))();
+  unsigned char* blk=owner ? *(unsigned char**)(owner+0x48) : 0;
+  if (!blk || !cap || cap>200000) return;
+  for (uint32_t i=0;i<cap;i++) {
+    const unsigned char* m=blk+base+(size_t)i*MATCH_STRIDE;
+    if (*(const uint16_t*)m==0xffff) continue;
+    uint16_t reg=*(const uint16_t*)(m+4); int tie=-1;
+    if (reg!=l->reg && lpre_of(reg,&tie)!=li) continue;
+    unsigned date_leg=(unsigned)cq_match_in_edition(ko_mdate(m),edition,g_cq.days[0],g_cq.days[1],gd);
+    if (!cq_count_match(clubs,*(const uint32_t*)(m+0x14),*(const uint32_t*)(m+0x18),
+                        (m[7]&0x40)!=0,date_leg,matches,left,legs,dates)) return;
+    for (int j=0;j<11;j++) {
+      uint32_t home=*(const uint32_t*)(m+0x14), away=*(const uint32_t*)(m+0x18);
+      if (cq_has(clubs+2*j,2,home) && cq_has(clubs+2*j,2,away)) scores[j][date_leg-1]=m;
+    }
+  }
+  for (int j=0;j<11;j++) {
+    if (matches[j]!=2 || left[j]!=0) return;
+    uint16_t id=lpre_tie(l,j); winners[j]=0;
+    ((winner_fn)(uintptr_t)(g_base+WINNER_RVA))(&winners[j],id);
+    winners[j]=canon_club(winners[j]);
+    const unsigned char* first=scores[j][0], *second=scores[j][1];
+    if (!first || !second) return;
+    int result=cq_score_winner(first+0x1c,second+0x1c);
+    if (!result) return;
+    uint32_t winner=canon_club(*(const uint32_t*)(first+(result>0 ? 0x14 : 0x18)));
+    if (!same_club(winner,winners[j]))
+      logf("fl26swiss: CONCACAF tie %u: score-rule winner %08x differs from native %08x",
+           (unsigned)id,winner,winners[j]);
+    winners[j]=winner;
+  }
+  if (!cq_handover(snapshot->club,clubs,matches,left,winners,bracket)) {
+    logf("fl26swiss: CONCACAF ERROR: invalid completed tie winners or duplicate Round-of-16 entrants"); return;
+  }
+  if (g_ccup[ci].nd!=7 || gd>=cq_edition_day(edition,g_ccup[ci].days[0])) {
+    logf("fl26swiss: CONCACAF ERROR: round-of-16 calendar missing or first date already passed; not starting retroactive fixtures"); return;
+  }
+  u32vec v={bracket,bracket+16,bracket+16};
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_cq.ko,&v,1); run_flush();
+  if (rec_count(ko)!=16) return;
+  start_stage(started,g_cq.ko);
+  if (!started) {
+    uint16_t id=g_cq.ko;
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } regs={&id,&id+1,&id+1};
+    ((regall_fn)(uintptr_t)(g_base+REGALL_RVA))(0,&regs); run_flush();
+  }
+  l->ko_year=year;
+  logf("fl26swiss: CONCACAF Round of 16: ALL 22 preliminary matches complete; 11 actual winners + 5 direct, 16 unique; %d fixtures",ccup_matches(g_cq.ko));
+}
+
+/* The confirmed field is a separate view. Keep the knockout's club list
+ * empty until handover, and never seed it to populate a menu. */
+static int cq_view_field(uint32_t* field)
+{
+  if (!g_cq_enabled) return 0;
+  int gd=game_date();
+  if (gd<0) return 0;
+  int internal_day=gd%365+g_year_off;
+  int edition=cq_edition_fill(gd,g_cq.fill);
+  for (int i=0;i<g_nfinal;i++) {
+    if (g_final[i].reg!=CQ_SNAPSHOT) continue;
+    final_t f=g_final[i];
+    int date=gd-(internal_day-f.day);
+    if (cq_snapshot_valid(f.club,f.n,date,gd,edition,g_cq.days[0])) {
+      if (!cq_central_field(&f,edition,gd,concacaf_career_start(gd))) return 0;
+    } else if (!cq_completed_view_window(edition,gd) ||
+               !cq_snapshot_valid(f.club,f.n,date,date,edition,g_cq.days[0]) ||
+               !cq_completed_native(gd,edition,f.club)) return 0;
+    memcpy(field,f.club,27*sizeof *field);
+    return 1;
+  }
+  return 0;
+}
+
+__declspec(dllexport) int fl26_swiss_concacaf_participants(int page, char* out, int cap)
+{
+  if (!out || cap<1) return 0;
+  out[0]=0;
+  int first, end;
+  if (!cq_view_page(page,&first,&end)) return 0;
+  uint32_t field[27];
+  if (!cq_view_field(field)) return 0;
+  uint32_t count=0;
+  const unsigned char* teams=team_array(&count);
+  int used=0;
+  for (int i=first;i<end;i++) {
+    uint32_t club=field[i], row=club&0x3fff;
+    const char* name=teams && row<count && team_at(teams,row)==club
+                     ? (const char*)(teams+(size_t)row*TEAM_STRIDE+4) : "Club";
+    int n=snprintf(out+used,(size_t)(cap-used),"%.56s [%u]\n",name,club>>14);
+    if (n<0 || n>=cap-used) { out[used]=0; break; }
+    used+=n;
+  }
+  return used;
+}
+
+static void lpre_fill_days(const char* route, void* ctx)
+{
+  if (!ctx) lc_tick(0);
+  ca_tick(ctx);
+  car_tick_with_context(ctx);
+  cq_tick(0, route);
   for (int i = 0; i < g_nlpre; i++) {
     lpre_fill(i);
     lib8_swap(i);
@@ -6551,6 +7185,9 @@ static int ko_sync(uint16_t reg, const char* why);
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
+  if (g_ca_ko && c->ko==g_ca_ko) return 0;
+  if ((g_cq_enabled || g_cq_blocked) && c->ko==g_cq.ko) return 0;
+  if (g_car_enabled && c->ko==g_car.ko) return 0;
   unsigned char* rec = get_rec(c->reg);
   if (!ccup_world(c)) { logf("fl26swiss: cup %u -- its rows are not all in this world; left alone", (unsigned)c->reg); return 0; }
   unsigned held = rec_count(rec);
@@ -6911,6 +7548,7 @@ static void ccup_keep_winners(int cal)
     /* Keep the custom cup's own champion as well. Champions-tier cups need it for the
        Club World Cup; the modern Sudamericana needs it independently for next season's
        Libertadores titleholder and the Recopa, even though ccup_tier() classifies it as tier 1. */
+    if (g_cq_enabled && g_ccup[k].ko==g_cq.ko) continue;
     if (!g_ccup[k].national && (!ccup_tier(&g_ccup[k]) || modern_suda_ccup() == k)) {
       uint16_t reg = g_ccup[k].ko;
       cupwin_t* w = cupwin_of(reg);
@@ -7151,6 +7789,8 @@ static unsigned char* ccup_group_table(const ccup_t* c, int g)
 static int ccup_progress(int k, uint16_t r, void* started)
 {
   const ccup_t* c = &g_ccup[k];
+  if (g_ca_ko && c->ko==g_ca_ko) return 0;
+  if (g_car_enabled && c->ko==g_car.ko) { car_tick(); return 0; }
   unsigned all = (1u << c->groups) - 1;
   if (r == c->reg) g_ccup_done[k] = all;
   else g_ccup_done[k] |= 1u << (((r >> 10) - 1) & 31);
@@ -7258,6 +7898,21 @@ static int ccup_ko_table(int k, size_t j0)
   g_ko_cr[k] = cr; g_ko_cr_year[k] = y;
   return cr;
 }
+static int cq_ko_dates(const ccup_t* cup, date_t* dates, size_t capacity)
+{
+  /* Match the 16-club Europa-format regulation's stage and leg keys. */
+  static const date_t rounds[] = {
+    {0,0x2e,0}, {0,0x2e,1}, {0,0x33,0}, {0,0x33,1},
+    {0,0x34,0}, {0,0x34,1}, {0,0x35,2}
+  };
+  if (cup->nd!=ARRAYSIZE(rounds) || capacity<ARRAYSIZE(rounds)) return 0;
+  for (size_t i=0;i<ARRAYSIZE(rounds);i++) {
+    dates[i]=rounds[i];
+    dates[i].day=cup->days[i];
+  }
+  return ARRAYSIZE(rounds);
+}
+
 static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
 {
   if (ccup_like_ok(&g_ccup[k])) return ccup_like_dates(k, id, reg, vec);
@@ -7267,10 +7922,44 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
      the normal borrowed calendar instead. */
   int keep = cc->cal && (!ko || !cc->nd);
   uint16_t src = ko ? (keep ? R_LIBKO : R_UCLKO) : R_LIBGROUP;
+  int cq_ko = g_cq_enabled && ko && id==g_cq.ko;
+  int ca=g_ca_group && cc->reg==g_ca_group;
+  if (cq_ko || (ko && (ca || (g_car_enabled && id==g_car.ko)))) src=R_LIBKO;
   uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | src, vec);
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
   date_t* r = (date_t*)v->b;
+  if (ca) {
+    static const date_t knockout[]={{251,46,0},{258,46,1},{293,52,0},
+                                     {300,52,1},{335,53,0},{339,53,1}};
+    static const unsigned group[]={209,216,223,230,237};
+    if (ko && r && (size_t)(v->c-v->b)>=sizeof knockout) {
+      memcpy(r,knockout,sizeof knockout); v->e=v->b+sizeof knockout;
+    } else if (!ko && have>=5) {
+      for (unsigned i=0;i<5;i++) r[i].day=group[i];
+      v->e=v->b+5*sizeof(date_t);
+    } else if (v->b) v->e=v->b;
+    return rv;
+  }
+  if (g_car_enabled && cc->ko==g_car.ko) {
+    static const date_t knockout[]={{286,46,0},{293,46,1},{334,53,0},
+                                     {338,53,1},{334,54,0},{338,54,1}};
+    static const unsigned group[]={216,230,244,251,258};
+    if (ko && r && (size_t)(v->c-v->b)>=sizeof knockout) {
+      memcpy(r,knockout,sizeof knockout); v->e=v->b+sizeof knockout;
+    } else if (!ko && have>=5) {
+      for (unsigned i=0;i<5;i++) r[i].day=group[i];
+      v->e=v->b+5*sizeof(date_t);
+    } else if (v->b) v->e=v->b;
+    return rv;
+  }
+  if (cq_ko) {
+    size_t capacity = v->b && v->c >= v->b ? (size_t)(v->c - v->b) / sizeof(date_t) : 0;
+    int n = cq_ko_dates(cc, r, capacity);
+    if (v->b) v->e = v->b + n * sizeof(date_t);
+    if (!n) logf("fl26swiss: CONCACAF ERROR: cannot supply seven keyed knockout dates (capacity %u)", (unsigned)capacity);
+    return rv;
+  }
   size_t want = ko ? ((cc->nd && !cc->like) ? cc->nd : 7) : 6;   /* like here: an old row, the old days */
   static unsigned said[MAX_CCUP];
   unsigned bit = ko ? 1 : 2;
@@ -7334,6 +8023,42 @@ static void canon_groups(const split_t* s);
 char prog_handler(void* ctx, uint64_t id, void* started)
 {
   uint16_t r = (uint16_t)id;
+  if (ca_owned(r)) {
+    unsigned char* rec=get_rec(r);
+    if (!g_ca_busy && (!rec || *(const uint16_t*)(rec+0x2fc)==0xffff)) return 0;
+    return ((prog_fn)(uintptr_t)g_tramp_prog)(ctx,id,started);
+  }
+  if (g_car_enabled) {
+    uint16_t ids[4];
+    car_native_regs(ids);
+    if (cq_native_has(ids,4,r)) {
+      int gd=game_date();
+      final_t* draw=final_of(CAR_GROUP_SNAPSHOT);
+      int drawn=draw ? gd-(abs_day()-draw->day) : -1;
+      if (!draw || draw->n!=10 || !car_draw_current(drawn,gd)) return 0;
+    }
+  }
+  if (g_cq_enabled && g_cq.fill==CQ_JANUARY_FILL) {
+    uint16_t ids[CQ_NATIVE_REGS];
+    int n=cq_native_regs(ids);
+    if (cq_native_has(ids,n,r)) {
+      int gd=game_date();
+      int edition=cq_edition_fill(gd,g_cq.fill);
+      final_t* field=final_of(CQ_SNAPSHOT);
+      int drawn=field ? gd-(abs_day()-field->day) : -1;
+      if (!field || !cq_snapshot_valid(field->club,field->n,drawn,gd,edition,g_cq.days[0]) ||
+          !cq_central_field(field,edition,gd,concacaf_career_start(gd))) return 0;
+    }
+  }
+  if (g_car_enabled) for (int i=0;i<g_car.n;i++) if (cq_source_feeds(g_car.sources[i].reg,r) ||
+      g_car.sources[i].title==r) {
+    car_capture();
+    break;
+  }
+  if (g_cq_enabled && r>1024 && (r&1023)==g_cq.pre) {
+    char ok=((prog_fn)(uintptr_t)g_tramp_prog)(ctx,id,started);
+    cq_tick(started, "progression"); return ok;
+  }
   split_keys();
   {
     const split_t* s; int part = split_part(r, &s);
@@ -7372,6 +8097,7 @@ char prog_handler(void* ctx, uint64_t id, void* started)
     if (k >= 0 && ccup_world(&g_ccup[k])) {
       char ok = ((prog_fn)(uintptr_t)g_tramp_prog)(ctx, id, started);
       if (!ko && ccup_progress(k, r, started)) ok = 1;
+      if (ko && g_car_enabled && r==g_car.ko) car_tick();
       return ok;
     }
   }
@@ -7802,13 +8528,22 @@ static int ko_winner(const uint32_t* sl, uint32_t* w, uint16_t reg)
   if (!m1 || !(m1[7] & 0x40)) return 0;
   uint32_t h = *(uint32_t*)(m1 + 0x14), a = *(uint32_t*)(m1 + 0x18);
   int gh = ko_goals(m1, 0), ga = ko_goals(m1, 1), ph = m1[0x1e], pa = m1[0x21], awh = 0, awa = ga;
+  unsigned char* m2 = 0;
   if (ids[1] != 0xffff) {
-    unsigned char* m2 = ko_match(ids[1], reg);
+    m2 = ko_match(ids[1], reg);
     if (!m2 || !(m2[7] & 0x40)) return 0;           /* second leg still to come */
     if (!same_club(*(uint32_t*)(m2 + 0x14), a) || !same_club(*(uint32_t*)(m2 + 0x18), h)) return 0;
     gh += ko_goals(m2, 1); ga += ko_goals(m2, 0);
     awh = ko_goals(m2, 1);
     ph = m2[0x21]; pa = m2[0x1e];
+  }
+  if ((g_cq_enabled && reg == g_cq.ko) || (g_car_enabled && reg==g_car.ko) ||
+      (g_ca_ko && reg==g_ca_ko)) {
+    if ((!m2 && m1[6]!=0x35) || (m2 && m1[6]!=m2[6])) return 0;
+    int winner = cq_score_winner(m1+0x1c,m2 ? m2+0x1c : 0);
+    if (!winner) return 0;
+    *w = winner > 0 ? h : a;
+    return 1;
   }
   if (gh == ga) { gh = ph; ga = pa; }
   if (gh == ga && ids[1] != 0xffff) { gh = awh; ga = awa; }
@@ -7832,6 +8567,113 @@ static uint32_t ko_final_winner(uint16_t reg)
   }
   return 0;
 }
+/* The generic continental winner lookup can still hold last year's champion.
+ * For the Champions Cup, prove the edition using its draw and played final. */
+static uint32_t cq_played_champion(int today, int final_day, const uint32_t* clubs)
+{
+  unsigned char* round=ko_round(g_cq.ko,53);
+  if (!round || *(uint16_t*)round!=g_cq.ko || ko_slots(round)!=1) return 0;
+  uint32_t* slot=ko_slot(round,0);
+  const uint16_t* ids=(const uint16_t*)(slot+2);
+  const unsigned char* match=ko_match(ids[0],g_cq.ko);
+  uint32_t winner=0;
+  if (!match || ids[1]!=0xffff || match[6]!=53 ||
+      !cq_final_in_edition(match[7]&0x40,ko_mdate(match),final_day,today) ||
+      !cq_has(clubs,27,slot[0]) || !cq_has(clubs,27,slot[1]) ||
+      !ko_winner(slot,&winner,g_cq.ko)) return 0;
+  return canon_club(winner);
+}
+
+static const ccup_t* cq_native_cup(void)
+{
+  for (int i=0;i<g_nccup;i++)
+    if (g_ccup[i].ko==g_cq.ko && g_ccup[i].nd==7) return &g_ccup[i];
+  return 0;
+}
+
+static int cq_completed_native(int today, int edition, const uint32_t* clubs)
+{
+  const ccup_t* cup=cq_native_cup();
+  if (!cup || !cq_unique(clubs,27)) return 0;
+  int final_day=cq_edition_day(edition,cup->days[6]);
+  if (today<final_day || !cq_played_champion(today,final_day,clubs)) return 0;
+  uint16_t ids[CQ_NATIVE_REGS];
+  int n=cq_native_regs(ids);
+  uint32_t cap;
+  const unsigned char* table=car_matches(&cap);
+  if (!n || !table) return 0;
+  static const unsigned stage[7]={46,46,51,51,52,52,53};
+  static const int expected[7]={8,8,4,4,2,2,1};
+  int count[7]={0}, ties[11]={0}, unplayed[11]={0};
+  unsigned legs[11]={0}, dates[11]={0};
+  for (uint32_t i=0;i<cap;i++) {
+    const unsigned char* m=table+(size_t)i*MATCH_STRIDE;
+    uint16_t reg=*(const uint16_t*)(m+4);
+    if (*(const uint16_t*)m==0xffff || !cq_native_has(ids,n,reg)) continue;
+    int date=ko_mdate(m);
+    uint32_t home=*(const uint32_t*)(m+0x14), away=*(const uint32_t*)(m+0x18);
+    if (!(m[7]&0x40) || same_club(home,away) ||
+        !cq_has(clubs,27,home) || !cq_has(clubs,27,away)) return 0;
+    if (reg!=g_cq.ko) {
+      unsigned leg=cq_match_in_edition(date,edition,g_cq.days[0],g_cq.days[1],today);
+      if (!cq_count_match(clubs+5,home,away,1,leg,ties,unplayed,legs,dates)) return 0;
+      continue;
+    }
+    int round=0;
+    while (round<7 && (m[6]!=stage[round] || date!=cq_edition_day(edition,cup->days[round]))) round++;
+    if (round==7 || ++count[round]>expected[round]) return 0;
+  }
+  for (int i=0;i<7;i++) if (count[i]!=expected[i]) return 0;
+  for (int i=0;i<11;i++) if (ties[i]!=2) return 0;
+  return 1;
+}
+
+/* A partially missing old table after a reload must not prevent cleanup.
+ * A fixture of the incoming edition vetoes the whole close. */
+static int cq_native_old_matches(const uint16_t* ids, int n, int incoming)
+{
+  uint32_t cap;
+  const unsigned char* table=car_matches(&cap);
+  if (!table) return 0;
+  int found=0;
+  for (uint32_t i=0;i<cap;i++) {
+    const unsigned char* m=table+(size_t)i*MATCH_STRIDE;
+    if (*(const uint16_t*)m==0xffff || !cq_native_has(ids,n,*(const uint16_t*)(m+4))) continue;
+    int date=ko_mdate(m);
+    if (date<0 || date>=incoming) return 0;
+    found=1;
+  }
+  return found;
+}
+
+static void cq_keep_champion(void)
+{
+  if (!g_cq_enabled) return;
+  int gd=game_date(), edition=cq_edition_fill(gd,g_cq.fill);
+  if (edition<0) return;
+  final_t* field=final_of(CQ_SNAPSHOT);
+  int ad=abs_day(), drawn=field ? gd-(ad-field->day) : -1;
+  if (!field || !cq_snapshot_valid(field->club,field->n,drawn,drawn,
+                                   edition,g_cq.days[0])) return;
+  const ccup_t* cup=cq_native_cup();
+  if (!cup) return;
+  int final_day=cq_edition_day(edition,cup->days[6]);
+  if (gd<final_day) return;
+  cupwin_t* old=cupwin_of(g_cq.ko);
+  int completion=ad-(gd-final_day);
+  if (old && old->day==completion) return;
+  uint32_t winner=cq_played_champion(gd,final_day,field->club);
+  if (!winner) return;
+  if (!old) {
+    if (g_ncupwin>=CUPWIN_N) return;
+    old=&g_cupwin[g_ncupwin++];
+  }
+  old->reg=g_cq.ko; old->day=completion; old->club=canon_club(winner);
+  state_store();
+  logf("fl26swiss: CONCACAF champion %08x retained for edition %d, final day %d",
+       old->club,final_day/365,final_day%365);
+}
+
 /* the winner a cup's <reg>:0 entry is sent: a cup of ours (176 and up) by its final, the game's
    cups and a final not found by the rights code */
 static uint32_t ccup_ko_winner(uint16_t reg)
@@ -8006,6 +8848,531 @@ static int ko_mdate(const unsigned char* m)
   int y = *(const uint16_t*)(m + 8), mo = m[10], dd = m[11];
   if (y < 1990 || y > 2200 || mo < 1 || mo > 12 || dd < 1 || dd > 31) return -1;
   return y * 365 + MONTH0[mo - 1] + dd - 1;
+}
+
+__declspec(dllexport) int fl26_swiss_caribbean(const uint16_t* data, int n)
+{
+  car_config c;
+  return g_car_enabled && car_parse(&c,data,n) && !memcmp(&c,&g_car,sizeof c);
+}
+
+typedef struct {
+  int pts, gf, ga, away, wins, away_wins;
+} car_stats;
+
+static void car_stat(car_stats* s, int gf, int ga, int away)
+{
+  s->pts+=gf>ga ? 3 : gf==ga;
+  s->gf+=gf; s->ga+=ga;
+  if (away) s->away+=gf;
+  if (gf>ga) { s->wins++; s->away_wins+=away; }
+}
+
+static int car_compare(const car_stats* a, const car_stats* b)
+{
+  if (a->pts!=b->pts) return a->pts-b->pts;
+  if (a->gf-a->ga!=b->gf-b->ga) return (a->gf-a->ga)-(b->gf-b->ga);
+  return a->gf-b->gf;
+}
+
+static int car_index(const uint32_t* clubs, int n, uint32_t club)
+{
+  for (int i=0;i<n;i++) if (same_club(clubs[i],club)) return i;
+  return -1;
+}
+
+static const unsigned char* car_matches(uint32_t* cap)
+{
+  const unsigned char* bs=(const unsigned char*)(g_base+MATCH_BASE_SITE);
+  const unsigned char* cs=(const unsigned char*)(g_base+MATCH_CAP_SITE);
+  if (memcmp(bs,"\x48\x8d\x88",3) || memcmp(cs,"\x81\xff",2)) return 0;
+  unsigned char* own=(unsigned char*)((owner_fn)(uintptr_t)(g_base+OWNER_RVA))();
+  const unsigned char* blk=own ? *(const unsigned char**)(own+0x48) : 0;
+  *cap=*(const uint32_t*)(cs+2);
+  return blk && *cap && *cap<=200000 ? blk+*(const uint32_t*)(bs+3) : 0;
+}
+
+static void car_capture_title(uint16_t reg, const unsigned char* matches, uint32_t cap, int gd)
+{
+  if (!reg) return;
+  int latest=-1;
+  uint32_t winner=0;
+  if (g_car.exact==2) {
+    const unsigned char* rec=get_rec(reg);
+    if (!rec) return;
+    winner=winner_now(reg);
+    if (!real_club(winner)) winner=ko_final_winner(reg);
+    if (!real_club(winner)) return;
+    latest=ca_cup_finish(reg,*(const uint32_t*)(rec+0x304),winner,gd,gd-364);
+  } else {
+    for (uint32_t j=0;j<cap;j++) {
+      const unsigned char* m=matches+(size_t)j*MATCH_STRIDE;
+      if (*(const uint16_t*)m==0xffff || *(const uint16_t*)(m+4)!=reg) continue;
+      int date=ko_mdate(m);
+      if (!(m[7]&0x40) || date<=gd-365 || date>gd) return;
+      if (latest<date) latest=date;
+    }
+    winner=ko_final_winner(reg);
+  }
+  if (latest<0) return;
+  int day=abs_day()-(gd-latest);
+  uint16_t key=CAR_DOMESTIC(reg);
+  cupwin_t* old=cupwin_of(key);
+  if (old && old->day>=day) return;
+  if (!real_club(winner)) return;
+  if (!old) {
+    if (g_ncupwin>=CUPWIN_N) return;
+    old=&g_cupwin[g_ncupwin++];
+  }
+  old->reg=key; old->day=day; old->club=winner;
+  state_store();
+}
+
+static void car_capture(void)
+{
+  if (!g_car_enabled) return;
+  int gd=game_date(), ad=abs_day();
+  if (gd<0) return;
+  uint32_t cap;
+  const unsigned char* matches=car_matches(&cap);
+  if (!matches) return;
+  for (int i=0;i<g_car.n;i++) {
+    uint16_t reg=g_car.sources[i].reg;
+    car_capture_title(g_car.sources[i].title,matches,cap,gd);
+    uint16_t parts[SSUM_PARTS]={reg};
+    int nr=1;
+    const ssum_t* sum=ssum_of(reg);
+    if (sum) {
+      nr=0;
+      while (nr<SSUM_PARTS && sum->part[nr]) { parts[nr]=sum->part[nr]; nr++; }
+    }
+    int latest=-1, valid=1, count=0;
+    for (int p=0;p<nr && valid;p++) {
+      int found=0;
+      for (uint32_t j=0;j<cap;j++) {
+        const unsigned char* m=matches+(size_t)j*MATCH_STRIDE;
+        if (*(const uint16_t*)m==0xffff || *(const uint16_t*)(m+4)!=parts[p]) continue;
+        int date=ko_mdate(m);
+        if (!(m[7]&0x40) || date<0 || date>gd || date<=gd-365) { valid=0; break; }
+        if (latest<date) latest=date;
+        found++;
+      }
+      if (!found) valid=0;
+      count+=found;
+    }
+    if (!valid || !count) continue;
+    uint16_t key=CAR_DOMESTIC(reg);
+    final_t* old=final_of(key);
+    int day=ad-(gd-latest);
+    if (old && old->day>=day) continue;
+    final_t result;
+    int played=0;
+    if (!count_table(parts,nr,&result,&played) || played!=count) continue;
+    if (!old) old=final_new(key);
+    if (!old) continue;
+    result.reg=key; result.day=day;
+    *old=result;
+    state_store();
+  }
+}
+
+static int car_qualify(int gd, int start, int built, uint32_t clubs[10])
+{
+  cq_source pools[CAR_SOURCES]={{0}};
+  uint32_t winners[CAR_SOURCES]={0};
+  state_sync();
+  for (int i=0;i<g_car.n;i++) {
+    const car_source* s=&g_car.sources[i];
+    unsigned char* row=get_rec(s->membership);
+    int n=row ? (int)rec_count(row) : 0;
+    if (!n || n>CQ_RANKS) return 0;
+    uint32_t current[CQ_RANKS];
+    for (int j=0;j<n;j++) current[j]=canon_club(rec_clubs(row)[j]);
+    final_t* result=final_of(CAR_DOMESTIC(s->reg));
+    int completed=result ? gd-(abs_day()-result->day) : -1;
+    int bootstrap=cq_summer_bootstrap(built,start,calyear(s->membership));
+    if (result && completed>start-365 && completed<=gd && completed>=built) {
+      memcpy(pools[i].club,result->club,result->n*sizeof(uint32_t));
+      if (g_car.exact==2) {
+        pools[i].n=result->n;
+        for (unsigned j=0;j<result->n;j++)
+          if (car_index(current,n,pools[i].club[j])<0) pools[i].club[j]=0;
+      } else pools[i].n=(uint16_t)cq_current_ranking(pools[i].club,result->n,current,n);
+      if (!pools[i].n) return 0;
+    } else if (bootstrap && cq_unique(current,n)) {
+      memcpy(pools[i].club,current,(size_t)n*sizeof(uint32_t));
+      pools[i].n=(uint16_t)n;
+    } else return 0;
+    if (s->title) {
+      cupwin_t* title=cupwin_of(CAR_DOMESTIC(s->title));
+      int date=title ? gd-(abs_day()-title->day) : -1;
+      int index=title ? car_index(pools[i].club,pools[i].n,title->club) : -1;
+      if (g_car.exact==2 && title && real_club(title->club) && date>start-365 && date<=gd && date>=built) {
+        winners[i]=canon_club(title->club);
+      } else if (g_car.exact!=2 && index>=0 && date>start-365 && date<=gd && date>=built) {
+        uint32_t champion=pools[i].club[index];
+        memmove(pools[i].club+1,pools[i].club,(size_t)index*sizeof(uint32_t));
+        pools[i].club[0]=champion;
+      } else if (!bootstrap) return 0;
+    }
+  }
+  if (g_car.exact==2) {
+    const uint32_t* tables[CAR_SOURCES];
+    unsigned sizes[CAR_SOURCES];
+    for (unsigned i=0;i<g_car.n;i++) { tables[i]=pools[i].club; sizes[i]=pools[i].n; }
+    return regional_select(g_car.places,10,tables,sizes,winners,clubs);
+  }
+  return car_select(&g_car,pools,clubs);
+}
+
+static int regional_group_results(const unsigned char* matches, uint32_t cap, uint16_t reg,
+                                  int year, const unsigned dates[5], const uint32_t clubs[5],
+                                  car_stats stats[5], int order[5])
+{
+  int scores[5][5], seen=0;
+  for (int i=0;i<5;i++) for (int j=0;j<5;j++) scores[i][j]=-1;
+  for (uint32_t i=0;i<cap;i++) {
+    const unsigned char* m=matches+(size_t)i*MATCH_STRIDE;
+    if (*(const uint16_t*)m==0xffff || *(const uint16_t*)(m+4)!=reg) continue;
+    int h=car_index(clubs,5,*(const uint32_t*)(m+0x14));
+    int a=car_index(clubs,5,*(const uint32_t*)(m+0x18));
+    if (!(m[7]&0x40) || h<0 || a<0 || h==a || scores[h][a]>=0 || m[6]>=5 ||
+        ko_mdate(m)!=year*365+(int)dates[m[6]]) return 0;
+    scores[h][a]=m[0x1c]; scores[a][h]=m[0x1f];
+    car_stat(&stats[h],scores[h][a],scores[a][h],0);
+    car_stat(&stats[a],scores[a][h],scores[h][a],1);
+    seen++;
+  }
+  if (seen!=10) return 0;
+  car_stats head[5]={{0}};
+  for (int i=0;i<5;i++) {
+    order[i]=i;
+    for (int j=0;j<5;j++) if (i!=j && !car_compare(&stats[i],&stats[j]))
+      car_stat(&head[i],scores[i][j],scores[j][i],0);
+  }
+  for (int i=1;i<5;i++) for (int j=i;j>0;j--) {
+    int a=order[j-1], b=order[j];
+    int overall=car_compare(&stats[b],&stats[a]);
+    int mini=car_compare(&head[b],&head[a]);
+    if (overall<0 || (!overall && mini<0) || (!overall && !mini && clubs[b]>=clubs[a])) break;
+    order[j-1]=b; order[j]=a;
+  }
+  return 1;
+}
+
+static int car_group_results(const unsigned char* matches, uint32_t cap, uint16_t reg,
+                             int year, const uint32_t clubs[5], car_stats stats[5], int order[5])
+{
+  static const unsigned dates[]={216,230,244,251,258};
+  return regional_group_results(matches,cap,reg,year,dates,clubs,stats,order);
+}
+
+static void car_display_order(uint16_t reg, const uint32_t clubs[5], const int order[5])
+{
+  unsigned char* table=((table_fn)(uintptr_t)(g_base+TABLE_RVA))(reg);
+  if (!table || *(uint32_t*)(table+0x3c0)!=5) return;
+  unsigned char sorted[5][20];
+  for (int i=0;i<5;i++) {
+    int row=0;
+    while (row<5 && !same_club(*(uint32_t*)(table+row*20),clubs[order[i]])) row++;
+    if (row==5) return;
+    memcpy(sorted[i],table+row*20,20);
+  }
+  memcpy(table,sorted,sizeof sorted);
+}
+
+static int car_series(unsigned char* round, int index, int year, int first, int second,
+                      uint32_t* winner, uint32_t* loser)
+{
+  if (index>=ko_slots(round) || *(const uint16_t*)round!=g_car.ko) return 0;
+  uint32_t* slot=ko_slot(round,index);
+  uint16_t* ids=(uint16_t*)(slot+2);
+  const unsigned char* leg[2]={ko_match(ids[0],g_car.ko),ko_match(ids[1],g_car.ko)};
+  unsigned stage=*(uint32_t*)(round+0x204)>>26;
+  if (!leg[0] || !leg[1] || !real_club(slot[0]) || !real_club(slot[1]) ||
+      leg[0][6]!=stage || leg[1][6]!=stage || (leg[0][7]&0x30) || (leg[1][7]&0x30)!=0x10 ||
+      ko_mdate(leg[0])!=year*365+first || ko_mdate(leg[1])!=year*365+second ||
+      !ko_winner(slot,winner,g_car.ko) ||
+      (!same_club(slot[0],*winner) && !same_club(slot[1],*winner))) return 0;
+  *loser=same_club(slot[0],*winner) ? slot[1] : slot[0];
+  return 1;
+}
+
+static int car_host_compare(const car_stats* a, const car_stats* b)
+{
+  int ranked=car_compare(a,b);
+  if (ranked) return ranked;
+  if (a->away!=b->away) return a->away-b->away;
+  if (a->wins!=b->wins) return a->wins-b->wins;
+  return a->away_wins-b->away_wins;
+}
+
+static int car_hosts(int year, const uint32_t clubs[10], unsigned char* final, unsigned char* bronze)
+{
+  if (ko_slots(final)!=1 || ko_slots(bronze)!=1) return 0;
+  uint32_t* slots[2]={ko_slot(final,0),ko_slot(bronze,0)};
+  for (int i=0;i<2;i++) if (!real_club(slots[i][0]) || !real_club(slots[i][1])) return 0;
+  uint32_t cap;
+  const unsigned char* matches=car_matches(&cap);
+  if (!matches) return 0;
+  car_stats stats[10]={{0}};
+  for (uint32_t i=0;i<cap;i++) {
+    const unsigned char* m=matches+(size_t)i*MATCH_STRIDE;
+    if (*(const uint16_t*)m==0xffff) continue;
+    uint16_t reg=*(const uint16_t*)(m+4);
+    if (reg!=g_car.group+1024 && reg!=g_car.group+2048 && !(reg==g_car.ko && m[6]==46)) continue;
+    if (!(m[7]&0x40) || ko_mdate(m)/365!=year) return 0;
+    int h=car_index(clubs,10,*(const uint32_t*)(m+0x14));
+    int a=car_index(clubs,10,*(const uint32_t*)(m+0x18));
+    if (h<0 || a<0 || h==a) return 0;
+    car_stat(&stats[h],m[0x1c],m[0x1f],0);
+    car_stat(&stats[a],m[0x1f],m[0x1c],1);
+  }
+  int changed=0;
+  for (int i=0;i<2;i++) {
+    uint32_t* slot=slots[i];
+    uint16_t* ids=(uint16_t*)(slot+2);
+    unsigned char* first=ko_match(ids[0],g_car.ko), *second=ko_match(ids[1],g_car.ko);
+    if (!first || !second || (first[7]&0x40) || (second[7]&0x40)) continue;
+    uint32_t h=*(uint32_t*)(first+0x14), a=*(uint32_t*)(first+0x18);
+    int hi=car_index(clubs,10,h), ai=car_index(clubs,10,a);
+    if (hi<0 || ai<0 || hi==ai || !same_club(h,*(uint32_t*)(second+0x18)) ||
+        !same_club(a,*(uint32_t*)(second+0x14))) continue;
+    int priority=car_host_compare(&stats[hi],&stats[ai]);
+    if (priority<0 || (!priority && h>a)) continue;
+    slot[0]=a; slot[1]=h;
+    *(uint32_t*)(first+0x14)=a; *(uint32_t*)(first+0x18)=h;
+    *(uint32_t*)(second+0x14)=h; *(uint32_t*)(second+0x18)=a;
+    changed=1;
+  }
+  return changed;
+}
+
+static void car_register(const uint16_t* ids, int n)
+{
+  struct { const uint16_t* b; const uint16_t* e; const uint16_t* c; } regs={ids,ids+n,ids+n};
+  ((regall_fn)(uintptr_t)(g_base+REGALL_RVA))(0,&regs);
+  run_flush();
+}
+
+static void car_native_regs(uint16_t ids[4])
+{
+  ids[0]=g_car.group; ids[1]=g_car.group+1024;
+  ids[2]=g_car.group+2048; ids[3]=g_car.ko;
+}
+
+static int car_completed_native(int gd, const final_t* draw)
+{
+  if (!draw || draw->n!=10 || !cq_unique(draw->club,10)) return 0;
+  int drawn=gd-(abs_day()-draw->day), year=drawn/365;
+  if (drawn<0 || drawn%365<CAR_FILL || drawn%365>=CAR_GROUP_FIRST ||
+      gd<year*365+338) return 0;
+  final_t* podium=final_of(CAR_PODIUM);
+  if (!podium || podium->n!=4 || !cq_unique(podium->club,4) ||
+      gd-(abs_day()-podium->day)!=year*365+338) return 0;
+  uint16_t ids[4];
+  car_native_regs(ids);
+  if (ccup_matches(ids[0])!=0 || ccup_matches(ids[1])!=10 ||
+      ccup_matches(ids[2])!=10 || ccup_matches(ids[3])!=8) return 0;
+  for (int i=1;i<=2;i++) {
+    unsigned char* t=((table_fn)(uintptr_t)(g_base+TABLE_RVA))(ids[i]);
+    if (!t || *(const uint32_t*)(t+0x3c0)!=5) return 0;
+    for (int j=0;j<5;j++)
+      if (!cq_has(draw->club+5*(i-1),5,*(const uint32_t*)(t+20*j))) return 0;
+  }
+  uint32_t cap, placement[4], semi[2][2];
+  const unsigned char* matches=car_matches(&cap);
+  car_stats scores[2][5]={{{0}}};
+  int ranks[2][5];
+  unsigned char* semifinals=ko_round(g_car.ko,46);
+  if (!matches || !car_group_results(matches,cap,ids[1],year,draw->club,scores[0],ranks[0]) ||
+      !car_group_results(matches,cap,ids[2],year,draw->club+5,scores[1],ranks[1]) ||
+      ko_slots(semifinals)!=2 ||
+      !car_series(semifinals,0,year,286,293,&semi[0][0],&semi[0][1]) ||
+      !car_series(semifinals,1,year,286,293,&semi[1][0],&semi[1][1]) ||
+      !car_series(ko_round(g_car.ko,53),0,year,334,338,placement,placement+1) ||
+      !car_series(ko_round(g_car.ko,54),0,year,334,338,placement+2,placement+3)) return 0;
+  for (int i=0;i<4;i++) if (!same_club(podium->club[i],placement[i])) return 0;
+  for (int i=0;i<2;i++)
+    if (!cq_has(placement,2,semi[i][0]) || !cq_has(placement+2,2,semi[i][1])) return 0;
+  return 1;
+}
+
+static int car_native_reset(void)
+{
+  uint16_t ids[4];
+  car_native_regs(ids);
+  for (int i=0;i<4;i++) {
+    unsigned char* rec=get_rec(ids[i]);
+    if (!rec || *(const uint16_t*)(rec+0x2fc)!=0xffff || ccup_matches(ids[i])!=0) return 0;
+  }
+  return 1;
+}
+
+typedef int (*car_close_fn)(void*, const uint16_t*);
+static car_close_fn car_close_bridge(void)
+{
+  HMODULE join=GetModuleHandleW(L"fl26join.dll");
+  return join ? (car_close_fn)(uintptr_t)GetProcAddress(join,"fl26_join_close_caribbean") : 0;
+}
+
+static int car_close_previous(void* ctx)
+{
+  car_close_fn close=car_close_bridge();
+  uint16_t ids[4];
+  car_native_regs(ids);
+  return ctx && close && close(ctx,ids) && car_native_reset();
+}
+
+static void car_tick(void) { car_tick_with_context(0); }
+
+static void car_tick_with_context(void* ctx)
+{
+  if (!g_car_enabled) return;
+  int gd=game_date();
+  int creation=concacaf_career_start(gd);
+  if (creation<0 || gd%365<CAR_FILL) return;
+  int year=gd/365, day=gd%365, start=year*365+CAR_FILL;
+  static int busy, checked=-1, timeline=-1, warned=-1, failed=-1, failed_timeline=-1;
+  if (busy) return;
+  if (checked!=gd || timeline!=g_timeline) {
+    checked=gd; timeline=g_timeline;
+    if (day<CAR_GROUP_FIRST) car_capture();
+  }
+  uint16_t reps[]={g_car.group+1024,g_car.group+2048};
+  int gm=ccup_matches(g_car.group), ga=ccup_matches(reps[0]), gb=ccup_matches(reps[1]), km=ccup_matches(g_car.ko);
+  if (gm<0 || ga<0 || gb<0 || km<0) return;
+  final_t* draw=final_of(CAR_GROUP_SNAPSHOT);
+  int saved=draw ? gd-(abs_day()-draw->day) : -1;
+  if (!draw || !car_draw_current(saved,gd) || draw->n!=10) {
+    if (day>=CAR_GROUP_FIRST || (failed==year && failed_timeline==g_timeline)) return;
+    int old=gm || ga || gb || km;
+    if (!car_can_replace(gd,saved,old,ctx!=0,old && ctx && car_completed_native(gd,draw))) return;
+    uint32_t clubs[10];
+    if (!car_qualify(gd,start,creation,clubs)) {
+      if (warned!=year) {
+        warned=year;
+        logf("fl26swiss: Caribbean Cup %d waiting for a complete ten-club domestic field",year);
+      }
+      return;
+    }
+    if (old) {
+      busy=1;
+      int cleared=car_close_previous(ctx);
+      busy=0;
+      if (!cleared) {
+        failed=year; failed_timeline=g_timeline;
+        logf("fl26swiss: Caribbean Cup %d replacement blocked: native reset could not be verified",year);
+        return;
+      }
+      gm=ga=gb=km=0;
+      logf("fl26swiss: Caribbean Cup %d previous edition cleared: four season markers reset, zero fixtures",year);
+    }
+    if (!draw) draw=final_new(CAR_GROUP_SNAPSHOT);
+    if (!draw) return;
+    draw->reg=CAR_GROUP_SNAPSHOT; draw->day=abs_day(); draw->n=10;
+    for (int i=0;i<10;i++) draw->club[(i%2)*5+i/2]=clubs[i];
+    state_store();
+    logf("fl26swiss: Caribbean Cup %d field retained, two groups of five",year);
+    logf("fl26swiss: Caribbean Cup %d career start %d/%d (year/day), field %u %u %u %u %u %u %u %u %u %u",
+         year,creation/365,creation%365,clubs[0]>>14,clubs[1]>>14,clubs[2]>>14,clubs[3]>>14,
+         clubs[4]>>14,clubs[5]>>14,clubs[6]>>14,clubs[7]>>14,clubs[8]>>14,clubs[9]>>14);
+  }
+  if (!cq_unique(draw->club,10)) return;
+  if (day<CAR_GROUP_FIRST && !gm && !ga && !gb && !km) {
+    busy=1;
+    u32vec field={draw->club,draw->club+10,draw->club+10};
+    ((setcl_fn)(uintptr_t)(g_base+SETCL_RVA))(g_car.group,&field,1);
+    for (int g=0;g<2;g++) {
+      uint32_t* p=draw->club+g*5;
+      u32vec group={p,p+5,p+5};
+      ((setcl_fn)(uintptr_t)(g_base+SETCL_RVA))(reps[g],&group,1);
+    }
+    run_flush();
+    car_register(reps,2);
+    ccup_season_fix(g_car.group,reps,2);
+    busy=0;
+    return;
+  }
+  if (day>=258 && day<CAR_SEMI_FIRST && ga==10 && gb==10 && !km) {
+    uint32_t cap;
+    const unsigned char* matches=car_matches(&cap);
+    car_stats scores[2][5]={{{0}}};
+    int rank[2][5];
+    if (!matches || !car_group_results(matches,cap,reps[0],year,draw->club,scores[0],rank[0]) ||
+        !car_group_results(matches,cap,reps[1],year,draw->club+5,scores[1],rank[1])) return;
+    car_display_order(reps[0],draw->club,rank[0]);
+    car_display_order(reps[1],draw->club+5,rank[1]);
+    uint32_t bracket[]={draw->club[5+rank[1][1]],draw->club[rank[0][0]],
+                        draw->club[rank[0][1]],draw->club[5+rank[1][0]]};
+    u32vec seed={bracket,bracket+4,bracket+4};
+    busy=1;
+    ((setcl_fn)(uintptr_t)(g_base+SETCL_RVA))(g_car.ko,&seed,1);
+    run_flush();
+    start_stage(0,g_car.ko);
+    car_register(&g_car.ko,1);
+    busy=0;
+    logf("fl26swiss: Caribbean Cup %d semifinals registered from 20 completed group matches",year);
+  }
+  if (day<293 || km!=8) return;
+  uint32_t semi[2][2];
+  unsigned char* semifinals=ko_round(g_car.ko,46);
+  unsigned char* final=ko_round(g_car.ko,53), *bronze=ko_round(g_car.ko,54);
+  if (ko_slots(semifinals)!=2 ||
+      !car_series(semifinals,0,year,286,293,&semi[0][0],&semi[0][1]) ||
+      !car_series(semifinals,1,year,286,293,&semi[1][0],&semi[1][1])) return;
+  if (day<334 && car_hosts(year,draw->club,final,bronze)) sched_rebuild("Caribbean Cup placement hosts");
+  if (day<338) return;
+  final_t* podium=final_of(CAR_PODIUM);
+  if (podium && gd-(abs_day()-podium->day)>=start) return;
+  uint32_t clubs[4];
+  if (!car_series(final,0,year,334,338,clubs,clubs+1) ||
+      !car_series(bronze,0,year,334,338,clubs+2,clubs+3) || !cq_unique(clubs,4)) return;
+  for (int i=0;i<2;i++) if (!cq_has(clubs,2,semi[i][0]) || !cq_has(clubs+2,2,semi[i][1])) return;
+  if (!podium) podium=final_new(CAR_PODIUM);
+  if (!podium) return;
+  podium->reg=CAR_PODIUM; podium->day=abs_day()-(day-338); podium->n=4;
+  memcpy(podium->club,clubs,sizeof clubs);
+  state_store();
+  logf("fl26swiss: Caribbean Cup %d podium retained",year);
+}
+
+#include "fl26central_probe.h"
+#include "fl26leagues_probe.h"
+#include "fl26leagues_bracket_view.h"
+#include "fl26leagues_stats.h"
+#include "fl26leagues_info.h"
+
+static lc_ui_table g_lc_info_tables[2];
+static int g_lc_info_timeline=-1, g_lc_info_year;
+static int g_lc_info_provider, g_lc_info_groups;
+
+static int lc_info_refresh(void)
+{
+  lc_results scores;
+  lc_records records;
+  uint32_t handles[LC_CLUBS];
+  int date=game_date();
+  int inaugural=date>=0 && date/365==LC_YEAR && g_lc.year==LC_YEAR;
+  if (g_lc_busy || (!inaugural &&
+      (g_lc_confirm_timeline!=g_timeline || g_lc_confirm_year!=g_lc.year)) ||
+      !lc_scan(&scores,&records,0) ||
+      (records.count && (records.count!=LC_MATCHES || !lc_group_rest(&scores))) ||
+      !lc_handles(handles)) return 0;
+  lc_ui_tables(g_lc_info_tables,&g_lc,&scores,handles);
+  g_lc_info_timeline=g_timeline;
+  g_lc_info_year=g_lc.year;
+  logf("Leagues Cup Group Stage snapshot: year=%u matches=%u MLS=%u LigaMX=%u",
+       g_lc.year,records.count,g_lc_info_tables[0].count,g_lc_info_tables[1].count);
+  return 1;
+}
+
+static int lc_info_side(uint16_t reg)
+{
+  if (!g_lc_enabled || !g_lc.mexico) return -1;
+  if (reg==g_lc.master[0]+1024) return 0;
+  if (reg==g_lc.master[0]+2048) return 1;
+  return -1;
 }
 
 /* 1 = drawn now, 0 = nothing to do (not made yet, or under way), -1 = done for the season */
@@ -8241,7 +9608,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
   if (!g_base) return;
   int d = today();
   abs_day();                      /* the loader calls this all year: it keeps abs_day() across New Year */
-  lpre_fill_days();
+  lpre_fill_days("loader",0);
   ccup_fill_days();
   cupdraw_tick();
   {
@@ -8760,6 +10127,10 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
 {
   uint64_t r = ((phkind_fn)(uintptr_t)g_tramp_phkind)(comp, kind);
+  /* Leagues Cup batches are single-match containers, never group tables. */
+  if (comp && g_lc_enabled &&
+      (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA) &&
+      lc_owns(&g_lc,(uint16_t)r)) return r | 0xffff;
 
   /* The auxiliary F1/F2 competition must expose the phase actually being
      played, not keep answering F1 for the whole season. */
@@ -8807,6 +10178,8 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
       ((kind == 3 && ra == g_base + MENU_KO_RA) || (kind == 4 && ra == g_base + MENU_KO4_RA))) {
     uint64_t cur = ((curph_fn)(uintptr_t)(g_base + CURPH_RVA))(*comp, 1, 0);
     if ((uint16_t)cur != (uint16_t)r) {
+      if (g_car_enabled && (uint16_t)r==g_car.ko &&
+          car_completed_native(game_date(),final_of(CAR_GROUP_SNAPSHOT))) return r;
       if (g_kogrey_n++ < 8)
         logf("fl26swiss: Knockout Phase greyed for comp %u (knockout %u, current phase %u)",
              *comp, (unsigned)(uint16_t)r, (unsigned)(uint16_t)cur);
@@ -8975,6 +10348,13 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
 #define QR2_TEXT   0x3a2fff3u   /* "2nd Qualifying Round" */
 #define KOPO_TEXT  0x3a2fff4u
 #define SUD1_TEXT  0x3a2fff5u   /* "First stage" */
+#define CQ_R1_TEXT 0x3a2fff7u   /* "Round One" */
+#define CA_PLAY_TEXT 0x3a2fff8u
+#define LC_PHASE_TEXT 0x3a2fff9u
+#define LC_TABLE_TEXT 0x3a2ffecu
+#define LC_MX_TABLE_TEXT 0x3a2ffeeu
+#define LC_RULES_TEXT 0x3a2ffefu
+#define LC_GROUP_TITLE 0x3a2ffe8u
 #define QR1_TEXT   0x3a2fff6u   /* "1st Qualifying Round" (FL27's July round) */
 /* a qualifying round's text: stage 1 the third, 2 the second, 3 the first */
 #define QR_TEXT(st) ((st) == 1 ? QR3_TEXT : (st) == 3 ? QR1_TEXT : QR2_TEXT)
@@ -8986,12 +10366,21 @@ typedef const char* (*txtget_fn)(void* table, uint64_t index);
 unsigned char* g_tramp_txtget = 0;
 const char* txtget_handler(void* table, uint64_t index)
 {
+  if (g_ca_pre && (uint16_t)index==(uint16_t)CA_PLAY_TEXT) return "Central American Cup Play-In";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)LC_PHASE_TEXT) return "Leagues Cup Phase One";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)LC_TABLE_TEXT) return "MLS Standings";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)LC_MX_TABLE_TEXT) return "Liga MX Standings";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)LC_RULES_TEXT) return "Rules";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)(LC_TABLE_TEXT+1)) return "Knockout Stage";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)LC_GROUP_TITLE) return "MLS";
+  if (g_lc_enabled && (uint16_t)index==(uint16_t)(LC_GROUP_TITLE+1)) return "Liga MX";
   if ((uint16_t)index == (uint16_t)LP_TEXT) return "League Phase";
   if ((uint16_t)index == (uint16_t)QR3_TEXT) return "3rd Qualifying Round";
   if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
   if ((uint16_t)index == (uint16_t)KOPO_TEXT) return "Knockout round play-offs";
   if ((uint16_t)index == (uint16_t)SUD1_TEXT) return "First stage";
   if ((uint16_t)index == (uint16_t)QR1_TEXT) return "1st Qualifying Round";
+  if (g_cq_enabled && (uint16_t)index == (uint16_t)CQ_R1_TEXT) return "Round One";
   return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
 }
 
@@ -9006,6 +10395,7 @@ uint64_t phname_handler(uint64_t reg)
 {
   unsigned char rec[0x200];
   phrec_fn get = (phrec_fn)(uintptr_t)(g_base + PHREC_RVA);
+  if (g_lc_enabled && g_tramp_txtget && lc_batch(&g_lc,(uint16_t)reg)>=0) return LC_PHASE_TEXT;
   for (int ci = 0; ci < 3 && g_tramp_txtget; ci++)   /* the league phases: "League Phase", see txtget_handler */
     if (cup_on(ci) && ((uint16_t)reg == CUPS[ci].league || (uint16_t)reg == CUPS[ci].row)) return LP_TEXT;
 
@@ -9035,6 +10425,8 @@ uint64_t phname_handler(uint64_t reg)
                                        (unsigned)(uint16_t)reg, CUPS[pc].name); }
     return KOPO_TEXT;
   }
+  if (g_cq_enabled && g_tramp_txtget && ((uint16_t)reg & 1023)==g_cq.pre)
+    return CQ_R1_TEXT;
   if ((uint16_t)reg == g_sud1_reg) return SUD1_TEXT;
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
@@ -9731,12 +11123,15 @@ static uint32_t g_catregs_n = 0;
 uint64_t catregs_handler(void* cat, uint16_t** vec)
 {
   uint64_t r = ((catregs_fn)(uintptr_t)g_tramp_catregs)(cat, vec);
-  if (!vec || !vec[0] || !g_nlpre) return r;
+  if (!vec || !vec[0] || (!g_nlpre && !g_lc_enabled)) return r;
   uint16_t *in = vec[0], *out = vec[0], *end = vec[1];
   int tie, cut = 0;
   for (; in < end; in++) {
     int li = lpre_of(*in, &tie);
-    if (li >= 0 && tie >= 0) { cut++; continue; }
+    if ((li >= 0 && tie >= 0) ||
+        (g_lc_enabled && lc_hide_category_reg(&g_lc,*in))) {
+      cut++; continue;
+    }
     *out++ = *in;
   }
   if (cut) {
@@ -10386,6 +11781,15 @@ static int lpre_league(int li, uint16_t id)
 }
 static int ccup_feeds(int k, uint16_t id)
 {
+  if (g_ca_ko && g_ccup[k].ko==g_ca_ko) return ca_domestic_feeds(id);
+  if (g_car_enabled && g_ccup[k].ko==g_car.ko) {
+    for (int i=0;i<g_car.n;i++) if (cq_source_feeds(g_car.sources[i].reg,id) ||
+        g_car.sources[i].membership==id) return 1;
+    return 0;
+  }
+  if (g_cq_enabled && g_ccup[k].ko==g_cq.ko) {
+    for (int i=0;i<g_cq.ns;i++) if (!g_cq.source[i].kind && cq_source_feeds(g_cq.source[i].reg, id)) return 1;
+  }
   const ccup_t* c = &g_ccup[k];
   for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++) {
     if (c->ereg[e] == id) return 1;
@@ -10464,6 +11868,7 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
     case BZ_NTQ: block(bad, d, 1); break;                       /* the day itself */
     }
   }
+  lc_protect_domestic_dates(id,bad);
 }
 /* the n rounds on free days at least `gap` apart, the least moved in all; -1 when there is no
    such calendar between the first and the last day. `jit` (0..2) is where a round would rather
@@ -10711,6 +12116,19 @@ static int busy_set(uint16_t id, busy_t* out)
   for (int k = 0; k < g_nccup; k++) {
     const ccup_t* x = &g_ccup[k];
     if (!x->national && ccup_feeds(k, id)) {           /* a continental cup of ours it feeds */
+      if (g_ca_ko && x->ko==g_ca_ko) {
+        static const unsigned calendar[]={209,216,223,230,237,251,258,293,300,335,339};
+        for (unsigned i=0;i<ARRAYSIZE(calendar);i++) BZ(calendar[i],BZ_CONT);
+        continue;
+      }
+      if (g_car_enabled && x->ko==g_car.ko) {
+        static const unsigned calendar[]={216,230,244,251,258,286,293,334,338};
+        for (unsigned i=0;i<sizeof calendar/sizeof *calendar;i++) BZ(calendar[i],BZ_CONT);
+        continue;
+      }
+      if (g_cq_enabled && x->ko==g_cq.ko) {
+        BZ(g_cq.days[0],BZ_CONT); BZ(g_cq.days[1],BZ_CONT);
+      }
       if (x->groups) for (int i = 0; i < 6; i++) BZ(ccup_day(x, 0, i), BZ_CONT);
       for (int i = 0; i < (x->nd ? x->nd : 7) && i < CCUP_MAX_DAYS; i++) BZ(ccup_day(x, 1, i), BZ_CONT);
       if (!x->cal)                                     /* and its pre-round's, for a league that plays it */
@@ -11904,8 +13322,20 @@ static int grp_one_big(const unsigned char* w, int vec, int rows_known)
   return rb && re > rb && (re - rb) % 0x28 == 0 && (re - rb) / 0x28 >= 24;
 }
 
+static int lc_info_selected(void);
+static int lc_bracket_active(void);
+static int lc_player_stats_refresh(void);
+static int g_lc_player_stats_hooks, g_lc_player_stats_open;
+static int g_lc_player_stats_timeline=-1, g_lc_player_stats_year;
+static lc_player_ranking g_lc_player_ranks[2];
+static int lc_bracket_prepare(void);
+static int g_lc_bracket_hooks, g_lc_bracket_open, g_lc_list_factory, g_lc_bracket_timeline=-1;
+static lc_bracket_view g_lc_bracket_ui;
 static uint32_t grp_text(uint32_t text, uint64_t arg, const char* letter, uint32_t site)
 {
+  if (g_tramp_txtget && text==GRP_GROUP && GRP_SITES[site].kind>=3 && letter &&
+      (letter[0]=='A' || letter[0]=='B') && !letter[1] && lc_info_selected())
+    return LC_GROUP_TITLE+(letter[0]=='B');
   if (!g_tramp_txtget || !g_nreg) return text;
   int kind = GRP_SITES[site].kind;
   uint32_t reg = kind >= 3 ? 0xffffffffu : (uint32_t)arg;
@@ -12040,9 +13470,9 @@ static const unsigned char SIG_SCHEDT[5] = { 0x48, 0x8d, 0x4c, 0x24, 0x50 };
 static const unsigned char SIG_TITLE[6]  = { 0x41, 0x83, 0xfe, 0x02, 0x75, 0x1c };
 static const unsigned char SIG_TITLER[7] = { 0x48, 0x8d, 0x4c, 0x24, 0x50, 0x84, 0xdb };
 
-/* a world-built continental cup's knockout (a ccup with a group stage, not a league cup's copy) */
 static int ccup_cont_ko(uint16_t reg)
 {
+  if (g_cq_enabled && reg == g_cq.ko) return 1;
   for (int k = 0; k < g_nccup; k++) {
     const ccup_t* c = &g_ccup[k];
     if (c->groups && !c->like && reg == c->ko) return 1;
@@ -12089,7 +13519,10 @@ static uint32_t g_kolist_n = 0;
 uint64_t kolist_test(uint64_t reg)
 {
   uint16_t id = (uint16_t)reg;
-  if ((id == UECL_KO && (lp_ours(UECL_REG) || lp_ours(UECL_ROW))) || ccup_cont_ko(id)) {
+  if (lc_bracket_active()) return 1;
+  /* The native four-club bracket includes the Caribbean third-place tie. */
+  if (!(g_car_enabled && id == g_car.ko) && !(g_ca_ko && id==g_ca_ko) &&
+      ((id == UECL_KO && (lp_ours(UECL_REG) || lp_ours(UECL_ROW))) || ccup_cont_ko(id))) {
     if (g_kolist_n++ < 6) logf("fl26swiss: Competition Info -- knockout %u shown as a list, not a bracket", (unsigned)id);
     return 1;
   }
@@ -12114,14 +13547,125 @@ static uint32_t g_ci_comp = 0xffffffffu, g_ci_menu_n = 0, g_ci_sel_n = 0;
 /* Libertadores F1/F2/F3 are pages of the native qualifying item; the rejected
    separate-menu-item experiment is intentionally not used. */
 
+/* Reuse the qualifying page flow and its phase override. The one-phase
+ * native builder lists this master and its replicas, with native dates/scores. */
+static int cq_ci_round_one(uint32_t comp, uint32_t (*comp_of)(uint16_t), int field_ready, int matches)
+{
+  return g_cq_enabled && field_ready && matches==22 &&
+         comp!=CI_NO_COMP && comp==comp_of(g_cq.ko);
+}
+
+static void regional_ci_append(ci_vec_t* v, uint32_t comp, uint16_t reg, uint32_t text)
+{
+  int n=(int)(v->e-v->b);
+  if (n>=CI_MAX) return;
+  ci_item_t item;
+  memset(&item,0,sizeof item);
+  item.type=0; item.en=1; item.text=text;
+  memcpy(item.buf,"playoff",8); item.size=7; item.cap=15;
+  ((cipush_fn)(uintptr_t)(g_base+CIPUSH_RVA))(v,&item);
+  if (v->e-v->b!=n+1) return;
+  ci_item_t tail=v->b[n];
+  memmove(v->b+1,v->b,(size_t)n*sizeof *v->b);
+  v->b[0]=tail;
+  g_ci_reg[0]=reg;
+  for (int i=1;i<=n;i++) g_ci_reg[i]=0xffff;
+  g_ci_n=n+1; g_ci_vec=v; g_ci_comp=comp;
+}
+
+static void cq_ci_append(ci_vec_t* v, uint32_t comp)
+{
+  uint32_t clubs[27];
+  int tie=-1, li=lpre_of(g_cq.pre,&tie);
+  if (li>=0 && cq_view_field(clubs) &&
+      cq_ci_round_one(comp,ci_live_comp,1,lpre_matches(&g_lpre[li])))
+    regional_ci_append(v,comp,g_cq.pre,CQ_R1_TEXT);
+}
+
+/* The public menu owns only inline strings. Replace its items as a unit. */
+static void lc_ci_append(ci_vec_t* v, uint32_t comp)
+{
+  for (ci_item_t* item=v->b;item<v->e;item++) if (item->cap!=15) return;
+  int ready=g_lc_info_groups && g_lc_info_provider &&
+            get_rec((uint16_t)(g_lc.master[0]+1024)) && get_rec((uint16_t)(g_lc.master[0]+2048)) &&
+            lc_info_refresh();
+  if (ready) lc_bracket_trace();
+  ci_item_t group={0}, knockout={0}, rules={0};
+  /* Preserve the native Rules item and its enable state if the game supplied it. */
+  for (ci_item_t* item=v->b;item<v->e;item++)
+    if (item->type==9 && item->size==11 && !memcmp(item->buf,"regulations",11)) rules=*item;
+  v->e=v->b;
+  group.type=2; group.en=(uint8_t)ready; group.text=LC_TABLE_TEXT;
+  memcpy(group.buf,"standings",10); group.size=9; group.cap=15;
+  knockout.type=6; knockout.text=LC_TABLE_TEXT+1;
+  if (ready && g_lc_list_factory && g_lc_bracket_hooks && g_tramp_cisel && lc_bracket_prepare())
+    knockout.en=1;
+  memcpy(knockout.buf,"tournamentdraw",15); knockout.size=14; knockout.cap=15;
+  cipush_fn push=(cipush_fn)(uintptr_t)(g_base+CIPUSH_RVA);
+  if (!rules.cap) {
+    rules.type=9; rules.en=1; rules.text=LC_RULES_TEXT;
+    memcpy(rules.buf,"regulations",12); rules.size=11; rules.cap=15;
+  }
+  push(v,&group);
+  group.text=LC_MX_TABLE_TEXT;
+  push(v,&group);
+  push(v,&knockout);
+  int count=4;
+  if (g_lc_player_stats_hooks && v->e-v->b==3) {
+    int stats_ready=ready && lc_player_stats_refresh();
+    ci_item_t rank={0};
+    rank.cap=15;
+    rank.size=11;
+    rank.type=7;
+    rank.text=0x1a00d6;
+    rank.en=(uint8_t)(stats_ready && g_lc_player_ranks[0].count);
+    memcpy(rank.buf,"goalranking",12);
+    push(v,&rank);
+    rank.type=8;
+    rank.text=0x1a00d7;
+    rank.size=13;
+    rank.en=(uint8_t)(stats_ready && g_lc_player_ranks[1].count);
+    memcpy(rank.buf,"assistranking",14);
+    push(v,&rank);
+    count=6;
+  }
+  push(v,&rules);
+  if (v->e-v->b==count) {
+    g_ci_vec=v; g_ci_n=count; g_ci_comp=comp;
+    g_ci_reg[0]=(uint16_t)(g_lc.master[0]+1024);
+    g_ci_reg[1]=(uint16_t)(g_lc.master[0]+2048);
+    g_ci_reg[2]=g_ci_reg[3]=0xffff;
+    if (count==6) g_ci_reg[4]=g_ci_reg[5]=0xffff;
+    logf("Leagues Cup standings menu comp=%u ready=%d rules=%u MLS=%u LigaMX=%u",
+         comp,ready,rules.en,g_ci_reg[0],g_ci_reg[1]);
+  }
+}
+
 uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
 {
+  g_lc_player_stats_open=0;
   g_ci_native = 0xffff; g_ci_native_comp = 0xffffffffu;
   g_mr_pick = 0xffff;                        /* B266: the menu is Competition Info's, not Match Results' */
   uint64_t r = ((cimenu_fn)(uintptr_t)g_tramp_cimenu)(v, comp, flag);
   g_ci_pick = 0xffff;
   if (v == g_ci_vec) { g_ci_vec = 0; g_ci_n = 0; }
-  if (!v || !comp || !v->b || v->e < v->b || !g_tramp_txtget) return r;
+  if (!v || !comp || v->e < v->b || !g_tramp_txtget) return r;
+  if (g_lc_enabled && g_lc.mexico && *comp!=CI_NO_COMP && *comp==ci_live_comp(g_lc.master[0])) {
+    lc_ci_append(v,*comp);
+    return r;
+  }
+  if (!v->b) return r;
+  if (g_ca_pre && *comp!=CI_NO_COMP && *comp==ci_live_comp(g_ca_ko)) {
+    unsigned char* a=get_rec(g_ca_ids[7]), *b=get_rec(g_ca_ids[8]);
+    if (a && b && rec_count(a)==2 && rec_count(b)==2 &&
+        *(const uint16_t*)(a+0x2fc)!=0xffff && *(const uint16_t*)(b+0x2fc)!=0xffff)
+      regional_ci_append(v,*comp,g_ca_pre,CA_PLAY_TEXT);
+    return r;
+  }
+  if (g_cq_enabled && *comp!=CI_NO_COMP && *comp==ci_live_comp(g_cq.ko)) {
+    cq_ci_append(v,*comp);
+    return r;
+  }
   /* B219 (antonimus 23.10.): the Libertadores' qualifying item ("Qualifying Round") went grey once
      its phases were played and stayed grey all season. Its F1/F2/F3 are filled by this module,
      not by the game's draw, and the menu (no phase-kind call for this item) greys it on a mark the
@@ -12350,12 +13894,26 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
 unsigned char* ci_sel_handler(unsigned char* flow)
 {
   unsigned char* e = ((cisel_fn)(uintptr_t)g_tramp_cisel)(flow);
-  if (!e || !flow || !g_ci_vec || strcmp((const char*)e, "playoff")) return e;
+  if (!e || !flow || !g_ci_vec) return e;
+  int lc_menu=g_lc_enabled && g_lc.mexico && g_ci_comp!=CI_NO_COMP &&
+              g_ci_comp==ci_live_comp(g_lc.master[0]);
+  g_lc_player_stats_open=lc_menu && g_lc_player_stats_hooks &&
+           (!strcmp((const char*)e,"goalranking") || !strcmp((const char*)e,"assistranking"));
+  if (g_lc_player_stats_open) lc_player_stats_refresh();
+  g_lc_bracket_open=lc_menu && g_lc_list_factory && g_lc_bracket_hooks &&
+                    !strcmp((const char*)e,"tournamentdraw") && lc_bracket_prepare();
+  if (lc_menu) logf("Leagues Cup menu transition flow=%s bracket=%d",(const char*)e,g_lc_bracket_open);
+  if (strcmp((const char*)e,lc_menu ? "standings" : "playoff")) {
+    if (lc_menu) g_ci_pick=0xffff;
+    return e;
+  }
   unsigned char* ctx = *(unsigned char**)(flow + 0x88);
   if (!ctx) return e;
   int list = *(int32_t*)(ctx + 0xa0), idx = *(int32_t*)(ctx + 0xd8), alt = *(int32_t*)(ctx + 0xfc);
   uint16_t p = idx >= 0 && idx < g_ci_n ? g_ci_reg[idx] : 0xffff;
   g_ci_pick = p; g_ci_pick_comp = g_ci_comp;
+  if (lc_menu)
+    logf("Leagues Cup standings selection list=%d index=%d alt=%d reg=%u",list,idx,alt,p);
   if (g_ci_sel_n++ < 16) {
     if (p != 0xffff) logf("fl26swiss: Competition Info -- item %d chosen: regulation %u (list %d, +0xfc %d)", idx, (unsigned)p, list, alt);
     else logf("fl26swiss: Competition Info -- item %d chosen, the game's own (list %d, +0xfc %d, %d items)", idx, list, alt, g_ci_n);
@@ -13072,6 +14630,9 @@ static void career_mark(const char* where)
   if (g_new_career || g_day_ticked) return;
   int t = today();
   if ((t >= SECOND_HALF && t <= 240) || t == 0) {
+    state_sync();
+    if (g_new_career || g_built_any >= 0) return;
+    if (g_cq_enabled || g_car_enabled) return; /* CONCACAF uses the save's original start. */
     g_new_career = 1; g_built_gdate = game_date(); g_built_stored = 0;
     logf("fl26swiss: a new career, built on day %d (%s)", t, where);
   }
@@ -13097,11 +14658,15 @@ uint64_t date_handler(uint64_t reg, void* vec)
     /* a league cup's pre-round: reg 2's records (the same tie of it), on the pre-round's days */
     int tk, li = lpre_of(id, &tk);
     if (li >= 0) {
+      int lc_group=g_lc_enabled ? lc_batch(&g_lc,id) : -1;
+      if (lc_group>=0) lc_recover_for_dates();
+      int lc_stage=g_lc_enabled ? lc_ko_stage(&g_lc,id) : -1;
+      if (lc_stage>=0) lc_ko_recover_date(lc_stage);
       const lpre_t* l = &g_lpre[li];
       /* A 16-tie single-match stage has more replicas than shipped reg 2. Borrow
          native Libertadores qualifying's first tie (1032) for every tie's one-match
          date shape; the generated regulation already has legs mode 0. */
-      uint16_t src = l->single ? (uint16_t)(tk >= 0 ? 1024 + CONM_LIBQ_REG : CONM_LIBQ_REG)
+      uint16_t src = (l->single || l->reg==g_ca_pre || (g_cq_enabled && l->reg==g_cq.pre)) ? (uint16_t)(tk >= 0 ? 1024 + CONM_LIBQ_REG : CONM_LIBQ_REG)
                                : (uint16_t)((id & ~0x3ff) | 2);
       uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | src, vec);
       vec_t* v = (vec_t*)vec;
@@ -13110,6 +14675,10 @@ uint64_t date_handler(uint64_t reg, void* vec)
       static unsigned char said[MAX_LPRE];
       if (l->single && have >= 1) {
         r[0].day = l->days[0];
+        if (lc_group>=0 && tk>=0 && tk<LC_TIES && lc_group_days[lc_group][tk])
+          r[0].day=lc_group_days[lc_group][tk];
+        if (lc_stage>=0 && tk>=0 && tk<lc_ko_ties[lc_stage] && lc_replica_days[lc_stage][tk])
+          r[0].day=lc_replica_days[lc_stage][tk];
         r[0].kind = 2;
         v->e = v->b + sizeof(date_t);
         if (!said[li]++)
@@ -13249,7 +14818,9 @@ uint64_t date_handler(uint64_t reg, void* vec)
   if (vec && !ours(id)) {                           /* a league of the game's own */
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
     cont_note(id, vec);                             /* ... or a continental one: its days kept */
-    if (natcup_fix(id, vec)) return rv;             /* ... or a national cup (case 6) */
+    int national=natcup_fix(id, vec);               /* ... or a national cup (case 6) */
+    if (id==LC_US_CUP) lc_note_cup((const vec_t*)vec);
+    if (national) return rv;
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     if (have >= 2 && have <= 64 && rest_league(id, have)) rest_dates(id, (date_t*)v->b, (uint32_t)have);
@@ -13477,6 +15048,7 @@ static uint32_t g_st_user = 0;
 int state_test_date(void);
 uint32_t state_test_user(void);
 const char* state_test_path(void);
+static uint32_t g_state_test_creation;
 #endif
 /* the game's date, year * 365 + day (the two fields season_year reads), or -1 */
 static int game_date(void)
@@ -13489,6 +15061,19 @@ static int game_date(void)
   if (!blk) return -1;
   int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
   return t >= 365 || y < 1990 || y > 2200 ? -1 : y * 365 + t;
+#endif
+}
+static int concacaf_career_start(int gd)
+{
+#ifdef FL26_STATE_TEST
+  return cq_career_start(g_state_test_creation,gd);
+#else
+  if (gd<0) return -1;
+  uint32_t offset=lay_career_start();
+  if (!offset) return -1;
+  unsigned char* o=((owner_fn)(uintptr_t)(g_base+OWNER_RVA))();
+  const unsigned char* blk=o ? *(unsigned char**)(o+0x48) : 0;
+  return blk ? cq_career_start(*(const uint32_t*)(blk+offset),gd) : -1;
 #endif
 }
 static uint32_t state_user(void)
@@ -13603,7 +15188,7 @@ static void state_store(void)
     memcpy(r->club + n / 2, K->lose, n / 2 * sizeof(uint32_t));
     r->check = state_check(r);
   }
-  if (g_new_career && g_built_gdate >= 0 && u && nw < STATE_MAXREC) {
+  if (!g_cq_enabled && !g_car_enabled && !g_ca_dynamic && g_new_career && g_built_gdate >= 0 && u && nw < STATE_MAXREC) {
     state_rec_t* r = &want[nw++];
     memset(r, 0, sizeof *r);
     r->user = u; r->gdate = g_built_gdate; r->kind = STATE_BUILT; r->n = 1; r->club[0] = u;
@@ -13647,6 +15232,32 @@ static void state_store(void)
    With no team array to look at (the native harnesses), every record is taken as before. */
 static int state_clubs_known(const state_rec_t* r)
 {
+  if (!r->kind && (r->reg&0xfffeu)==LC_STOP_KEY(0)) {
+    unsigned year=(unsigned)(r->gdate/365);
+    return r->reg==LC_STOP_KEY(year) && r->n==2 && r->club[0]==year &&
+           r->club[1] && r->club[1]<(1u<<(1+LC_KO_STAGES));
+  }
+  if (!r->kind && (r->reg&0xfffeu)==LC_PLAN_KEY(0)) {
+    unsigned year=(unsigned)(r->gdate/365), latest=0;
+    if (r->reg!=LC_PLAN_KEY(year) || (r->n!=LC_PLAN_FIELDS && r->n!=LC_PLAN_SPLIT_FIELDS) ||
+        r->club[0]!=year) return 0;
+    for (unsigned i=0;i<LC_BATCHES;i++) {
+      unsigned d=r->club[1+i];
+      /* These are batch maxima. Match-level rest is checked against the
+         54 native records before the journal can be used. */
+      if (d<LC_AUG_FIRST || d>LC_GROUP_LAST) return 0;
+      if (d>latest) latest=d;
+    }
+    for (unsigned i=0;i<LC_KO_STAGES;i++) {
+      unsigned d=r->club[1+LC_BATCHES+i];
+      if (!d) continue; /* an uncommitted outcome-specific branch */
+      if (d>LC_KO_RECOVERY_LAST || d<latest+LC_REST) return 0;
+      latest=d;
+    }
+    for (unsigned i=LC_PLAN_FIELDS;i<r->n;i++)
+      if (r->club[i] && (r->club[i]<LC_AUG_FIRST || r->club[i]>LC_KO_RECOVERY_LAST)) return 0;
+    return 1;
+  }
   uint32_t n;
   unsigned char* a = team_array(&n);
   if (!a) return 1;
@@ -13665,13 +15276,25 @@ static void state_sync(void)
   int gn = game_date();
   if (gn < 0) return;
   int an = abs_day();
-  if (an < 0 || (gn - an == g_st_off && an == g_st_day && g_st_user)) return;   /* no club yet: ask again */
+  int native_start=g_cq_enabled || g_car_enabled || g_ca_dynamic || (g_lc_enabled && g_lc.mexico);
+  int creation=native_start ? concacaf_career_start(gn) : -1;
+  if (native_start && creation<0) return;
+  if (an < 0 || (!native_start && gn-an==g_st_off && an==g_st_day && g_st_user)) return;
   uint32_t u = state_user();
-  if (gn - an == g_st_off && u == g_st_user) { g_st_day = an; return; }
+  if (native_start && !u) return;
+  if (gn - an == g_st_off && u == g_st_user && (!native_start || creation==g_built_any)) {
+    g_st_day = an; return;
+  }
   /* what memory keeps, put on today's footing: kept while the game's date was abs_day + the
      old offset; a keep dated after today is a later save's, left out (abs_day can take a save
      of a year before, near the same day, for days going on) */
   int old = g_st_off, off = gn - an, later = 0;
+  if (native_start && old != -0x7fffffff &&
+      (creation != g_built_any || (g_st_user && u != g_st_user))) {
+    g_nfinal=0; g_ncupwin=0; g_nseed=0;
+    memset(g_q1kept,0,sizeof g_q1kept);
+    g_new_career=0; g_built_gdate=-1; g_built_stored=0; g_first_day=-1;
+  }
   if (old != -0x7fffffff && old != off) {
     for (int i = 0; i < g_nfinal; ) {
       if (g_final[i].day + old > gn) { g_final[i] = g_final[--g_nfinal]; later++; continue; }
@@ -13690,7 +15313,11 @@ static void state_sync(void)
   }
   if (g_st_user && u != g_st_user) for (int c = 0; c < NQ; c++) g_q1kept[c].gdate = 0;   /* another club's career */
   g_st_off = off; g_st_day = an; g_st_user = u; g_st_read_back = 0;
-  g_built_any = -1;
+  g_built_any = creation;
+  if (native_start && gn-creation<BUILT_SUMMER &&
+      gn-creation<=(gn%365-FIRST_SUMMER_END+365)%365 && !g_new_career) {
+    g_new_career=1; g_built_gdate=creation; g_built_stored=1; g_first_day=-1;
+  }
   const char* p = state_path();
   HANDLE h = p ? state_open(p, 0) : 0;
   if (!h) return;
@@ -13698,9 +15325,14 @@ static void state_sync(void)
   int nb = 0, foreign = 0;
   state_rec_t r; DWORD got = 0;
   while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
-    if (r.check != state_check(&r) || r.user != u || r.gdate > gn || gn - r.gdate > STATE_AGE ||
+    if (r.check != state_check(&r) || r.user != u || r.gdate > gn ||
+        (native_start && (r.kind == STATE_BUILT || r.gdate < creation)) ||
+        (r.kind != STATE_BUILT && gn - r.gdate > STATE_AGE) ||
         r.kind > STATE_Q1 || !r.n || r.n > FINAL_MAX ||
         ((r.kind == 1 || r.kind == STATE_BUILT) && r.n != 1)) continue;
+    if (!r.kind && (r.reg&0xfc00u)==CQ_CENTRAL_KEEP(0) &&
+        (!g_ca_dynamic || r.reg!=CQ_CENTRAL_KEEP(g_ca_ko) ||
+         !cq_central_result(r.gdate/365,r.gdate,gn,r.club,r.n))) continue;
     if (!state_clubs_known(&r)) { foreign++; continue; }
     int k = 0;
     while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
@@ -13776,7 +15408,8 @@ static void state_sync(void)
       f->reg = best[k].reg; f->n = best[k].n; f->day = day;
       memcpy(f->club, best[k].club, sizeof f->club);
       nf++;
-      if (an - day < 120 && !(built >= 0 && best[k].gdate >= built))
+      if ((best[k].reg&0xfffeu)!=LC_PLAN_KEY(0) && (best[k].reg&0xfffeu)!=LC_STOP_KEY(0) &&
+          an - day < 120 && !(built >= 0 && best[k].gdate >= built))
         g_st_read_back = 1;                        /* last season's: not a career's first summer */
     } else {
       cupwin_t* w = cupwin_of(best[k].reg);
@@ -14688,13 +16321,17 @@ char daychk_handler(void* ctx)
   }
   apclau_keep();
   ssum_keep(0);
-  lpre_fill_days();
+  cq_capture(0);
+  ca_capture_domestic(0);
+  cq_keep_champion();
+  lpre_fill_days("day hook",ctx);
   ccup_fill_days();
   calendar_scup_fill_days();
   aug_scup_fill_days();
   uefa_scup_fill_days();                           /* B470: reg 7 when the game left it empty */
   q1_keep();                                      /* FL27: July's first round, before August's fills */
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
+  lc_tick(ctx);
   cal_dedupe();
   sched_days();
   if (g_new_career && !g_built_stored && g_built_gdate >= 0) {    /* B209: once, a club known */
@@ -14797,8 +16434,17 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (n + 24 > TD_MAX) return in;
   ssum_keep(1);                       /* before the tables of the halves go */
   access_capture();
+  cq_capture(1);
+  lc_capture_annual(1);
+  if (g_ca_dynamic) for (int j=0;j<n;j++) {
+    if (!ca_domestic_feeds(in->b[j])) continue;
+    ca_capture_domestic(1);
+    break;
+  }
+  car_capture();
   ccup_keep_tables(in->b, n);
   table_pool_reap("July teardown");
+  cq_keep_champion();
   ccup_keep_winners(0);
   ccup_keep_winners(1);
   aug_scup_keep();
@@ -14814,6 +16460,25 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     if (id == 1027) has1027 = 1;
     if (id == 1029) has1029 = 1;
     if (id == 29) bra = 1;
+  }
+  /* Use the native list boundary, not the South American scheduling flag. */
+  uint16_t cq_ids[CQ_NATIVE_REGS];
+  int ncq=0;
+  int gd=game_date(), d=today();
+  int july=euro && d>=SECOND_HALF-7 && d<BUILD_DAY;
+  int newyear=!euro && libq && (d>=NEWYEAR_FROM || (d>=0 && d<=NEWYEAR_TO));
+  if (g_cq_enabled && g_cq.fill==CQ_JANUARY_FILL && gd>=0 && july) {
+    int edition=cq_edition_fill(gd,g_cq.fill);
+    final_t* field=final_of(CQ_SNAPSHOT);
+    int drawn=field ? gd-(abs_day()-field->day) : -1;
+    if (field && cq_snapshot_valid(field->club,field->n,drawn,drawn,edition,g_cq.days[0]) &&
+        cq_completed_native(gd,edition,field->club))
+      ncq=cq_native_regs(cq_ids);
+  }
+  if (g_cq_enabled && g_cq.fill==CQ_JANUARY_FILL && gd>=0 && newyear) {
+    int incoming=(gd/365+(d>=NEWYEAR_FROM))*365;
+    ncq=cq_native_regs(cq_ids);
+    if (!ncq || !cq_native_old_matches(cq_ids,ncq,incoming)) ncq=0;
   }
   int uel6 = uel_ko_teardown_wanted(in->b, n);
   int ncal = 0;
@@ -14839,9 +16504,11 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   for (int i = 0; i < g_nlpre; i++) if (g_lpre[i].alias && !lpre_cal(&g_lpre[i])) nal++;
   if (!euro) {
     int cal = bra && ncal, qal = nal && (libq || cal);
-    if (!cal && !ndcl && !qal) return in;
+    if (!cal && !ndcl && !qal && !ncq) return in;
     memcpy(g_td_list, in->b, (size_t)n * sizeof(uint16_t));
-    int k = n, added = 0;
+    int k=cq_teardown_append(g_td_list,n,cq_ids,ncq), added=0;
+    if (ncq)
+      logf("fl26swiss: CONCACAF New Year teardown -- %d prior-edition regulations queued for cleanup on day %d",ncq,d);
     for (int c = 0; cal && c < g_nccup; c++) {
       const ccup_t* cc = &g_ccup[c];
       if (!cc->cal || !ccup_world(cc)) continue;
@@ -14895,8 +16562,22 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   /* The list names every regulation it closes -- group rows are not reached through their
    * parent -- so the league phase's row goes in as well, or its 36 clubs, its tables and its
    * 144 matches outlive the season. */
-  memcpy(g_td_list, in->b, (size_t)n * sizeof(uint16_t));
-  int k = n;
+  uint16_t kept[CQ_NATIVE_REGS+4+9];
+  int nkeep=ncq;
+  memcpy(kept,cq_ids,(size_t)ncq*sizeof *kept);
+  if (g_ca_group) {
+    memcpy(kept+nkeep,g_ca_ids,sizeof g_ca_ids);
+    nkeep+=9;
+  }
+  if (july && g_car_enabled && car_close_bridge() &&
+      car_completed_native(gd,final_of(CAR_GROUP_SNAPSHOT))) {
+    car_native_regs(kept+nkeep);
+    nkeep+=4;
+    logf("fl26swiss: Caribbean Cup July teardown -- four completed-edition regulations kept open");
+  }
+  int k=cq_teardown_filter(g_td_list,in->b,n,kept,nkeep);
+  if (ncq)
+    logf("fl26swiss: CONCACAF July teardown -- %d completed-edition regulations kept open",ncq);
   if (uecl) {
     if (!has186) g_td_list[k++] = UECL_REG;
     if (!has187 && get_rec(UECL_KO)) g_td_list[k++] = UECL_KO;
@@ -14924,6 +16605,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     int nc = 0;
     for (int g = -2; g < cc->groups; g++) {
       uint16_t id = g == -2 ? cc->ko : g == -1 ? cc->reg : ccup_rep(cc, g);
+      if (cq_native_has(kept,nkeep,id)) continue;
       int there = 0;
       for (int j = 0; j < k; j++) if (g_td_list[j] == id) there = 1;
       if (!there && get_rec(id) && k < TD_MAX) { g_td_list[k++] = id; nc++; }
@@ -14954,6 +16636,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     if (g_lpre[i].alias && !libq) { nkept++; continue; }    /* B275: closed with phase 3 in January */
     for (int g = -1; g < lpre_rows(&g_lpre[i]); g++) {
       uint16_t id = g < 0 ? g_lpre[i].reg : lpre_tie(&g_lpre[i], g);
+      if (cq_native_has(kept,nkeep,id)) continue;
       int there = 0;
       for (int j = 0; j < k; j++) if (g_td_list[j] == id) there = 1;
       if (!there && get_rec(id) && k < TD_MAX) { g_td_list[k++] = id; npre++; }
@@ -15086,12 +16769,41 @@ typedef uint64_t (*u10_factory_fn)(uint64_t,uint64_t,uint64_t);
 typedef uint64_t (*u10_init_fn)(uint64_t,uint64_t,uint64_t,uint64_t);
 static unsigned char* u10_group_tramp;
 static uintptr_t u10_vtable[1+0x250/8];
+static uintptr_t lc_scroll_vtable[1+0x250/8];
+static int lc_scroll_available;
 static int32_t u10_selection_offset;
 static owner_fn u10_owner;
 static table_fn u10_table;
 static u10_factory_fn u10_league;
 static u10_init_fn u10_native_init;
 static unsigned u10_logs;
+
+static int lc_info_selected(void)
+{
+ if (!g_lc_enabled || !g_lc.mexico || !u10_owner) return 0;
+ unsigned char* owner=u10_owner();
+ unsigned char* block=owner ? *(unsigned char**)(owner+0x48) : 0;
+ uint32_t comp=block ? *(uint32_t*)(block+u10_selection_offset) : CI_NO_COMP;
+ return comp!=CI_NO_COMP && comp==ci_live_comp(g_lc.master[0]);
+}
+
+static int lc_bracket_active(void)
+{
+  return g_lc_bracket_hooks && g_lc_bracket_open && g_lc_bracket_timeline==g_timeline &&
+         g_lc_bracket_ui.year==g_lc.year && lc_info_selected();
+}
+
+static int lc_bracket_prepare(void)
+{
+  lc_results phase;
+  lc_records matches;
+  unsigned char* native=g_lc.ko[0] ? get_rec(g_lc.ko[0]) : 0;
+  if (!native || !lc_scan(&phase,&matches,0) || matches.count!=LC_MATCHES ||
+      !lc_view_read(&g_lc_bracket_ui,&phase,g_lc.ko[0])) return 0;
+  if (g_lc_bracket_ui.rounds[0].slots[3].legs[0]==UINT16_MAX) return 0;
+  g_lc_bracket_timeline=g_timeline;
+  return 1;
+}
 
 static uint16_t u10_reg(unsigned comp,unsigned selected) {
  unsigned phase=comp==2?3:comp==3?5:comp==174?186:0;
@@ -15107,6 +16819,86 @@ static unsigned u10_count(uint64_t self) {
  uintptr_t b=*(uintptr_t*)(self+0x90),e=*(uintptr_t*)(self+0x98),c=*(uintptr_t*)(self+0xa0);
  return b && e>=b && c>=e && e-b<=48*4 && (e-b)%4==0?(unsigned)((e-b)/4):0;
 }
+
+static void lc_scroll_headline(uint64_t self, int side)
+{
+ void* root=((void* (*)(uint64_t))(uintptr_t)(g_base+0xe3dc90))(self);
+ if (!root) return;
+ unsigned char* finder=(unsigned char*)root+0x98;
+ void** vtable=*(void***)finder;
+ if (!vtable || !vtable[1]) return;
+ void* label=((void* (*)(void*,const char*))vtable[1])(finder,"headline");
+ if (label) ((void (*)(void*,const char*))(uintptr_t)(g_base+0xe54990))(label,side ? "Liga MX" : "MLS");
+}
+
+static uint8_t lc_scroll_rank_arrows(uint64_t self)
+{
+ uint8_t stock=((uint8_t (*)(uint64_t))(uintptr_t)(g_base+0xaed760))(self);
+ if (*(uintptr_t*)self==(uintptr_t)(lc_scroll_vtable+1))
+   logf("Leagues Cup arrows initial decision self=%p reg=%u before=%u stock=%u",
+        (void*)(uintptr_t)self,*(uint16_t*)(self+0xa8),*(uint8_t*)(self+0xac),stock);
+ return stock;
+}
+
+/* Both native row paths call the statistics filler after setting the rank arrow.
+ * Clear the graphic and its visibility at that later point, including on recycle. */
+static void lc_scroll_hide_rank_icon(void* row)
+{
+ typedef void* (*find_widget_fn)(void*,unsigned,unsigned);
+ typedef int (*icon_state_fn)(void*,unsigned);
+ typedef int (*icon_visible_fn)(void*,uint8_t,uint8_t,unsigned);
+ find_widget_fn find_widget=(find_widget_fn)(uintptr_t)(g_base+0xe4d1c0);
+ void* icon=find_widget((unsigned char*)row+0x98,0x25,0);
+ if (!icon) return;
+ uint32_t before=*(uint32_t*)((unsigned char*)icon+0xc);
+ int neutral=((icon_state_fn)(uintptr_t)(g_base+0xe7ddc0))(icon,0);
+ int hidden=((icon_visible_fn)(uintptr_t)(g_base+0xe4c260))(icon,0,1,2);
+ static unsigned samples;
+ if (samples++<36)
+   logf("Leagues Cup rank icon=%p flags=%x->%x neutral=%d hide=%d",icon,before,
+        *(uint32_t*)((unsigned char*)icon+0xc),neutral,hidden);
+}
+
+static void lc_scroll_hide_division_icon(void* row)
+{
+ typedef void* (*find_widget_fn)(void*,unsigned,unsigned);
+ typedef int (*visible_fn)(void*,uint8_t,uint8_t,unsigned);
+ find_widget_fn find=(find_widget_fn)(uintptr_t)(g_base+0xe4d1c0);
+ /* The division arrow uses a different widget from the rank-change icon
+    (0x25). The recycler's final fill can select icon_divisionDown on it. */
+ unsigned char* icon=find((unsigned char*)row+0x98,0x1a,0);
+ if (!icon) return;
+ uint32_t before=*(uint32_t*)(icon+0x10);
+ int status=((visible_fn)(uintptr_t)(g_base+0xe4bba0))(icon,0,0,2);
+ static unsigned samples;
+ if (samples++<36)
+   logf("Leagues Cup division icon=%p visible=%x->%x status=%d",icon,before,
+        *(uint32_t*)(icon+0x10),status);
+}
+
+static void lc_scroll_division_row(uint64_t self, void* row, unsigned index)
+{
+ if (*(uintptr_t*)self==(uintptr_t)(lc_scroll_vtable+1) &&
+     lc_info_side(*(uint16_t*)(self+0xa8))>=0) {
+   lc_scroll_hide_division_icon(row);
+   return;
+ }
+ ((void (*)(uint64_t,void*,unsigned))(uintptr_t)(g_base+0xaee370))(self,row,index);
+}
+
+static uint64_t lc_scroll_initialize(uint64_t a,uint64_t b,uint64_t c,uint64_t d)
+{
+ logf("Leagues Cup standings init enter self=%p reg=%u arrows=%u",
+      (void*)(uintptr_t)a,*(uint16_t*)(a+0xa8),*(uint8_t*)(a+0xac));
+ uint64_t ok=u10_native_init(a,b,c,d);
+ unsigned count=u10_count(a);
+ uint16_t reg=*(uint16_t*)(a+0xa8);
+ int side=lc_info_side(reg);
+ if ((ok&255) && count==LC_SIDE && side>=0) lc_scroll_headline(a,side);
+ logf("Leagues Cup standings init exit self=%p reg=%u result=%u rows=%u arrows=%u",
+      (void*)(uintptr_t)a,reg,(unsigned)(ok&255),count,*(uint8_t*)(a+0xac));
+ return ok;
+}
 static uint64_t u10_initialize(uint64_t a,uint64_t b,uint64_t c,uint64_t d) {
  uint64_t ok=u10_native_init(a,b,c,d);
  unsigned reg=*(uint16_t*)(a+0xa8),count=u10_count(a);
@@ -15121,6 +16913,23 @@ static uint64_t u10_factory(uint64_t a,uint64_t b,uint64_t c) {
    comp=*(uint32_t*)(block+u10_selection_offset);
    selected=*(uint16_t*)(block+u10_selection_offset+4);
    row=u10_reg(comp,selected);
+ }
+ if (lc_scroll_available && g_lc_info_groups && g_lc_info_provider && g_lc_enabled && g_lc.mexico &&
+     comp!=CI_NO_COMP && comp==ci_live_comp(g_lc.master[0]) && lc_info_refresh()) {
+   uint64_t self=u10_league(a,b,c);
+   if (self) {
+     uint16_t reg=selected;
+     int menu_pick=g_ci_pick_comp==comp && lc_info_side(g_ci_pick)>=0;
+     if (menu_pick) reg=g_ci_pick;
+     int defaulted=lc_info_side(reg)<0;
+     if (defaulted) reg=(uint16_t)(g_lc.master[0]+1024);
+     g_ci_pick=0xffff;
+     *(uint16_t*)(self+0xa8)=reg;
+     *(uintptr_t*)self=(uintptr_t)(lc_scroll_vtable+1);
+     logf("Leagues Cup scrolling standings routed comp=%u selected=%u menu=%d default=%d reg=%u self=%p",
+          comp,selected,menu_pick,defaulted,reg,(void*)(uintptr_t)self);
+     return self;
+   }
  }
  unsigned char* table=row?lp_table(row):0;     /* B206: the season with clubs, not next season's empty one */
  unsigned count=table?*(uint32_t*)(table+0x3c0):0;
@@ -15169,7 +16978,13 @@ static void u10_install(void) {
  u10_league=(u10_factory_fn)(uintptr_t)(g_base+0xaed610);
  u10_native_init=(u10_init_fn)(uintptr_t)(g_base+0xaeda10);
  int status=hook_or_chain((unsigned char*)(uintptr_t)(g_base+0xaf4e20),sig,sizeof sig,(void*)u10_factory,&u10_group_tramp);
+ if (!status && rk_call_to(g_base,0xe54956,0xe54990)) {
+   memcpy(lc_scroll_vtable,vt-1,sizeof lc_scroll_vtable);
+   lc_scroll_vtable[1+0xd8/8]=(uintptr_t)lc_scroll_initialize;
+   lc_scroll_available=1;
+ }
  logf("UEFA10 install=%d selection-offset=%x; exact UEFA 36-team tables only",status,(unsigned)u10_selection_offset);
+ logf("Leagues Cup scrolling standings available=%d",lc_scroll_available);
 }
 
 /* ---- B206: Competition Info's League Phase showed "Group A" with no clubs ----
@@ -15188,8 +17003,8 @@ static void u10_install(void) {
 #define LPPAGE_THUNK 0x1579b90
 static unsigned char* lppage_table(uint64_t id)
 {
-  unsigned char* t = ((table_fn)(uintptr_t)(g_base + LPPAGE_THUNK))(id);
   uint16_t r = (uint16_t)id;
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + LPPAGE_THUNK))(id);
   if (r != 1027 && r != 1029 && r != UECL_ROW) return t;
   if (t && *(uint32_t*)(t + 0x3c0) >= 24) return t;
   unsigned yr = 0;
@@ -15204,6 +17019,18 @@ static unsigned char* lppage_table(uint64_t id)
   }
   return t2;
 }
+
+static unsigned char* lc_info_group_table(uint64_t id)
+{
+  int side=lc_info_side((uint16_t)id);
+  if (g_lc_info_provider && g_lc_info_groups && side>=0) {
+    static lc_ui_table empty;
+    return (unsigned char*)(g_lc_info_timeline==g_timeline && g_lc_info_year==g_lc.year
+                             ? &g_lc_info_tables[side] : &empty);
+  }
+  return lppage_table(id);
+}
+
 static void lppage_install(uint64_t exe_base)
 {
   static const uint32_t CALLS[5] = { 0xaedd37, 0xaee0f5, 0xaee4fa, 0xaf591e, 0xaf63db };
@@ -15216,17 +17043,384 @@ static void lppage_install(uint64_t exe_base)
   }
   unsigned char* t = near_alloc(exe_base);
   if (!t) { logf("fl26swiss: League Phase page fallback NOT installed (no page in reach)"); return; }
-  t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)lppage_table;
+  ci_jmp(t,0,(uintptr_t)lc_info_group_table);
   FlushInstructionCache(GetCurrentProcess(), t, 14);
   for (int i = 0; i < 5; i++) {
-    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + CALLS[i]);
-    DWORD old;
-    if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return;
-    *(int32_t*)(c + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(c + 5));
-    VirtualProtect(c, 5, old, &old);
-    FlushInstructionCache(GetCurrentProcess(), c, 5);
+    if (rk_point(exe_base,CALLS[i],t)) return;
   }
+  g_lc_info_provider=1;
   logf("fl26swiss: League Phase page fallback live (5 page calls)");
+}
+
+typedef struct { uint16_t *begin, *end, *capacity; } lc_page_vector;
+typedef void (*lc_group_build_fn)(lc_page_vector*, uint32_t*, unsigned);
+static void lc_info_group_page(lc_page_vector* out, uint32_t* comp, unsigned kind)
+{
+  if (g_lc_info_groups && g_lc_info_provider && g_lc_enabled && g_lc.mexico && kind==2 &&
+      *comp!=CI_NO_COMP && *comp==ci_live_comp(g_lc.master[0])) {
+    /* The native controller fail-fasts on an empty regulation vector even
+       when the menu disabled the item. Keep the topology independent of rows. */
+    if (!lc_info_refresh()) g_lc_info_timeline=-1;
+    typedef void (*push_reg_fn)(lc_page_vector*, const uint16_t*);
+    push_reg_fn push=(push_reg_fn)(uintptr_t)(g_base+0xcc7f20);
+    const uint16_t mls=(uint16_t)(g_lc.master[0]+1024), mexico=(uint16_t)(g_lc.master[0]+2048);
+    push(out,&mls);
+    push(out,&mexico);
+    logf("Leagues Cup Group Stage vector: comp=%u groups=2 rows=%u/%u",*comp,
+         g_lc_info_timeline==g_timeline ? g_lc_info_tables[0].count : 0,
+         g_lc_info_timeline==g_timeline ? g_lc_info_tables[1].count : 0);
+    return;
+  }
+  ((lc_group_build_fn)(uintptr_t)(g_base+0x1542300))(out,comp,kind);
+}
+
+/* MatchResultsFactory uses the stock continental list. The list walks
+ * four request kinds and uses each returned slot's actual kind for its row. */
+static uint64_t lc_list_regulations(lc_page_vector* out, uint32_t* comp, unsigned kind)
+{
+  typedef uint64_t (*route_fn)(lc_page_vector*,uint32_t*,unsigned);
+  if (kind==3 && lc_bracket_active() && comp && *comp==ci_live_comp(g_lc.master[0])) {
+    typedef void (*push_reg_fn)(lc_page_vector*,const uint16_t*);
+    ((push_reg_fn)(uintptr_t)(g_base+0xcc7f20))(out,&g_lc.ko[0]);
+    logf("Leagues Cup knockout list anchor=%u",g_lc.ko[0]);
+    return (uintptr_t)out;
+  }
+  return ((route_fn)(uintptr_t)(g_base+0x1542300))(out,comp,kind);
+}
+
+static const lc_view_round* lc_list_projected_round(const lc_bracket_view* view,unsigned kind)
+{
+  static const unsigned request[]={0x2e,0x33,0x34,0x35};
+  static const unsigned ordered[]={0,1,3,2};
+  for (unsigned i=0;i<4;i++) if (request[i]==kind) {
+    const lc_view_round* round=&view->rounds[ordered[i]];
+    return round->slots[0].legs[0]!=UINT16_MAX ? round : 0;
+  }
+  return 0;
+}
+
+static uint64_t lc_list_anchor(uint32_t comp,uint8_t flag,unsigned mode)
+{
+  typedef uint64_t (*anchor_fn)(uint32_t,uint8_t,unsigned);
+  if (lc_bracket_active() && comp==ci_live_comp(g_lc.master[0])) return g_lc.ko[0];
+  return ((anchor_fn)(uintptr_t)(g_base+0x150c3c0))(comp,flag,mode);
+}
+
+static const void* lc_list_round(const uint16_t* reg,const uint32_t* kind)
+{
+  typedef const void* (*round_fn)(const uint16_t*,const uint32_t*);
+  if (lc_bracket_active() && *reg==g_lc.ko[0]) {
+    const lc_view_round* round=lc_list_projected_round(&g_lc_bracket_ui,*kind);
+    logf("Leagues Cup knockout list requested=%u kind=%u ties=%u",
+         *kind,round ? round->kind_count>>26 : 0,round ? round->kind_count&0xff : 0);
+    return round;
+  }
+  return ((round_fn)(uintptr_t)(g_base+0x1579da0))(reg,kind);
+}
+
+static const lc_view_round* lc_list_row_round_for(const lc_bracket_view* view,
+                                                uint16_t regulation, uint32_t kind)
+{
+  for (unsigned r=0;r<LC_VIEW_ROUNDS;r++) {
+    const lc_view_round* round=&view->rounds[r];
+    if ((round->kind_count>>26)!=kind) continue;
+    for (unsigned t=0;t<(round->kind_count&0xff);t++) {
+      const lc_view_match* match=&view->matches[r][t];
+      if (match->regulation && match->regulation==regulation) return round;
+    }
+  }
+  return 0;
+}
+
+static const void* lc_list_row_round(const uint16_t* reg,const uint32_t* kind)
+{
+  typedef const void* (*round_fn)(const uint16_t*,const uint32_t*);
+  if (lc_bracket_active()) {
+    const lc_view_round* round=lc_list_row_round_for(&g_lc_bracket_ui,*reg,*kind);
+    if (round) return round;
+  }
+  return ((round_fn)(uintptr_t)(g_base+0x1579bd0))(reg,kind);
+}
+
+static uint8_t lc_list_single_leg(const lc_view_slot* slot)
+{
+  typedef uint8_t (*leg_fn)(const lc_view_slot*);
+  if (lc_bracket_active() && (uint16_t)slot->key==g_lc.ko[0] &&
+      lc_view_match_for_key(&g_lc_bracket_ui,slot->key)) return 1;
+  return ((leg_fn)(uintptr_t)(g_base+0x14d64b0))(slot);
+}
+
+static uint32_t lc_list_match(const lc_view_slot* slot,unsigned flags)
+{
+  typedef uint32_t (*match_id_fn)(const lc_view_slot*,unsigned);
+  if (lc_bracket_active() && (uint16_t)slot->key==g_lc.ko[0]) {
+    if (flags!=0 && flags!=2) return UINT16_MAX; /* one leg */
+    const lc_view_match* match=lc_view_match_for_key(&g_lc_bracket_ui,slot->key);
+    if (!match) return UINT16_MAX;
+    const unsigned char* owner=((owner_fn)(uintptr_t)(g_base+OWNER_RVA))();
+    void* db=owner ? *(void* const*)(owner+0x48) : 0;
+    const unsigned char* record=db ? ((match_fn)(uintptr_t)(g_base+MATCH_RVA))(db,match->id) : 0;
+    if (record && lc_view_match_is_exact(match,*(const uint32_t*)record,*(const uint16_t*)(record+4))) {
+      if ((uintptr_t)__builtin_return_address(0)==g_base+0xca1d83)
+        logf("Leagues Cup row key=%x requested=%u resolved=%u reg=%u home=%u away=%u score=%u+%u:%u+%u pens=%u:%u flags=%x",
+             slot->key,match->id,*(const uint32_t*)record,*(const uint16_t*)(record+4),
+             *(const uint32_t*)(record+0x14)>>14,*(const uint32_t*)(record+0x18)>>14,
+             record[0x1c],record[0x1d],record[0x1f],record[0x20],record[0x1e],record[0x21],record[7]);
+      return match->id;
+    }
+    logf("Leagues Cup knockout list rejected match=%u expected regulation=%u",match->id,match->regulation);
+    return UINT16_MAX;
+  }
+  return ((match_id_fn)(uintptr_t)(g_base+0x14d6380))(slot,flags);
+}
+
+static const lc_view_match* lc_list_find_match(uint32_t id)
+{
+  if (!lc_bracket_active()) return 0;
+  const lc_bracket_view* view=&g_lc_bracket_ui;
+  for (unsigned r=0;r<LC_VIEW_ROUNDS;r++)
+    for (unsigned t=0;t<(view->rounds[r].kind_count&0xff);t++)
+      if (view->matches[r][t].regulation && view->matches[r][t].id==id)
+        return &view->matches[r][t];
+  return 0;
+}
+
+static const unsigned char* lc_list_resolve(void* db, uint32_t id)
+{
+  typedef const unsigned char* (*native_fn)(void*,uint32_t);
+  native_fn resolve=(native_fn)(uintptr_t)(g_base+0x14bb280);
+  const unsigned char* record=resolve(db,id);
+  const lc_view_match* match=lc_list_find_match(id);
+  if (!match || (record && lc_view_match_is_exact(match,*(const uint32_t*)record,
+                                                  *(const uint16_t*)(record+4)))) return record;
+  logf("Leagues Cup knockout render rejected match=%u expected regulation=%u",id,match->regulation);
+  return resolve(db,UINT16_MAX);
+}
+
+static void* lc_list_title(void* out, uint32_t* id, uint8_t style, uint8_t suffix)
+{
+  typedef void* (*native_fn)(void*,uint32_t*,uint8_t,uint8_t);
+  const lc_view_match* match=lc_list_find_match(*id);
+  if (match) {
+    /* Native MSVC string return storage. The caller uses the game's destructor. */
+    memset(out,0,32);
+    ((uint64_t*)out)[3]=15;
+    ((textfetch_fn)(uintptr_t)(g_base+TEXTFETCH_RVA))(out,lc_view_round_text(&g_lc_bracket_ui,match));
+    return out;
+  }
+  return ((native_fn)(uintptr_t)(g_base+0x152af20))(out,id,style,suffix);
+}
+
+static const char* lc_list_competition_name(const unsigned char* rec)
+{
+  typedef const char* (*native_fn)(const unsigned char*);
+  if (lc_bracket_active() && rec && lc_ko_stage(&g_lc,*(const uint16_t*)rec)>=0) {
+    const unsigned char* public_rec=get_rec(g_lc.master[0]);
+    if (public_rec) rec=public_rec;
+  }
+  return ((native_fn)(uintptr_t)(g_base+0x14c98b0))(rec);
+}
+
+/* The widened constructor already writes DWORD IDs to the native list entries.
+ * These consumers still load their low words in FL27. Check the full opcode
+ * at every site before installing the adapter. */
+static int lc_list_match_width(int install)
+{
+  static const struct {
+    uint32_t rva;
+    uint8_t size, before[5], after[5], equivalent[5];
+  } sites[]={
+    {0xcaa84e,3,{0x0f,0xb7,0xd0},{0x89,0xc2,0x90},{0x8b,0xd0,0x90}},
+    {0xcaaad9,3,{0x0f,0xb7,0xd0},{0x89,0xc2,0x90},{0x8b,0xd0,0x90}},
+    {0xca29c8,5,{0x0f,0xb7,0x54,0x24,0x24},{0x8b,0x54,0x24,0x24,0x90}},
+    {0xca2b44,5,{0x0f,0xb7,0x54,0x24,0x24},{0x8b,0x54,0x24,0x24,0x90}},
+    {0xca1fa4,5,{0x0f,0xb7,0x54,0xd8,0x04},{0x8b,0x54,0xd8,0x04,0x90}},
+    {0xca2219,3,{0x0f,0xb7,0xd3},{0x89,0xda,0x90},{0x8b,0xd3,0x90}},
+    {0xca22bf,3,{0x0f,0xb7,0xd7},{0x89,0xfa,0x90}},
+    {0x152b07d,3,{0x0f,0xb7,0x17},{0x8b,0x17,0x90}},
+    {0xca1d83,3,{0x0f,0xb7,0xd0},{0x89,0xc2,0x90}},
+    {0xca28f3,3,{0x0f,0xb7,0xd0},{0x89,0xc2,0x90}},
+    {0xca1d91,3,{0x0f,0xb7,0x08},{0x8b,0x08,0x90}},
+    {0xca28fe,3,{0x0f,0xb7,0x08},{0x8b,0x08,0x90}},
+    {0x151530f,3,{0x0f,0xb7,0xd6},{0x89,0xf2,0x90}}
+  };
+  for (unsigned i=0;i<sizeof sites/sizeof *sites;i++) {
+    unsigned char* p=(unsigned char*)(uintptr_t)(g_base+sites[i].rva);
+    unsigned n=sites[i].size;
+    /* fl26match runs first and uses the other encoding of the same MOV. */
+    if (!memcmp(p,sites[i].after,n) ||
+        (sites[i].equivalent[0] && !memcmp(p,sites[i].equivalent,n))) continue;
+    if (memcmp(p,sites[i].before,n)) {
+      logf("Leagues Cup knockout list match width signature mismatch rva=%x",sites[i].rva);
+      return 0;
+    }
+    if (install) {
+      DWORD protection;
+      if (!VirtualProtect(p,n,PAGE_EXECUTE_READWRITE,&protection)) return 0;
+      memcpy(p,sites[i].after,n);
+      VirtualProtect(p,n,protection,&protection);
+      FlushInstructionCache(GetCurrentProcess(),p,n);
+    }
+  }
+  return 1;
+}
+
+static int lc_player_stats_refresh(void)
+{
+  g_lc_player_stats_timeline=-1;
+  memset(g_lc_player_ranks,0,sizeof g_lc_player_ranks);
+  int gd=game_date();
+  if (gd<0 || g_lc.year<1990 || g_lc.year>gd/365) return 0;
+  uint32_t capacity;
+  const unsigned char* matches=car_matches(&capacity);
+  if (!matches || lay_day_elem()!=4) return 0;
+  lc_player_edition totals={0};
+  unsigned rejected=0, duplicates=0, processed=0;
+  for (uint32_t i=0;i<capacity;i++) {
+    const unsigned char* m=matches+(size_t)i*MATCH_STRIDE;
+    uint16_t reg=*(const uint16_t*)(m+4);
+    if (lc_stats_u32(m)==UINT16_MAX || !(m[7]&0x40) || !lc_owns(&g_lc,reg)) continue;
+    int native_day=ko_mdate(m);
+    if (native_day>=0 && native_day/365!=g_lc.year) continue;
+    unsigned before=totals.played;
+    processed++;
+    if (native_day<0 || !lc_stats_collect(&totals,m,reg&1023,(unsigned)(native_day%365),g_lc.year)) {
+      rejected++;
+      logf("Leagues Cup player rankings unavailable year=%u reg=%u match=%u: incomplete or conflicting player detail",
+           g_lc.year,reg,lc_stats_u32(m));
+    } else if (totals.played==before) duplicates++;
+  }
+  unsigned goals=0, assists=0, scoreboard_goals=lc_stats_scoreboard_goals(&totals);
+  for (unsigned i=0;i<totals.count;i++) {
+    goals+=totals.players[i].goals;
+    assists+=totals.players[i].assists;
+  }
+  logf("Leagues Cup player stats year=%u processed=%u matches=%u unique_player_ids=%u goals=%u assists=%u duplicates=%u rejected=%u",
+       g_lc.year,processed,totals.played,totals.count,goals,assists,duplicates,rejected);
+  logf("Leagues Cup player stats reconciliation year=%u matches=%u scoreboard_goals=%u credited=%u uncredited=%u",
+       g_lc.year,totals.played,scoreboard_goals,goals,scoreboard_goals-goals);
+  if (rejected) return 0;
+  if (!totals.played) return 0;
+  lc_stats_rank(&totals,0,&g_lc_player_ranks[0]);
+  lc_stats_rank(&totals,1,&g_lc_player_ranks[1]);
+  for (unsigned kind=0;kind<2;kind++) {
+    const lc_player_ranking* ranking=&g_lc_player_ranks[kind];
+    uint64_t fingerprint=UINT64_C(14695981039346656037);
+    for (unsigned i=0;i<ranking->count;i++) {
+      const lb_row_t* row=&ranking->rows[i];
+      const uint32_t fields[]={row->player,row->club>>14,row->rank,row->n};
+      for (unsigned f=0;f<ARRAYSIZE(fields);f++)
+        fingerprint=(fingerprint^fields[f])*UINT64_C(1099511628211);
+    }
+    logf("Leagues Cup player stats table year=%u type=%s rows=%u fingerprint=%016llx",
+         g_lc.year,kind ? "assists" : "goals",ranking->count,(unsigned long long)fingerprint);
+  }
+  g_lc_player_stats_timeline=g_timeline;
+  g_lc_player_stats_year=g_lc.year;
+  return 1;
+}
+
+static const lc_player_ranking* lc_player_stats_page(uint16_t reg, uint16_t stage, uint8_t assists)
+{
+  typedef const lc_player_ranking* (*rank_fn)(uint16_t,uint16_t,uint8_t);
+  const lc_player_ranking* native=((rank_fn)(uintptr_t)(g_base+0x157c5d0))(reg,stage,assists);
+  if (g_lc_player_stats_open && lc_owns(&g_lc,reg) && g_ci_comp!=CI_NO_COMP &&
+      g_ci_comp==ci_live_comp(g_lc.master[0])) {
+    static const lc_player_ranking empty={.capacity=LB_ROWS};
+    const lc_player_ranking* view=&empty;
+    if (g_lc_player_stats_timeline==g_timeline && g_lc_player_stats_year==g_lc.year) {
+      view=&g_lc_player_ranks[assists!=0];
+    }
+    logf("Leagues Cup player stats controller year=%u reg=%u stage=%u assists=%u native_rows=%u native_max=%u edition_rows=%u edition_max=%u",
+         g_lc.year,reg,stage,assists,native ? native->count : 0,
+         native && native->count ? native->rows[0].n : 0,
+         view->count,view->count ? view->rows[0].n : 0);
+    return view;
+  }
+  if (g_lc_player_stats_open)
+    logf("Leagues Cup player stats controller fallback reg=%u stage=%u assists=%u comp=%u",
+         reg,stage,assists,g_ci_comp);
+  return native;
+}
+
+static void lc_player_stats_install(void)
+{
+  /* Native UI controller: regulation, stage and ranking type, then append
+     exactly table.count rows and send the vector size to the list widget. */
+  const uint32_t site=0xb1768b;
+  if (rk_call_to(g_base,site,0x157c5d0)) {
+    unsigned char* stub=near_alloc(g_base);
+    if (stub) {
+      FlushInstructionCache(GetCurrentProcess(),stub,ci_jmp(stub,0,(uintptr_t)lc_player_stats_page));
+      g_lc_player_stats_hooks=!rk_point(g_base,site,stub);
+    }
+  }
+  logf("Leagues Cup native player ranking page hooks=%d",g_lc_player_stats_hooks);
+}
+
+static void lc_info_install(void)
+{
+  if (rk_call_to(g_base,0xaf5837,0x1542300) && rk_call_to(g_base,0xaf6213,0x1542300)) {
+    unsigned char* stub=near_alloc(g_base);
+    if (stub) {
+      FlushInstructionCache(GetCurrentProcess(),stub,ci_jmp(stub,0,(uintptr_t)lc_info_group_page));
+      g_lc_info_groups=!rk_point(g_base,0xaf5837,stub) && !rk_point(g_base,0xaf6213,stub);
+    }
+  }
+  if (lc_scroll_available && rk_call_to(g_base,0xaedbc3,0xaed760)) {
+    unsigned char* stub=near_alloc(g_base);
+    if (stub) {
+      ci_jmp(stub,0,(uintptr_t)lc_scroll_rank_arrows);
+      FlushInstructionCache(GetCurrentProcess(),stub,14);
+      logf("Leagues Cup arrows initialization trace=%d",!rk_point(g_base,0xaedbc3,stub));
+    }
+  }
+  static const uint32_t sites[]={0xcaae03,0xcaae55,0xcab3bc,0xcab4b6,0xcab4ce,
+    0xcaa963,0xcaab52,0xca2a63,0xca2a8e,0xca2d0c,0xcaa9be,0xcaabba,
+    0xcaa854,0xcaaadf,0xca29d0,0xca2b4c,0xca1fac,0xca2223,0xca22c9,
+    0xca1fca,0xca1b0b,0xca28da,0xca1d7e,0xca28ee,0xca1d89,0xca28f9};
+  static const uint32_t targets[]={0x1542300,0x150c3c0,0x1579da0,0x14d6380,0x14d6380,
+    0x152af20,0x152af20,0x152af20,0x152af20,0x152af20,0x14c98b0,0x14c98b0,
+    0x14bb280,0x14bb280,0x14bb280,0x14bb280,0x14bb280,0x14bb280,0x14bb280,
+    0x1579bd0,0x14d64b0,0x14d64b0,0x14d6380,0x14d6380,0x14bb280,0x14bb280};
+  const uintptr_t handlers[]={(uintptr_t)lc_list_regulations,(uintptr_t)lc_list_anchor,(uintptr_t)lc_list_round,
+    (uintptr_t)lc_list_match,(uintptr_t)lc_list_match,
+    (uintptr_t)lc_list_title,(uintptr_t)lc_list_title,(uintptr_t)lc_list_title,
+    (uintptr_t)lc_list_title,(uintptr_t)lc_list_title,
+    (uintptr_t)lc_list_competition_name,(uintptr_t)lc_list_competition_name,
+    (uintptr_t)lc_list_resolve,(uintptr_t)lc_list_resolve,(uintptr_t)lc_list_resolve,
+    (uintptr_t)lc_list_resolve,(uintptr_t)lc_list_resolve,(uintptr_t)lc_list_resolve,
+    (uintptr_t)lc_list_resolve,
+    (uintptr_t)lc_list_row_round,(uintptr_t)lc_list_single_leg,(uintptr_t)lc_list_single_leg,
+    (uintptr_t)lc_list_match,(uintptr_t)lc_list_match,(uintptr_t)lc_list_resolve,(uintptr_t)lc_list_resolve};
+  unsigned compatible=0, installed=0;
+  for (unsigned i=0;i<sizeof sites/sizeof *sites;i++)
+    compatible+=rk_call_to(g_base,sites[i],targets[i]);
+  const unsigned char widened[]={0x89,0xc0,0x90};
+  if (compatible==sizeof sites/sizeof *sites &&
+      !memcmp((const void*)(uintptr_t)(g_base+0xcab4bb),widened,sizeof widened) &&
+      !memcmp((const void*)(uintptr_t)(g_base+0xcab4d3),widened,sizeof widened) &&
+      lc_list_match_width(0) && lc_list_match_width(1)) {
+    unsigned char* stub=near_alloc(g_base);
+    if (stub) {
+      for (unsigned i=0;i<sizeof sites/sizeof *sites;i++) ci_jmp(stub,16*i,handlers[i]);
+      FlushInstructionCache(GetCurrentProcess(),stub,16*compatible);
+      for (unsigned i=0;i<sizeof sites/sizeof *sites;i++)
+        installed+=!rk_point(g_base,sites[i],stub+16*i);
+      g_lc_bracket_hooks=installed==sizeof sites/sizeof *sites;
+    }
+  }
+  logf("Leagues Cup knockout list hooks=%d compatible=%u installed=%u",g_lc_bracket_hooks,compatible,installed);
+  if (lc_scroll_available && rk_call_to(g_base,0xaee04f,0xaee370)) {
+    unsigned char* stub=near_alloc(g_base);
+    if (stub) {
+      ci_jmp(stub,0,(uintptr_t)lc_scroll_division_row);
+      FlushInstructionCache(GetCurrentProcess(),stub,14);
+      logf("Leagues Cup division icon recycler hook=%d",!rk_point(g_base,0xaee04f,stub));
+    }
+  }
+  logf("Leagues Cup native Group Stage provider=%d",g_lc_info_groups && g_lc_info_provider);
+  lc_player_stats_install();
 }
 
 /* ---- MP: a matches-played column in the standings (mato 2026-10-21: its own column, A stays) ----
@@ -15384,8 +17578,10 @@ static int zone_access(uint16_t reg, unsigned rank)
     if (z >= 0) return z;
   }
   if (!rank) return -1;
+  /* CONCACAF registry entries describe fixture shape; the resolver owns its places. */
   for (int k = 0; k < g_nccup; k++) {
     const ccup_t* c = &g_ccup[k];
+    if ((g_cq_enabled || g_cq_blocked) && c->ko == g_cq.ko) continue;
     int z = zone_code((unsigned)ccup_zcomp(c->ko));
     if (z < 0) continue;
     for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++)
@@ -15393,6 +17589,7 @@ static int zone_access(uint16_t reg, unsigned rank)
   }
   for (int k = 0; k < g_nlpre; k++) {
     const lpre_t* l = &g_lpre[k];
+    if ((g_cq_enabled || g_cq_blocked) && l->reg == g_cq.pre) continue;
     int z = l->ko ? zone_code((unsigned)ccup_zcomp(l->ko)) : ZONE_CL;
     if (z < 0) continue;
     for (int e = 0; e < 2 * l->ties && e < 2 * LPRE_MAX; e++)
@@ -15468,6 +17665,7 @@ static int zone_group(uint16_t reg, unsigned i, unsigned n, int linked_up, int l
 }
 static int zone_of(uint16_t reg, unsigned i)
 {
+  if (lc_info_side(reg)>=0) return i<4 ? ZONE_UP : -1;
   if (reg == 1027 || reg == 1029 || reg == UECL_ROW)
     return i < 8 ? ZONE_UP : i < 24 ? ZONE_PO : -1;
   int split = 0;
@@ -15522,8 +17720,13 @@ static uint64_t mp_fill(void* screen, void* roww, uint64_t idx, uint64_t r9)
   if (!screen || !roww) return ret;
   unsigned i = (unsigned)idx;
   uint16_t reg = *(uint16_t*)((unsigned char*)screen + 0xa8);
+  if (*(uintptr_t*)screen==(uintptr_t)(lc_scroll_vtable+1) && lc_info_side(reg)>=0) {
+    lc_scroll_hide_rank_icon(roww);
+    lc_scroll_hide_division_icon(roww);
+  }
   /* the league phases: the table the page shows (B206), not next season's empty one */
-  unsigned char* tab = reg == 1027 || reg == 1029 || reg == UECL_ROW ? lp_table(reg)
+  unsigned char* tab = lc_info_side(reg)>=0 ? lc_info_group_table(reg)
+                     : reg == 1027 || reg == 1029 || reg == UECL_ROW ? lp_table(reg)
                      : ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
   if (!tab) return ret;
   unsigned char* row = i < 0x30 ? tab + i * 0x14 : tab;
@@ -15785,6 +17988,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
   }
   {
     int kl = kolist_install(exe_base);
+    g_lc_list_factory=!kl;
     if (!kl) logf("fl26swiss: Competition Info knockouts as a list live (Conference League, world-built continental cups; call@%llx)",
                   (unsigned long long)(exe_base + KOLIST_CALL));
     else logf("fl26swiss: Competition Info knockouts as a list NOT installed (%d); they stay brackets", kl);
@@ -15802,6 +18006,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
   }
   u10_install();
   lppage_install(exe_base);
+  lc_info_install();
   mp_install();
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
@@ -15809,20 +18014,25 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: Cup mode list NOT installed (vtable slot)");
   logf("fl26swiss: hooks live (schedule@%llx dates@%llx) for %d regulation(s)",
        (unsigned long long)(exe_base + GEN_RVA), (unsigned long long)(exe_base + DATE_RVA), nregs);
+  g_cq_hooks = g_tramp_setcl && g_tramp_prog && g_tramp_teardown && g_tramp_daychk;
   return 0;
 }
 
 /* copy and clear the pending log text; returns bytes copied */
 __declspec(dllexport) int fl26_swiss_log(char* out, int cap)
 {
+  if (!out || cap < 1) return 0;
+  AcquireSRWLockExclusive(&g_log_lock);
+  uint32_t lost = 0;
   if (g_log_lost && g_log_len + 128 < (int)sizeof g_log) {
-    uint32_t lost = g_log_lost; g_log_lost = 0;
-    logf("fl26swiss: %u log line(s) before this point went to fl26swiss-overflow.log -- the log was full and not drained", (unsigned)lost);
+    lost = g_log_lost; g_log_lost = 0;
   }
   int n = g_log_len; if (n > cap - 1) n = cap - 1; if (n < 0) n = 0;
   if (n < g_log_len) { int k = n; while (k > 0 && g_log[k - 1] != '\n') k--; if (k > 0) n = k; }  /* whole lines only */
   memcpy(out, g_log, n); out[n] = 0;
   if (n < g_log_len) { memmove(g_log, g_log + n, g_log_len - n); g_log_len -= n; } else g_log_len = 0;
+  ReleaseSRWLockExclusive(&g_log_lock);
+  if (lost) logf("fl26swiss: %u log line(s) before this point went to fl26swiss-overflow.log -- the log was full and not drained", (unsigned)lost);
   return n;
 }
 

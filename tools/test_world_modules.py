@@ -11,6 +11,7 @@ import os, shutil, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import leaguebuilder as B
+import siderroot
 from modstudio import checks
 
 N = 0
@@ -59,7 +60,22 @@ def in_game(game, name):
 def main():
     tmp = tempfile.mkdtemp()
     old_pack = B.pack_dir
+    old_ini = siderroot.INI
     try:
+        siderroot.INI = os.path.join(tmp, "activation.ini")
+        for settings in ("", "livecpk.enabled = 0\n",
+                         "; livecpk.enabled = 0\n  LiveCPK.Enabled = 0\nlivecpk.enabled = 1\n"):
+            put(siderroot.INI, INI + settings + 'cpk.root = ".\\livecpk\\_FL26Other"\n')
+            B.call(siderroot, ["_FL26Active", "--require-livecpk"])
+            with open(siderroot.INI, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            ok("world activation enables LiveCPK with settings %r" % settings,
+               [line for line in lines if siderroot.LIVECPK.match(line)] == ["livecpk.enabled = 1"])
+            ok("world activation selects only the requested root and keeps other options",
+               [line for line in lines if line.startswith("cpk.root")] ==
+               ['cpk.root = ".\\livecpk\\_FL26Active"']
+               and 'lua.module = "kserv.lua"' in lines)
+
         pack = os.path.join(tmp, "pack")
         for f in ("fl26caps.lua", "fl26rank.lua"):
             put(os.path.join(pack, "modules", f), "-- " + f)
@@ -140,6 +156,7 @@ def main():
            open(os.path.join(g.modules_dir, "fl26regions.lua")).read() == "-- fl26regions of _FL26MyWorld 1.4B")
     finally:
         B.pack_dir = old_pack
+        siderroot.INI = old_ini
         shutil.rmtree(tmp, ignore_errors=True)
     print("1..%d" % N)
 

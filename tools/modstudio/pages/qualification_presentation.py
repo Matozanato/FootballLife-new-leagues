@@ -15,6 +15,7 @@ CHANGE_COLOR = "#f5ad40"
 
 def destination_name(target, recipe):
     names = dict(W.COMPETITIONS)
+    names.update(Q.concacaf_destinations(recipe))
     if target in (3, 9) and Q.modern(recipe):
         return _("%s — group stage") % _(names[target])
     return _(names[target]) if target in names else _("Unavailable destination")
@@ -40,12 +41,24 @@ class AllocationRow:
     problem: bool = False
 
 
-def allocation_rows(sources, recipe, conf):
+def allocation_rows(sources, recipe, conf, concacaf_access=None, pending=False):
     """Render the shared counter and actual UEFA direct-room calculation unchanged."""
-    counts, _notes = Q.allocation_counts(sources, recipe, conf)
+    counts = {} if conf == 6 else Q.allocation_counts(sources, recipe, conf)[0]
     allowed = dict(Q.destinations(conf, recipe))
     rows = []
-    if conf == 2:
+    if conf == 6:
+        totals = Q.concacaf_totals(concacaf_access or {})
+        for target, name in allowed.items():
+            key = Q.B.concacaf.ACCESS_TARGETS[target]
+            if key not in totals:
+                status = _("Checking the current competition plan...") if pending else _("Plan unavailable")
+                rows.append(AllocationRow(target, name, "?", status))
+                continue
+            n, capacity = totals[key]
+            status = (_("Complete") if n == capacity else _("%d still to assign") % (capacity - n)
+                      if n < capacity else _("%d above capacity") % (n - capacity))
+            rows.append(AllocationRow(target, name, "%d / %d" % (n, capacity), status, n != capacity))
+    elif conf == 2:
         comps = [c for c, n in counts.items() for _i in range(n)] + [e[2] for e in W.HOLDERS]
         for c, (n, capacity) in W.europe_count(comps, bool(recipe.get("uecl", True))).items():
             status = (_("%d automatically filled") % (capacity - n) if n < capacity else

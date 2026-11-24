@@ -211,7 +211,7 @@ class ContinentalEditor(QWidget):
         for setting in C.SETTINGS:
             key = ("setting", setting.key)
             values[key] = C.setting_value(recipe, setting)
-            sources[key] = C.slot(recipe, (setting.key,))
+            sources[key] = C.slot(recipe, C.setting_path(setting.key))
         tracked = {k for k in getattr(self, "_values", {}) if k[0] == "qualification"}
         for key in Q.keys(recipe) | tracked:
             values[key], sources[key] = Q.state(recipe, key)
@@ -442,6 +442,8 @@ class ContinentalEditor(QWidget):
             return
         generation, owner, base = self._generation, self.project.recipe, self.project.base
         recipe = C.preview_recipe(owner, self.changes(), self.competitions)
+        if self.confederation.currentData() == 6 and "concacaf" not in recipe:
+            recipe["concacaf"] = C.concacaf_draft(recipe)
         self._checking = True
         self.check_plan.setEnabled(False)
         self.plan_note.setText(_("Checking the current competition plan..."))
@@ -484,7 +486,7 @@ class ContinentalEditor(QWidget):
         qchanges = {k: v for k, v in patches.items() if k[0] == "qualification"}
         if qchanges:
             available = self.qualification.sources if self.qualification else ()
-            if any(k[1] in ("game", "league", "association") for k in qchanges):
+            if any(k[1] in ("game", "league", "association", "concacaf") for k in qchanges):
                 try:
                     available = Q.sources(proposed, self.project.base, self.project.confeds)
                 except (OSError, ValueError, B.BuildError) as exc:
@@ -508,7 +510,7 @@ class ContinentalEditor(QWidget):
             elif key[1] == "conmebol":
                 continue
             else:
-                recipe[key[1]] = value
+                C.write_setting(recipe,key[1],value)
         if ("setting", "conmebol") in patches:
             C.set_modern_mode(recipe, patches[("setting", "conmebol")], lambda _n: True)
         return bool(patches)

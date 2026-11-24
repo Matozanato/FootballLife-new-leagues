@@ -76,6 +76,9 @@ static int fl26_save_dir(char* out, int cap)
 #ifdef FL26_SAVEDIR_TEST
   if (GetEnvironmentVariableW(L"FL26_TEST_FL27", id, 16)) fl27 = 1;
 #endif
+#ifdef FL26_SAVEDIR_REAL_FL27
+  fl27 = 1;  /* Standalone test executable, with the real Windows Documents lookup. */
+#endif
   if (fl27) def = FL27_SAVE_ID_DEFAULT;
   sid = def;
   if (slash && (size_t)(slash - ini) + 9 < MAX_PATH * 2) {
