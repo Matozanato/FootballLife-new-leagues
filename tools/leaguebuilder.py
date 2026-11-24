@@ -101,8 +101,14 @@ which league sits above -- and nothing about ids:
               below; for game_europe the country's cup in the game), its place going down the
               league when the winner already has one or there is none yet -- for 6..14 too since
               0.2.0 (#95). 0..5 and 10..12 are written as uefa lines of the world file, after the shipped
-              leagues' places (fl26world.uefa_places); 6..9, 13..15 build that cup (see ccup_plan)
-  europe_pre  optional, FL 2027: which of the "europe" places of a cup 6, 7, 8, 13, 14 or 15 enter it
+              leagues' places (fl26world.uefa_places); 6..9, 14..15 build that cup (see ccup_plan).
+              Target 13 requests the modern 27-team CONCACAF engine; Build needs runtime
+              contract v1 and optional FL27 Caribbean Cup (docs/developers/fork/concacaf.md).
+  concacaf    optional recipe-level object: modules {leagues_cup, central_american_cup,
+              caribbean_cup: bool}, all false by default; sources {domestic role: [reg ids
+              or new league names]}. Enabled regional modules cannot build until result
+              providers exist. Leagues Cup requires MLS and Liga MX; no format selector
+  europe_pre  optional, FL 2027: which of the "europe" places of a cup 6, 7, 8, 14 or 15 enter it
               through a preliminary round of one match: [[position, competition], ...] or
               [[position, competition, seed], ...] (seed 1 = the strongest; without it the order of
               the leagues). The cup's other places are direct; the winners of the ties take the
@@ -331,6 +337,7 @@ import mkleague as M
 import mkworld as W
 import mkcoaches
 import mkuecl
+import concacaf
 import fl26world
 import siderdir
 import flpaths
@@ -1488,7 +1495,7 @@ def has_edits(r):
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
                 or r.get("samerica_super_cup_logo") or r.get("samerica_super_cup_first")
                 or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("squad") or r.get("country_order")
-                or r.get("conmebol") or r.get("continental_emblems") or r.get("confederation_logos")) \
+                or r.get("conmebol") or r.get("continental_emblems") or r.get("confederation_logos")) or "concacaf" in r \
         or r.get("uecl") is False or r.get("caf_super_cup") is False or r.get("samerica_super_cup") is False
 
 
@@ -1619,7 +1626,7 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
                    "league_order", "packs", "conmebol", "conmebol_associations", "samerica_super_cup",
                    "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar",
-                   "continental_emblems", "confederation_logos",
+                   "concacaf", "continental_emblems", "confederation_logos",
                    "id_retire", "pack_version", "id_lineage",    # idledger.py: the ids that may go, the version name
                    "id_not_lineages", "id_ledger",   # id_ledger: absolute (idledger.absolute_ledger), review 3
                    "id_tables",       # the zip of the version shared last, for its rows (rowkeep.prev_rows)
@@ -1830,6 +1837,10 @@ def settings_from_plan(pl, base):
     itself from (fl26world.CCUPS) is found by the field's order (ccup_given); one that the order
     does not tell is lost."""
     out = {}
+    if (pl.get("concacaf") or {}).get("configuration") is not None:
+        out["concacaf"] = copy.deepcopy(pl["concacaf"]["configuration"])
+    elif pl.get("concacaf_integration"):
+        out["concacaf"] = copy.deepcopy(pl["concacaf_integration"]["configuration"])
     name_of = {p["rid"]: p["name"] for p in pl.get("leagues") or []}
 
     def club(ref):
@@ -1853,6 +1864,11 @@ def settings_from_plan(pl, base):
     names = {str(c["number"]): c["name"] for c in cups if c.get("number") in default
              and c.get("name") and c["name"] != default[c["number"]]}
     logos = {str(c["number"]): c["logo"] for c in cups if c.get("number") in default and c.get("logo")}
+    for number, appearance in (pl.get("concacaf_appearance") or {}).items():
+        if appearance["name"] != concacaf.CUP_NAMES[int(number)]:
+            names[number] = appearance["name"]
+        if appearance.get("logo"):
+            logos[number] = appearance["logo"]
     if names:
         out["ccup_names"] = names
     if logos:
@@ -1908,6 +1924,10 @@ def settings_from_plan(pl, base):
         for c in cups:
             n = c.get("number")
             fill = next((set(map(tuple, f)) for c2, _n, _code, _conf, f in fl26world.CCUPS if c2 == n), None)
+            if n == concacaf.TARGET:
+                # Old plans without settings cannot distinguish an explicit MLS place
+                # from the old automatic padding. Do not migrate twelve implicit berths.
+                fill = set(fl26world.LEGACY_CONCACAF_FILL)
             if fill is None:
                 continue
             fill |= {(sums[e[0]],) + tuple(e[1:]) for e in fill if e[0] in sums}
@@ -1917,7 +1937,7 @@ def settings_from_plan(pl, base):
                 if e[0] == "ko" or lg in name_of or lg not in tops:
                     continue
                 (maybe if e in fill else given).append(e)
-            if maybe:
+            if maybe and n != concacaf.TARGET:
                 given += ccup_given(n, c.get("entry") or [], ours, given, maybe, sums=sums)
             for e in given:
                 ge.setdefault(str(entry_league(e)), []).append([CUP_WINNER if e[0] == "cup" else int(e[1]), int(n)])
@@ -3361,6 +3381,13 @@ def group_world_lines(pl):
 def plan(recipe, base, prev=None):
     """the plan of `recipe`; `prev` is the plan of the world's last Build, whose ids the
     leagues built then keep (prev_pins)"""
+    if "concacaf" in recipe:
+        try:
+            if recipe["concacaf"] is None:
+                raise concacaf.QualificationError("concacaf must be an object")
+            concacaf.configuration(recipe["concacaf"])
+        except concacaf.QualificationError as e:
+            raise BuildError(str(e)) from e
     use_squad(recipe)
     # a recipe made for one game ("game": "fl27", the Megapack's) is not built for the other
     want = str(recipe.get("game") or "").lower()
@@ -3988,6 +4015,7 @@ def plan(recipe, base, prev=None):
     ge, gr, gn, gcc = game_europe(access_recipe, regrow, region_of_cid, base)
     gstaged = game_stage_places(access_recipe, regrow, region_of_cid, base)
     ssums = season_sums(access_recipe, regrow)
+    cup_sums = {h: e[0] for e in ssums for h in e[1:]}
     aaccess, accup, astaged, arows, arecipe = conmebol_association_places(
         access_recipe, base, out
     )
@@ -4013,9 +4041,43 @@ def plan(recipe, base, prev=None):
     room = {p["rid"]: p["clubs"] for p in out}
     room.update({r: entries_of(base, M.reg_cid(regrow[r])) for r, _p, _c, _a in gcc})
     room.update({row["source"]: row["capacity"] for row in arows})
+    concacaf_integration = None
+    if "concacaf" in recipe or any(c == concacaf.TARGET for _r, _p, c, _a in continental_places):
+        try:
+            config, sources, aliases = concacaf_sources(recipe, base, out, regrow, region_of_cid)
+            access = concacaf.integration_access(config, sources, aliases)
+            lc = access.get("leagues_cup")
+            if lc and lc["ready"]:
+                north, mexico = lc["sources"]
+                source_by_id = {str(s["id"]): s for s in sources}
+                if north != "51" or set(game_season_totals(regrow).get(51, ())) != {166, 167}:
+                    lc["errors"].append("Leagues Cup requires the native MLS annual table and its two phases")
+                else:
+                    from leagues_probe import MLS, MX
+                    mexican_teams = source_by_id[mexico].get("teams")
+                    if (not set(MLS) <= set(source_by_id[north].get("teams", ()))
+                            or source_by_id[mexico].get("retained_membership_incomplete")
+                            or (mexican_teams is not None and set(MX) != set(mexican_teams))):
+                        lc["errors"].append("Leagues Cup requires the validated inaugural MLS and Liga MX memberships")
+                lc["ready"] = not lc["errors"]
+                if not lc["ready"]:
+                    access = concacaf.integration_access(config, sources, aliases, lc["errors"])
+            concacaf_integration = {"configuration": config, "access": access, "sources": sources, "aliases": aliases}
+            for key, cup in access.items():
+                if not cup["ready"]:
+                    details = "; ".join(cup["errors"]) or "configured %s, need %s" % (cup.get("configured"), cup["required"])
+                    name = concacaf.CUP_NAMES[concacaf.CUP_NUMBERS[key]]
+                    fnotes.append("CONCACAF: omitting %s (%s)" % (name, details))
+            continental_places = [p for p in continental_places if p[2] != concacaf.TARGET]
+            existing_totals = {e[0] for e in ssums}
+            qualified_sources = {str(s["id"]) for s in sources}
+            ssums.extend([t] + halves for t, halves in game_season_totals(regrow).items()
+                         if str(t) in qualified_sources and t not in existing_totals)
+        except concacaf.QualificationError as e:
+            raise BuildError(str(e)) from e
     pre_marks = {(p["rid"], e[0], e[1]): (e[2] if len(e) > 2 else 0)
                  for p in out for e in p.get("europe_pre") or [] if [e[0], e[1]] in p["europe"]}
-    cups, notes = ccup_plan(continental_places, room, {h: e[0] for e in ssums for h in e[1:]},
+    cups, notes = ccup_plan(continental_places, room, cup_sums,
                             modern_conmebol=modern_conmebol, pre=pre_marks)
     for c in cups:            # "ccup_pre": {"<cup number>": {"fill": day, "day": day}} moves a preliminary round
         q = (recipe.get("ccup_pre") or {}).get(str(c["number"])) or {}
@@ -4084,6 +4146,11 @@ def plan(recipe, base, prev=None):
             "libq": libq,
             "modern_libertadores_access": access_recipe.get("_modern_libertadores_access"),
             "suda_first": suda_first,
+            "concacaf": None,
+            "concacaf_integration": concacaf_integration,
+            "concacaf_appearance": {str(n): {"name": ((recipe.get("ccup_names") or {}).get(str(n)) or "").strip() or default,
+                                             "logo": (recipe.get("ccup_logos") or {}).get(str(n))}
+                                    for n, default in concacaf.CUP_NAMES.items()},
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
             "assoc_rank": assoc_rank(out, base, access_alias(regrow)),
             "access_alias": access_alias(regrow),
@@ -5631,7 +5698,7 @@ def ccup_short(own, clubs, notes):
     Champions League and 2 Confederation Cup places, Alikhaled_727 2026-09-29: neither cup was
     built, now the Champions League takes all four), then the next positions of its own leagues
     that no place of any competition claims, a league at a time (`clubs`: {league: its clubs})"""
-    places = {c: sorted((ccup_entry(r, pos, a) for r, pos, comp, a in own if comp == c), key=entry_key)
+    places = {c: sorted((ccup_entry(r, pos, a) for r, pos, comp, a in own if comp == c and c != concacaf.TARGET), key=entry_key)
               for c, _n, _code, _conf, _fill in fl26world.CCUPS}
     claimed = {}
     for r, pos, _comp, _a in own:
@@ -5713,6 +5780,117 @@ def apart(field):
     return field
 
 
+def require_competition_runtime(pl):
+    """Reject legacy plans and unavailable feeders before any staging/game writes."""
+    if pl.get("concacaf") or any(c.get("number") == concacaf.TARGET or c.get("code") == concacaf.CODE
+                                  for c in pl.get("ccups") or []):
+        import mkconcacaf
+        try:
+            mkconcacaf.supported(pl.get("concacaf") or {})
+            if pl["concacaf"]["modules"]["caribbean_cup"]:
+                import caribbean
+                caribbean.sources(pl["concacaf"])
+        except concacaf.QualificationError as e:
+            raise BuildError(str(e)) from e
+
+
+def check_concacaf_runtime(pl):
+    access = (pl.get("concacaf_integration") or {}).get("access", {})
+    lc = access.get("leagues_cup", {}).get("ready")
+    car = access.get("caribbean_cup", {}).get("ready")
+    central = access.get("central_american_cup", {}).get("ready")
+    champions = access.get("champions_cup", {}).get("ready")
+    if not pl.get("concacaf") and not any((lc, car, central, champions)):
+        return
+    import mkconcacaf
+    try:
+        src = os.path.join(pack_dir(), "modules")
+        mkconcacaf.check_runtime(os.path.join(src, "fl26swiss.dll"), os.path.join(src, "fl26swiss.lua"),
+                                 caribbean=((pl.get("concacaf") or {}).get("modules") or {}).get("caribbean_cup", False),
+                                 leagues=lc, caribbean_access=car, central_access=central, champions_access=champions)
+    except (OSError, ValueError, struct.error) as e:
+        raise BuildError("CONCACAF runtime compatibility: %s" % e) from e
+
+
+def central_phase_kind(phases, shapes):
+    """Validate a Central American annual source and identify a split by division."""
+    import central_qualification as annual
+    if (not phases or len(phases) > annual.MAX_PHASES
+            or any(pid not in shapes or not (2 <= shapes[pid][0] <= 40 and 1 <= shapes[pid][1] <= 7)
+                   for pid in phases)):
+        return None
+    tiered = len(phases) > 1 and sum(shapes[pid][0] for pid in phases[1:]) == shapes[phases[0]][0]
+    return tiered if tiered or len({shapes[pid][0] for pid in phases}) == 1 else None
+
+
+def concacaf_sources(recipe, base, leagues, regrow, region_of_cid):
+    """Adapt existing domestic access data to the pure planner; no new fixtures or ids.
+
+    Use actual table countries, not hardcoded MLS regulation 51: FL27 and database mods
+    move it. National-cup references stay symbolic until the ordinary cup allocator runs.
+    """
+    config = concacaf.integration_draft(recipe)
+    totals = game_season_totals(regrow)
+    total_of = {h: t for t, halves in totals.items() for h in halves}
+    game = game_leagues(base)
+    countries = game_league_countries(base, game)
+    conf = game_league_confeds(base, game)
+    rows, aliases = {}, {}
+
+    def add(rid, country, capacity, teams=None, cup=None):
+        key = str(rid)
+        low = country.lower()
+        role = "liga_mx" if low == "mexico" else "mls" if low in ("usa", "united states", "united states of america") else "canadian_premier" if low == "canada" else None
+        source = {"id": key, "kind": "league", "region": concacaf.region(country), "country": country,
+                  "conf": 6, "capacity": capacity, "roles": [role] if role else []}
+        if teams is not None:
+            source["teams"] = list(teams)
+        rows[key] = source
+        if cup:
+            cr = {"id": "cup:" + key, "kind": "cup", "region": source["region"], "country": country,
+                  "conf": 6, "capacity": 0, "roles": ["canadian_championship"] if low == "canada"
+                  else ["us_open_cup"] if role == "mls" else []}
+            rows[cr["id"]] = cr
+            if type(cup) is int:
+                aliases[str(cup)] = cr["id"]
+                cr["runtime_reg"] = cup
+
+    from central_qualification import database_phase_shapes
+    shapes = database_phase_shapes(regrow)
+    phase_owners = {}
+    for pid in shapes:
+        phase_owners.setdefault(M.reg_cid(regrow[pid]), []).append(pid)
+
+    for rid, cid, _name, teams in game:
+        if conf.get(cid) == 6 and rid in countries and M.get_tier(regrow[rid]) == 1:
+            total = total_of.get(rid, rid)
+            add(total, countries[rid], len(teams), teams,
+                home_cup(regrow, region_of_cid, region_of_cid.get(cid)))
+            if rows[str(total)]["region"] == "central":
+                phases = totals.get(total) or (phase_owners.get(cid) if regrow[rid][M.R_TYPE] == 9 else None) or [rid]
+                rows[str(total)]["central_annual_supported"] = central_phase_kind(phases, shapes) is not None
+            if total != rid:
+                rows[str(total)]["membership_reg"] = rid
+                aliases.update({str(h): str(total) for h in totals[total]})
+    import mkflags
+    cty = mkflags.countries(mkflags.table("Country", [base]))
+    cconf = confederations(base)
+    for league in leagues:
+        if cconf.get(league["country"]) != 6 or league.get("above") or league.get("exhibition"):
+            continue
+        country = (cty.get(league["country"]) or ("",))[0]
+        add(league["rid"], country, league["clubs"], cup=bool(league.get("cup")))
+        retained = league.get("game_clubs") or {}
+        if len(retained) == league["clubs"]:
+            rows[str(league["rid"])]["teams"] = [row["id"] for _pos, row in sorted(retained.items())]
+        elif country.casefold() == "mexico":
+            rows[str(league["rid"])]["retained_membership_incomplete"] = True
+        aliases[league["name"]] = str(league["rid"])
+        if league.get("cup"):
+            aliases["cup:" + league["name"]] = "cup:" + str(league["rid"])
+    return config, list(rows.values()), aliases
+
+
 CCUP_PRE_TIES = 16                       # a cup's preliminary round: one-match ties at most (fl26swiss LPRE_MAX)
 # its days: filled on 14 August, played on 20 August -- no African or CONCACAF league or cup of the
 # GigaPack plays between 17 and 26 August (Build 5, 11.11.2026), and the cups are drawn on day 239
@@ -5782,7 +5960,7 @@ def ccup_pre_plan(c, name, code, conf, mine, marked, fill, pre, notes):
             "entry": entry, "pre": {"ties": pairs, "fill": CCUP_PRE_FILL, "day": CCUP_PRE_DAY}}
 
 
-def ccup_plan(own, clubs=None, sums=None, *, modern_conmebol=False, pre=None):
+def ccup_plan(own, clubs=None, sums=None, *, modern_conmebol=False, pre=None, concacaf_plan=None):
     """the continental cups the new leagues' places lead to (competitions 6..9, 13..15: fl26world.CCUPS),
     each only when some place names it. The field is the places of the world's own leagues and,
     where the cup has them, shipped leagues' places after those: the biggest of 32/16/8/4 clubs
@@ -5799,6 +5977,14 @@ def ccup_plan(own, clubs=None, sums=None, *, modern_conmebol=False, pre=None):
     sums = sums or {}
     pre = pre or {}
     for c, name, code, conf, fill in fl26world.CCUPS:
+        if c == concacaf.TARGET:
+            if concacaf_plan is not None or any(comp == c for _r, _p, comp, _a in own):
+                cup = {"number": c, "name": name, "code": code, "conf": conf, "groups": 0,
+                       "entry": [], "format": concacaf.FORMAT, "participants": 27, "runtime_ready": False}
+                cup.update({k: v for k, v in ((concacaf_plan or {}).get("previous_ids") or {}).items()
+                            if k in ("cid", "reg", "ko", "pre_reg")})
+                cups.append(cup)
+            continue
         mine = places[c]
         fill = [(sums.get(e[0], e[0]),) + tuple(e[1:]) for e in fill]
         if not mine:
@@ -5947,7 +6133,7 @@ def game_stage_places(recipe, regrow, region_of_cid, base):
     return out
 
 
-def europe_problems(clubs, europe, cup=True):
+def europe_problems(clubs, europe, cup=True, *, competitions=None):
     """what is wrong with a league's European places ([[position, competition], ...]): each a
     position of the league's own, 1..clubs, none twice, and a competition fl26swiss knows.
     Position 0 is the cup winner (CUP_WINNER): only for a league whose country has a cup (cup),
@@ -5956,7 +6142,7 @@ def europe_problems(clubs, europe, cup=True):
     for the League Builder's continental cups too (GitHub #95: the cup winner to the Copa
     Sudamericana, the Confederation Cup, the AFC Champions League Two)"""
     out, seen = [], set()
-    comps = {c for c, _n in fl26world.COMPETITIONS}
+    comps = {c for c, _n in fl26world.COMPETITIONS} if competitions is None else set(competitions)
     for e in europe:
         try:
             pos, comp = int(e[0]), int(e[1])
@@ -6260,6 +6446,13 @@ def describe(pl, base=None, game=None):
                     if p.get("calendar") or p.get("follows_calendar")
                     else "its date follows %s" % SUPER_CUP_LIKE))
     for cup in pl.get("ccups") or []:
+        if cup.get("number") == concacaf.TARGET:
+            lines.append("  %s: 27 places, 22 in Round One (11 two-leg ties), 5 direct to Round of 16; "
+                         "single-match final. Runtime contract v1 and new career required."
+                         % cup["name"])
+            if (pl.get("concacaf") or {}).get("modules", {}).get("caribbean_cup"):
+                lines.append("  Caribbean Cup: 10 clubs, two groups of five, 28 fixtures; one January bye and two Round One places.")
+            continue
         if cup.get("kind") == "super":
             if cup.get("code") == "FL_SAMRC":
                 lines.append("  %s: the previous Libertadores and Sudamericana winners, one "
@@ -6800,8 +6993,14 @@ def write_managers(pl, base, db, raw, min_id, game, world, log=print):
 
 
 def build(pl, base, game, replace=False, log=print):
+    require_competition_runtime(pl)
+    check_concacaf_runtime(pl)
     flpaths.use_game(game, siderdir.find(game))   # the exe readers (caltab, region headings) look here
     use_game(game)                                # the caps of that game: Mod Studio builds in a new process
+    if (pl.get("concacaf") or {}).get("modules", {}).get("caribbean_cup"):
+        fl27_only("Caribbean Cup", "the Caribbean Cup runtime")
+    if any(cup.get("ready") for cup in (pl.get("concacaf_integration") or {}).get("access", {}).values()):
+        fl27_only("CONCACAF", "the explicit qualification runtime")
     use_squad(pl)                                 # World options > Players per new club
     out = os.path.join(siderdir.find(game), "livecpk", pl["world"])
     if os.path.exists(out):
@@ -7324,6 +7523,7 @@ def build(pl, base, game, replace=False, log=print):
         newfaces = [l for l in newfaces if not l.startswith("newfaces")]
 
     splits = [p for p in pl["leagues"] if p.get("split")]
+    phases = {}
     if splits:
         import mksplit
         args = ["--base", db, "--out", tmp, "--ids", ",".join(map(str, split_phase_ids(pl, db, splits)))]
@@ -7372,12 +7572,13 @@ def build(pl, base, game, replace=False, log=print):
                                                        if own_cup.get(r)]
     prepare_sudamericana_first(pl, tmp, db, log)
     prepare_cup_prelims(pl, tmp, db, log)
-    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl), pl.get("prev_cup_ids"),
+    ccups = continental([c for c in pl.get("ccups") or [] if c["number"] != concacaf.TARGET] + hc, tmp, db, log, alt_from(pl), pl.get("prev_cup_ids"),
                         pl.get("low_cids"))
     ccups += sudamericana_first_line(pl)
     ccups += cup_prelim_lines(pl)
     ccups += sudamericana_playoffs(pl, tmp, db, log)
     ccups += libertadores_qualifying(pl, tmp, db, log)
+    ccups += build_concacaf(pl, tmp, db, log, phases=phases)
     modern_conmebol_no_away_goals(pl, db, log)
     for c in (pl.get("ccups") or []) + hc:
         pl.setdefault("cup_ids", {})["ccup:" + (c.get("code") or c["name"])] = {
@@ -8617,6 +8818,254 @@ def helper_ids(pl, db, key, nregs=1):
     return cids[0], got
 
 
+def concacaf_appearance(pl, number):
+    return (pl.get("concacaf_appearance") or {}).get(str(number), {"name": concacaf.CUP_NAMES[number]})
+
+
+def build_concacaf(pl, root, db, log=print, phases=None):
+    integrated = pl.get("concacaf_integration") or {}
+    if integrated:
+        access = integrated["access"]
+        sources = {str(s["id"]): s for s in integrated["sources"]}
+        lines = []
+        feeders = {}
+        generated_ids = pl["concacaf_emblems"] = {}
+        if access.get("leagues_cup", {}).get("ready"):
+            generated = build_integrated_leagues(pl, root, db, access["leagues_cup"], integrated, log)
+            if generated:
+                lines.extend(generated)
+                feeders["module:leagues_cup"] = pl["cup_ids"]["concacaf:FL_LC_KO"]["reg3"]
+                generated_ids["-14"] = [entry["cid"] for key, entry in pl["cup_ids"].items()
+                                        if key.startswith("concacaf:FL_LC_")]
+        domestic_cups = {"cup:" + str(p["rid"]): p["own_cup"]["reg"]
+                         for p in pl["leagues"] if p.get("own_cup")}
+        if access.get("central_american_cup", {}).get("ready"):
+            try:
+                central_lines, knockout = build_integrated_central(pl, root, db, access["central_american_cup"], sources, log, phases or {}, domestic_cups)
+            except concacaf.QualificationError as e:
+                log("  CONCACAF: omitting Central American Cup (%s)" % e)
+            else:
+                lines.extend(central_lines)
+                feeders["module:central_american_cup"] = knockout
+                generated_ids["-15"] = [pl["cup_ids"][key]["cid"] for key in
+                                        ("concacaf:FL_CAC_PROBE", "concacaf:FL_CAC_PLAYIN")]
+        if access.get("caribbean_cup", {}).get("ready"):
+            import caribbean
+            key = "ccup:" + caribbean.CODE
+            cid, (group, knockout) = helper_ids(pl, db, key, 2)
+            previous = (pl.get("prev_cup_ids") or {}).get(key, {})
+            if any(pl["cup_ids"][key].get(field) != value for field, value in previous.items()):
+                raise BuildError("Caribbean Cup cannot preserve its previous competition or regulation IDs")
+            try:
+                lines.extend(caribbean.generate(db, root, {"configuration": integrated["configuration"],
+                    "access": access["caribbean_cup"], "sources": sources},
+                    cid, group, knockout, log, name=concacaf_appearance(pl, -13)["name"], cup_regs=domestic_cups))
+            except concacaf.QualificationError as e:
+                log("  CONCACAF: omitting Caribbean Cup (%s)" % e)
+            except (ValueError, SystemExit) as e:
+                raise BuildError("Caribbean Cup: %s" % e) from e
+            else:
+                feeders[caribbean.MODULE] = knockout
+                generated_ids["-13"] = [cid]
+        expected = {key for key, ready in access.get("champions_cup", {}).get("feeders", {}).items() if ready}
+        actual = {key for key in concacaf.MODULES if "module:" + key in feeders}
+        if expected != actual:
+            config = dict(integrated["configuration"], modules={key: key in actual for key in concacaf.MODULES})
+            final_access = concacaf.integration_access(config, integrated["sources"], integrated.get("aliases"))
+            access["champions_cup"] = final_access["champions_cup"]
+            if not access["champions_cup"]["ready"]:
+                log("  CONCACAF: omitting Champions Cup; generated feeders require %s domestic places, configured %s" %
+                    (access["champions_cup"]["required"], access["champions_cup"]["configured"]))
+        if access.get("champions_cup", {}).get("ready"):
+            import mkconcacaf
+            cid, ko, helper_cid, pre = paired_concacaf_ids(pl, db, "ccup:" + concacaf.CODE,
+                                                          "concacaf:" + mkconcacaf.HELPER_CODE)
+            feeders.update(domestic_cups)
+            try:
+                lines.extend(mkconcacaf.generate(db, root, concacaf.explicit_champions_plan(integrated),
+                                                 cid, ko, helper_cid, pre, name=concacaf_appearance(pl, concacaf.TARGET)["name"],
+                                                 cup_regs=feeders, log=log))
+                generated_ids[str(concacaf.TARGET)] = [cid, helper_cid]
+            except (ValueError, SystemExit) as e:
+                raise BuildError("Champions Cup: %s" % e) from e
+        if phases:
+            used = {int(row["source"].removeprefix("cup:"))
+                    for row in access.get("caribbean_cup", {}).get("sources", ())}
+            used.update(int(row["source"].removeprefix("cup:"))
+                        for rows in access.get("champions_cup", {}).get("sources", {}).values()
+                        for row in rows)
+            if used.intersection(phases):
+                from central_qualification import database_phase_shapes
+                raw = M.load(db, "CompetitionRegulation.bin")
+                rules = {u16(raw, i + M.R_ID): raw[i:i+M.REG] for i in range(0, len(raw), M.REG)}
+                sizes = database_phase_shapes(rules)
+                sums = pl.setdefault("season_sums", [])
+                for rid in sorted(used.intersection(phases)):
+                    parts = phases[rid]
+                    if (1 < len(parts) <= 3 and all(p < 1024 and p in sizes for p in parts)
+                            and len({sizes[p][0] for p in parts}) == 1 and not any(row[0] == rid for row in sums)):
+                        sums.append([rid, *parts])
+        pins = pl.setdefault("cup_ids", {})
+        preserved = {"ccup:FL_CONCACAF", "ccup:FL_CARIBBEAN_CUP", "concacaf:FL_CCC_R1", "concacaf:FL_CAC_PROBE",
+                     "concacaf:FL_CAC_PLAYIN", "concacaf:FL_LC_KO", *(f"concacaf:FL_LC_PHASE1_{i}" for i in range(1, 7))}
+        for key, value in (pl.get("prev_cup_ids") or {}).items():
+            if key in preserved:
+                pins.setdefault(key, value)
+        return lines
+    if not pl.get("concacaf"):
+        return []
+    import mkconcacaf
+    cup = next(c for c in pl["ccups"] if c.get("number") == concacaf.TARGET)
+    cid, (ko,) = helper_ids(pl, db, "ccup:" + concacaf.CODE)
+    key = "concacaf:" + mkconcacaf.HELPER_CODE
+    cids, regs = pinned_ids(pl, db, key)
+    cids, regs = [c for c in cids if c != cid], [r for r in regs if r != ko]
+    if not cids or not regs:
+        raise out_of_ids("CONCACAF Round One")
+    helper, pre = cids[0], regs[0]
+    pl.setdefault("cup_ids", {})[key] = {"cid": helper, "reg": pre}
+    cups = {"cup:" + str(p["rid"]): (p.get("own_cup") or {}).get("reg")
+            for p in pl["leagues"] if p.get("own_cup")}
+    feeder_lines = []
+    try:
+        if pl["concacaf"]["modules"]["caribbean_cup"]:
+            import caribbean
+            car_key = "ccup:" + caribbean.CODE
+            free_c, free_r = pinned_ids(pl, db, car_key)
+            free_c = [c for c in free_c if c not in (cid, helper)]
+            free_r = [r for r in free_r if r not in (ko, pre)]
+            raw = M.load(db, "CompetitionRegulation.bin")
+            occupied = {int.from_bytes(raw[i+2:i+4], "little") for i in range(0,len(raw),M.REG)}
+            group = next((r for r in free_r if not {r+1024,r+2048} & occupied), None)
+            old = ((pl.get("prev_cup_ids") or {}).get(car_key) or {}).get("reg2")
+            knockout = next((r for r in [old, *free_r] if r in free_r and r != group), None)
+            if not free_c or group is None or knockout is None:
+                raise out_of_ids(caribbean.NAME)
+            pl["cup_ids"][car_key] = {"cid": free_c[0], "reg": group, "reg2": knockout}
+            feeder_lines = caribbean.generate(db, root, pl["concacaf"], free_c[0], group, knockout, log)
+            cups[caribbean.MODULE] = knockout
+        lines = mkconcacaf.generate(db, root, pl["concacaf"], cid, ko, helper, pre,
+                                    name=cup["name"], cup_regs=cups, log=log)
+    except (concacaf.QualificationError, SystemExit) as e:
+        raise BuildError("CONCACAF: %s" % e) from e
+    cup.update(cid=cid, reg=ko, ko=ko, runtime_ready=True, runtime_version=1, pre_reg=pre)
+    pl["concacaf"]["runtime_ready"] = True
+    pl["concacaf"]["runtime_version"] = 1
+    return feeder_lines + lines
+
+
+def paired_concacaf_ids(pl, db, primary, auxiliary, extra=0):
+    """Allocate both families before either is emitted into the staged tables."""
+    cids, regs = pinned_ids(pl, db, primary)
+    old = (pl.get("prev_cup_ids") or {}).get(primary, {})
+    others = (pl.get("prev_cup_ids") or {}).get(auxiliary, {})
+    want = [old[k] for k in ("reg", "reg2")[:extra+1] if k in old]
+    if not cids or len(regs) <= extra or any(r not in regs for r in want):
+        raise out_of_ids(primary)
+    got = (want + [r for r in regs if r not in want])[:extra+1]
+    hc, hr = pinned_ids(pl, db, auxiliary)
+    hcid = next((c for c in hc if c != cids[0]), None)
+    hreg = next((r for r in hr if r not in got), None)
+    if (hcid is None or hreg is None or (old.get("cid") not in (None, cids[0]))
+            or others.get("cid") not in (None, hcid) or others.get("reg") not in (None, hreg)):
+        raise out_of_ids(auxiliary)
+    pins = pl.setdefault("cup_ids", {})
+    pins[primary] = {"cid": cids[0], "reg": got[0]}
+    if extra:
+        pins[primary]["reg2"] = got[1]
+    pins[auxiliary] = {"cid": hcid, "reg": hreg}
+    return (cids[0], *got, hcid, hreg)
+
+
+def build_integrated_central(pl, root, db, access, sources, log, split_phases, cup_regs):
+    import central_probe as central
+    import central_qualification as annual
+    comps, regulations, _ = central.rows(db)
+    by_comp = {M.comp_cid(row): row for row in comps}
+    by_reg = {u16(row, M.R_ID): row for row in regulations}
+    shapes = annual.database_phase_shapes(by_reg)
+    totals = {row[0]: row[1:] for row in pl.get("season_sums") or []}
+    seasons = {int(parts[1]): int(parts[2]) for line in season_lines(pl, db)
+               if (parts := line.split())[0] == "season"}
+    orders = {rid: teams for rid, _, _, teams in game_leagues(db)}
+    grouped = concacaf.group_regional_places(access["sources"])
+    words, places, tables = [], [], {}
+    for index, (key, ranks) in enumerate(grouped.items()):
+        source = sources[key]
+        rid = int(key)
+        cup = concacaf.regional_cup_reg(key, ranks, sources, cup_regs, by_reg)
+        membership = int(source.get("membership_reg", rid))
+        if membership not in by_reg:
+            raise concacaf.QualificationError("missing league membership regulation %d" % membership)
+        cid = M.reg_cid(by_reg[membership])
+        phases = totals.get(rid) or split_phases.get(membership)
+        if not phases and by_reg[membership][M.R_TYPE] == 9:
+            phases = [pid for pid, row in by_reg.items() if pid in shapes and M.reg_cid(row) == cid]
+        phases = phases or [membership]
+        region = M.dec_region(by_comp[cid][M.REGION_OFF])
+        calendar = seasons.get(region, int(region in annual.CALENDAR_REGIONS))
+        tiered = central_phase_kind(phases, shapes)
+        if tiered is None:
+            raise concacaf.QualificationError("unsupported annual phases for regulation %d" % rid)
+        words.extend([membership, calendar, cup, *(v for i, pid in enumerate(phases) for v in (pid, *shapes[pid], i if tiered else 0)),
+                      *([0] * (4 * (annual.MAX_PHASES - len(phases))))])
+        places.extend(index * 64 + rank for rank in ranks)
+        tables[key] = orders.get(membership) or source.get("teams") or []
+    width = len(annual.ASSOCIATIONS)
+    if len(grouped) > width or len(places) != 20:
+        raise concacaf.QualificationError("need twenty places across no more than seven eligible league sources")
+    seeds = concacaf.initial_regional_field(grouped, tables)
+    words.extend([0] * ((width - len(grouped)) * (3 + 4 * annual.MAX_PHASES)))
+    cid, group, ko, helper_cid, helper = paired_concacaf_ids(pl, db, "concacaf:FL_CAC_PROBE", "concacaf:FL_CAC_PLAYIN", 1)
+    try:
+        central.generate_tables(db, root, cid, helper_cid, group, ko, helper, seeds, log,
+                                name=concacaf_appearance(pl, -15)["name"])
+    except (ValueError, SystemExit) as e:
+        raise BuildError("Central American Cup: %s" % e) from e
+    return ["central_probe 4 data=" + ",".join(map(str, [group, ko, helper, *words, *places]))], ko
+
+
+def build_integrated_leagues(pl, root, db, access, integrated, log):
+    from leagues_probe import KNOCKOUT, MLS, MX, generate_tables
+    mexico = next(s for s in integrated["sources"] if str(s["id"]) == access["sources"][1])
+    membership = int(mexico.get("membership_reg", mexico["id"]))
+    members = next((teams for rid, _, _, teams in game_leagues(db) if rid == membership), [])
+    if set(members) != set(MX):
+        log("  CONCACAF: omitting Leagues Cup because the built Liga MX membership differs from the inaugural field")
+        return []
+    previous = pl.get("prev_cup_ids") or {}
+    stems = [(f"concacaf:FL_LC_PHASE1_{batch+1}", 1) for batch in range(6)] + [("concacaf:FL_LC_KO", 3)]
+    ids, assigned, used_regs = {}, set(), set()
+    for key, nregs in stems:
+        free, available = pinned_ids(pl, db, key)
+        old = previous.get(key, {})
+        cid = next((candidate for candidate in free if candidate not in assigned), None)
+        if cid is None or old.get("cid") not in (None, cid):
+            raise BuildError("Leagues Cup cannot preserve its competition ID for " + key)
+        assigned.add(cid)
+        fields = ("reg", "reg2", "reg3")[:nregs]
+        pinned = {old[field] for field in fields if field in old}
+        ids[key] = {"cid": cid}
+        for field in fields:
+            value = old.get(field)
+            if value is None:
+                value = next((r for r in available if r not in used_regs and r not in pinned), None)
+            if value is None or value not in available or value in used_regs:
+                raise BuildError("Leagues Cup cannot reserve a compatible regulation family for " + key)
+            ids[key][field] = value
+            used_regs.add(value)
+    regs = [ids[key]["reg"] for key, _ in stems[:-1]]
+    finals = [(ids[stems[-1][0]][field], ties) for field, (_, ties) in zip(("reg", "reg2", "reg3"), KNOCKOUT)]
+    try:
+        generate_tables(db, root, [value["cid"] for value in ids.values()], True, log, regs, finals, name=concacaf_appearance(pl, -14)["name"])
+    except (ValueError, SystemExit) as e:
+        raise BuildError("Leagues Cup: %s" % e) from e
+    pl.setdefault("cup_ids", {}).update(ids)
+    vector = [*regs, *MLS, *MX, 212, 242, *(r for r, _ in finals),
+              membership]
+    return ["leagues_probe 2 data=" + ",".join(map(str, vector))]
+
+
 def share_slots(leagues):
     """a league on a shared id of the band (fl26world.SHARED_IDS) takes the Select Team slot of a
     league of its country that has one of its own -- the top one first (fewest divisions above),
@@ -9365,6 +9814,7 @@ def continental(cups, root, db, log=print, start=None, want=None, low=False):
     """build the planned continental cups (ccup_plan) with mkccup.py into the world's tables in
     <db>, with ids nothing in them uses -- a cup's own of the last Build first (want, the plan's
     prev_cup_ids); returns the world file's ccup lines"""
+    require_competition_runtime({"ccups": cups})
     if not cups:
         return []
     import mkccup
@@ -9647,6 +10097,8 @@ def picture_jobs(pl, base, log=print, gone=None):
         targets = {E.key("game", cid): [cid] for cid in native}
         targets.update({E.key("generated", c["number"]): [c["cid"]]
                         for c in pl.get("ccups") or [] if c.get("cid")})
+        for number, ids in (pl.get("concacaf_emblems") or {}).items():
+            targets[E.key("generated", int(number))] = ids
         if pl.get("uecl"):
             targets["uecl"] = [UECL_CID]
         # the confederation rows of Select Team (fl26confgroups, FL 2027): their logos too, black
@@ -10016,6 +10468,13 @@ def cup_emblems(pl):
     for c in (pl.get("ccups") or []) + (pl.get("home_cups") or []) + (pl.get("game_supers") or []):
         if c.get("cid"):
             out.append((c["cid"], c["name"], c.get("logo")))
+    helper = (pl.get("cup_ids") or {}).get("concacaf:FL_CCC_R1") or {}
+    if helper.get("cid") and not pl.get("concacaf_integration"):
+        primary = next((c for c in pl.get("ccups") or [] if c.get("number") == concacaf.TARGET), {})
+        out.append((helper["cid"], "CONCACAF Round One", primary.get("logo")))
+    for number, ids in (pl.get("concacaf_emblems") or {}).items():
+        appearance = concacaf_appearance(pl, int(number))
+        out.extend((cid, appearance["name"], appearance.get("logo")) for cid in ids)
     # the modern CONMEBOL helper cups (helper_ids) wear the emblem of the cup they are a round of:
     # with none of their own, the Sudamericana's first stage showed no emblem in the fixtures (B220,
     # antonimus 23.10.)
@@ -10734,11 +11193,31 @@ def switch_on(world, game, log=print, redraw=False):
     if wide > 255 and not cid_wide(game):
         raise BuildError("%s has competition ids up to %d, and the game's caps set reads only 255 (it has no "
                          "cidwide step) -- Home > Install now, then switch it on again" % (world, wide))
+    with open(wf, encoding="utf-8") as f:
+        world_text = f.read()
+    def contract_version(name):
+        found = re.search(r"^\s*" + name + r"\s+(\d+)\s", world_text, re.M)
+        return int(found[1]) if found else 0
+
+    cq, car = contract_version("concacaf"), contract_version("caribbean")
+    central, lc = contract_version("central_probe"), contract_version("leagues_probe")
+    if (car or central or lc or cq >= 2) and (not is_fl27(game) or (car == 1 and not cq)):
+        raise BuildError("This CONCACAF world requires FL27 and matching competition contracts")
+    if cq or car or central or lc:
+        import mkconcacaf
+        modules = os.path.join(siderdir.find(game), "modules")
+        try:
+            mkconcacaf.check_runtime(os.path.join(modules, "fl26swiss.dll"), os.path.join(modules, "fl26swiss.lua"),
+                                     caribbean=bool(car), leagues=lc >= 2, caribbean_access=car >= 3,
+                                     central_access=central >= 4, champions_access=cq >= 3)
+        except (OSError, ValueError, struct.error) as e:
+            raise BuildError("CONCACAF activation refused: install the matching native modules first: %s" % e) from e
     import siderroot
     siderroot.INI = os.path.join(siderdir.find(game), "sider.ini")
     if not os.path.exists(siderroot.INI):
         raise BuildError("no %s -- is Sider installed in this game folder?" % siderroot.INI)
-    log(call(siderroot, [world]).strip())
+    args = [world, "--require-livecpk"] if cq or car or central or lc else [world]
+    log(call(siderroot, args).strip())
     dst = os.path.join(siderdir.find(game), "modules", MARK)
     keep_before(dst, "Switch on %s: the world file" % world, siderdir.find(game))    # was fl26world.txt.prev
     shutil.copy2(wf, dst)

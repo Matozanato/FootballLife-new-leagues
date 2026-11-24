@@ -155,11 +155,14 @@ def workflow():
         return [q.toolbar.layout().itemAt(i).widget().text() for i in range(q.toolbar.layout().count())
                 if isinstance(q.toolbar.layout().itemAt(i).widget(), QPushButton) and not q.toolbar.layout().itemAt(i).widget().isHidden()]
     ok("UEFA has exactly ranking, first-season clubs and plan in that order", toolbar() == ["UEFA ranking...", "First-season clubs...", "Check current competition plan"] and q.generate_button.isHidden())
-    for conf in (3, 5, 6, 7):
+    for conf in (3, 5, 7):
         e.confederation.setCurrentIndex(e.confederation.findData(conf))
         ok("other confederation %d retains the generic preset toolbar" % conf, toolbar() == ["Generate preset...", "Check current competition plan"])
+    e.confederation.setCurrentIndex(e.confederation.findData(6))
+    ok("CONCACAF uses automatic allocation without the generic preset",
+       toolbar() == ["Auto-assign qualification places", "Check current competition plan"])
     e.confederation.setCurrentIndex(e.confederation.findData(4))
-    ok("CONMEBOL has only auto allocation immediately before plan", toolbar() == ["Auto set continental places", "Check current competition plan"])
+    ok("CONMEBOL has only auto allocation immediately before plan", toolbar() == ["Auto-assign qualification places", "Check current competition plan"])
     before = copy.deepcopy(app.project.recipe)
     pending = ("qualification", "league", "European custom")
     e.set_qualification(pending, (True, [[2, 1]]))

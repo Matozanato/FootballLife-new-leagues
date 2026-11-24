@@ -544,17 +544,18 @@ CCUPS = [
     (9, "Copa Sudamericana", "FL_SUDAM", 4,
      [(r, p) for k in range(8) for r, p in ((_BRA, 7 + k), (_ARG, 7 + k), (_CHI, 3 + k), (_COL, 3 + k))]),
     # 0.2.0: North and Central America and Oceania, asked for since 0.1.5 (#81: MLS to a CONCACAF
-    # cup). The CONCACAF Champions Cup is a straight knockout, as the real one is (CCUP_KNOCKOUT);
-    # MLS fills it from the top down after the world's own places. The OFC Champions League has
+    # cup). CONCACAF now has a dedicated 27-team planner (concacaf.py); no generic MLS padding.
+    # The OFC Champions League has
     # no league of the game to fill from, so it is the world's own clubs only, as the CAF cups are.
-    (13, "CONCACAF Champions Cup", "FL_CONCACAF", 6, [(_MLS, p) for p in range(1, 13)]),
+    (13, "CONCACAF Champions Cup", "FL_CONCACAF", 6, []),
     (14, "OFC Champions League", "FL_OFCCL", 7, []),
     # 0.2.0: the AFC's third cup, under the Champions League Two (Discord, 2026-10-07: "acl, acl 2
     # and Challenge League"); the shipped Asian leagues fill it from the places after ACL Two's.
     (15, "AFC Challenge League", "FL_AFCCHL", 3,
      [(r, p) for k in range(4) for r, p in ((_J1, 11 + k), (_CSL, 10 + k), (_SPL, 11 + k))]),
 ]
-CCUP_KNOCKOUT = {13}              # cups that play no groups: a knockout of 16 (or 8, 4) from the start
+CCUP_KNOCKOUT = set()             # CONCACAF is handled separately, not as a generic 16-team cup
+LEGACY_CONCACAF_FILL = [(_MLS, p) for p in range(1, 13)]  # old plan recovery only; never generation
 COMPETITIONS += [(c, n) for c, n, _code, _conf, _fill in CCUPS]
 COMPETITIONS += [(c, v[0]) for c, v in CONMEBOL_STAGE_TARGETS.items()]
 # The shipped leagues that fill the cups above, by regulation (for Check the plan).

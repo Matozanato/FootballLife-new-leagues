@@ -61,6 +61,9 @@ class Setting:
 
 
 SETTINGS = (Setting("uecl", 2, "Include the Conference League"),
+            Setting("leagues_cup", 6, "Include Leagues Cup", False),
+            Setting("central_american_cup", 6, "Include the CONCACAF Central American Cup", False),
+            Setting("caribbean_cup", 6, "Include the CONCACAF Caribbean Cup", False),
             Setting("conmebol", 4, "Enable Libertadores new format, Sudamericana and Recopa Sudamericana", False),
             Setting("caf_super_cup", 5, "CAF Super Cup"))
 
@@ -126,6 +129,12 @@ def catalog(base):
         targets = (number, W.SUD_FIRST) if number == B.SUDAM else (number,)
         # the Copa Sudamericana is listed in classic worlds too: they build the classic one (mato 08.11.)
         entries.append(Competition("generated:%d" % number, conf, name, "generated", number, info, targets))
+    entries.append(Competition("leagues_cup", 6, "Leagues Cup", "generated", -14,
+                               "leagues_cup", visibility_setting="leagues_cup"))
+    entries.append(Competition("central_american_cup", 6, B.concacaf.CUP_NAMES[-15], "generated", -15,
+                               "central_american_cup", visibility_setting="central_american_cup"))
+    entries.append(Competition("caribbean_cup", 6, "CONCACAF Caribbean Cup", "generated", -13,
+                               "caribbean", visibility_setting="caribbean_cup"))
     for factory, info in ((B.samerica_super_cup, "recopa"), (B.caf_super_cup, "caf-super")):
         definition = factory({})
         entries.append(Competition("generated:%d" % definition["number"], definition["conf"],
@@ -192,7 +201,26 @@ def modern(recipe):
 
 
 def setting_value(recipe, setting):
+    if setting.key in B.concacaf.MODULES:
+        return concacaf_draft(recipe)["modules"][setting.key]
     return modern(recipe) if setting.key == "conmebol" else bool(recipe.get(setting.key, setting.default))
+
+
+def setting_path(key):
+    return ("concacaf", "modules", key) if key in B.concacaf.MODULES else (key,)
+
+
+def concacaf_draft(recipe):
+    return B.concacaf.integration_draft(recipe)
+
+
+def write_setting(recipe, key, value):
+    if key in B.concacaf.MODULES:
+        conf = concacaf_draft(recipe)
+        conf["modules"][key] = value
+        recipe["concacaf"] = conf
+    else:
+        recipe[key] = value
 
 
 def visible(competition, recipe):
@@ -244,7 +272,7 @@ def preview_recipe(recipe, changes, competitions):
                 result["game_europe"] = dict(result.get("game_europe") or {})
             set_modern_mode(result, value, lambda _n: True)
         else:
-            result[key[1]] = value
+            write_setting(result,key[1],value)
     return result
 
 
@@ -285,6 +313,31 @@ def sudamericana_information(c, recipe):
     return _("Classic mode: the classic Copa Sudamericana, groups of four then a knockout, for the leagues with Sudamericana places. The sudamericana_calendar setting dates it February to December; off, August to May.")
 
 
+def concacaf_information(number):
+    return {
+        B.concacaf.TARGET: (
+            _("27 clubs. Two-legged first round, round of 16, quarter-finals and semi-finals, followed by a single-match final."),
+            _("Requires all 27 qualification places to be filled."),
+            _("Configurable domestic qualification and automatic qualification from available regional cups."),
+        ),
+        -14: (
+            _("36 clubs. League phase with separate MLS and Liga MX standings, followed by quarter-finals, semi-finals, third-place match and final."),
+            _("Optional competition. Requires MLS and Liga MX."),
+            _("Automatic annual qualification of 18 MLS clubs and 18 Liga MX clubs."),
+        ),
+        -15: (
+            _("20 clubs. Four groups of five, followed by quarter-finals, semi-finals, play-ins and final."),
+            _("Optional competition. Requires 20 configured qualification places."),
+            _("Configurable qualification from eligible Central American leagues. Six clubs qualify for Champions Cup when available."),
+        ),
+        -13: (
+            _("10 clubs. Two groups of five, followed by semi-finals, third-place match and final."),
+            _("Optional competition. Requires 10 configured qualification places."),
+            _("Configurable qualification from eligible Caribbean leagues. Three clubs qualify for Champions Cup when available."),
+        ),
+    }.get(number)
+
+
 INFORMATION = {
     "generated": generated_information,
     "uefa": uefa_information,
@@ -302,6 +355,7 @@ INFORMATION = {
 def information(c, recipe, plan=None):
     supercup = c.information in ("native-super", "recopa", "caf-super")
     status = _("Depends on configured places. Check the current plan to see whether it is generated.")
+    concacaf_info = concacaf_information(c.number) if c.confederation == 6 and c.storage == "generated" else None
     if c.storage == "game":
         status = _("Available in the selected game's tables.") if c.available else _("Not found in the selected game's tables; identity editing is unavailable.")
     elif c.storage == "uecl":
@@ -310,7 +364,10 @@ def information(c, recipe, plan=None):
         status = _("Disabled; its name and logo are retained.")
     elif c.information == "recopa" and (not modern(recipe) or not recipe.get("samerica_super_cup", True)):
         status = _("Unavailable in the selected mode or disabled by existing world settings.")
-    format_text = INFORMATION[c.information](c, recipe)
+    if concacaf_info:
+        format_text, status, qualification = concacaf_info
+    else:
+        format_text = INFORMATION[c.information](c, recipe)
     if c.information in ("native", "native-super", "afc-elite") and c.native_stages:
         kinds = {1: _("Qualifying"), 2: _("Group stage"), 3: _("Knockout")}
         source = "; ".join(_("%s: table limit %d clubs (regulation %d)") %
@@ -326,7 +383,9 @@ def information(c, recipe, plan=None):
                ("Source", _("Original game competition") if c.storage == "game" else _("Generated with the world")),
                ("Format and stages", format_text),
                ("Availability", status)]
-    if c.targets:
+    if concacaf_info:
+        details.append(("Qualification overview", qualification))
+    elif c.targets:
         details.append(("Qualification overview", _("Explicit configured rows pointing to this competition: %d. Inherited places, automatic fill and capacity limits are resolved by the current plan. Edit places through the existing league tools.") % configured_places(recipe, c.targets)))
     elif supercup:
         details.append(("Qualification overview", _("Participants are the winners of the corresponding competitions.")))
@@ -335,6 +394,12 @@ def information(c, recipe, plan=None):
     if plan is not None:
         if plan.get("error"):
             details.append(("Current plan", _("The plan could not be completed: %s") % plan["error"]))
+        elif (access_key := "champions_cup" if c.number == B.concacaf.TARGET else c.visibility_setting) in plan.get("concacaf_access", {}):
+            cup = plan["concacaf_access"][access_key]
+            text = _("Ready to build.") if cup["ready"] else _("Not generated by the current plan.")
+            if cup.get("configured") is not None:
+                text += " " + _("Configured: %s. Required: %s.") % (cup["configured"], cup["required"])
+            details.append(("Current plan", " ".join([text, *cup["errors"]])))
         elif c.storage == "generated":
             cup = plan["cups"].get(c.number)
             if cup is None:
@@ -361,8 +426,14 @@ def plan_summary(recipe, base):
     """Use the actual builder on demand, retaining only a tiny display summary."""
     try:
         plan = B.plan(recipe, base)
-        return {"cups": {c["number"]: {"participants": len(c.get("entry") or []), "groups": c.get("groups", 0)}
-                         for c in plan.get("ccups") or []},
+        cups = {c["number"]: {"participants": c.get("participants", len(c.get("entry") or [])), "groups": c.get("groups", 0)}
+                for c in plan.get("ccups") or []}
+        if ((plan.get("concacaf") or {}).get("modules") or {}).get("caribbean_cup"):
+            import caribbean
+            caribbean.sources(plan["concacaf"])
+            cups[-13] = {"participants": 10, "groups": 2}
+        return {"cups": cups,
+                "concacaf_access": (plan.get("concacaf_integration") or {}).get("access", {}),
                 "uefa_rounds": sorted(B.qual_rounds(plan))}
     except (B.BuildError, OSError, ValueError, SystemExit) as exc:
         return {"error": str(exc)}

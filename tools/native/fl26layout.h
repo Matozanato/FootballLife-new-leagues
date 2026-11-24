@@ -55,6 +55,15 @@ LAY_CACHED(lay_fans,     0x0cd1691, "\x8b\x9a",         2, 0x1798b8cu)
 LAY_CACHED(lay_regcap,   0x14b87dd, "\x41\xbe",         2, 600u)
 LAY_CACHED(lay_fixcap,   0x14bba84, "\xbe",             1, 8000u)
 
+/* Read the original start date, never the mutable current/target dates. */
+static uint32_t lay_career_start(void)
+{
+  static uint32_t offset;
+  if (!offset)
+    offset=lay_read(0x126979a, "\x8b\x86", 2, 0);
+  return offset;
+}
+
 /* the calendar's day: 365 days of one size each between the calendar and today */
 static uint32_t lay_day_size(void) { return (lay_today() - lay_calendar()) / 365; }
 

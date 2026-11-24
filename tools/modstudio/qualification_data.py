@@ -16,6 +16,8 @@ from . import filecache
 from .i18n import _, tr
 
 ROOTS = ("uefa_rank", "uefa_off", "uefa_seed")
+CONCACAF_ACCESS = {"central_american_cup": "regional_access", "caribbean_cup": "regional_access",
+                  "round_of_16": "champions_access", "round_one": "champions_access"}
 TARGETS = {2: (0, 10, 1, 11, 2, 12), 4: (3, 17, 16, 9, 19),
            3: (5, 8, 15), 5: (6, 7), 6: (13,), 7: (14,)}
 MODERN_TOTALS = {3: 26, 17: 13, 16: 6, 18: 0, 9: 12, 19: 32}
@@ -59,6 +61,7 @@ def table_signature(base):
 
 def keys(recipe):
     result = {("qualification", "root", k) for k in ROOTS}
+    result.update(("qualification", "concacaf", k) for k in CONCACAF_ACCESS)
     result.update(("qualification", "first", k) for k, _title in B.EUROPE_FIRST)
     result.update(("qualification", "league", L["name"]) for L in recipe.get("leagues") or [] if L.get("name"))
     for kind, root in (("game", "game_europe"), ("association", "conmebol_associations")):
@@ -68,6 +71,10 @@ def keys(recipe):
 
 def state(recipe, key):
     _namespace, kind, name = key
+    if kind == "concacaf":
+        branch = B.concacaf.integration_draft(recipe)[CONCACAF_ACCESS[name]]
+        value = (name in branch, deepcopy(branch.get(name)))
+        return value, value
     if kind == "league":
         league = next((L for L in recipe.get("leagues") or [] if L.get("name") == name), None)
         if league is None:
@@ -90,6 +97,11 @@ def write(recipe, key, value):
         field = "europe"
     elif kind == "root":
         node, field = recipe, name
+    elif kind == "concacaf":
+        from .competition_catalog import concacaf_draft
+        config = concacaf_draft(recipe)
+        recipe["concacaf"] = config
+        node, field = config[CONCACAF_ACCESS[name]], name
     else:
         root = {"game": "game_europe", "association": "conmebol_associations", "first": "europe_first"}[kind]
         if not present and not recipe.get(root):
@@ -205,8 +217,68 @@ def sources(recipe, base, fallback_confeds=None):
     return tuple(result)
 
 
+def concacaf_destinations(recipe, source=None):
+    config = B.concacaf.integration_draft(recipe)
+    if source and (source.kind == "association" or source.confederation != 6):
+        return []
+    choices = []
+    aliases = recipe.get("ccup_names") or {}
+    name = aliases.get(str(B.concacaf.TARGET)) or B.concacaf.NAME
+    choices.extend([(B.concacaf.ROUND_OF_16, _("%s (Round of 16)") % name),
+                    (B.concacaf.TARGET, _("%s (Round One)") % name)])
+    for number in (-15, -13):
+        key = B.concacaf.ACCESS_TARGETS[number]
+        if config["modules"][key] and (not source or B.concacaf.region(source.country) == B.concacaf.PATH_REGION[key]):
+            choices.append((number, aliases.get(str(number)) or B.concacaf.CUP_NAMES[number]))
+    return choices
+
+
+def concacaf_rows(source, recipe):
+    config = B.concacaf.integration_draft(recipe)
+    rows = []
+    for target, key in B.concacaf.ACCESS_TARGETS.items():
+        branch = CONCACAF_ACCESS[key]
+        for allocation in config[branch].get(key, ()):
+            ref = str(allocation["source"])
+            if ref == str(source.key):
+                rows.append([allocation["rank"], target])
+            elif source.cup and ref == "cup:" + str(source.key):
+                rows.append([0, target])
+    return rows
+
+
+def concacaf_changes(source, recipe, rows):
+    config = B.concacaf.integration_draft(recipe)
+    changes = {}
+    for target, key in B.concacaf.ACCESS_TARGETS.items():
+        branch = CONCACAF_ACCESS[key]
+        quantity = "rank"
+        old = config[branch].get(key, [])
+        refs = {str(source.key), "cup:" + str(source.key)}
+        keep = [row for row in old if str(row["source"]) not in refs]
+        own = [{"source": source.key if value else "cup:" + str(source.key),
+                quantity: value or 1} for value, destination in rows if destination == target]
+        if [row for row in old if str(row["source"]) in refs] != own:
+            changes["qualification", "concacaf", key] = (bool(keep or own), keep + own)
+    return changes
+
+
+def concacaf_totals(access):
+    """Format the same validated access report used by the builder."""
+    if "champions_cup" not in access:
+        return {}
+    values = {key: (cup["configured"], cup["required"]) for key, cup in access.items()
+              if key in B.concacaf.REGIONAL_TOTALS}
+    champions = access["champions_cup"]
+    values.update({key: (champions["configured"][key], champions["required"][key])
+                   for key in B.concacaf.ACCESS_STAGES})
+    return values
+
+
 def destinations(conf, recipe):
     ids = TARGETS[conf]
+    if conf == 6:
+        return concacaf_destinations(recipe)
     if conf == 4 and not modern(recipe):
         # classic: the Libertadores, its qualifying round and the classic Copa Sudamericana
         # (mato 08.11.: a classic world keeps its Sudamericana)
@@ -229,6 +301,8 @@ def touches_native(rows):
 
 
 def effective(source, recipe):
+    if source.confederation == 6 and source.kind != "association":
+        return concacaf_rows(source, recipe)
     present, rows = state(recipe, source.draft_key)[0]
     if source.kind != "game":
         return list(rows or [])
@@ -241,6 +315,8 @@ def effective(source, recipe):
 
 
 def editable_rows(source, recipe):
+    if source.confederation == 6:
+        return effective(source, recipe)
     present, rows = state(recipe, source.draft_key)[0]
     return list(rows or []) if present or source.kind != "game" else effective(source, recipe)
 
@@ -271,6 +347,12 @@ def inherited_text(source, recipe):
 
 
 def row_errors(source, rows, recipe):
+    if source.confederation == 6:
+        allowed = dict(concacaf_destinations(recipe, source))
+        errors = B.europe_problems(source.clubs, rows, source.cup, competitions=B.concacaf.ACCESS_TARGETS)
+        if any(p[1] not in allowed for p in rows):
+            errors.append(_("Stored destination is retained, but unavailable for new assignments in this mode."))
+        return errors
     errors = B.europe_problems(source.clubs, rows, source.cup)
     allowed = dict(destinations(source.confederation, recipe))
     for row in rows:
@@ -311,11 +393,16 @@ def allocation_counts(all_sources, recipe, conf):
     return counts, notes
 
 
-def overview(all_sources, recipe, conf):
-    counts, notes = allocation_counts(all_sources, recipe, conf)
+def overview(all_sources, recipe, conf, concacaf_access=None):
+    counts, notes = (Counter(), []) if conf == 6 else allocation_counts(all_sources, recipe, conf)
     allowed = dict(destinations(conf, recipe))
     names = dict(W.COMPETITIONS)
-    if conf == 4 and modern(recipe):
+    if conf == 6:
+        values = concacaf_totals(concacaf_access or {})
+        lines = ["%s: %d / %d" % (_(name), *values[B.concacaf.ACCESS_TARGETS[target]])
+                 for target, name in allowed.items() if B.concacaf.ACCESS_TARGETS[target] in values]
+        lines.append(_("Champions Cup has five direct entrants and 22 Round One entrants, including places supplied by available regional cups."))
+    elif conf == 4 and modern(recipe):
         lines = ["%s: %d / %d — %s" % (_(names[c]), counts[c], want,
                  _("Complete") if counts[c] == want else _("Incomplete") if counts[c] < want else _("Excess"))
                  for c, want in MODERN_TOTALS.items()]
@@ -329,7 +416,9 @@ def overview(all_sources, recipe, conf):
     else:
         lines = ["%s: %d" % (_(names[c]), counts[c]) for c in allowed]
         for c, _n, _code, cup_conf, fill in W.CCUPS:
-            if cup_conf == conf and c in allowed:
+            if cup_conf == conf and c == B.concacaf.TARGET:
+                lines.append(_("CONCACAF Champions Cup: 27 clubs. The CONCACAF recipe and domestic results determine the field."))
+            elif cup_conf == conf and c in allowed:
                 sizes = [n for n in B.CCUP_SIZES if c not in W.CCUP_KNOCKOUT or n <= B.CCUP_KNOCKOUT_MAX]
                 lines.append(_("%s: supported fields %s; inherited fill and the current plan determine the generated field.") % (_(names[c]), "/".join(map(str, sizes))))
         if conf == 4:
@@ -400,7 +489,7 @@ def generate(recipe, all_sources, conf, ranked, excluded, sizes=None):
             return {}, [_('No supported generated field was selected.')], False
         if conf != 4:
             generated = {c for c, _n, _code, continent, _fill in W.CCUPS if continent == conf}
-            if any(c not in generated or n not in B.CCUP_SIZES or
+            if any(c == B.concacaf.TARGET or c not in generated or n not in B.CCUP_SIZES or
                    (c in W.CCUP_KNOCKOUT and n > B.CCUP_KNOCKOUT_MAX) for c, n in targets.items()):
                 return {}, [_('The selected allocation size is not supported by the existing competition.')], False
         retained = {s.draft_key: [p for p in effective(s, recipe) if int(p[1]) not in targets] for s in ranked + excluded}
@@ -512,13 +601,40 @@ def canonical_ref(ref, aliases):
     return aliases.get(key, ("unresolved", str(ref)))
 
 
+def validate_concacaf_changes(original, recipe, changes, available):
+    sources = {str(source.key): source for source in available if source.confederation == 6
+               and source.kind in ("game", "league")}
+    edited_sources = set()
+    for namespace, kind, name in changes:
+        if (namespace, kind) != ("qualification", "concacaf"):
+            continue
+        before = state(original, (namespace, kind, name))[0][1] or []
+        after = state(recipe, (namespace, kind, name))[0][1] or []
+        quantity = "rank"
+        old = Counter((str(row["source"]), row[quantity]) for row in before)
+        new = Counter((str(row["source"]), row[quantity]) for row in after)
+        edited_sources.update(ref for ref, _value in new - old)
+    errors = []
+    for ref in sorted(edited_sources):
+        is_cup = ref.startswith("cup:")
+        source = sources.get(ref[4:] if is_cup else ref)
+        if source is None or (is_cup and not source.cup):
+            errors.append(_("Unavailable qualification source: %s") % ref)
+            continue
+        prior = set(row_errors(source, concacaf_rows(source, original), original))
+        for message in row_errors(source, concacaf_rows(source, recipe), recipe):
+            if message not in prior:
+                errors.append("%s: %s" % (source.name, message))
+    return errors
+
+
 def validate_changes(original, recipe, changes, available, aliases=None):
     """Local Apply checks; incomplete global packages remain editable drafts.
 
     Stored legacy destinations are not silently migrated. New unsupported rows
     are refused; unchanged legacy rows can remain and are diagnosed by the UI.
     """
-    errors = []
+    errors = validate_concacaf_changes(original, recipe, changes, available)
     by_key = {s.draft_key: s for s in available}
     for key in changes:
         if key[0] != "qualification" or key[1] not in ("game", "league", "association"):

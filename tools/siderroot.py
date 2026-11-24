@@ -2,11 +2,25 @@
 
 Every test world is a livecpk root, and only one of them may be live at a time or the
 pesdb tables layer in an order nobody asked for.  This comments out every _FL26 root and
-uncomments (or inserts, above the first root) the one named, then prints what is active.
+uncomments (or inserts, above the first root) the one named. Use --require-livecpk for a world whose runtime depends on
+its tables being loaded. Prints what is active.
 """
-import os, sys
+import os, re, sys
 
 INI = os.path.join(os.environ.get("FL26_DIR", r"C:\Football Life 2026"), "SiderAddons", "sider.ini")
+LIVECPK = re.compile(r"^\s*livecpk\.enabled\s*=", re.I)
+
+
+def enable_livecpk(lines):
+    """Write one active setting. Listing roots does not turn on Sider's file replacement."""
+    positions = [i for i, line in enumerate(lines) if LIVECPK.match(line)]
+    if positions:
+        lines[positions[0]] = "livecpk.enabled = 1"
+        for i in reversed(positions[1:]):
+            del lines[i]
+    else:
+        section = next((i for i, line in enumerate(lines) if line.strip().lower() == "[sider]"), -1)
+        lines.insert(section + 1, "livecpk.enabled = 1")
 
 
 def main():
@@ -34,8 +48,10 @@ def main():
                 l = "#" + s
         out.append(l)
     if not found:
-        first = next(i for i, l in enumerate(out) if l.strip().startswith("cpk.root"))
+        first = next((i for i, l in enumerate(out) if l.strip().startswith("cpk.root")), len(out))
         out.insert(first, r'cpk.root = ".\livecpk\%s"' % want)
+    if "--require-livecpk" in sys.argv[2:]:
+        enable_livecpk(out)
     open(INI, "w", encoding="utf-8").write("\n".join(out) + "\n")
     print("active:", [l for l in out if l.strip().startswith("cpk.root") and "_FL26" in l])
     return 0

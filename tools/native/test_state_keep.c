@@ -111,8 +111,43 @@ static long file_size(void)
   return n;
 }
 
-int main(void)
+/* Read a preserved Pantoja journal without writing to it. The start date
+ * supplied here simulates the original date read from the loaded ML block. */
+static int replay_pantoja(const char* journal)
 {
+  if (snprintf(g_path_test,sizeof g_path_test,"%s",journal)>=(int)sizeof g_path_test)
+    return 1;
+  g_user_test=0x477401ffu;
+  g_state_test_creation=0x010107eau;
+  g_car_enabled=1;
+  go(2029,196);
+  state_sync();
+  career_mark("reload date builder");
+  expect(g_built_any==2026*365 && !g_new_career,"July 2029 reload keeps January 2026 creation");
+  expect(!final_of(CAR_GROUP_SNAPSHOT) ||
+         !car_draw_current(game_date()-(abs_day()-final_of(CAR_GROUP_SNAPSHOT)->day),game_date()),
+         "the later July draw is invisible from the older checkpoint");
+  go(2029,CAR_FILL);
+  const uint16_t regs[]={220,326,331,463,488};
+  car_config cfg={.n=5};
+  cq_source pools[CAR_SOURCES]={{0}};
+  for (int i=0;i<5;i++) {
+    cfg.sources[i].quota=i<3 ? 2 : 1;
+    final_t* f=final_of(CAR_DOMESTIC(regs[i]));
+    if (!f || !cq_result_fresh(game_date()-(abs_day()-f->day),game_date(),game_date())) return 1;
+    pools[i].n=f->n;
+    memcpy(pools[i].club,f->club,f->n*sizeof f->club[0]);
+  }
+  uint32_t field[10];
+  expect(car_select(&cfg,pools,field) && cq_unique(field,10),"ten places from completed domestic rankings");
+  expect((field[2]>>14)==73167 && (field[3]>>14)==73172,
+         "Dominican places go to 73167 and 73172");
+  return fails!=0;
+}
+
+int main(int argc, char** argv)
+{
+  if (argc==2) return replay_pantoja(argv[1]);
   char tmp[MAX_PATH];
   GetTempPathA(sizeof tmp, tmp);
   snprintf(g_path_test, sizeof g_path_test, "%sfl26swiss-state-test-%lu.bin", tmp, GetCurrentProcessId());
@@ -275,6 +310,10 @@ int main(void)
     go(2027, 220);
     any_final_kept();
     expect(!g_new_career, "the same career a year on: not new");
+    expect(g_built_any == 2026 * 365, "career creation survives the sporting journal age limit");
+    career_mark("reload date builder");
+    expect(!g_new_career && g_built_any == 2026 * 365,
+           "a reload date-builder call cannot replace a known creation marker");
 
     /* B289: loaded past its first summer, but within BUILT_SUMMER days of the build */
     restart();
@@ -372,6 +411,222 @@ int main(void)
     expect(s62 != 0, "no team array to look at: taken as before");
     free(arr);
   }
+
+  printf("\nA January career which never qualified reloads before Round One\n");
+  restart();
+  DeleteFileA(g_path_test);
+  g_user_test = USER_A;
+  go(2026, 0);
+  g_new_career = 1;
+  g_built_gdate = game_date();
+  state_store();
+  restart();
+  go(2026, 2);
+  final_t* previous = final_of(CQ_SNAPSHOT);
+  expect(!previous && cq_first_edition(g_built_any, cq_edition_fill(game_date(), CQ_JANUARY_FILL)),
+         "the persisted January build date allows qualification for its first February");
+  restart();
+  DeleteFileA(g_path_test);
+  go(2026, 181);
+  g_new_career = 1;
+  g_built_gdate = game_date();
+  state_store();
+  restart();
+  go(2027, 1);
+  state_sync();
+  expect(cq_first_edition(g_built_any,cq_edition_fill(game_date(),CQ_JANUARY_FILL)),
+         "the persisted July build date allows the following January's first edition");
+
+  printf("\nCONCACAF qualification results keep completion dates across seasons\n");
+  restart();
+  DeleteFileA(g_path_test);
+  g_user_test = USER_A;
+  go(2025, 364);
+  keep_table(CQ_RESULT(51), 500, 30);
+  state_store();
+  restart();
+  go(2026, 350);
+  keep_table(CQ_RESULT(52), 530, 30);
+  keep_winner(CQ_RESULT(54), CLUB(500));
+  state_store();
+  restart();
+  go(2027, 1);
+  int gd = game_date(), fill = cq_edition_fill(gd, CQ_JANUARY_FILL), now = abs_day();
+  final_t* ranking = final_of(CQ_RESULT(51));
+  final_t* december = final_of(CQ_RESULT(52));
+  cupwin_t* winner = cupwin_of(CQ_RESULT(54));
+  expect(!ranking || !cq_result_fresh(gd-(now-ranking->day),fill,gd),
+         "a result from two calendar years ago cannot qualify clubs again");
+  expect(winner && cq_result_fresh(gd-(now-winner->day),fill,gd),
+         "a completed December result is fresh the following January after reload");
+  expect(december && december->club[0]==CLUB(530) &&
+         cq_result_fresh(gd-(now-december->day),fill,gd),
+         "the completed December league ranking reloads for January qualification");
+
+  printf("\nCONCACAF qualification snapshot across reload and July\n");
+  restart();
+  DeleteFileA(g_path_test);
+  g_user_test = USER_A;
+  go(2027, 1);
+  keep_table(CQ_SNAPSHOT, 500, 27);
+  state_store();
+  restart();
+  go(2027, 40);
+  final_t* edition = final_of(CQ_SNAPSHOT);
+  expect(edition && cq_snapshot_valid(edition->club, edition->n,
+         game_date()-(abs_day()-edition->day), game_date(), cq_edition_fill(game_date(),CQ_JANUARY_FILL),33),
+         "all 27 qualifiers are retained after a restart into Round One");
+  expect(edition && edition->club[0] == CLUB(500) && edition->club[26] == CLUB(526),
+         "the five-bye-first snapshot retains its original order");
+  g_cq_enabled = 1;
+  g_state_test_creation = 0x010107eau;
+  g_cq.fill = CQ_JANUARY_FILL; g_cq.days[0] = 33;
+  char view[2048];
+  for (int page=0; page<3; page++) {
+    int first, end, lines=0;
+    expect(cq_view_page(page,&first,&end), "participant page exists");
+    int n = fl26_swiss_concacaf_participants(page,view,sizeof view);
+    for (int i=0;i<n;i++) lines += view[i]=='\n';
+    expect(lines==end-first && lines==(page ? 11 : 5), "the page shows its confirmed entrants");
+  }
+  expect(fl26_swiss_concacaf_participants(3,view,sizeof view)==0, "invalid page is empty");
+  go(2027, 182);
+  edition = final_of(CQ_SNAPSHOT);
+  expect(fl26_swiss_concacaf_participants(0,view,sizeof view)==0,
+         "July must not show the old edition's participants");
+  g_cq_enabled = 0;
+  expect(!edition || !cq_snapshot_valid(edition->club, edition->n,
+         game_date()-(abs_day()-edition->day), game_date(), cq_edition_fill(game_date(),CQ_JANUARY_FILL),33),
+         "July rejects the previous edition's field");
+  restart();
+  go(2027, 0);
+  expect(!final_of(CQ_SNAPSHOT), "loading before qualification cannot see the future snapshot");
+  go(2028, 1);
+  edition = final_of(CQ_SNAPSHOT);
+  expect(!edition || !cq_snapshot_valid(edition->club, edition->n,
+         game_date()-(abs_day()-edition->day), game_date(), cq_edition_fill(game_date(),CQ_JANUARY_FILL),33),
+         "the next January needs a new snapshot");
+  keep_table(CQ_SNAPSHOT, 600, 27);
+  state_store();
+  restart();
+  go(2028, 40);
+  edition = final_of(CQ_SNAPSHOT);
+  expect(edition && edition->club[0]==CLUB(600), "the leap-year edition reloads its own field");
+  unsigned char fixture[12]={0};
+  fixture[8]=0xec; fixture[9]=0x07; fixture[10]=3; fixture[11]=3;
+  expect(ko_mdate(fixture)==2028*365+61, "FL27 match dates use March 3 even in a leap year");
+  restart();
+  DeleteFileA(g_path_test);
+  go(2026,338);
+  keep_table(CAR_PODIUM,700,4);
+  state_store();
+  restart();
+  go(2027,1);
+  final_t* podium=final_of(CAR_PODIUM);
+  expect(podium && podium->n==4 && podium->club[0]==CLUB(700) &&
+         car_previous_year(game_date()-(abs_day()-podium->day),game_date()),
+         "Caribbean podium survives restart and is available in the following January");
+  go(2028,1);
+  podium=final_of(CAR_PODIUM);
+  expect(!podium || !car_previous_year(game_date()-(abs_day()-podium->day),game_date()),
+         "the old Caribbean podium cannot feed another January edition");
+
+  printf("\nCentral American Cup domestic qualification through July and reload\n");
+  restart();
+  g_ca_dynamic=1;
+  g_state_test_creation=0x010107eau;
+  g_ca_sources[4].calendar=1;
+  go(2026,350);
+  keep_table(CA_ANNUAL(4,2026),880,8);
+  state_store();
+  go(2027,170);
+  for (int i=0;i<CA_ASSOCIATIONS;i++)
+    if (i!=4) keep_table(CA_ANNUAL(i,2026),800+10*i,8);
+  state_store();
+  uint32_t expected[CA_FIELD]={0}, replay[CA_FIELD]={0};
+  for (int reload=0;reload<2;reload++) {
+    if (reload) restart();
+    go(2027,CA_DRAW);
+    ca_pool pool[CA_ASSOCIATIONS]={{0}};
+    for (int i=0;i<CA_ASSOCIATIONS;i++) {
+      final_t* f=ca_annual_result(i,game_date(),abs_day(),2026*365,game_date());
+      expect(f && f->n==8,"completed annual rank available at the July draw");
+      if (f) {
+        pool[i].n=f->n;
+        memcpy(pool[i].league,f->club,f->n*sizeof *f->club);
+      }
+    }
+    ca_entry field[CA_FIELD];
+    expect(ca_allocate(pool,field) &&
+           ca_draw_groups(field,2027,reload ? replay : expected),"20 clubs drawn from retained rankings");
+  }
+  expect(!memcmp(expected,replay,sizeof expected),"identical draw after reloading the domestic result cache");
+  expect(!ca_annual_result(0,game_date(),abs_day(),2026*365,2027*365+169),
+         "a result completed after the requested cutoff is excluded");
+  expect(!ca_annual_result(0,game_date(),abs_day(),2027*365+171,game_date()),
+         "a result completed before career creation is excluded");
+  printf("\nCentral American Cup sporting journal\n");
+  restart();
+  DeleteFileA(g_path_test);
+  g_ca_ko=701;
+  uint16_t sporting=CQ_CENTRAL_KEEP(g_ca_ko);
+  go(2026,338);
+  keep_table(CAR_PODIUM,700,4);
+  go(2026,CQ_CENTRAL_FINAL_DAY);
+  keep_table(sporting,920,6);
+  state_store();
+  long published=file_size();
+  state_store();
+  expect(file_size()==published,"repeated callbacks leave one checksummed sporting record");
+  restart();
+  go(2026,CQ_CENTRAL_FINAL_DAY-1);
+  expect(!final_of(sporting),"a checkpoint before the final cannot see the result");
+  restart();
+  go(2027,1);
+  final_t* record=final_of(sporting);
+  expect(record && record->n==6 && record->club[0]==CLUB(920) && record->club[5]==CLUB(925),
+         "sporting placements survive a January reload");
+  expect(final_of(CAR_PODIUM) && final_of(CAR_PODIUM)->n==4,
+         "the same journal still loads the unrelated Caribbean result");
+  state_store();
+  expect(file_size()==published,"reload does not duplicate publication");
+  cq_source central={.kind=CQ_CENTRAL,.reg=701};
+  expect(!ca_feeder(&central,game_date(),game_date(),2026*365,1) && !central.n,
+         "same-club journal without native bracket cannot feed the loaded career");
+  restart();
+  go(2027,182);
+  record=final_of(sporting);
+  expect(record && cq_central_result(2026,game_date()-(abs_day()-record->day),
+         game_date(),record->club,record->n),"completed record survives July rollover and a reload");
+  FILE* damaged=fopen(g_path_test,"rb+");
+  expect(damaged!=0,"open isolated test journal for corruption test");
+  if (damaged) {
+    fseek(damaged,8+sizeof(state_rec_t)+offsetof(state_rec_t,check),SEEK_SET);
+    int byte=fgetc(damaged);
+    fseek(damaged,-1,SEEK_CUR);
+    fputc(byte^1,damaged);
+    fclose(damaged);
+  }
+  restart();
+  go(2027,1);
+  expect(!final_of(sporting),"checksum mismatch rejects the sporting record");
+  expect(final_of(CAR_PODIUM)!=0,"a corrupt Central row does not hide the Caribbean result");
+  DeleteFileA(g_path_test);
+  restart();
+  go(2026,CQ_CENTRAL_FINAL_DAY);
+  keep_table(sporting,920,5);
+  state_store();
+  restart();
+  go(2027,1);
+  expect(!final_of(sporting),"valid checksum cannot make an incomplete result eligible");
+  damaged=fopen(g_path_test,"rb+");
+  if (damaged) {
+    fputs("FL26SST2",damaged);
+    fclose(damaged);
+  }
+  expect(damaged!=0 && !state_open(g_path_test,0) && !state_open(g_path_test,1),
+         "unknown journal version is neither read nor replaced");
+  g_ca_dynamic=0;
 
   DeleteFileA(g_path_test);
   printf(fails ? "\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);

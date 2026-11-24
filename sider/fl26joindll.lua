@@ -102,7 +102,10 @@ local function read_world(ctx)
   local f = io.open(path, "r")
   if not f then return nil end
   local leagues, regular, groups, seasons, gsupers = {}, {}, {}, {}, {}
+  local cup_rollback = false
   for line in f:lines() do
+    if line:match("^%s*leagues_probe%s+[12]%s") or line:match("^%s*central_probe%s+[1234]%s")
+        or line:match("^%s*caribbean%s+[123]%s") then cup_rollback = true end
     -- `gsuper <reg> league= cup= region= conf=`: a super cup Build gave a league of the game,
     -- which has no league line of its own to carry it as scup=
     local gs, grest = line:match("^%s*gsuper%s+(%d+)(.*)$")
@@ -131,7 +134,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, regular, groups, seasons, gsupers
+  return leagues, regular, groups, seasons, gsupers, cup_rollback
 end
 
 -- Shipped regions whose season is the calendar year (season type 1 in the exe's region table
@@ -262,7 +265,7 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_join_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[8]")
 
-  local world, regular, groups, seasons, gsupers = read_world(ctx)
+  local world, regular, groups, seasons, gsupers, cup_rollback = read_world(ctx)
   SEASONS = seasons or {}
 
   BUILDER_EXTRA = {}
@@ -359,7 +362,17 @@ function m.init(ctx)
     log(string.format("fl26joindll: world file -- %d leagues%s%s", #IDS - phases + shown,
                       phases > 0 and string.format(" (+%d split phase(s) registered with them)", phases) or "",
                       shown > 0 and string.format(", %d exhibition only (not registered)", shown) or ""))
-    if #IDS == 0 then log("fl26joindll: the world has no leagues -- nothing to register"); return end
+    if #IDS == 0 then
+      if cup_rollback then
+        local entry = ffi.C.GetProcAddress(h, "fl26_join_install_rollback")
+        if entry == nil then error("fl26joindll: cup rollback requires the matching DLL") end
+        local base = ffi.cast("uint64_t", ffi.C.GetModuleHandleA(nil))
+        local status = tonumber(ffi.cast("int (*)(uint64_t)", entry)(base))
+        if status ~= 0 then error("fl26joindll: cup rollback hook failed (" .. status .. ")") end
+        log("fl26joindll: installed cup rollback with zero added leagues")
+      end
+      return
+    end
   end
   idbuf = ffi.new("uint16_t[?]", #IDS)
   for i, v in ipairs(IDS) do idbuf[i - 1] = v end

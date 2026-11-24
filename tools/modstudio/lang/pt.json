@@ -2202,7 +2202,7 @@
   "Association rank %d": "Posição no país %d",
   "Association ranks resolve to eligible clubs at runtime, not league positions or team IDs. Available clubs: %d.": "As posições no país viram clubes elegíveis durante o jogo, não posições no campeonato nem IDs de time. Clubes disponíveis: %d.",
   "Association without playable league": "Associação sem campeonato jogável",
-  "Auto set continental places": "Definir vagas continentais automaticamente",
+  "Auto-assign qualification places": "Definir vagas continentais automaticamente",
   "Available clubs": "Clubes disponíveis",
   "Available in the selected game's tables.": "Disponível nas tabelas do jogo selecionado.",
   "Available: %d/10": "Disponíveis: %d/10",

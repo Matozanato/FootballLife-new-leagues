@@ -1,5 +1,8 @@
 # Testing
 
+For CONCACAF, use the [validation ledger](leagues-cup-ui-validation.md) to distinguish native FL27 evidence from offline coverage. `test_concacaf_integration.py` exercises the 16 generation cases on temporary copies of table fixtures supplied through `CONCACAF_TEST_BASE`. `test_concacaf_auto_allocation.py` exercises all eight regional combinations and the shared Qualification summary. Set `QT_QPA_PLATFORM=offscreen` for Qt tests. Keep the current native harness builds outside the source tree; never point Build regression tests at a production game folder or a save. Archive logs and test inputs separately from the proposed PR.
+
+
 There are four layers. Small Python tests check one rule each. `regress018.py` builds a set of
 test recipes and checks the worlds without the game. `test_modstudio_build.py` runs Build and
 install through Mod Studio itself, on a PC set up like a player's. Only the game itself proves
@@ -7,6 +10,32 @@ that a world plays. Run all four before a release.
 
 The tests need no framework. Each is a script with plain `assert`s. It stops at the first
 failure, and most print an `ok` line per check. Run them from the repository root.
+
+## CONCACAF source checkpoint
+
+Build the native runtime in an ignored local output directory. Keep the paired
+Swiss and Join builds and the loader used for game testing with that run's
+evidence. The tracked upstream DLLs and import libraries stay at their upstream
+versions in a source checkpoint.
+
+Run the Champions Cup and Caribbean Python tests with the unpacked FL27 database
+and the locally built Swiss DLL. Exercise the native qualification, calendar,
+registry, exact teardown and journal harnesses alongside the shared UEFA and
+CONMEBOL regressions. Recipe regression worlds and offline Mod Studio builds
+use scratch installations and fake save folders. A live replay needs its own
+profile, checkpoint and corresponding sporting journal. See the [Champions Cup
+runtime notes](concacaf.md#career-identity-and-journal-limits) for checkpoint
+and same-club journal limits and the [Caribbean Cup notes](caribbean.md) for the
+validated August 2029 transition.
+
+The source review passed the 23 `regress018.py` recipes against the unpacked FL27
+tables, the offscreen Mod Studio Build and Install test with a scratch pack, and
+the native UEFA qualifying retention and CONMEBOL zone checks. The separate
+CONMEBOL modern build checks also verified that an AFC knockout kept its rule
+settings. Optional Lua and executable-emulation coverage depends on the local
+test packages and Zig. Review the individual test logs before treating a skip
+or missing fixture as a pass. The standalone Swiss draw stress test uses
+unchanged upstream draw inputs and can report unresolved pairing conflicts.
 
 ## CUPS branch: final pre-PR validation
 

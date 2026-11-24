@@ -5,7 +5,9 @@
  *                                probe.fl26x.moved through fl26_u8move, read it back
  *
  * FL26_TEST_DOCS is the Documents folder; sys.ini is read next to this exe, as next to the game's. */
+#ifndef FL26_SAVEDIR_REAL_FL27
 #define FL26_SAVEDIR_TEST
+#endif
 #include "fl26savedir.h"
 #include <string.h>
 

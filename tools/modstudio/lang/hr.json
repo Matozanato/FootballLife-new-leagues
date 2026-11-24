@@ -2201,7 +2201,7 @@
   "Association rank %d": "Rang u zemlji %d",
   "Association ranks resolve to eligible clubs at runtime, not league positions or team IDs. Available clubs: %d.": "Rangovi u zemlji tijekom igre postaju klubovi koji ispunjavaju uvjete, a ne pozicije u ligi ni ID-evi klubova. Dostupni klubovi: %d.",
   "Association without playable league": "Savez bez igrive lige",
-  "Auto set continental places": "Automatski postavi kontinentalna mjesta",
+  "Auto-assign qualification places": "Automatski postavi kontinentalna mjesta",
   "Available clubs": "Dostupni klubovi",
   "Available in the selected game's tables.": "Dostupno u tablicama odabrane igre.",
   "Available: %d/10": "Dostupno: %d/10",

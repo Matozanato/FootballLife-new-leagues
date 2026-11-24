@@ -165,7 +165,8 @@ def source(m):
     it, and that folder won: four modules (fl26joindll, fl26swiss, fl26chain, fl26clubs) went
     out as 0.1.3.1's Lua next to 0.1.5.5's DLLs, and the world's season lines, split phases and
     built cups never reached the game (GitHub #69)."""
-    if is_public(REPO):
+    # These loaders must match this checkout's cup contracts and sandbox fix.
+    if m in ("fl26swiss", "fl26joindll", "fl26catlist") or is_public(REPO):
         roots = [REPO]
     else:
         roots = [PUBLIC, REPO] if os.path.isdir(os.path.join(PUBLIC, "sider")) else [REPO]
@@ -252,6 +253,9 @@ def build(out, log=print):
             p = os.path.join(mods, junk)
             if os.path.exists(p):
                 os.remove(p)
+    from mkconcacaf import check_runtime
+    check_runtime(os.path.join(mods, "fl26swiss.dll"), os.path.join(mods, "fl26swiss.lua"),
+                  caribbean=True, leagues=True, caribbean_access=True, central_access=True, champions_access=True)
     for name in PREBUILT:
         shutil.copy2(os.path.join(HERE, "native", name + ".dll"), os.path.join(mods, name + ".dll"))
     face_pack(out, log)

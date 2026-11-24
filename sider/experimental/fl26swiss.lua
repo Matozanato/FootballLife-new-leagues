@@ -71,7 +71,10 @@ local UECL = { 4071, 4145, 320, 4124, 403, 242, 5845, 174, 5196, 270, 5202, 2067
 local ACCESS = nil
 
 local dll_log, dll_stats, dll_ko_tick, logbuf, statbuf, regbuf
-local ticks = 0
+local ticks, cq_frames = 0, 0
+local cq_drain = false
+local cq_participants, cq_buf
+local cq_page = 0
 
 local function drain(reason)
   if not dll_log then return end
@@ -97,8 +100,30 @@ function m.make_key(ctx, filename)
   return nil
 end
 
+function m.display_frame(ctx)
+  cq_frames = cq_frames + 1
+  if cq_frames % 120 == 0 then drain(nil) end
+end
+
+function m.overlay_on(ctx)
+  local title = "CONCACAF Champions Cup"
+  if not cq_participants then return title .. "\nF8: qualification diagnostics" end
+  local n = tonumber(cq_participants(cq_page, cq_buf, 2048))
+  if n <= 0 then return title .. "\nNo confirmed field for this edition.\nF8: qualification diagnostics" end
+  local headings = { "5 direct Round-of-16 entrants", "Round One entrants 1-11", "Round One entrants 12-22" }
+  return title .. " | " .. headings[cq_page + 1] .. "\n" ..
+    ffi.string(cq_buf, n) .. "Left/Right: change list | F8: qualification diagnostics"
+end
+
 function m.key_down(ctx, vkey)
-  if vkey == 0x77 then drain("F8 report") end      -- F8
+  if cq_participants and (vkey == 0x25 or vkey == 0x27) then
+    cq_page = (cq_page + (vkey == 0x25 and 2 or 1)) % 3
+    return
+  end
+  if vkey ~= 0x77 then return end
+  -- Retry through the existing loader tick, then drain its result.
+  if cq_drain and dll_ko_tick then dll_ko_tick() end
+  drain("F8 report")
 end
 
 -- First-season list (optional): modules\fl26swiss-first.txt. While no final table has been kept
@@ -150,11 +175,54 @@ local function read_world(ctx)
   local f = io.open(path, "r")
   if not f then return nil end
   local leagues, splits, uefa, ccups, dlike, qrounds, lpres = {}, {}, {}, {}, {}, {}, {}
+  local cq, caribbean, central_probe, leagues_probe
   confed = {}
   seasonsum = {}
   gsplits = {}
   CUPDRAW = { all = 1 }
   for line in f:lines() do
+    if line:match("^%s*leagues_probe%s") then
+      local version, data = line:match("^%s*leagues_probe%s+([12])%s+data=([%d,]+)%s*$")
+      if not data or leagues_probe then error("Leagues Cup prototype: invalid contract") end
+      leagues_probe = {tonumber(version)}
+      for value in data:gmatch("%d+") do
+        local n = tonumber(value)
+        if n >= 262143 then error("Leagues Cup prototype: contract field out of range") end
+        leagues_probe[#leagues_probe + 1] = n
+      end
+    end
+    if line:match("^%s*central_probe%s") then
+      local version, data = line:match("^%s*central_probe%s+([1234])%s+data=([%d,]+)%s*$")
+      if not data or central_probe then error("Central American Cup prototype: invalid contract") end
+      central_probe = {tonumber(version)}
+      for value in data:gmatch("%d+") do
+        local n = tonumber(value)
+        if n >= 262143 then error("Central American Cup prototype: contract field out of range") end
+        central_probe[#central_probe + 1] = n
+      end
+    end
+    if line:match("^%s*caribbean%s") then
+      local version, data = line:match("^%s*caribbean%s+([123])%s+data=([%d,]+)%s*$")
+      if not data or caribbean then error("Caribbean Cup: invalid or duplicate contract") end
+      caribbean = {}
+      for v in data:gmatch("%d+") do
+        local n = tonumber(v)
+        if n > 65535 then error("Caribbean Cup: contract field out of range") end
+        caribbean[#caribbean + 1] = n
+      end
+      if caribbean[1] ~= tonumber(version) then error("Caribbean Cup: contract versions disagree") end
+    end
+    local cv, cd = line:match("^%s*concacaf%s+(%d+)%s+data=([%d,]+)%s*$")
+    if line:match("^%s*concacaf%s") then
+      if not cv or (tonumber(cv) ~= 1 and tonumber(cv) ~= 2 and tonumber(cv) ~= 3) or cq then error("CONCACAF: invalid/duplicate runtime contract; rebuild the world") end
+      cq = {}
+      for value in cd:gmatch("%d+") do
+        local n = tonumber(value)
+        if n > 65535 then error("CONCACAF: runtime contract word exceeds uint16") end
+        cq[#cq + 1] = n
+      end
+      if #cq < 7 or cq[1] ~= tonumber(cv) then error("CONCACAF: unsupported runtime contract") end
+    end
     local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
     if lr then
       local L = { tonumber(lr), tonumber(lrest:match("cup=(%d+)") or 0), tonumber(lrest:match("fill=(%d+)") or 0), {}, {} }
@@ -292,7 +360,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, splits, uefa, ccups, dlike, qrounds, lpres
+  return leagues, splits, uefa, ccups, dlike, qrounds, lpres, cq, caribbean, central_probe, leagues_probe
 end
 
 -- `rcal <reg> <first> <last> <break from> <break to> <days> <also> [eu]` lines of the world file
@@ -476,6 +544,14 @@ local function load_dll(path)
 end
 
 function m.init(ctx)
+  local world, splits, uefa, ccups, dlike, qrounds, lpres, cq, caribbean, central_probe, leagues_probe = read_world(ctx)
+  local regional = central_probe or leagues_probe or caribbean
+  if central_probe and (#ccups > 0 or #lpres > 0 or cq or caribbean)
+      and central_probe[1] < 3 and (central_probe[1] ~= 2 or not cq) then
+    error("Central American Cup requires a standalone world or a dynamic Champions Cup feeder contract")
+  end
+  if caribbean and caribbean[1] == 1 and not cq then error("Caribbean Cup v1 requires the CONCACAF world contract") end
+  if caribbean and #ccups == 0 then error("Caribbean Cup requires a continental registry entry") end
   if ffi == nil then log("fl26swiss: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
     void*    LoadLibraryA(const char*);
@@ -492,18 +568,23 @@ function m.init(ctx)
     typedef int  (*fl26_swiss_access_t)(const uint16_t*, int);
     typedef int  (*fl26_swiss_first_t)(const uint32_t*, int);
     typedef void (*fl26_swiss_wm_report_t)(uint32_t*);
+    typedef int  (*fl26_swiss_concacaf_version_t)(void);
   ]])
 
   local sep = string.char(92)
   local dllpath = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26swiss.dll"
   local h = load_dll(dllpath)
   if h == nil then
+    if cq or regional then error("CONCACAF: could not load the matching fl26swiss.dll") end
     log(string.format("fl26swiss: LoadLibraryA failed (err %d): %s", tonumber(ffi.C.GetLastError()), dllpath)); return
   end
   local pi = ffi.C.GetProcAddress(h, "fl26_swiss_install")
   local pl = ffi.C.GetProcAddress(h, "fl26_swiss_log")
   local ps = ffi.C.GetProcAddress(h, "fl26_swiss_stats")
-  if pi == nil or pl == nil or ps == nil then log("fl26swiss: GetProcAddress failed"); return end
+  if pi == nil or pl == nil or ps == nil then
+    if cq or regional then error("CONCACAF: missing fl26swiss.dll installation exports") end
+    log("fl26swiss: GetProcAddress failed"); return
+  end
   local install = ffi.cast("fl26_swiss_install_t", pi)
   dll_log   = ffi.cast("fl26_swiss_log_t", pl)
   dll_stats = ffi.cast("fl26_swiss_stats_t", ps)
@@ -513,7 +594,28 @@ function m.init(ctx)
   for i, r in ipairs(REGS) do regbuf[i - 1] = r end
 
   local base = ffi.cast("uint64_t", ffi.C.GetModuleHandleA(nil))
+  -- Fail before installing hooks when this world's contract cannot be executed.
+  local cqload = nil
+  if cq then
+    local version = ffi.C.GetProcAddress(h, "fl26_swiss_concacaf_version")
+    cqload = ffi.C.GetProcAddress(h, "fl26_swiss_concacaf")
+    if version == nil or cqload == nil or ffi.C.GetProcAddress(h, "fl26_swiss_seasonsum") == nil
+      or ffi.C.GetProcAddress(h, "fl26_swiss_ccup_zone") == nil or ffi.C.GetProcAddress(h, "fl26_swiss_gsplits") == nil
+      or tonumber(ffi.cast("fl26_swiss_concacaf_version_t", version)()) ~= 1 then
+      error("CONCACAF: incompatible fl26swiss.dll; contract v1 required. Do not load this career.")
+    end
+  end
+  if (cq and cq[1] == 2 and ffi.C.GetProcAddress(h, "fl26_swiss_concacaf_access_abi") == nil)
+    or (cq and cq[1] == 3 and ffi.C.GetProcAddress(h, "fl26_swiss_regional_places_abi") == nil)
+    or (caribbean and caribbean[1] == 3 and ffi.C.GetProcAddress(h, "fl26_swiss_regional_places_abi") == nil)
+    or (central_probe and central_probe[1] == 4 and ffi.C.GetProcAddress(h, "fl26_swiss_regional_places_abi") == nil)
+    or (caribbean and caribbean[1] == 2 and ffi.C.GetProcAddress(h, "fl26_swiss_caribbean_access_abi") == nil)
+    or (central_probe and central_probe[1] == 3 and ffi.C.GetProcAddress(h, "fl26_swiss_central_access_abi") == nil)
+    or (leagues_probe and leagues_probe[1] == 2 and ffi.C.GetProcAddress(h, "fl26_swiss_leagues_ids_abi") == nil) then
+    error("CONCACAF: explicit-access world requires matching native modules")
+  end
   local status = tonumber(install(base, regbuf, #REGS))
+  if (cq or regional) and status ~= 0 then error("CONCACAF: required native installation failed (" .. status .. "); do not load a career") end
   if status == 0 then
     local pu = ffi.C.GetProcAddress(h, "fl26_swiss_uecl")
     if pu ~= nil then
@@ -522,7 +624,6 @@ function m.init(ctx)
       ffi.cast("fl26_swiss_uecl_t", pu)(ubuf, #UECL)
     end
     -- the leagues whose calendar follows their own size: the world file's, when there is one
-    local world, splits, uefa, ccups, dlike, qrounds, lpres = read_world(ctx)
     if world then
       if #qrounds > 0 then
         local pq = ffi.C.GetProcAddress(h, "fl26_swiss_qrounds")
@@ -685,8 +786,9 @@ function m.init(ctx)
             log(string.format("fl26swiss: world file -- %d single-match league cup(s), %d taken", nlike, m))
           end
         end
-        local pc = ffi.C.GetProcAddress(h, "fl26_swiss_ccup")
+        local pc = ffi.C.GetProcAddress(h, caribbean and "fl26_swiss_ccup_caribbean" or "fl26_swiss_ccup")
         if pc == nil then
+          if caribbean then error("Caribbean Cup requires the matching native registry") end
           log("fl26swiss: this fl26swiss.dll runs no continental cups (fl26_swiss_ccup); the world file's are not played")
         else
           local len = 0
@@ -696,7 +798,17 @@ function m.init(ctx)
             cbuf[p], cbuf[p + 1], cbuf[p + 2], cbuf[p + 3] = c[1], c[2], c[3], #c[4]; p = p + 4
             for _, e in ipairs(c[4]) do cbuf[p], cbuf[p + 1] = e[1], e[2]; p = p + 2 end
           end
-          local k = tonumber(ffi.cast("fl26_swiss_access_t", pc)(cbuf, #ccups))
+          local k
+          if caribbean then
+            local buf = ffi.new("uint16_t[?]", #caribbean)
+            for i, v in ipairs(caribbean) do buf[i - 1] = v end
+            local register = ffi.cast("int (*)(const uint16_t*, int, int, const uint16_t*, int)", pc)
+            k = tonumber(register(cbuf, len, #ccups, buf, #caribbean))
+            if k < 0 then error("Caribbean Cup: native registry rejected the contract") end
+            log("fl26swiss: Caribbean Cup contract v1 loaded")
+          else
+            k = tonumber(ffi.cast("fl26_swiss_access_t", pc)(cbuf, #ccups))
+          end
           log(string.format("fl26swiss: world file -- %d continental cup(s), %d accepted", #ccups, k))
           -- each continental cup's competition, for the standings' zone strip
           local zone = {}
@@ -799,6 +911,32 @@ function m.init(ctx)
       end
       if #ccups == 0 then
         load_lpres()
+      end
+      if central_probe then
+        local register = ffi.C.GetProcAddress(h, "fl26_swiss_central_probe")
+        if register == nil then error("Central American Cup prototype requires the matching runtime") end
+        local buf = ffi.new("uint32_t[?]", #central_probe)
+        for i, value in ipairs(central_probe) do buf[i - 1] = value end
+        if ffi.cast("fl26_swiss_first_t", register)(buf, #central_probe) ~= 1 then
+          error("Central American Cup prototype: native registry rejected the contract")
+        end
+        log("fl26swiss: Central American Cup prototype contract loaded")
+      end
+      if leagues_probe then
+        local register = ffi.C.GetProcAddress(h, "fl26_swiss_leagues_probe")
+        if register == nil then error("Leagues Cup prototype requires the matching runtime") end
+        local buf = ffi.new("uint32_t[?]", #leagues_probe)
+        for i, value in ipairs(leagues_probe) do buf[i - 1] = value end
+        if ffi.cast("fl26_swiss_first_t", register)(buf, #leagues_probe) ~= 1 then
+          error("Leagues Cup prototype: native registry rejected the contract")
+        end
+      end
+      if cq then
+        local buf = ffi.new("uint16_t[?]", #cq)
+        for i, v in ipairs(cq) do buf[i - 1] = v end
+        local accepted = tonumber(ffi.cast("fl26_swiss_access_t", cqload)(buf, #cq))
+        if accepted ~= 1 then error("CONCACAF: DLL rejected contract (" .. accepted .. "); do not load a career") end
+        log("fl26swiss: CONCACAF contract v" .. cq[1] .. " loaded: 22 preliminary entrants + 5 direct")
       end
       -- each country's confederation: the Club World Cup (with continental cups of ours) and the
       -- board objective of a club of ours outside UEFA (GitHub #43, any world)
@@ -1148,6 +1286,19 @@ function m.init(ctx)
         .. "; 8 opponents each over 16 matchdays (F8 = report)")
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)
+    if cq or central_probe or leagues_probe then
+      cq_drain = true
+      -- Fast Forward can go months without enough file opens to drain the DLL.
+      ctx.register("display_frame", m.display_frame)
+    end
+    if cq then
+      local view = ffi.C.GetProcAddress(h, "fl26_swiss_concacaf_participants")
+      if view ~= nil then
+        cq_participants = ffi.cast("int (*)(int, char*, int)", view)
+        cq_buf = ffi.new("char[2048]")
+      end
+      ctx.register("overlay_on", m.overlay_on)
+    end
     drain(nil)
   else
     local msg = ({ [2] = "signature mismatch at 0x1413f3e00 -- wrong game build",

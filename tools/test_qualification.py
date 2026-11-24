@@ -14,7 +14,7 @@ from types import SimpleNamespace, MethodType
 from unittest.mock import patch
 
 from test_cups_page import qa
-from test_continental_competitions import make_page, editor, NATIVE
+from test_continental_competitions import make_page, editor, NATIVE, apply, discard
 from modstudio import qualification_data as Q
 from modstudio import competition_catalog as C
 from modstudio.pages import qualification as UI, first_season as F, builder
@@ -130,7 +130,7 @@ def pure():
     ok("lower/exhibition/unassigned sources are excluded", not {"Lower", "Exhibition", "Unassigned"} & {s.name for s in sources})
     ok("four original plus six added South American leagues rank together",
        len([s for s in sources if s.confederation == 4 and not s.linked_to]) == 10)
-    expected = {2: [0, 10, 1, 11, 2, 12], 4: [3, 17, 16, 9, 19], 3: [5, 8, 15], 5: [6, 7], 6: [13], 7: [14]}
+    expected = {2: [0, 10, 1, 11, 2, 12], 4: [3, 17, 16, 9, 19], 3: [5, 8, 15], 5: [6, 7], 6: [Q.B.concacaf.ROUND_OF_16, 13], 7: [14]}
     for conf, ids in expected.items():
         ok("confederation %d offers only implemented logical destinations" % conf, list(dict(Q.destinations(conf, recipe))) == ids)
     ok("UECL off hides only new Conference assignments", list(dict(Q.destinations(2, dict(recipe, uecl=False)))) == [0, 10, 1, 11])
@@ -189,14 +189,18 @@ def pure():
     result, warnings, valid = Q.generate(historical, sources, 4, on, [])
     ok("legacy F3 and classic qualifying preserved and diagnosed, never silently migrated",
        not valid and all(p in Q.preview(historical, result)["leagues"][2]["europe"] for p in [[1, 18], [2, 4]]))
-    for conf, sizes in ((3, {8: 8, 15: 8}), (5, {6: 16, 7: 16}), (6, {13: 16}), (7, {14: 8})):
+    for conf, sizes in ((3, {8: 8, 15: 8}), (5, {6: 16, 7: 16}), (7, {14: 8})):
         ranked, off = Q.ranked_sources(sources, recipe, conf)
         proposal, warnings, complete = Q.generate(recipe, sources, conf, ranked, off, sizes)
         preview = Q.preview(recipe, proposal)
         totals = Counter(c for s in sources for _p, c in Q.effective(s, preview))
         ok("confederation %d preset respects actual supported allocation sizes" % conf,
            complete and all(totals[c] == n for c, n in sizes.items()))
-    ok("unsupported CONCACAF field size refused", not Q.generate(recipe, sources, 6, [], [], {13: 32})[2])
+    configured = dict(recipe, concacaf={"modules": {"caribbean_cup": True}, "sources": {"mls": ["166"]}})
+    for n in (16, 27, 32):
+        proposal, warnings, complete = Q.generate(configured, sources, 6, [], [], {13: n})
+        ok("CONCACAF refuses generic %d-club presets and preserves its configuration" % n,
+           not complete and not proposal and Q.preview(configured, proposal)["concacaf"] == configured["concacaf"])
     on, off = Q.ranked_sources(sources, recipe, 2)
     expected_recipe = copy.deepcopy(recipe)
     candidate = lambda s: dict(id="g%s" % s.key if s.kind == "game" else s.key, name=s.name, country=s.country, clubs=s.clubs, cup=s.cup, game=s.kind == "game")
@@ -622,6 +626,88 @@ def real_backend(base):
     ok("real UEFA ranking proposal validates through the current plan and retains seeding", complete and bool(plan["uefa_seed"]) and "game_europe" not in uefa)
 
 
+
+def concacaf_workflow():
+    recipe = data()
+    recipe["leagues"] += [dict(name=name, country=country, clubs=clubs)
+                          for name, country, clubs in (("Guatemala UI", "Guatemala", 20),
+                                                       ("Haiti UI", "Haiti", 10),
+                                                       ("Jamaica UI", "Jamaica", 10))]
+    recipe["concacaf"] = dict(version=2, champions_cup=False,
+                             modules=dict.fromkeys(Q.B.concacaf.MODULES, True))
+    with patch.dict(CONF, {"Guatemala": 6, "Haiti": 6, "Jamaica": 6}):
+        app, page, e, q = page_for(recipe, 6)
+    ok("CONCACAF has only regional switches", set(e.settings) & {"champions_cup", *Q.B.concacaf.MODULES}
+       == set(Q.B.concacaf.MODULES))
+    names = {}
+    for i in range(e.list.count()):
+        e.list.setCurrentRow(i)
+        c = e.competitions[e.list.item(i).data(Qt.UserRole)]
+        ok(c.name + " exposes all appearance fields before qualification", e.identity_body.isEnabled()
+           and not e.identity_body.isHidden() and e.name.isEnabled()
+           and e.logo.isEnabled() and all(pic.isEnabled() for pic in e.variant_logos.values()))
+        names[c.key] = c.name
+    ok("catalog defaults match generated CONCACAF names", set(names.values()) == set(Q.B.concacaf.CUP_NAMES.values()))
+    ok("there is no separate qualification editor", not hasattr(q, "concacaf_button"))
+    for league, dest, count in (("Guatemala UI", -15, 20), ("Haiti UI", -13, 6), ("Jamaica UI", -13, 4)):
+        choose(q, "league", league)
+        for index in range(count):
+            q.table.add()
+            choices = q.table.table.cellWidget(index, 1)
+            choices.setCurrentIndex(choices.findData(dest))
+        ok(league + " edits individual positions in the standard table",
+           q.table.places() == [[rank, dest] for rank in range(1, count + 1)]
+           and all("Leagues Cup" not in choices.itemText(i) for i in range(choices.count())))
+    choose(q, "league", "North")
+    q.table.add()
+    round_of_16 = Q.B.concacaf.ROUND_OF_16
+    targets = dict(Q.destinations(6, e.preview()))
+    ok("CONCACAF targets use the exact default labels",
+       targets == {round_of_16: "CONCACAF Champions Cup (Round of 16)",
+                   13: "CONCACAF Champions Cup (Round One)",
+                   -15: "CONCACAF Central American Cup", -13: "CONCACAF Caribbean Cup"})
+    renamed = dict(e.preview(), ccup_names={"13": "Custom Champions Cup"})
+    ok("custom competition names retain the parenthesized stage",
+       dict(Q.destinations(6, renamed))[round_of_16] == "Custom Champions Cup (Round of 16)")
+    source = q.current_source()
+    ok("valid Round of 16 rows have no validation warning",
+       not Q.row_errors(source, [[1, round_of_16]], e.preview()) and not q.warning.text())
+    ok("invalid IDs are rejected and CONCACAF-only targets stay out of native access",
+       Q.row_errors(source, [[1, 999]], e.preview())
+       and Q.B.europe_problems(source.clubs, [[1, round_of_16]], source.cup))
+    q.table.add()
+    round_one = q.table.table.cellWidget(1, 1)
+    round_one.setCurrentIndex(round_one.findData(13))
+    q.table.table.cellWidget(1, 0).setValue(1)
+    changes = {key: value for key, value in e.changes().items() if key[0] == "qualification"}
+    ok("the same league position cannot be applied to both stages",
+       any("listed twice" in message for message in Q.validate_changes(app.project.recipe, e.preview(), changes, q.sources)))
+    q.table.table.cellWidget(1, 0).setValue(2)
+    preview = e.preview()["concacaf"]
+    ok("standard positions edit Champions Cup and retain all regional assignments",
+       preview["champions_access"]["round_of_16"] == [{"source": "North", "rank": 1}]
+       and preview["regional_access"]["caribbean_cup"] == [
+           {"source": league, "rank": rank} for league, count in (("Haiti UI", 6), ("Jamaica UI", 4))
+           for rank in range(1, count + 1)])
+    apply(page)
+    ok("standard Apply saves both Champions Cup stages", app.project.recipe["concacaf"] == preview)
+    ok("Undo and Redo restore CONCACAF assignments",
+       app.project.undo() and not app.project.recipe["concacaf"].get("champions_access")
+       and app.project.redo() and app.project.recipe["concacaf"] == preview)
+    active = editor(page)
+    choose(active.qualification, "league", "North")
+    active.qualification.table.table.cellWidget(1, 0).setValue(3)
+    discard(page)
+    ok("Discard keeps the last applied CONCACAF assignments",
+       app.project.recipe["concacaf"] == preview and editor(page).preview()["concacaf"] == preview)
+    with tempfile.TemporaryDirectory() as folder:
+        path = os.path.join(folder, "concacaf-ui.json")
+        app.project.save(path)
+        app.project.open(path)
+        ok("Apply, Save and Open keep regional and continental access",
+           app.project.recipe["concacaf"] == preview and "champions_cup" not in preview)
+
+
 if __name__ == "__main__":
     with patch.object(Q, "metadata", return_value=(NATIVES, ASSOCIATIONS, CONF)), \
             patch.object(C.B, "game_competitions", side_effect=lambda base: NATIVE if base else []), \
@@ -630,6 +716,7 @@ if __name__ == "__main__":
             patch.object(UI.A, "playable_native_rids", return_value={str(s.key) for s in NATIVES}), \
             patch.object(UI, "run_job", side_effect=inline), patch.object(F, "run_job", side_effect=inline):
         pure()
+        concacaf_workflow()
         workflow()
         presets()
         first_season()

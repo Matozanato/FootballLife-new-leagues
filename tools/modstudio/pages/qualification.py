@@ -1,7 +1,7 @@
 """One integrated qualification view and ranking-preview workflow for all confederations."""
 from copy import deepcopy
 from shiboken6 import isValid
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QTreeWidget,
                               QTreeWidgetItem, QLabel, QPushButton, QCheckBox, QScrollArea,
                               QSplitter, QDialog, QDialogButtonBox,
@@ -11,9 +11,10 @@ import leaguebuilder as B
 import fl26world as W
 from .. import qualification_data as Q
 from .. import conmebol_allocation as A
+from .. import concacaf_allocation as CA
 from ..editor_containers import EditorStack
 from ..i18n import _
-from ..ui import hint, row, run_job, Fold, error
+from ..ui import hint, row, run_job, Fold, error, ask
 from .qualification_presentation import PresetPreview, AllocationOverview, allocation_rows
 from .builder import EuropeTable
 
@@ -64,7 +65,7 @@ class RankingPreviewDialog(QDialog):
         self.sizes = {}
         if conf not in (2, 4):
             for target, title in Q.destinations(conf, recipe):
-                if target == 5:
+                if target == 5 or conf == 6:
                     continue
                 field = QComboBox()
                 options = [n for n in B.CCUP_SIZES if target not in W.CCUP_KNOCKOUT or n <= B.CCUP_KNOCKOUT_MAX]
@@ -181,6 +182,10 @@ class QualificationEditor(QWidget):
         self.first = None
         self._pending_tool = None
         self._auto_running = False
+        self._overview_plan = QTimer(self)
+        self._overview_plan.setSingleShot(True)
+        self._overview_plan.setInterval(250)
+        self._overview_plan.timeout.connect(self.check_overview_plan)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 8, 0, 0)
         self.toolbar = QWidget()
@@ -290,9 +295,13 @@ class QualificationEditor(QWidget):
             self.search.setText(self._queries.get(conf, ""))
             self._selected = self._selections.get(conf)
         self.conf = conf
+        plan = self.owner._plan or {}
+        if conf == 6 and plan and not plan.get("error") and not plan.get("concacaf_access"):
+            self.owner.invalidate_plan()
         recipe = self.recipe()
-        self.generate_button.setVisible(conf != 2)
-        self.generate_button.setText(_("Auto set continental places") if conf == 4 else _("Generate preset..."))
+        self.generate_button.setVisible(conf == 6 or conf != 2 and any(
+            target != B.concacaf.TARGET for target, _name in Q.destinations(conf, recipe)))
+        self.generate_button.setText(_("Auto-assign qualification places") if conf in (4, 6) else _("Generate preset..."))
         self.generate_button.setToolTip(_("Fixed quotas for all ten playable CONMEBOL top divisions. Requires Modern CONMEBOL; changes only the CUPS draft.") if conf == 4 else "")
         self.rank_button.setVisible(conf == 2)
         self.first_button.setVisible(conf == 2)
@@ -397,7 +406,7 @@ class QualificationEditor(QWidget):
             self.warning.clear()
         self.refresh_summary()
         self.generate_button.setEnabled(not self._loading and not self._auto_running and
-                                        (self.conf == 4 or bool(self.list.topLevelItemCount())))
+                                        (self.conf in (4, 6) or bool(self.list.topLevelItemCount())))
         self.rank_button.setEnabled(not self._loading and bool(self.list.topLevelItemCount()))
         if self._pending_tool and not self._loading:
             tool, self._pending_tool = self._pending_tool, None
@@ -435,7 +444,8 @@ class QualificationEditor(QWidget):
             return
         self._mounting = True
         recipe = self.recipe()
-        present = Q.state(recipe, source.draft_key)[0][0]
+        concacaf = source.confederation == 6
+        present = concacaf or Q.state(recipe, source.draft_key)[0][0]
         self.title.setText("%s — %s" % (source.name, source.country))
         kind = _("Stored association allocations") if source.linked_to else {"game": _("Original game league"), "league": _("Mod Studio league"), "association": _("Association without playable league")}[source.kind]
         explanation = Q.inherited_text(source, recipe)
@@ -457,7 +467,7 @@ class QualificationEditor(QWidget):
         self.description.setText(text)
         self.legacy_association.setVisible(bool(source.linked_to or any(s.linked_to == source.draft_key for s in self.sources)))
         self.legacy_association.setText(_("Back to playable league allocations") if source.linked_to else _("Review saved association allocations..."))
-        self.own.setVisible(source.kind != "league")
+        self.own.setVisible(not concacaf and source.kind != "league")
         self.own.setText(_("Own places for this association") if source.kind == "association" else _("Set custom qualification places"))
         self.own.setChecked(present)
         if self.table is not None:
@@ -465,7 +475,9 @@ class QualificationEditor(QWidget):
             self.table.hide()
             self.table.deleteLater()
         rows = Q.editable_rows(source, recipe)
-        choices = Q.destinations(source.confederation, recipe)
+        choices = Q.concacaf_destinations(recipe, source) if concacaf else Q.destinations(source.confederation, recipe)
+        if concacaf:
+            self.description.setText(kind + "\n" + _("Assign one place per league position or eligible domestic cup winner."))
         try:
             self.table = EuropeTable(rows, source.clubs, competitions=choices,
                                      cup_winner=source.cup,
@@ -477,7 +489,7 @@ class QualificationEditor(QWidget):
         self.table.preset.hide()
         self.table.changed = self.places_changed
         self.table_layout.addWidget(self.table)
-        self.table.setEnabled((source.kind == "league" or present) and not source.invalid_link)
+        self.table.setEnabled(bool(choices) and (source.kind == "league" or present) and not source.invalid_link)
         self.table_host.show()
         empty = not rows
         self.empty_state.setText(_("No places yet. Use Add place to assign a competition.") if source.kind == "league" or present else
@@ -525,7 +537,10 @@ class QualificationEditor(QWidget):
         if source is None or (source.kind != "league" and not self.own.isChecked()):
             return
         rows = self.table.places()
-        self.owner.set_qualification(source.draft_key, (True, rows))
+        if source.confederation == 6:
+            self.owner.set_qualification_batch(Q.concacaf_changes(source, self.recipe(), rows))
+        else:
+            self.owner.set_qualification(source.draft_key, (True, rows))
         self.resize_table()
         self.refresh_summary()
         self.mark_sources()
@@ -538,7 +553,11 @@ class QualificationEditor(QWidget):
             for j in range(group.childCount()):
                 item = group.child(j)
                 source = by_key[tuple(item.data(0, Qt.UserRole))]
-                item.setText(0, ("● " if Q.state(recipe, source.draft_key)[0][0] else "") + source.name)
+                item.setText(0, ("● " if (Q.concacaf_rows(source, recipe) if source.confederation == 6 else Q.state(recipe, source.draft_key)[0][0]) else "") + source.name)
+
+    def check_overview_plan(self):
+        if self.conf == 6 and self.owner.tabs.currentIndex() == 1 and self.owner._plan is None:
+            self.owner.request_plan()
 
     def refresh_summary(self):
         recipe = self.recipe()
@@ -547,9 +566,16 @@ class QualificationEditor(QWidget):
                                     % ", ".join(sorted(str(k[2]) for k in removed)) if removed else "")
         self.removed_notice.setVisible(bool(removed))
         self.discard_removed.setVisible(bool(removed))
-        self.summary.display(allocation_rows(self.sources, recipe, self.conf))
+        plan = self.owner._plan
+        pending = self.conf == 6 and plan is None and self.owner.project.base is not None
+        if pending and not self.owner._checking:
+            self._overview_plan.start()
+        access = (plan or {}).get("concacaf_access")
+        self.summary.display(allocation_rows(self.sources, recipe, self.conf, access, pending))
         explanation = Q.inherited_text(self.current_source(), recipe) if self.current_source() else ""
-        self.explanation_text.setText(explanation + "\n\n" + "\n".join(Q.overview(self.sources, recipe, self.conf)))
+        if self.conf == 6 and ((recipe.get("concacaf") or {}).get("modules") or {}).get("caribbean_cup"):
+            explanation += "\n" + _("Caribbean Cup: ten eligible domestic clubs. Its champion earns a bye and the runner-up and third-place winner enter the following January's Champions Cup Round One.")
+        self.explanation_text.setText(explanation + "\n\n" + "\n".join(Q.overview(self.sources, recipe, self.conf, access)))
         source = self.current_source()
         if source:
             warnings = Q.row_errors(source, Q.effective(source, recipe), recipe)
@@ -564,8 +590,8 @@ class QualificationEditor(QWidget):
         if self.conf == 2:
             self.open_uefa_ranking()
             return
-        if self.conf == 4:
-            self.auto_set_conmebol()
+        if self.conf in (4, 6):
+            self.auto_assign()
             return
         self.review_ranking(PresetDialog)
 
@@ -593,16 +619,29 @@ class QualificationEditor(QWidget):
             self.owner.set_qualification_batch(proposal)
             self.activate(self.conf)
 
-    def auto_set_conmebol(self):
-        if self.conf != 4 or self._loading or self._auto_running:
+    def auto_assign(self):
+        if self.conf not in (4, 6) or self._loading or self._auto_running:
             return
         recipe = self.recipe()
-        if not Q.modern(recipe):
+        concacaf = self.conf == 6
+        if not concacaf and not Q.modern(recipe):
             error(self, "Cannot auto-set continental places", _("Enable Modern CONMEBOL competitions before using automatic allocation.")
                   + "\n\n" + _("No qualification places were changed."))
             return
         owner, base = self.owner.project.recipe, self.owner.project.base
-        snapshot = A.snapshot(recipe)
+        def allocation_snapshot(value):
+            if not concacaf:
+                return A.snapshot(value)
+            return {key: deepcopy(value.get(key)) for key in
+                    ("leagues", "concacaf", "game_europe", "_id_spent")}
+
+        snapshot = allocation_snapshot(recipe)
+        if concacaf:
+            config = B.concacaf.integration_draft(recipe)
+            if (any(config["champions_access"].values()) or any(config["regional_access"].values())) and not ask(
+                    self, "Auto-assign qualification places",
+                    _("Replace Champions Cup places and complete the enabled regional cups in the draft? Buildable regional allocations are kept.")):
+                return
         draft = deepcopy(self.owner._values)
         tables = self.table_stamp()
         self._auto_running = True
@@ -610,8 +649,8 @@ class QualificationEditor(QWidget):
 
         def calculate(_progress):
             try:
-                return True, A.generate(snapshot, base)
-            except A.AllocationError as exc:
+                return True, CA.generate(recipe, base) if concacaf else A.generate(snapshot, base)
+            except (A.AllocationError, B.BuildError) as exc:
                 return False, str(exc)
 
         def done(result):
@@ -621,21 +660,25 @@ class QualificationEditor(QWidget):
             if owner is not self.owner.project.recipe or base != self.owner.project.base:
                 return
             self.generate_button.setEnabled(not self._loading)
-            if tables != self.table_stamp() or draft != self.owner._values or snapshot != A.snapshot(self.recipe()):
+            if tables != self.table_stamp() or draft != self.owner._values or snapshot != allocation_snapshot(self.recipe()):
                 error(self, "Cannot auto-set continental places", _("The world changed during automatic allocation. Try again; no qualification places were changed."))
                 return
             success, value = result
             if not success:
                 error(self, "Cannot auto-set continental places", value)
                 return
-            if value:
-                self.owner.set_qualification_batch(value)
+            changes, access = value if concacaf else (value, None)
+            if changes:
+                self.owner.set_qualification_batch(changes)
             self.activate(self.conf)
-            self.set_state(_("All 89 CONMEBOL places are set in the CUPS draft. Review them, then Apply to save or Discard changes to restore."))
+            if concacaf:
+                self.set_state(CA.summary(access))
+            else:
+                self.set_state(_("All 89 CONMEBOL places are set in the CUPS draft. Review them, then Apply to save or Discard changes to restore."))
 
         def failed(trace):
             import logging
-            logging.getLogger(__name__).error("CONMEBOL automatic allocation failed:\n%s", trace)
+            logging.getLogger(__name__).error("Automatic qualification allocation failed:\n%s", trace)
             done((False, _("The game or league data could not be verified. No qualification places were changed.")))
 
         run_job(calculate, done, failed)

@@ -104,7 +104,12 @@ def run():
                for key, box in e.settings.items()))
     ok("national-team competitions stay outside this catalog", not any(c.number == 98 for c in e.rows))
     ok("every engine-generated continental cup is represented", {c.number for c in e.rows if c.storage == "generated"}
-       == {c[0] for c in C.W.CCUPS} | {C.B.caf_super_cup({})["number"], C.B.samerica_super_cup({})["number"]})
+       == {c[0] for c in C.W.CCUPS} | {C.B.caf_super_cup({})["number"], C.B.samerica_super_cup({})["number"], -13, -14, -15})
+    e.confederation.setCurrentIndex(e.confederation.findData(6))
+    e.settings["caribbean_cup"].setChecked(True)
+    ok("enabling the optional Caribbean Cup shows its catalog entry and nested recipe setting",
+       e.list.count() == 2 and e.preview()["concacaf"]["modules"]["caribbean_cup"])
+    e.settings["caribbean_cup"].setChecked(False)
     e = select(page, "game:afc")
     ok("AFC Elite maps to the existing native slot without renaming game data", e.original_name.text()
        == "AFC Champions League Elite" and e.name.placeholderText() == "AFC Champions League"
