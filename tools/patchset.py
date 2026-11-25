@@ -2020,6 +2020,243 @@ def copyb_calendar_patches(patches, unit_bytes):
     return out, cal_new, size_new
 
 
+# Copy B's match table.  B holds 12,360 match records at +0x2a24c0 (the constructor's
+# `mov edi, 0x3048`), and both of its walkers move exactly that many: block -> B at save
+# (0x1413feda0, `cmp ebp, 0x3048` at 0x1413fef4c) and B -> block at load (0x1413fea10,
+# 0x1413feb8c).  Their other bound, `cmp ebp, 0x32c8` ahead of the `cmovae` that falls back
+# to record 0, is the block's and is already raised to 65000 -- so a League Mode season of
+# more than 12,360 matches is saved without the rest, and a load brings back a calendar whose
+# ids past 0x3047 name no match.  Measured on a League career (16.11.2026, fl26calcheck):
+# 12,360 records, 21,101 calendar ids, 9,072 of them (every one >= 0x3048) with no record, and
+# a calendar screen that falls into 0x1414bc560's linear scan of 65,000 records for each.
+#
+# B is packed end to end (rec596 runs into the singletons at +0x9a8c60), so the table does
+# not grow where it is.  It goes where the calendar unit went, for the same reason: to the
+# top of what a League save stores, the player part's place, with the player part (and the
+# descriptor's split) moving up by the table.  Only six instructions name B's table -- the
+# constructor's lea and count and each walker's lea and bound (copyscan.py --variant b, and
+# no other 0x3048 or 0x2a24c0 in the image) -- and the walkers address it as
+# [r15 + 0x2a24c0 + rdi] with r15 = B - block, so the new offset is all they need.  The old
+# 12,360-record area stays in the object, unused.  A League save made before this does not
+# load under it: the object and the player part are where the save does not expect them.
+COPYB_REC_OLD = 0x2a24c0
+COPYB_REC_CAP_OLD = 0x3048
+COPYB_REC_SITES = [                      # (instruction, what it carries)
+    (0x140afd707, "base"),   # ctor: lea rbx, [rsi + 0x2a24c0]
+    (0x140afd70e, "cap"),    # ctor: mov edi, 0x3048 (records constructed)
+    (0x1413feb66, "base"),   # B -> block: lea rdx, [r15 + 0x2a24c0]
+    (0x1413feb8c, "cap"),    # B -> block: cmp ebp, 0x3048
+    (0x1413fef26, "base"),   # block -> B: lea rcx, [r15 + 0x2a24c0]
+    (0x1413fef4c, "cap"),    # block -> B: cmp ebp, 0x3048
+]
+
+
+def copyb_match_patches(patches, unit_bytes):
+    """give copy B the block's match cap, at the top of its saved prefix"""
+    a = LAYOUT["arrays"]["rec596"]
+    cap, stride = a["cap_new"], H(a["stride"])
+    by_va = {H(p["va"]): p for p in patches}
+
+    def bump(va, val, grow):
+        # the instruction at va was already patched to carry val; carry val + grow instead
+        for k in range(16):
+            p = by_va.get(va + k)
+            if p is not None:
+                break
+        else:
+            raise SystemExit("copy B matches: no earlier patch at 0x%x" % va)
+        new = bytearray.fromhex(p["new"])
+        want = struct.pack("<I", val)
+        j = bytes(new).find(want)
+        if j < 0 or bytes(new).find(want, j + 1) >= 0:
+            raise SystemExit("copy B matches: 0x%x does not carry 0x%x exactly once" % (va, val))
+        new[j:j + 4] = struct.pack("<I", val + grow)
+        p["new"] = new.hex()
+        p["why"] += "; copy B match table below it, up by 0x%x: 0x%x -> 0x%x" % (grow, val, val + grow)
+
+    size_p = by_va[COPYB_SIZE_SITE]
+    size_old = int.from_bytes(bytes.fromhex(size_p["new"])[:4], "little")
+    # the player part's header is where copyb_calendar_patches left it: past the unit
+    tail = COPYB_TAIL + align(unit_bytes, 0x10)
+    rec_new = tail
+    grow = align(cap * stride, 0x10)
+    out = []
+    for va, what in COPYB_REC_SITES:
+        ins = insn_at(va)
+        raw = bytes(ins.bytes)
+        old, new = (COPYB_REC_OLD, rec_new) if what == "base" else (COPYB_REC_CAP_OLD, cap)
+        want = struct.pack("<I", old)
+        k = raw.find(want)
+        if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
+            raise SystemExit("copy B matches: 0x%x does not carry 0x%x exactly once (%s %s)"
+                             % (va, old, ins.mnemonic, ins.op_str))
+        if va + k in by_va:
+            raise SystemExit("copy B matches: 0x%x is already patched" % (va + k))
+        why = ("copy B match table: +0x%x -> +0x%x, at the top of what a League save stores"
+               % (old, new) if what == "base" else
+               "copy B match records: %d -> %d, the block's cap, so a League save keeps every "
+               "match its calendar names" % (old, new))
+        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
+                    "new": struct.pack("<I", new).hex(),
+                    "why": "%s (%s %s)" % (why, ins.mnemonic, ins.op_str),
+                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+    for va, val in COPYB_TAIL_SITES:
+        bump(va, val + (tail - COPYB_TAIL), grow)
+    bump(COPYB_SIZE_SITE, size_old, grow)
+    return out, rec_new, size_old + grow
+
+
+# Copy B's team, coach, regulation and fixture tables (League Mode, 16.11.2026).  B keeps the
+# shipped 750 teams, 750 coaches, 180 regulations and 1750 fixtures, and League Mode reads
+# them back on load and through the accessor 0x140af3680 (its [r15 + 0x268] branch) -- so a
+# world of 1837 clubs and regulations up to 255 loaded with clubs and competitions missing
+# ("next match without an opponent, empty tables").  Only the copy's own code touches B
+# (scan of every [x + 0x268] load: the accessor, the load-time player adoption, and the save
+# and load routines that take B whole), so the tables grow to the block's caps:
+#
+# - teams stay at +0x50 (the accessor's `lea rdi, [rdx + 0x50]` and block -> B's
+#   `add rcx, 0x50` are disp8) and grow in place; coaches and regulations follow them into
+#   the space the 12,360-record match table left when copyb_match_patches moved it.  The
+#   singletons from +0x9a8c60 on do not move.
+# - fixtures go to the top of the saved prefix after the match table, the player part up again.
+# - the constructor builds teams and coaches with one `mov ebp, 0x2ee` that also counts the
+#   750-entry side table at +0xb45ec0 (the block's own is 750 too: 0x1413fce10 copies 750),
+#   so ebp stays and the two counts become `imul edi, ebp, 4 / 5`: 3000 teams and 3750
+#   coaches are built, 2400 and 3400 are used.
+# - B -> block also wrote B's regulations to the block's shipped base: its pre-biased
+#   `lea rcx, [r15 + 0xa7169c]` (0x1413feaf1) was never moved with the table, and its index
+#   check `cmp edi, 0x12c` (0x1413feae0) never raised.  Both are set here.
+COPYB_BUILT = {"teams": 3000, "coaches": 3750}      # 750 * 4, 750 * 5
+COPYB_SINGLETONS = 0x9a8c60                         # the first field that stays where it is
+COPYB_OLD = {"teams": 0x50, "coaches": 0x133a30, "regulations": 0x1a1800, "fixtures": 0x1c4210}
+COPYB_OLD_CAP = {"teams": 750, "coaches": 750, "regulations": 180, "fixtures": 1750}
+COPYB_BASE_SITES = {                                # instructions carrying B's base of a table
+    "coaches": [0x140afd6a5, 0x1413fea99, 0x1413fee5e, 0x140af3cd0],
+    "regulations": [0x140afd6c5, 0x1413fead6, 0x1413feeae, 0x140af3e92],
+    "fixtures": [0x140afd6e6, 0x1413feb26, 0x1413feee6],
+}
+COPYB_CAP_SITES = {                                 # instructions carrying B's record count
+    "teams": [0x1413fea8f, 0x140af37f5],
+    "coaches": [0x1413feacc, 0x140af3cd7],
+    "regulations": [0x140afd6cc, 0x1413feb0c, 0x140af3e99, 0x140af36d0],
+    "fixtures": [0x140afd6ed, 0x1413feb4c, 0x1413fef0c],
+}
+COPYB_CTOR_COUNTS = [(0x140afd68d, "8bfd90", "6bfd04", "teams"),      # mov edi, ebp; nop
+                     (0x140afd6ac, "488bfd90", "6bfd0590", "coaches")]  # mov rdi, rbp; nop
+COPYB_BIASED = [(0x1413feab1, "coaches"),           # B -> block, lea rcx, [r15 + block - B]
+                (0x1413feaf1, "regulations")]
+COPYB_REG_CHECK = 0x1413feae0                       # B -> block: cmp edi, 0x12c
+
+
+def _compose(by_va, va, old_val, new_val, note):
+    """an earlier patch at the instruction va carries old_val; make it carry new_val"""
+    for k in range(16):
+        p = by_va.get(va + k)
+        if p is not None:
+            break
+    else:
+        return False
+    new = bytearray.fromhex(p["new"])
+    want = struct.pack("<I", old_val)
+    j = bytes(new).find(want)
+    if j < 0 or bytes(new).find(want, j + 1) >= 0:
+        raise SystemExit("copy B: patch at 0x%x does not carry 0x%x exactly once" % (va, old_val))
+    new[j:j + 4] = struct.pack("<I", new_val)
+    p["new"] = new.hex()
+    p["why"] += "; " + note
+    return True
+
+
+def _imm_patch(by_va, va, old_val, new_val, why):
+    """a patch of the dword old_val inside the instruction at va (or compose onto one)"""
+    ins = insn_at(va)
+    raw = bytes(ins.bytes)
+    want = struct.pack("<I", old_val)
+    k = raw.find(want)
+    if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
+        raise SystemExit("copy B: 0x%x does not carry 0x%x exactly once (%s %s)"
+                         % (va, old_val, ins.mnemonic, ins.op_str))
+    if va + k in by_va:
+        raise SystemExit("copy B: 0x%x is already patched" % (va + k))
+    return {"va": "0x%x" % (va + k), "old": want.hex(), "new": struct.pack("<I", new_val).hex(),
+            "why": "%s (%s %s)" % (why, ins.mnemonic, ins.op_str),
+            "asm": "%s %s" % (ins.mnemonic, ins.op_str)}
+
+
+def copyb_table_patches(patches, unit_bytes, bases):
+    """grow copy B's teams, coaches, regulations and fixtures to the block's caps"""
+    by_va = {H(p["va"]): p for p in patches}
+    A = LAYOUT["arrays"]
+    cap = {n: A[n]["cap_new"] for n in COPYB_OLD}
+    stride = {n: H(A[n]["stride"]) for n in COPYB_OLD}
+    for n, built in COPYB_BUILT.items():
+        if cap[n] > built:
+            raise SystemExit("copy B: %d %s wanted, the constructor builds %d" % (cap[n], n, built))
+    new = {"teams": COPYB_OLD["teams"]}
+    new["coaches"] = align(new["teams"] + COPYB_BUILT["teams"] * stride["teams"], 0x10)
+    new["regulations"] = align(new["coaches"] + COPYB_BUILT["coaches"] * stride["coaches"], 0x10)
+    end = new["regulations"] + cap["regulations"] * stride["regulations"]
+    if end > COPYB_SINGLETONS:
+        raise SystemExit("copy B: the tables end at 0x%x, past the singletons at 0x%x"
+                         % (end, COPYB_SINGLETONS))
+    # fixtures on top of the match table, where the player part's header is now
+    a = A["rec596"]
+    top = COPYB_TAIL + align(unit_bytes, 0x10) + align(a["cap_new"] * H(a["stride"]), 0x10)
+    new["fixtures"] = top
+    grow = align(cap["fixtures"] * stride["fixtures"], 0x10)
+    out = []
+    for n, sites in COPYB_BASE_SITES.items():
+        for va in sites:
+            out.append(_imm_patch(by_va, va, COPYB_OLD[n], new[n],
+                                  "copy B %s: +0x%x -> +0x%x, %d records"
+                                  % (n, COPYB_OLD[n], new[n], cap[n])))
+    for n, sites in COPYB_CAP_SITES.items():
+        for va in sites:
+            out.append(_imm_patch(by_va, va, COPYB_OLD_CAP[n], cap[n],
+                                  "copy B %s: %d -> %d records, the block's cap"
+                                  % (n, COPYB_OLD_CAP[n], cap[n])))
+    for va, old, rep, n in COPYB_CTOR_COUNTS:
+        got = d[off_of(va):off_of(va) + len(old) // 2].hex()
+        if got != old:
+            raise SystemExit("copy B: 0x%x holds %s, expected %s" % (va, got, old))
+        out.append({"va": "0x%x" % va, "old": old, "new": rep,
+                    "why": "copy B constructor: %d %s records built instead of 750 (imul edi, "
+                           "ebp, %d), ebp stays 750 for the side table at +0xb45ec0"
+                           % (COPYB_BUILT[n], n, COPYB_BUILT[n] // 750),
+                    "asm": "imul edi, ebp, %d" % (COPYB_BUILT[n] // 750)})
+    for va, n in COPYB_BIASED:
+        block = bases[n]
+        old_block = H(A[n]["base_old"])
+        shipped = old_block - COPYB_OLD[n]
+        cur = block - COPYB_OLD[n]
+        want = block - new[n]
+        note = ("copy B %s biased: block 0x%x - B 0x%x = 0x%x" % (n, block, new[n], want))
+        if not _compose(by_va, va, cur, want, note):
+            out.append(_imm_patch(by_va, va, shipped, want,
+                                  "%s; B -> block wrote B's %s to the block's shipped base "
+                                  "0x%x" % (note, n, old_block)))
+    out.append(_imm_patch(by_va, COPYB_REG_CHECK, A["regulations"]["cap_old"],
+                          cap["regulations"],
+                          "copy B regulations: B -> block index check %d -> %d, or records "
+                          "past %d go to the dummy" % (A["regulations"]["cap_old"],
+                                                       cap["regulations"], A["regulations"]["cap_old"])))
+    for va, n, c in COPYB_CLAMPS:
+        p = by_va[va]
+        if not p["new"].startswith("81ff"):
+            raise SystemExit("copy B: clamp at 0x%x is not cmp edi, imm32" % va)
+        p["new"] = "81ff" + struct.pack("<I", cap[n]).hex()
+        p["why"] += "; copy B now holds %d %s: cmp edi, %d" % (cap[n], n, cap[n])
+    # the player part, the descriptor's split and the object size move up by the fixtures
+    for va, val in COPYB_TAIL_SITES:
+        cur = val + (top - COPYB_TAIL)
+        if not _compose(by_va, va, cur, cur + grow,
+                        "copy B fixtures below it, up by 0x%x: 0x%x -> 0x%x" % (grow, cur, cur + grow)):
+            raise SystemExit("copy B: no patch at 0x%x" % va)
+    size_p = by_va[COPYB_SIZE_SITE]
+    size_old = int.from_bytes(bytes.fromhex(size_p["new"])[:4], "little")
+    _compose(by_va, COPYB_SIZE_SITE, size_old, size_old + grow,
+             "copy B fixtures: 0x%x -> 0x%x" % (size_old, size_old + grow))
+    return out, new, size_old + grow
 def pk32_patches(patches):
     """the pk32 step (pk32.py), checked against the set it joins: its bytes must not touch any
     patch already in it, and the bounds it relies on must already follow the player cap"""
@@ -2627,14 +2864,25 @@ def main():
     if calendar:
         cb, cal_b, size_b = copyb_calendar_patches(patches, calendar["unit_bytes"])
         patches += cb
-        calendar["copy_b_unit"], calendar["copy_b_size"] = (
-            "0x%x" % cal_b,
-            "0x%x" % size_b,
-        )
-        print(
-            "copy B (Cup/League Mode): calendar unit at +0x%x, player part after it, object 0x%x; team/coach/"
-            "regulation fills stop at 750/1300/180" % (cal_b, size_b)
-        )
+        calendar["copy_b_unit"], calendar["copy_b_size"] = "0x%x" % cal_b, "0x%x" % size_b
+        print("copy B (Cup/League Mode): calendar unit at +0x%x, player part after it, object 0x%x; team/coach/"
+              "regulation fills stop at 750/1300/180" % (cal_b, size_b))
+        if "rec596" in relocate:
+            cm, rec_b, size_b = copyb_match_patches(patches, calendar["unit_bytes"])
+            patches += cm
+            calendar["copy_b_matches"], calendar["copy_b_size"] = "0x%x" % rec_b, "0x%x" % size_b
+            print("copy B (Cup/League Mode): %d match records at +0x%x, player part after them, "
+                  "object 0x%x" % (LAYOUT["arrays"]["rec596"]["cap_new"], rec_b, size_b))
+            if SLOTS32:
+                raise SystemExit("copy B tables: copyb_patches (--slots32) shifts the fixed "
+                                 "layout these patches replace; not combined yet")
+            ct, tb, size_b = copyb_table_patches(patches, calendar["unit_bytes"], bases)
+            patches += ct
+            calendar["copy_b_tables"] = {k: "0x%x" % v for k, v in tb.items()}
+            calendar["copy_b_size"] = "0x%x" % size_b
+            print("copy B (Cup/League Mode): %d patches; teams +0x%x, coaches +0x%x, regulations "
+                  "+0x%x, fixtures +0x%x, object 0x%x"
+                  % (len(ct), tb["teams"], tb["coaches"], tb["regulations"], tb["fixtures"], size_b))
         cs, cal_s, size_s = copys_calendar_patches(patches, calendar["unit_bytes"])
         patches += cs
         calendar["copy_s_unit"], calendar["copy_s_size"] = (

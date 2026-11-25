@@ -1623,7 +1623,282 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "id_retire", "pack_version", "id_lineage",    # idledger.py: the ids that may go, the version name
                    "id_not_lineages", "id_ledger",   # id_ledger: absolute (idledger.absolute_ledger), review 3
                    "id_tables",       # the zip of the version shared last, for its rows (rowkeep.prev_rows)
-                   "notice")          # the author's words for whoever installs the world's zip (export: NOTICE.txt)
+                   "notice",          # the author's words for whoever installs the world's zip (export: NOTICE.txt)
+                   "club_world_cup")   # International > Club World Cup of 32 (cwc_config)
+
+
+# ---- the Club World Cup of 32 (Leagues > More > Club World Cup) ----
+# recipe "club_world_cup": {"on": true, "every": 4, "first": 2029, "keep_old": true,
+#   "old_name": "Intercontinental Cup", "replace": "super:<league>" | "cup:<league>" |
+#   "gsuper:<code>" | "glcup:<code>" | null, "logo": <picture> | null}
+# logo: the Club World Cup of 32's emblem (competition 1); none keeps the game's. The
+# Intercontinental's is the game's Club World Cup's, edits.competitions["1"].logo (Cups >
+# International and Competition Names): with the cup of 32 on it goes to the Intercontinental's
+# id (picture_jobs), and with none the Intercontinental wears the game's own emblem of
+# competition 1 from the person's install.
+# on: competition 1 becomes the 2025 format (mkcwc.reshape: eight groups of four, a knockout of
+# sixteen on a free regulation id), played in June of every <every>-th year from <first>
+# (fl26swiss.dll, the world file's cwc32 line). keep_old: the shipped four-club cup is copied
+# onto a competition of its own (mkcwc.intercontinental) and keeps being played every December
+# with the game's four entrants. A world with no free competition id gives it the ids of a cup
+# it no longer builds: `replace` names that cup (the dialog unticks it in the recipe).
+CWC_KEY_KO, CWC_KEY_IC = "cwc:club_world_cup", "cwc:intercontinental"
+CWC_EVERY_MAX = 8
+CWC_OLD_NAME = "Intercontinental Cup"
+# the default name in either language (recipes before 17.11. hold the Portuguese one): a default
+# name is written per language, a name of the user's in every language
+CWC_OLD_NAMES = {"Intercontinental Cup", "Copa Intercontinental"}
+CWC_IC_LATIN = "Copa Intercontinental"
+CWC_PT_NAME = "Copa do Mundo de Clubes"
+# regulation name slots (mkleague.name_at): 2 Latin-American Spanish, 4 English, 7 Spanish,
+# 8 Portuguese, 9 the internal code, 10 Brazilian Portuguese
+SLOTS_ES_PT, SLOTS_PT = (2, 7, 8, 10), (8, 10)
+
+
+def cwc_localize(regs, ic_cid, ic_reg, old_name):
+    """names per language: the Club World Cup's Portuguese slots "Copa do Mundo de Clubes" (only
+    where they still hold the English name), the Intercontinental "Intercontinental Cup" with
+    "Copa Intercontinental" in Spanish and Portuguese when it has the default name"""
+    def slot(o, k):
+        return bytes(regs[o + M.name_at(k):o + M.name_at(k) + M.NAME_SLOT]).split(b"\0")[0]
+    for i in range(len(regs) // M.REG):
+        o = i * M.REG
+        if M.reg_cid(regs, o) == 1:
+            en = slot(o, 4)
+            for k in SLOTS_PT:
+                if slot(o, k) in (en, b""):
+                    M.put(regs, o + M.name_at(k), CWC_PT_NAME, M.NAME_SLOT)
+        elif ic_reg and M.reg_cid(regs, o) == ic_cid and u16(regs, o + M.R_ID) == ic_reg \
+                and old_name in CWC_OLD_NAMES:
+            M.put_names(regs, o, CWC_OLD_NAME, skip=(NAME_CODE_SLOT,))
+            for k in SLOTS_ES_PT:
+                M.put(regs, o + M.name_at(k), CWC_IC_LATIN, M.NAME_SLOT)
+    return regs
+
+
+def cwc_config(recipe):
+    """the recipe's club_world_cup, checked and with its defaults; None when it is off"""
+    c = (recipe or {}).get("club_world_cup")
+    if not isinstance(c, dict) or not c.get("on"):
+        return None
+    try:
+        every = int(c.get("every", 4))
+        first = int(c.get("first", 2029))
+    except (TypeError, ValueError):
+        raise BuildError("Club World Cup: every and first must be numbers")
+    if not 1 <= every <= CWC_EVERY_MAX:
+        raise BuildError("Club World Cup: every %d years -- 1 to %d" % (every, CWC_EVERY_MAX))
+    if not 2000 <= first <= 2200:
+        raise BuildError("Club World Cup: the first one in %d -- a year from 2000 to 2200" % first)
+    keep = bool(c.get("keep_old", True))
+    name = (c.get("old_name") or "").strip() or CWC_OLD_NAME
+    return {"every": every, "first": first, "keep_old": keep, "old_name": name,
+            "replace": (c.get("replace") or None) if keep else None, "logo": c.get("logo") or None}
+
+
+def cwc_last_key(replace):
+    """the plan's cup_ids key of a cup the Intercontinental replaces (cwc_replaceable's keys)"""
+    kind, _, name = (replace or "").partition(":")
+    if kind == "glcup":
+        return "ccup:" + name
+    return replace or ""
+
+
+def cwc_pins(prev_cups, last_ids, cfg):
+    """the cups' ids of the last Build for this one, with the Club World Cup's: none when it is
+    off, the Intercontinental's only when it is kept -- and, the first time, the ids of the cup
+    it replaces (cfg["replace"], unticked in the recipe and so gone from prev_cups)"""
+    out = {k: v for k, v in prev_cups.items() if not k.startswith("cwc:")}
+    if not cfg:
+        return out
+    if isinstance(last_ids.get(CWC_KEY_KO), dict):
+        out[CWC_KEY_KO] = last_ids[CWC_KEY_KO]
+    if cfg["keep_old"]:
+        mine = last_ids.get(CWC_KEY_IC)
+        if not isinstance(mine, dict) and cfg.get("replace"):
+            was = last_ids.get(cwc_last_key(cfg["replace"]))
+            mine = {f: was[f] for f in ("cid", "reg") if isinstance(was, dict) and isinstance(was.get(f), int)}
+            out.pop(cwc_last_key(cfg["replace"]), None)
+        if isinstance(mine, dict) and mine:
+            out[CWC_KEY_IC] = mine
+    return out
+
+
+def cwc_replaceable(recipe, last_ids=None):
+    """[(group, key, name, cid or None)] of the cups this world builds that the Intercontinental
+    can take the place of: group "cup" or "super". last_ids: the plan's cup_ids of the last Build"""
+    last_ids = last_ids or {}
+    out = []
+    for L in (recipe or {}).get("leagues") or []:
+        if L.get("others"):
+            continue
+        nm = (L.get("name") or "").strip()
+        if not nm:
+            continue
+        if L.get("cup"):
+            out.append(("cup", "cup:" + nm, (L.get("cup_name") or "").strip() or nm + " Cup",
+                        (last_ids.get("cup:" + nm) or {}).get("cid")))
+            if L.get("supercup"):
+                out.append(("super", "super:" + nm, (L.get("supercup_name") or "").strip() or nm + " Super Cup",
+                            (last_ids.get("super:" + nm) or {}).get("cid")))
+    for g in (recipe or {}).get("game_cups") or []:
+        r = g.get("league")
+        if not isinstance(r, int):
+            continue
+        if g.get("super_cup"):
+            code = "FL_G%03d_SCUP" % r
+            out.append(("super", "gsuper:" + code, (g.get("super_name") or "").strip() or "Super Cup (league %d)" % r,
+                        (last_ids.get("gsuper:" + code) or {}).get("cid")))
+        if g.get("league_cup"):
+            code = "FL_G%03d_LCUP" % r
+            out.append(("cup", "glcup:" + code,
+                        (g.get("league_cup_name") or "").strip() or "League Cup (league %d)" % r,
+                        (last_ids.get("ccup:" + code) or {}).get("cid")))
+    return out
+
+
+def cwc_untick(recipe, key):
+    """take the cup `key` (cwc_replaceable) out of the recipe: it is no longer built, and the
+    Intercontinental gets its ids. True when something changed"""
+    kind, _, name = (key or "").partition(":")
+    for L in recipe.get("leagues") or []:
+        nm = (L.get("name") or "").strip()
+        if kind == "cup" and nm == name and L.get("cup"):
+            L["cup"] = False
+            L["supercup"] = False
+            return True
+        if kind == "super" and nm == name and L.get("supercup"):
+            L["supercup"] = False
+            return True
+    for g in recipe.get("game_cups") or []:
+        r = g.get("league")
+        if kind == "gsuper" and isinstance(r, int) and name == "FL_G%03d_SCUP" % r and g.get("super_cup"):
+            g["super_cup"] = False
+            return True
+        if kind == "glcup" and isinstance(r, int) and name == "FL_G%03d_LCUP" % r and g.get("league_cup"):
+            g["league_cup"] = False
+            return True
+    return False
+
+
+# The Club World Cup's confederations whose continental cups only Build makes (fl26world.CCUPS
+# numbers): the UEFA's, CONMEBOL's and the AFC's are the game's and in every world. A world
+# without them has no titles and no ranking points for that confederation (fl26swiss
+# cwc_quota_field): its places go to the best clubs of the whole ranking not yet in, the OFC's
+# to the AFC first (the user's rule, 2026-11-21).
+CWC_BUILT_CONFEDS = (("CAF", 4, (6, 7)), ("CONCACAF", 4, (13,)), ("OFC", 1, (14,)))
+
+
+def cwc_short_confeds(pl):
+    """[(confederation, places)] the Club World Cup gives that this plan has no continental cup
+    for (pl: a plan, its ccups)"""
+    have = {c.get("number") for c in pl.get("ccups") or []}
+    return [(name, n) for name, n, cups in CWC_BUILT_CONFEDS if not have & set(cups)]
+
+
+def cwc_short_text(short):
+    """the warning of cwc_short_confeds, one sentence per confederation ("" when none)"""
+    out = []
+    for name, n in short:
+        where = ("the AFC" if name == "OFC"
+                 else "the best clubs of the whole ranking not yet in, whatever their confederation")
+        out.append("No %s continental cup in this world: %s to %s."
+                   % (name, "its %d places go" % n if n > 1 else "its place goes", where))
+    return " ".join(out)
+
+
+def club_world_cup(pl, root, db, log=print):
+    """the Club World Cup of 32 (and the old one kept as the Intercontinental) into the world's
+    tables in <db>; returns the world file's cwc32 line"""
+    cfg = pl.get("club_world_cup")
+    if not cfg:
+        return []
+    import mkcwc
+    comp, regs, ents = (M.load(db, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    _c, kregs = pinned_ids(pl, db, CWC_KEY_KO)
+    kregs = [r for r in kregs if 175 < r < 1024]
+    if not kregs:
+        raise out_of_ids("the Club World Cup")
+    ko = kregs[0]
+    ic_cid = ic_reg = 0
+    if cfg["keep_old"]:
+        cids, iregs = pinned_ids(pl, db, CWC_KEY_IC)
+        iregs = [r for r in iregs if r != ko and 1 < r < 1024]
+        if not cids or not iregs:
+            raise BuildError("no free competition id for %s (the old Club World Cup) -- the world has all "
+                             "the competitions the game takes. Pick a cup for it to take the place of in "
+                             "My world > Leagues > More > Club World Cup, or untick \"Keep the old Club World "
+                             "Cup\" there" % cfg["old_name"])
+        ic_cid, ic_reg = cids[0], iregs[0]
+        try:
+            mkcwc.intercontinental(comp, regs, ents, ic_cid, ic_reg, cfg["old_name"])
+        except SystemExit as e:
+            raise BuildError("%s: %s" % (cfg["old_name"], e))
+        pl.setdefault("cup_ids", {})[CWC_KEY_IC] = {"cid": ic_cid, "reg": ic_reg}
+    said = []
+    try:
+        regs = mkcwc.reshape(regs, ko, log=said.append)
+    except SystemExit as e:
+        raise BuildError("Club World Cup of 32: %s" % e)
+    pl.setdefault("cup_ids", {})[CWC_KEY_KO] = {"reg": ko}
+    regs = cwc_localize(bytearray(regs), ic_cid, ic_reg, cfg["old_name"])
+    with contextlib.redirect_stdout(io.StringIO()):
+        M.write_tables(root, comp, regs, ents)
+    log("  Club World Cup of 32: groups on regulation 1 (1025..8193), knockout on regulation %d, "
+        "played in June every %d year(s) from %d" % (ko, cfg["every"], cfg["first"]))
+    if ic_reg:
+        log("  %s (the old Club World Cup, every December): competition %d, regulation %d"
+            % (cfg["old_name"], ic_cid, ic_reg))
+    short = cwc_short_text(cwc_short_confeds(pl))
+    if short:
+        log("  warning: Club World Cup of 32 -- " + short)
+    return ["cwc32 ko=%d every=%d first=%d ic=%d iccid=%d" % (ko, cfg["every"], cfg["first"], ic_reg, ic_cid)]
+
+
+# The confederation ranking (fl26cwc.dll) gives points for the continental cups' matches. The
+# game's own cups (Champions League 2-4, Europa League 5-6, Libertadores 8-10, AFC Champions League
+# 15-16) and the Conference League with the two play-offs (186-189, fixed by mkuecl / mkeuropo)
+# have the same ids in every world and are in the DLL. Everything else Build makes takes the first
+# free ids of the world (free_comp_ids), so the cwcpts line tells the DLL which regulation is which:
+#   cwcpts <reg>=<kind> ...   kind letters: u UEFA, s a secondary cup, q a qualifying or
+#   preliminary round, g a group stage, r one regulation per group or tie (reg + 1024 * k); "-" none
+# A regulation not on the line gives no points (until 18.11. the DLL had one world's ids written
+# in, and in another world they could be a league's or a national cup's).
+CWC_SECONDARY = {7, 8, 9, 15}    # fl26world.CCUPS: CAF Confederation Cup, ACL Two, Sudamericana, AFC Challenge League
+CWC_CONTINENTAL = {c for c, _n, _code, _conf, _fill in fl26world.CCUPS}
+
+
+def cwc_points_lines(pl, qlines):
+    """the world file's cwcpts line (with the Club World Cup of 32 only): this world's ids of the
+    continental rounds that give ranking points"""
+    if not pl.get("club_world_cup"):
+        return []
+    kinds = {}
+
+    def put(reg, kind):
+        if isinstance(reg, int) and 0 < reg < 1024:
+            kinds[reg] = kind or "-"
+    for q in qlines or []:                       # qround lines: (competition 10..12, round, regulation)
+        put(q[2], "uq" if q[0] == 10 else "usq")
+    for c in pl.get("ccups") or []:
+        if c.get("number") not in CWC_CONTINENTAL:
+            continue
+        s = "s" if c["number"] in CWC_SECONDARY else ""
+        if c.get("groups"):
+            put(c.get("reg"), s + "gr")
+        put(c.get("ko"), s)
+        put(c.get("pre_reg"), s + "qr")
+    ids = pl.get("cup_ids") or {}
+    if pl.get("suda_first"):
+        put(pl["suda_first"].get("reg"), "sqr")                       # the Sudamericana's first stage
+        put((ids.get("conmebol:" + SPO_CODE) or {}).get("reg"), "sr")  # and its play-off
+    if pl.get("libq"):                                                  # the Libertadores' phases 1 and 2
+        for f in ("reg", "reg2"):
+            put((ids.get("conmebol:" + LIBQ_CODE) or {}).get(f), "qr")
+    if not kinds:
+        return []
+    return ["cwcpts " + " ".join("%d=%s" % (r, kinds[r]) for r in sorted(kinds))]
 
 
 def is_plan(r):
@@ -3450,6 +3725,8 @@ def plan(recipe, base, prev=None):
     # nor a cup's id of the last Build: build() gives the cup its own back (pinned_ids)
     prev_cups = kept_cups(renamed_cups((prev or {}).get("cup_ids") or {}, renamed), names)
     prev_cups = ticked_cups(prev_cups, leagues, names, pins)
+    cwc = cwc_config(full)
+    prev_cups = cwc_pins(prev_cups, (prev or {}).get("cup_ids") or {}, cwc)
     cup_cids = {w.get("cid") for w in prev_cups.values() if isinstance(w, dict)}
     rest = [c for c in pool if c not in taken_cid and c not in cup_cids and c not in spent_c]
     for i in range(len(leagues)):
@@ -4104,6 +4381,7 @@ def plan(recipe, base, prev=None):
             "pack_faces": recipe.get("pack_faces", True) is not False,
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe),
+            "club_world_cup": cwc,                              # Leagues > More > Club World Cup
             # the cups' ids of the last Build, {key: {cid, reg, ...}}: build() gives each its own back
             "prev_cup_ids": kept_cups(prev_cups, names, [s["code"] for s in gsupers]),
             # B159: a world built with competition ids under 130 (eu4, r12) goes on with them
@@ -7363,6 +7641,11 @@ def build(pl, base, game, replace=False, log=print):
                           cup_regs(pl.get("prev_cup_ids")))
     national_cups(pl, tmp, db, log)
     game_super_cups(pl, tmp, db, log)
+    cwc_lines = club_world_cup(pl, tmp, db, log)
+    if cwc_lines:
+        # fl26contrank's ranking buttons and screens: the menu flows and the texts, in this world
+        import lbcwcmenu
+        lbcwcmenu.write(tmp, game, siderdir.find(game), log)
     resolve_new_league_stage_cup_winners(pl)
     hc = home_cups(pl, confed)
     own_cup = {p["rid"]: (p.get("own_cup") or {}).get("reg") for p in pl["leagues"]}
@@ -7385,7 +7668,8 @@ def build(pl, base, game, replace=False, log=print):
     # the confed line also tells fl26swiss which of our clubs the board sends to the AFC
     # Champions League or the Libertadores instead of the Champions League (GitHub #43), so a
     # world with a league outside UEFA gets it even with no continental cup
-    if confed and (pl.get("ccups") or pl.get("association_access") or pl.get("conmebol_stages")
+    # the Club World Cup of 32 too: its field and fl26contrank's rankings go by confederation
+    if confed and (pl.get("ccups") or pl.get("association_access") or pl.get("conmebol_stages") or cwc_lines
                    or any(confed.get(p["country"], 2) != 2 for p in pl["leagues"])):
         ccups.append(confed_line(confed))
     for c, h in zip(hc, pl.get("home_cups") or []):
@@ -7529,7 +7813,7 @@ def build(pl, base, game, replace=False, log=print):
                           + order_lines(pl, base, confed) + seasonsum_lines(pl)
                           + kickorder_lines(pl, base, confed) + confgroups_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
-                          + fans
+                          + fans + cwc_lines + (cwc_points_lines(pl, qlines) if cwc_lines else [])
                           + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines, group_world_lines(pl))
     pl.pop("prev_cup_ids", None)      # this Build's own are in cup_ids; the old ones must not pile up
@@ -8950,6 +9234,11 @@ def confgroups_lines(pl, base, confed):
         return []
     ctry = {s: c for s, c in ctry.items() if s in slots and ("country", s) not in clash}
     cups = [(g, CLUB_WORLD_CUP_CID) for g in range(len(CONF_GROUP_NAMES))]
+    # the Intercontinental of a world with the Club World Cup of 32 (club_world_cup, keep_old):
+    # FIFA's like the Club World Cup, so on every confederation's side too, and out of League Info
+    ic = (pl.get("cup_ids") or {}).get(CWC_KEY_IC) if pl.get("club_world_cup") else None
+    fifa = [ic["cid"]] if isinstance(ic, dict) and isinstance(ic.get("cid"), int) else []
+    cups += [(g, c) for c in fifa for g in range(len(CONF_GROUP_NAMES))]
     cups += [(0, c) for c in GROUP_CUPS_UEFA] + ([(0, UECL_CID)] if pl.get("uecl") else [])
     cups += [(g, c) for g, c in GROUP_CUPS_GAME]
     conf_of = {n: code for n, _nm, _code, code, _e in fl26world.CCUPS}
@@ -8966,6 +9255,8 @@ def confgroups_lines(pl, base, confed):
         ",".join("%d:%d" % x for x in sorted(regions.items())),
         ",".join("%d:%d" % x for x in sorted(ctry.items())),
         ",".join("%d:%d" % x for x in cups))
+    if fifa:
+        line += " fifa=" + ",".join("%d:1" % c for c in fifa)
     logos = conf_logos(pl)
     if logos:
         line += " emblems=" + ",".join("%d:%d" % (g, CONF_EMBLEM_CID + g) for g in sorted(logos))
@@ -9611,11 +9902,32 @@ def picture_jobs(pl, base, log=print, gone=None):
                 job("league_logo", logo_files(cid_of[int(rid)]), cid_of[int(rid)], v.get("name") or "",
                     have_picture(v["logo"], v.get("name") or "league %s" % rid, log,
                                  "logo", "drawn emblem", gone, logo_files(cid_of[int(rid)])))
+    # the Club World Cup of 32 (club_world_cup) is competition 1 now: the game's Club World Cup's
+    # logo (edits.competitions["1"]) is the Intercontinental's, on the id it was copied to
+    cwc = pl.get("club_world_cup")
+    ic = ((pl.get("cup_ids") or {}).get(CWC_KEY_IC) or {}) if cwc and cwc.get("keep_old") else {}
+    ic_cid = ic.get("cid") if isinstance(ic.get("cid"), int) else None
+    ic_logo = None
     for cid, v in (e.get("competitions") or {}).items():
         if v.get("logo"):
-            job("league_logo", logo_files(int(cid)), int(cid), v.get("name") or "",
+            to = int(cid)
+            if cwc and to == CLUB_WORLD_CUP_CID:
+                ic_logo = v["logo"]
+                continue
+            job("league_logo", logo_files(to), to, v.get("name") or "",
                 have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
-                             "logo", "drawn emblem", gone, logo_files(int(cid))))
+                             "logo", "drawn emblem", gone, logo_files(to)))
+    pic = have_picture(cwc["logo"], "the Club World Cup", log, "logo", "game's emblem", gone,
+                       logo_files(CLUB_WORLD_CUP_CID)) if cwc and cwc.get("logo") else None
+    if pic:                      # (none: the game's own emblem stays, not a drawn one)
+        job("league_logo", logo_files(CLUB_WORLD_CUP_CID), CLUB_WORLD_CUP_CID, "Club World Cup", pic)
+    if ic_cid:
+        name = cwc.get("old_name") or CWC_OLD_NAME
+        pic = have_picture(ic_logo, name, log, "logo", "game's emblem", gone, logo_files(ic_cid)) if ic_logo else None
+        if pic:
+            job("league_logo", logo_files(ic_cid), ic_cid, name, pic)
+        else:                    # the game's own Club World Cup emblem, as the cup had before
+            job("game_emblem", logo_files(ic_cid), ic_cid, name, CLUB_WORLD_CUP_CID)
     for tid, v in (e.get("clubs") or {}).items():
         # "kit": a place of the game's NewLife gave another club (refresh_game_leagues, B57); with
         # no crest picture it gets that club's shield (or badge), as a new club does, never the

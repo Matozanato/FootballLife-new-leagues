@@ -10,6 +10,7 @@ from ..ui import hint
 from .builder import BuilderPage, PictureField
 from .cup_editors import GameCupsEditor, OurCupsEditor, CupConflict
 from .continental import ContinentalEditor
+from .international import InternationalEditor
 
 
 class Section(dict):
@@ -60,8 +61,9 @@ class Cups(BuilderPage):
         self.tabs = SectionTabs()
         self.outer.addWidget(self.tabs, 1)
         self.sections = []
+        # International (feature/cwc32): FIFA's club cups -- the Intercontinental, the Club World Cup of 32
         for title, factory in (("Game Countries", GameCupsEditor), ("Our Countries", OurCupsEditor),
-                               ("Continental", ContinentalEditor)):
+                               ("Continental", ContinentalEditor), ("International", InternationalEditor)):
             body = QWidget()
             layout = QVBoxLayout(body)
             # Real space outside the tab bar, not padding inside its labels.
@@ -74,10 +76,13 @@ class Cups(BuilderPage):
                               page=self, owed=None)
             if factory is ContinentalEditor:
                 self.continental_section = section
+            elif factory is InternationalEditor:
+                self.international_section = section
             else:
                 self.sections.append(section)
             self.tabs.addTab(body, _(title))
-        self.all_sections = self.sections + [self.continental_section]
+        # in the order of the tabs: current_section() is all_sections[tab index]
+        self.all_sections = self.sections + [self.continental_section, self.international_section]
         self.tabs.currentChanged.connect(self.section_changed)
         self._recipe = None
         self._key = None
@@ -89,6 +94,10 @@ class Cups(BuilderPage):
 
     def current_section(self):
         return self.all_sections[self.tabs.currentIndex()]
+
+    def show_international(self):
+        """the International tab (the old Leagues > More > Club World Cup comes here)"""
+        self.tabs.setCurrentIndex(self.all_sections.index(self.international_section))
 
     def heightForWidth(self, width):
         # Status/banner text wraps, so the outer scroll area queries height-for-width.

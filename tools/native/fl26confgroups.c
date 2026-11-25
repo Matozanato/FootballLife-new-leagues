@@ -942,6 +942,16 @@ static uint64_t ci_dtor(char* t, uint64_t a)
 typedef struct { uint16_t *b, *e, *c; } hvec;
 static uint16_t g_cups[NG][16];
 static int g_ncups[NG];
+/* FIFA's club cups besides the Club World Cup (the world line's `fifa`: the Intercontinental of a
+   world with the Club World Cup of 32, 21.11.): in every group's `cups`, kept out of League Info
+   as the Club World Cup is (B402) */
+static uint16_t g_fifa[8]; static int g_nfifa;
+static int is_fifa(uint32_t cid)
+{
+  if (cid == CWC_CID) return 1;
+  for (int i = 0; i < g_nfifa; i++) if (g_fifa[i] == cid) return 1;
+  return 0;
+}
 static uint32_t reg_cid(void* data, uint16_t rid)
 {
   const char* rec = data ? ((reg_find_t)VA(REG_FIND))(data, rid) : 0;
@@ -1033,7 +1043,7 @@ static uint32_t* cg_info(uint32_t* info, uint32_t league, char* t)
   if (g < 0 || !r) return r;
   int n = 0;
   for (int i = 0; i < g_ncups[g] && n < INFO_ICONS; i++)
-    if (g_cups[g][i] != CWC_CID) r[1 + n++] = g_cups[g][i];
+    if (!is_fifa(g_cups[g][i])) r[1 + n++] = g_cups[g][i];
   for (int i = n; i < INFO_ICONS; i++) r[1 + i] = 0xffffffffu;
   r[7] = r[8] = 0xffffffffu;
   if (r[0] == 0xffffffffu) r[0] = 0;       /* a row with no league: the panel is still filled */
@@ -1407,6 +1417,11 @@ __declspec(dllexport) void fl26_confgroups_cname(int c, const char* name)
 __declspec(dllexport) void fl26_confgroups_cup(int g, int cid)
 {
   if (g >= 0 && g < NG && cid > 0 && cid < 0x10000 && g_ncups[g] < 16) g_cups[g][g_ncups[g]++] = (uint16_t)cid;
+}
+/* a FIFA club cup (the world line's fifa=<cid>:1): not on League Info's confederation rows */
+__declspec(dllexport) void fl26_confgroups_fifa(int cid, int on)
+{
+  if (on && cid > 0 && cid < 0x10000 && g_nfifa < 8) g_fifa[g_nfifa++] = (uint16_t)cid;
 }
 /* the slot a group's header row stands on (its emblem); default 123, none.  League Info on that
  * row is the group's continental cups whatever the slot (cg_info) */

@@ -48,16 +48,9 @@ def rows(regs):
     return [bytearray(regs[i:i + M.REG]) for i in range(0, len(regs), M.REG)]
 
 
-def main():
-    a = sys.argv[1:]
-    get = lambda k, d=None: a[a.index(k) + 1] if k in a else d
-    base, out = get("--base"), get("--out")
-    if not base or (not out and "--dry" not in a):
-        print(__doc__)
-        return 1
-    ko = int(get("--ko", "200"))
-    comp, regs, ents = (M.load(base, n) for n in
-                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+def reshape(regs, ko, log=print):
+    """regs (CompetitionRegulation.bin) with competition 1 reshaped: regulation 1 the group stage
+    and its replicas, `ko` the knockout of sixteen. SystemExit when the tables are not as expected"""
     R = rows(regs)
     used = {rid(r) for r in R}
     if ko in used:
@@ -105,17 +98,13 @@ def main():
         if rid(g) != CWC_REG and rid(g) in used:
             raise SystemExit("regulation %d is taken in this world" % rid(g))
 
-    print("Club World Cup (competition 1), %d rows replace the shipped one:" % len(new))
+    log("Club World Cup (competition 1), %d rows replace the shipped one:" % len(new))
     for g in new:
         dw = int.from_bytes(g[R_ROUNDS_DW:R_ROUNDS_DW + 4], "little")
-        print("   reg %5d  kind %d  clubs %2d  group %3d  back %d  groups %d  rounds %d  single %d"
-              % (rid(g), g[M.R_TYPE], g[M.R_TEAMS] & 0x3f, g[R_GROUP],
-                 int.from_bytes(g[R_BACK:R_BACK + 2], "little"), dw & 0x1f, (dw >> 12) & 7,
-                 (dw >> 29) & 1))
-    if "--dry" in a:
-        print("dry run: nothing written")
-        return 0
-
+        log("   reg %5d  kind %d  clubs %2d  group %3d  back %d  groups %d  rounds %d  single %d"
+            % (rid(g), g[M.R_TYPE], g[M.R_TEAMS] & 0x3f, g[R_GROUP],
+               int.from_bytes(g[R_BACK:R_BACK + 2], "little"), dw & 0x1f, (dw >> 12) & 7,
+               (dw >> 29) & 1))
     # the shipped row's place in the table is where the group stage goes; the rest follows it
     out_regs = bytearray()
     for r in R:
@@ -124,6 +113,46 @@ def main():
                 out_regs += g
         else:
             out_regs += r
+    return out_regs
+
+
+IC_CLUBS = 4
+
+
+def intercontinental(comp, regs, ents, cid, reg, name, code="FL_INTERCONTINENTAL"):
+    """the shipped Club World Cup -- competition 1 and its one regulation, four clubs, mid-December
+    -- copied in place onto competition `cid` and regulation `reg`, called `name` (Mod Studio's
+    "keep the old Club World Cup"). Before reshape: it copies the shipped row. No entries: the
+    game's four entrants of regulation 1 are handed to it by fl26swiss.dll"""
+    at = next((i for i in range(len(comp) // M.COMP) if M.comp_cid(comp, i * M.COMP) == CWC_CID), None)
+    if at is None:
+        raise SystemExit("no competition 1 (the Club World Cup) in these tables")
+    R = rows(regs)
+    old = [r for r in R if M.reg_cid(r) == CWC_CID]
+    if len(old) != 1 or rid(old[0]) != CWC_REG:
+        raise SystemExit("competition 1 is not the shipped one-row Club World Cup here -- already reshaped?")
+    proto = M.code_of(comp[at * M.COMP:(at + 1) * M.COMP])
+    region = comp[at * M.COMP + M.REGION_OFF]
+    M.add_league(comp, regs, ents, cid, reg, region, name, code, [], proto, quiet=True)
+    last = (len(regs) // M.REG - 1) * M.REG
+    regs[last + M.R_TEAMS] = (regs[last + M.R_TEAMS] & 0xc0) | IC_CLUBS
+    return cid, reg
+
+
+def main():
+    a = sys.argv[1:]
+    get = lambda k, d=None: a[a.index(k) + 1] if k in a else d
+    base, out = get("--base"), get("--out")
+    if not base or (not out and "--dry" not in a):
+        print(__doc__)
+        return 1
+    ko = int(get("--ko", "200"))
+    comp, regs, ents = (M.load(base, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    out_regs = reshape(regs, ko)
+    if "--dry" in a:
+        print("dry run: nothing written")
+        return 0
     M.write_tables(out, comp, out_regs, ents)
     print("written to %s" % out)
     return 0

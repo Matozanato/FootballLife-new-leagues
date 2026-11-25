@@ -685,6 +685,14 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-11-20 (next update): **in a big world, the last cups of the world file were never
+  played.** fl26swiss.dll took at most 32 `dates` lines and dropped the rest without a word; a
+  world of 73 leagues had 35, so the last three cups had no date. The Supercopa do Brasil (a
+  game league's super cup, the last line) had its two clubs and its match in January of every
+  season and was never played; the two other cups were 296 and 297 of that world. It now takes
+  128 and says in sider.log when a world has more. Needs Install mods (the new fl26swiss.dll);
+  a career already started should get the dates at its next New Year, when the season is
+  built. Not yet checked in the game.
 - 2026-10-31 (next update, Discord, thanks leon): **A league on Select Team slot 76, 77 or 80
   was missing from a career's Team Info and transfer lists** (LigaPro Serie A, SuperSport HNL
   and Guatemala in the Modpack and World pack, TOPsport A lyga in the Europe pack), while Edit

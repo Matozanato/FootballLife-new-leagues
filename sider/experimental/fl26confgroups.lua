@@ -81,7 +81,7 @@ local function read_line(dir)
       for c, nm in nl:gmatch("(%d+):([^|]+)") do names[#names + 1] = { tonumber(c), (nm:gsub("%s+$", "")) } end
     end
     if rest then
-      out = { slots = {}, regions = {}, countries = {}, cups = {}, heads = {}, emblems = {}, trace = false }
+      out = { slots = {}, regions = {}, countries = {}, cups = {}, heads = {}, emblems = {}, fifa = {}, trace = false }
       for key, list in rest:gmatch("(%a+)=([%d:,]+)") do
         local t = out[key]
         if key == "trace" then
@@ -180,6 +180,14 @@ function m.init(ctx)
     for _, e in ipairs(line.emblems) do setemb(e[1], e[2]) end
   elseif #line.emblems > 0 then
     log("confgroups: the confederations' emblems need a newer fl26confgroups.dll -- the rows keep none")
+  end
+  -- FIFA's club cups besides the Club World Cup (fifa=<cid>:1, the Intercontinental of a world with
+  -- the Club World Cup of 32): out of League Info. An older DLL has no setter: they show there too
+  local setfifa = fn("fl26_confgroups_fifa", "fl26_confgroups_set_t")
+  if setfifa then
+    for _, e in ipairs(line.fifa) do setfifa(e[1], e[2]) end
+  elseif #line.fifa > 0 then
+    log("confgroups: the Intercontinental needs a newer fl26confgroups.dll -- League Info shows it on the confederations' rows")
   end
   if line.trace then settrace(1, 0) end
   local status = tonumber(install(base))

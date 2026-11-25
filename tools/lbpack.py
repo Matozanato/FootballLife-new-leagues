@@ -46,6 +46,9 @@ ORDER = [
     "fl26confgroups",           # FL 2027 only (it stands down in FL26): Select Team / Competition Info by confederation
     "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
+    "fl26contrank",       # the confederation ranking screens and menus (on with the world's cwc32 line)
+    "fl26cwc",            # the Club World Cup ranking, and the titles the 32-club draw takes (feature/cwc32)
+    "fl26cwctitle",       # the 32-club final and the Intercontinental's give the ML title and the trophy ceremony
 ]
 # Modules that ship as one file (0.2.0, Gu: "quite a lot of separate Lua/DLL modules now"): the
 # small one-fix guards, each still its own file in sider/ to read and change, go out bundled in
@@ -88,7 +91,7 @@ DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
         "fl26edit": "build-edit.sh", "fl26walk": "build-walk.sh",
         "fl26compcache": "build-compcache.sh", "fl26squadlist": "build-squadlist.sh",
-        "fl26confgroups": "build-confgroups.sh"}
+        "fl26confgroups": "build-confgroups.sh", "fl26cwc": "build-cwc.sh"}
 # DLLs that go out as committed, not built here: the bytes the GigaPack's seasons were played with
 # (B408: zig does not build fl26match.dll byte for byte again; the committed file is the tested one.
 # 16.11.2026 e7681449: source 9a5a47d + the loading fixes pl_fill, pl_bs and the walk cave, without the B465 work in progress)

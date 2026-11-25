@@ -94,7 +94,7 @@ def run():
     qa.processEvents()
     game, ours = page.sections
     ge, oe = game["editor"], ours["editor"]
-    ok("real page with three sections", page.tabs.count() == 3)
+    ok("real page with four sections (International: feature/cwc32)", page.tabs.count() == 4)
     ok("Game keeps seven columns", ge.table.columnCount() == 7)
     ok("Our keeps ten columns and only eligible leagues", oe.table.columnCount() == 10
        and oe.keys() == ["Alpha", "Beta", "Existing calendar"])

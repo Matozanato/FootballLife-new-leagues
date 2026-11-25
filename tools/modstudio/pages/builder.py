@@ -3387,6 +3387,8 @@ class NewLeagues(BuilderPage):
         self.action("CONMEBOL countries without a league", self.conmebol_associations,
                     tip="With the modern CONMEBOL competitions: places for South American countries that have no "
                     "league in this world")
+        self.action("Club World Cup", self.club_world_cup, tip="The Club World Cup with 32 clubs every few "
+                    "years, and the old one kept as the Intercontinental Cup")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
         self.action("Trophies", self.trophies, tip="A trophy folder of your own for a competition: FL26's "
@@ -3689,6 +3691,11 @@ class NewLeagues(BuilderPage):
         if self.need_tables(True):
             return
         CompetitionIdsDialog(self, self.project).finish()
+
+    def club_world_cup(self):
+        # the Club World Cup of 32 and the Intercontinental are in Cups > International now
+        self.app.open_page("Cups")
+        self.app.page("Cups").show_international()
 
     def competition_names(self):
         if self.need_tables(True):

@@ -73,6 +73,46 @@ static void run(const char* name, const int* key, int want_pairs, int runs)
   expect(worst <= want_pairs && !said, buf);
 }
 
+/* 21.11.2026: the Club World Cup's pots of a FL27 career (sider.log); pot_draw put three UEFA
+   clubs into groups C and G and two CONMEBOL clubs into group A. cwc_draw: at most two UEFA and
+   one of any other confederation per group, countries apart, every draw whole. Confederations as
+   confed_of: 2 UEFA, 4 CONMEBOL, 3 AFC, 5 CAF, 6 CONCACAF, 7 OFC. */
+static void cwc_case(void)
+{
+  static const int conf[32] = {
+    2, 2, 2, 2, 4, 4, 4, 4,      /* pot 1 */
+    5, 5, 5, 5, 2, 3, 2, 2,      /* pot 2 */
+    2, 7, 2, 4, 2, 2, 6, 4,      /* pot 3 */
+    2, 3, 3, 6, 3, 6, 3, 6 };    /* pot 4 */
+  int key[32];
+  for (int i = 0; i < 32; i++) key[i] = 100 + i;
+  key[0] = key[12] = key[16] = 1;                  /* three English clubs */
+  key[1] = key[14] = 2;                            /* two Spanish */
+  uint32_t field[32], grp[8][8];
+  for (int i = 0; i < 32; i++) field[i] = CLUB(100 + i);
+  int whole_all = 1, conf_ok = 1, country_ok = 1, found = 1; long worst_nodes = 0;
+  for (int r = 0; r < 3000; r++) {
+    long nodes = 0;
+    if (!cwc_draw(field, key, conf, 1, grp, &nodes)) { found = 0; continue; }
+    if (nodes > worst_nodes) worst_nodes = nodes;
+    int whole;
+    if (check(field, key, grp, &whole)) country_ok = 0;
+    if (!whole) whole_all = 0;
+    for (int g = 0; g < 8; g++) {
+      int c[16] = { 0 };
+      for (int pot = 0; pot < 4; pot++)
+        for (int i = 0; i < 32; i++)
+          if (field[i] == grp[g][pot] && ++c[conf[i]] > (conf[i] == 2 ? 2 : 1)) conf_ok = 0;
+    }
+  }
+  char buf[200];
+  snprintf(buf, sizeof buf, "Club World Cup: 3000 draws found (worst %ld step(s))", worst_nodes);
+  expect(found, buf);
+  expect(whole_all, "Club World Cup: every draw whole");
+  expect(conf_ok, "Club World Cup: at most 2 UEFA and 1 of any other confederation per group");
+  expect(country_ok, "Club World Cup: no two clubs of one country in a group");
+}
+
 int main(void)
 {
   int key[32];
@@ -95,6 +135,8 @@ int main(void)
 
   for (int i = 0; i < 32; i++) key[i] = 1;
   run("one association only", key, 48, 200);
+
+  cwc_case();
 
   if (fails) { printf("%d check(s) FAILED\n", fails); return 1; }
   printf("all checks passed\n");

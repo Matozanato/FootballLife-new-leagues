@@ -27,7 +27,7 @@ STAGE = os.path.join(WORK, "src")
 NAME = "FL26ModStudio"
 PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-dump[s]", re.I)
 LOCAL_PATH_LINE = re.compile(r'^\s*sys\.path\.insert\(0, r"[A-Za-z]:\\[^"]*"\)\s*$')
-HIDDEN = ["leaguebuilder", "bigjson", "lbplayers", "lbrating", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack", "lbstadiums", "lbtrophies", "mktrophyvariants",
+HIDDEN = ["leaguebuilder", "bigjson", "lbplayers", "lbrating", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack", "lbstadiums", "lbtrophies", "mktrophyvariants", "lbcwcmenu",
           "mkplayers", "mksplit", "mkreshape", "mkphases", "mkuecl", "mkeuropo", "mkkits", "mkemblems",
           "mkcrests", "mkregioncats", "mkregnames", "mkcup", "mkccup", "mkcoaches", "mkcatflags", "mkmpcol", "mkteamcrest", "afp",
           "siderdir", "mktactics", "shieldcrest", "crestmatch", "kitpics", "kitnumbers", "kitnumbers_data", "lbservers", "kitmaker", "kitpatterns",

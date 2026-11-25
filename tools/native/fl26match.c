@@ -306,6 +306,40 @@ static const wide_t TWIN_WIDE[] = {
 static int g_twin_st[NTWIN];               /* what twin_widen found: 1 widened, 2 already, 0 left alone */
 static unsigned char g_twin_seen[NTWIN][5];
 
+/* The score of a result row (21.11.2026, Master League, Ligue 1 of a big world). 0x141515300 (the row's
+ * score: played? goals) takes the id in ecx, and its seven callers -- all on the matchday-results pages,
+ * 0x140ca1b60, 0x140ca1d50, 0x140ca2890, 0x140ca7fc0, 0x140ca80d0 -- hand it the record's id as
+ * `movzx ecx, word [rec]`, rec the record a lookup just gave them (fl26match keeps the id whole at +0).
+ * caps widens the cut inside it (0x14151530f), too late: the word is all it gets. While a low id was a
+ * twin of a live match (389 handed out below 65536 in that career), the score looked up the low twin,
+ * another competition's match not played yet, and the page listed the round's fixtures with no result
+ * but the user's (the current match, which the lookup tells apart) -- the table counted them all. Each
+ * read becomes the dword read of the same record; same byte check as PAGE_WIDE. */
+static const wide_t SCORE_WIDE[] = {
+  {0x140ca1bbaull, 4, {0x0f,0xb7,0x4d,0x00}, {0x8b,0x4d,0x00,0x90}},      /* word [rbp] -> dword */
+  {0x140ca1bc6ull, 4, {0x41,0x0f,0xb7,0x0e}, {0x41,0x8b,0x0e,0x90}},      /* word [r14] -> dword */
+  {0x140ca1d91ull, 3, {0x0f,0xb7,0x08},      {0x8b,0x08,0x90}},           /* word [rax] -> dword */
+  {0x140ca28feull, 3, {0x0f,0xb7,0x08},      {0x8b,0x08,0x90}},
+  {0x140ca802dull, 3, {0x0f,0xb7,0x08},      {0x8b,0x08,0x90}},
+  {0x140ca8145ull, 3, {0x0f,0xb7,0x0e},      {0x8b,0x0e,0x90}},           /* word [rsi] -> dword */
+  {0x140ca814full, 4, {0x41,0x0f,0xb7,0x0e}, {0x41,0x8b,0x0e,0x90}},      /* word [r14] -> dword */
+};
+/* The rows of the matchday-results page (21.11.2026, the same career, next round: one row only, the
+ * user's, and the table counted every match). MatchDayResults' +0x278 (0x140ca3ee0) keeps the day's id
+ * list (dwords, 0x141510bd0) through a remove_if (0x140ca3a50) whose test 0x140ca22a0 gets the id whole
+ * in ecx, cuts it (`movzx edx, di`) for the lookup and compares the match's round with the current
+ * match's (ctx+0x35960). With a twin live it tested the low twin, another competition's match, and the
+ * round's fixture left the list. The only lookup of the exe that compares with ctx+0x35960 after a cut. */
+static const wide_t LIST_WIDE[] = {
+  {0x140ca22bfull, 3, {0x0f,0xb7,0xd7},      {0x8b,0xd7,0x90}},           /* movzx edx, di -> mov edx, edi */
+};
+#define NLIST ((int)(sizeof LIST_WIDE / sizeof *LIST_WIDE))
+static int g_list_st[NLIST];
+static unsigned char g_list_seen[NLIST][5];
+#define NSCORE ((int)(sizeof SCORE_WIDE / sizeof *SCORE_WIDE))
+static int g_score_st[NSCORE];             /* what score_widen found: 1 widened, 2 already, 0 left alone */
+static unsigned char g_score_seen[NSCORE][5];
+
 static uint32_t g_sched;                  /* block offset of the per-club schedules, 0 = unknown */
 static volatile LONG g_twins, g_turn, g_both, g_user_hi, g_user_amb, g_user_none;
 
@@ -336,7 +370,7 @@ static int has_club(const uint8_t* r, uint32_t c)
 #define SETCTX_VA   0x141550090ull
 static const unsigned char SIG_SETCTX[15] = {0x48,0x89,0x5c,0x24,0x10,0x48,0x89,0x74,0x24,0x18,0x57,0x48,0x83,0xec,0x20};
 static volatile uint32_t g_cur = 0xffff;
-static volatile LONG g_cur_hi, g_cur_low, g_cur_site;
+static volatile LONG g_cur_hi, g_cur_low, g_cur_site, g_cur_post;
 typedef struct { uint32_t b, e; } fnr_t;
 static const fnr_t CTX_FNS[] = {   /* exe RVAs, sorted; every fragment of each function (B465) */
   {0x8e9210,0x8e92db}, {0xab8500,0xab8f1f}, {0xac6260,0xac6300}, {0xadcc40,0xadd194},
@@ -376,18 +410,104 @@ static void __attribute__((ms_abi)) m_setctx(const uint8_t* rec)
   g_cur = *(const uint32_t*)rec;
   g_setctx(rec);
 }
+/* The post-match thread (21.11.2026, Master League, Ligue 1 of a big world: the hub's headline read
+ * "Derrota contra , 1-0" after a win, no opponent). 0x1412fd680 (UpdatePostMatchThread /
+ * UpdateDayEndThread, one .pdata entry) reads the context's word (0x1412fd8fc, r15 = ctx + 0x35960)
+ * into [rsp+0x28] and hands it on, by value or by pointer, to Master League's after-match handlers:
+ * 0x14133dfc0 (the gate and the money, its lookup returns at 0x14133e00b, deeper ones under
+ * 0x141567540), 0x14132add0 (0x14132ae80), 0x1413365d0 (reads the context itself, 0x1413366ec) and
+ * 0x14134edc0. CUR_SITES named only 0x1412fd680's own four lookups, so with the current match a high
+ * twin every one of these got the low twin, another competition's match without the user's club: the
+ * news item had no opponent and, his club in neither slot, the result fell through to a defeat (the
+ * stats' "amb" lines, 11-13 each, one per match of the career). A lookup of the current match's low
+ * word anywhere under this function is the current match -- except when the low twin is played the
+ * same day: the day-end pass also simulates the day's other matches, so then it stays the low one. */
+static const fnr_t POST_FNS[] = { {0x12fd680,0x12fe5d0} };
+/* 1 = under a function of CTX_FNS, 2 = only under one of POST_FNS (check the dates), 0 = neither */
 static int __attribute__((noinline)) ctx_site(void)
 {
-  void* fr[6] = {0};
-  USHORT k = RtlCaptureStackBackTrace(2, 6, fr, 0);   /* past ctx_site and m_lookup */
+  void* fr[8] = {0};
+  USHORT k = RtlCaptureStackBackTrace(2, 8, fr, 0);   /* past ctx_site and m_lookup */
+  int post = 0;
   for (int j = 0; j < k; j++) {
     uintptr_t v = (uintptr_t)fr[j];
     if (v < g_exe || v >= g_exe + 0x8000000) continue;
     uint32_t r = (uint32_t)(v - g_exe);
-    int lo = 0, hi = (int)(sizeof CTX_FNS / sizeof *CTX_FNS) - 1;
+    if (j < 6) {                                       /* CTX_FNS: the depth it always had */
+      int lo = 0, hi = (int)(sizeof CTX_FNS / sizeof *CTX_FNS) - 1;
+      while (lo <= hi) {
+        int m = (lo + hi) / 2;
+        if (r < CTX_FNS[m].b) hi = m - 1; else if (r >= CTX_FNS[m].e) lo = m + 1; else return 1;
+      }
+    }
+    for (unsigned s = 0; s < sizeof POST_FNS / sizeof *POST_FNS; s++)
+      if (r >= POST_FNS[s].b && r < POST_FNS[s].e) post = 1;
+  }
+  return post ? 2 : 0;
+}
+
+/* Today's calendar list (21.11.2026, the same career: the headline still read "Derrota contra" after
+ * the POST_FNS fix, which did fire). Master League's daily pass and its news manager walk TODAY's day
+ * of the calendar (block + calendar + today * day size: up to 280 match ids as WORDS, the count at
+ * +0x230) and look each word up: 0x14134bc70 (the news manager's "the user's club's match today",
+ * called from 0x14134ec10 and 0x14134edc0), 0x141333ad0.. (the day's matches, 0x1412f8e60), and
+ * 0x1413007d0 / 0x141304810 (the daily news and finances). With twins live the word of today's match
+ * of the user's club, a high id, is also a low match of another day; the lookup gave that one, the
+ * user's club was in neither slot, and the news fell to a defeat with no opponent. These are the
+ * functions that read the calendar's "today" index (its displacement, 0x1642a1c from the block or
+ * 0x3f174 from the calendar, in the shipped exe; every fragment of each, .pdata), 81 of them: when
+ * one of them is the lookup's direct caller (the first two return addresses: a wrapper's and its
+ * caller's) and only the high twin is dated today (block + 0x1642a24, the dword 0x1415765e0 reads,
+ * the form of the record's +8), it is the high twin. A deeper caller is not enough: 0x141546c70 (the
+ * slots of a competition), called from them, keeps the slots' own pick. */
+static const fnr_t TODAY_FNS[] = {   /* exe RVAs, sorted */
+  {0xadcc40,0xadd194}, {0xaed760,0xaed98d}, {0xaf1fb0,0xaf204a}, {0xaf93f0,0xaf94c0},
+  {0xaf94e0,0xaf980c}, {0xafff60,0xb000b3}, {0xb00a60,0xb00d86}, {0xb00ed0,0xb00f8d},
+  {0xb01360,0xb0190c}, {0xb02120,0xb02550}, {0xb05840,0xb0592f}, {0xb85170,0xb85a48},
+  {0xb85a50,0xb86416}, {0xb95310,0xb95e38}, {0xbbdec0,0xbbe421}, {0xc907f0,0xc929d4},
+  {0xca3e20,0xca3edc}, {0xca7160,0xca73b7}, {0xcae960,0xcaecf7}, {0xcaee60,0xcaff6b},
+  {0xcd3490,0xcd3572}, {0xed9b80,0xed9c00}, {0xf0f9c0,0xf10980}, {0xf6a830,0xf6ab01},
+  {0xfad5f0,0xfad62e}, {0xfad62e,0xfad694}, {0xfad694,0xfad736}, {0xfad736,0xfad838},
+  {0xfad838,0xfad841}, {0xfc4130,0xfc4584}, {0xfc49c0,0xfc4a4c}, {0xfc4a4c,0xfc4bf4},
+  {0xfc4bf4,0xfc4db5}, {0xfc6cb0,0xfc6ce1}, {0xfc6ce1,0xfc6ce9}, {0xfc6ce9,0xfc7039},
+  {0xfc7039,0xfc706a}, {0xfc706a,0xfc7073}, {0xfc7ee0,0xfc800c}, {0xfc93e0,0xfc9eac},
+  {0x12695b0,0x1269ee4}, {0x1275b00,0x1275c22}, {0x12ddc40,0x12de333}, {0x12e0540,0x12e0573},
+  {0x12e0573,0x12e0946}, {0x12e0946,0x12e09d4}, {0x12e09d4,0x12e0a0d}, {0x12e0a0d,0x12e0b25},
+  {0x12e0b25,0x12e0b45}, {0x12e0b45,0x12e0b53}, {0x12e8480,0x12e8b62}, {0x12f1cc0,0x12f1ef7},
+  {0x12f42d0,0x12f514a}, {0x12f5310,0x12f5a08}, {0x12f8e60,0x12f95e3}, {0x13007d0,0x1301901},
+  {0x1304810,0x130692c}, {0x13069c0,0x13069da}, {0x13069da,0x1306a03}, {0x1306a03,0x1306a65},
+  {0x1306a65,0x1306a7b}, {0x1306a7b,0x1306ab1}, {0x1306bf0,0x130714a}, {0x1314fc0,0x13156d4},
+  {0x1318100,0x1318ad1}, {0x1318c70,0x1318d18}, {0x1320710,0x132071b}, {0x132071b,0x13207c7},
+  {0x13207c7,0x13207f8}, {0x13207f8,0x1320974}, {0x1320974,0x1320979}, {0x1320979,0x13209e0},
+  {0x13209e0,0x13209f0}, {0x1321110,0x1321e2f}, {0x13247e0,0x132480d}, {0x132480d,0x1324ce6},
+  {0x1324ce6,0x1324cf1}, {0x1325a80,0x1325cf5}, {0x132e7d0,0x132ef32}, {0x1333ad0,0x1333b49},
+  {0x1333b49,0x1333d7f}, {0x1333d7f,0x1333e03}, {0x133e2c0,0x133e766}, {0x134bc70,0x134be10},
+  {0x13504b0,0x1350646}, {0x1351740,0x13517c5}, {0x1357ad0,0x135822a}, {0x135ee70,0x135f0a1},
+  {0x135fef0,0x1360493}, {0x1361880,0x1361962}, {0x1367010,0x136728c}, {0x13fbf60,0x13fc0b1},
+  {0x14c8fd0,0x14c900e}, {0x14c900e,0x14c90ec}, {0x14c90ec,0x14c90f0}, {0x150c230,0x150c3bd},
+  {0x150fe90,0x150fffd}, {0x1510000,0x1510160}, {0x1510bd0,0x1510c34}, {0x1510c34,0x1510cf5},
+  {0x1510cf5,0x1510d09}, {0x1510d10,0x1510d69}, {0x1510d69,0x1510e1e}, {0x1510e1e,0x1510e2c},
+  {0x15120d0,0x151230b}, {0x1512d70,0x1512f6d}, {0x151c470,0x151c4ce}, {0x151c4ce,0x151c5d4},
+  {0x151c5d4,0x151c5d8}, {0x151e090,0x151e337}, {0x15251e0,0x1526f67}, {0x153d440,0x153dd84},
+  {0x15416b0,0x1542284}, {0x15481b0,0x15481f6}, {0x15481f6,0x1548314}, {0x1548314,0x1548318},
+  {0x157f1a0,0x157f319}, {0x158f420,0x158f86f}, {0x2199c00,0x2199e85}, {0x2199e90,0x219a12c},
+  {0x219a130,0x219a3d0}
+};
+#define TODATE_VA 0x1415765f2ull          /* mov eax, [rdx + today's date] (0x1415765e0) */
+static uint32_t g_todate;                 /* block offset of today's date, 0 = unknown (rule off) */
+static volatile LONG g_today_hi;
+static int __attribute__((noinline)) today_site(void)
+{
+  void* fr[2] = {0};
+  USHORT k = RtlCaptureStackBackTrace(2, 2, fr, 0);   /* past today_site and m_lookup */
+  for (int j = 0; j < k; j++) {
+    uintptr_t v = (uintptr_t)fr[j];
+    if (v < g_exe || v >= g_exe + 0x8000000) continue;
+    uint32_t r = (uint32_t)(v - g_exe);
+    int lo = 0, hi = (int)(sizeof TODAY_FNS / sizeof *TODAY_FNS) - 1;
     while (lo <= hi) {
       int m = (lo + hi) / 2;
-      if (r < CTX_FNS[m].b) hi = m - 1; else if (r >= CTX_FNS[m].e) lo = m + 1; else return 1;
+      if (r < TODAY_FNS[m].b) hi = m - 1; else if (r >= TODAY_FNS[m].e) lo = m + 1; else return 1;
     }
   }
   return 0;
@@ -511,7 +631,7 @@ static uint8_t* __attribute__((ms_abi, noinline)) m_lookup(uint8_t* blk, uint32_
       uint8_t* h = id < 0x10000 && t < g_cap && g_mask == 0xffffffffu ? rec_at(blk, t) : 0;
       if (h && *(uint32_t*)h == t) {             /* both twins live: whole low id, or a cut user one */
         InterlockedIncrement(&g_both);
-        int us = user_site();
+        int us = user_site(), cs = 0;
 #ifdef FL26MATCH_DIAG
         int us0 = us;
 #endif
@@ -546,8 +666,14 @@ static uint8_t* __attribute__((ms_abi, noinline)) m_lookup(uint8_t* blk, uint32_
           if (a && b) InterlockedIncrement(&g_user_amb);
           if (!a && !b) InterlockedIncrement(&g_user_none);   /* not his club's schedule after all */
           if (b && !a) { InterlockedIncrement(&g_user_hi); cut_note(); return h; }
-        } else if (g_cur == t && ctx_site()) {      /* the current match's id, read from the context */
-          InterlockedIncrement(&g_cur_hi); cut_note(); return h;
+        } else if (g_cur == t && (cs = ctx_site()) != 0 &&
+                   (cs == 1 || *(uint32_t*)(r + 8) != *(uint32_t*)(h + 8))) {
+          /* the current match's id, read from the context (2: under the post-match thread, the
+           * low twin played another day) */
+          InterlockedIncrement(cs == 1 ? &g_cur_hi : &g_cur_post); cut_note(); return h;
+        } else if (g_todate && *(uint32_t*)(h + 8) == *(uint32_t*)(blk + g_todate) &&
+                   *(uint32_t*)(r + 8) != *(uint32_t*)(blk + g_todate) && today_site()) {
+          InterlockedIncrement(&g_today_hi); cut_note(); return h;   /* today's list: today's twin */
         } else if (g_cur == id) InterlockedIncrement(&g_cur_low);
         else if (g_sched) { uint32_t c = user_club(blk); if (c != 0x3fff && has_club(h, c) && !has_club(r, c)) amb_note(); }
 #ifdef FL26MATCH_DIAG
@@ -1000,6 +1126,23 @@ static void twin_widen(void)
   }
 }
 
+/* the result rows' score reads as dwords (SCORE_WIDE); the same rules as page_widen */
+static void score_widen(void)
+{
+  for (int i = 0; i < NSCORE; i++) {
+    unsigned char* at = (unsigned char*)(g_exe + (uintptr_t)(SCORE_WIDE[i].va - EXE_VA));
+    for (unsigned k = 0; k < SCORE_WIDE[i].n; k++) g_score_seen[i][k] = at[k];
+    g_score_st[i] = wide_state(at, &SCORE_WIDE[i]);
+    if (g_score_st[i] == 1 && !put((uintptr_t)at, SCORE_WIDE[i].neu, SCORE_WIDE[i].n)) g_score_st[i] = 0;
+  }
+  for (int i = 0; i < NLIST; i++) {          /* the rows' test (LIST_WIDE), the same rules */
+    unsigned char* at = (unsigned char*)(g_exe + (uintptr_t)(LIST_WIDE[i].va - EXE_VA));
+    for (unsigned k = 0; k < LIST_WIDE[i].n; k++) g_list_seen[i][k] = at[k];
+    g_list_st[i] = wide_state(at, &LIST_WIDE[i]);
+    if (g_list_st[i] == 1 && !put((uintptr_t)at, LIST_WIDE[i].neu, LIST_WIDE[i].n)) g_list_st[i] = 0;
+  }
+}
+
 /* the Calendrier's and the matchday page's lookups (PICK): a return address is used only when the read
  * and `call 0x1414bb280` before it are the shipped bytes; returns how many are on. Nothing is written. */
 static int pick_check(void)
@@ -1045,6 +1188,8 @@ __declspec(dllexport) int fl26_match_install(uint32_t first, uint32_t mask)
     if (q[0] == 0x49 && q[1] == 0x8d && q[2] == 0xb7) g_sched = *(uint32_t*)(q + 3);
     unsigned char* u = (unsigned char*)(g_exe + (USER_LEA_VA - EXE_VA));
     if (u[0] == 0x48 && u[1] == 0x8d && u[2] == 0x8e) g_user_off = *(uint32_t*)(u + 3);
+    unsigned char* d = (unsigned char*)(g_exe + (TODATE_VA - EXE_VA));   /* mov eax, [rdx+disp32] */
+    if (d[0] == 0x8b && d[1] == 0x82 && d[6] == 0x89 && d[7] == 0x03) g_todate = *(uint32_t*)(d + 2);
   }
   unsigned char* x = (unsigned char*)(g_exe + (SETCTX_VA - EXE_VA));
   int setctx = 0;
@@ -1068,6 +1213,7 @@ __declspec(dllexport) int fl26_match_install(uint32_t first, uint32_t mask)
   if (mask == 0xffffffffu) g_strip = strip_hook();   /* not fatal: the strip then shows low twins */
   if (mask == 0xffffffffu) page_widen();
   if (mask == 0xffffffffu) twin_widen();   /* not fatal: a site left alone answers as before */
+  if (mask == 0xffffffffu) score_widen();  /* the same: a site left alone shows the low twin's score */
   if (mask == 0xffffffffu) g_pick_on = pick_check();   /* not fatal: a site left off answers as before */
   return 0;
 }
@@ -1294,8 +1440,8 @@ static DWORD WINAPI writer(LPVOID p)
                      g_twins ? "on" : "off", g_sched, g_blk ? user_club(g_blk) : 0, (unsigned)g_both,
                      (unsigned)g_user_hi, (unsigned)g_user_amb, (unsigned)g_user_none);
     if (g_mask == 0xffffffffu)
-      n += wsprintfA(b + n, "current match %u (%s): its low word looked up from the context %u, after-match sites %u, the low twin itself %u; strip list %s\r\n",
-                     (unsigned)g_cur, g_setctx ? "hooked" : "not hooked", (unsigned)g_cur_hi, (unsigned)g_cur_site, (unsigned)g_cur_low,
+      n += wsprintfA(b + n, "current match %u (%s): its low word looked up from the context %u, after-match sites %u, under the post-match thread %u, today's twin from today's list %u (date +0x%x), the low twin itself %u; strip list %s\r\n",
+                     (unsigned)g_cur, g_setctx ? "hooked" : "not hooked", (unsigned)g_cur_hi, (unsigned)g_cur_site, (unsigned)g_cur_post, (unsigned)g_today_hi, g_todate, (unsigned)g_cur_low,
                      g_strip ? "hooked" : "not hooked");
     if (g_mask == 0xffffffffu) {
       int wd = 0, ad = 0, sk = 0;
@@ -1312,6 +1458,22 @@ static DWORD WINAPI writer(LPVOID p)
       for (int i = 0; i < NTWIN; i++) if (g_twin_st[i] == 0) {
         n += wsprintfA(b + n, "id read %08x%08x skipped, saw ", (unsigned)(TWIN_WIDE[i].va >> 32), (unsigned)TWIN_WIDE[i].va);
         for (unsigned k = 0; k < TWIN_WIDE[i].n; k++) n += wsprintfA(b + n, "%02x", g_twin_seen[i][k]);
+        n += wsprintfA(b + n, "\r\n");
+      }
+      wd = ad = sk = 0;
+      for (int i = 0; i < NSCORE; i++) { if (g_score_st[i] == 1) wd++; else if (g_score_st[i] == 2) ad++; else sk++; }
+      n += wsprintfA(b + n, "result row score reads: widened %d, already 32-bit %d, skipped %d of %d\r\n", wd, ad, sk, NSCORE);
+      for (int i = 0; i < NSCORE; i++) if (g_score_st[i] == 0) {
+        n += wsprintfA(b + n, "score read %08x%08x skipped, saw ", (unsigned)(SCORE_WIDE[i].va >> 32), (unsigned)SCORE_WIDE[i].va);
+        for (unsigned k = 0; k < SCORE_WIDE[i].n; k++) n += wsprintfA(b + n, "%02x", g_score_seen[i][k]);
+        n += wsprintfA(b + n, "\r\n");
+      }
+      wd = ad = sk = 0;
+      for (int i = 0; i < NLIST; i++) { if (g_list_st[i] == 1) wd++; else if (g_list_st[i] == 2) ad++; else sk++; }
+      n += wsprintfA(b + n, "result rows' round test: widened %d, already 32-bit %d, skipped %d of %d\r\n", wd, ad, sk, NLIST);
+      for (int i = 0; i < NLIST; i++) if (g_list_st[i] == 0) {
+        n += wsprintfA(b + n, "round test %08x%08x skipped, saw ", (unsigned)(LIST_WIDE[i].va >> 32), (unsigned)LIST_WIDE[i].va);
+        for (unsigned k = 0; k < LIST_WIDE[i].n; k++) n += wsprintfA(b + n, "%02x", g_list_seen[i][k]);
         n += wsprintfA(b + n, "\r\n");
       }
       n += wsprintfA(b + n, "calendar matchday page (B470): sites on %d of %d; calendar picked high %u, low %u, unclear %u; "
