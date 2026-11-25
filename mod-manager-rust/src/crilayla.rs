@@ -334,12 +334,12 @@ mod tests {
         // The six-entry sample above passed while 15 of 606 files were wrong,
         // so the real check is: take every compressed entry, not a handful.
         use std::io::{Read, Seek, Write};
-        let cpk_path = std::path::Path::new(
-            r"C:\Games\SP Football Life 2027\Data\dt00_x64.cpk");
+        let cpk_path = std::path::Path::new(crate::install::GAME_ROOT)
+            .join("Data/dt00_x64.cpk");
         if !cpk_path.exists() {
             return;
         }
-        let cpk = crate::cpk::Cpk::open(cpk_path).unwrap();
+        let cpk = crate::cpk::Cpk::open(&cpk_path).unwrap();
         let mut file = std::fs::File::open(cpk_path).unwrap();
         let mut checked = 0;
         let mut failed = Vec::new();
@@ -374,14 +374,15 @@ mod tests {
     fn real_dt00_entries_compress_and_decompress_back() {
         use std::io::Read;
         use std::path::Path;
-        let cpk_path = Path::new(r"C:\Games\SP Football Life 2027\Data\dt00_x64.cpk");
+        let cpk_path = Path::new(crate::install::GAME_ROOT)
+            .join("Data/dt00_x64.cpk");
         if !cpk_path.exists() {
             return;
         }
-        let cpk = crate::cpk::Cpk::open(cpk_path).unwrap();
+        let cpk = crate::cpk::Cpk::open(&cpk_path).unwrap();
         let mut checked = 0;
         for entry in cpk.files.iter().filter(|f| f.compressed()).take(6) {
-            let mut f = std::fs::File::open(cpk_path).unwrap();
+            let mut f = std::fs::File::open(&cpk_path).unwrap();
             use std::io::Seek;
             f.seek(std::io::SeekFrom::Start(cpk.content_offset + entry.offset)).unwrap();
             let mut raw = vec![0u8; entry.size as usize];

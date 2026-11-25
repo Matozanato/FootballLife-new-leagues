@@ -126,10 +126,9 @@ fn zeroed_and_max_fields_never_panic() {
 #[test]
 fn truncated_cpk_never_panics() {
     // A CPK is read through a file handle, so this needs real temp files.
-    let Some(bytes) = first_existing(&[
-        "C:/Games/SP Football Life 2027/Data/dt13_all.cpk",
-        "C:/Games/SP Football Life 2027/Data/dt16_all.cpk",
-    ]) else {
+    let dt13 = "C:/Games/SP Football Life 2027/Data/dt13_all.cpk";
+    let dt16 = "C:/Games/SP Football Life 2027/Data/dt16_all.cpk";
+    let Some(bytes) = first_existing(&[dt13, dt16]) else {
         return;
     };
     let step = (bytes.len() / 12).max(1);

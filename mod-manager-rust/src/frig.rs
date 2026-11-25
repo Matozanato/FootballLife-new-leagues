@@ -361,7 +361,7 @@ mod tests {
     use super::*;
 
     fn rigs() -> Vec<std::path::PathBuf> {
-        let mut out: Vec<_> = crate::fsutil::files(Path::new("C:/Games/SP Football Life 2027/SiderAddons"))
+        let mut out: Vec<_> = crate::fsutil::files(&Path::new(crate::install::GAME_ROOT).join("SiderAddons"))
             .into_iter()
             .filter(|p| p.extension().map(|e| e == "frig").unwrap_or(false))
             .collect();
@@ -380,6 +380,13 @@ mod tests {
     /// once.
     #[test]
     fn every_rig_tiles_with_the_type_determined_record_size() {
+        if !Path::new(crate::install::GAME_ROOT).join("SiderAddons").is_dir()
+            && !std::env::temp_dir()
+                .join("skelx/common/anime/FoxAnim/Body/CharacterAssets/body_skel.frig")
+                .is_file()
+        {
+            return;
+        }
         let r = rigs();
         assert!(r.len() >= 10, "expected the shipped rigs, got {}", r.len());
         for p in &r {

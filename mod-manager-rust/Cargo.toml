@@ -2,7 +2,8 @@
 name = "fl27mm"
 version = "1.4.0"
 edition = "2021"
-description = "Mod manager for SP Football Life 2027 / Sider: pack order, conflicts, install safety"
+description = "Optional native tools for FL Mod Studio: CPK archives, textures, models and animations"
+license-file = "LICENSE"
 
 [lib]
 name = "fl27mm"
@@ -13,7 +14,7 @@ name = "fl27mm"
 path = "src/main.rs"
 
 [workspace]
-members = ["ui/src-tauri", "python"]
+members = ["python"]
 
 [dependencies]
 anyhow = "1"
@@ -24,13 +25,10 @@ rayon = "1.12.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 zlib-rs = "0.6.8"
-# Only used to hand a rendered head back as an image; already vendored for
-# the desktop crate, so this adds nothing new to resolve offline.
 
-# No panic = "abort" here on purpose. Tauri runs each command on the async
-# runtime, and a panicked task is reported to the UI as an error the user can
-# see and retry. Aborting would take the whole window down with it, which is a
-# worse trade than the few hundred kilobytes saved.
+# No panic = "abort" here on purpose. A panicked task is reported to the host
+# as an error it can show and retry; aborting would take the whole process
+# down. Every buffer size that comes from a file is bounds-checked instead.
 [profile.release]
 opt-level = 3
 lto = true

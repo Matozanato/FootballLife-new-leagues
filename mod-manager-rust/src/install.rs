@@ -104,6 +104,10 @@ mod path {
     }
 }
 
+/// The installed game, when this build's tests can see it. CI and other
+/// machines skip the tests that need a real install.
+pub const GAME_ROOT: &str = "C:/Games/SP Football Life 2027";
+
 /// Scan the machine for installs. `extra` is searched first, so a folder the
 /// user picked by hand outranks anything found automatically.
 pub fn detect(extra: &[PathBuf]) -> Vec<Install> {

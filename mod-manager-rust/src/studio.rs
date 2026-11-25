@@ -140,11 +140,21 @@ pub fn read_text(path: &Path) -> Result<TextFile> {
 }
 
 /// Write through a temporary name and rename, so an interrupted save cannot
-/// leave a half-written `sider.ini` behind. Returns the bytes now on disk.
+/// leave a half-written `sider.ini` behind. The previous content is copied
+/// aside first (`<name>.fl27mm-backup`), so an in-place edit is always
+/// recoverable. Returns the bytes now on disk.
 pub fn write_text(path: &Path, text: &str) -> Result<usize> {
     let parent = path.parent().unwrap_or(Path::new("."));
     fs::create_dir_all(parent)
         .with_context(|| format!("creating {}", parent.display()))?;
+    if path.exists() {
+        let bak = path.with_extension(format!(
+            "{}.fl27mm-backup",
+            path.extension().and_then(|e| e.to_str()).unwrap_or("bak")
+        ));
+        fs::copy(path, &bak)
+            .with_context(|| format!("backing up {}", path.display()))?;
+    }
     let tmp = path.with_extension(format!(
         "{}.fl27mm-tmp",
         path.extension().and_then(|e| e.to_str()).unwrap_or("tmp")
@@ -343,6 +353,10 @@ pub struct Install {
     pub bytes: u64,
     /// The line inserted into sider.ini, or None when it was already there.
     pub ini_line: Option<String>,
+    /// True when the pack was already registered, so the host need not edit the
+    /// ini at all.
+    pub already_registered: bool,
+    /// No longer written here: sider.ini is edited by the host's save path.
     pub backup: Option<String>,
     pub warnings: Vec<String>,
 }
@@ -445,8 +459,10 @@ pub fn register(ini: &mut Ini, value: &str, section_hint: &str) -> Option<String
     Some(line)
 }
 
-/// Copy a pack into the install and register it, with a backup of `sider.ini`
-/// and a byte-for-byte check of every copied file.
+/// Copy a pack into the install. It never touches `sider.ini`: registering the
+/// pack goes through the host's own `save_ini`, which makes the restore point
+/// and refuses to write while the game is running. The proposed line is
+/// returned for that, along with a byte-for-byte check of every copied file.
 pub fn install_pack(src: &Path, addons: &Path) -> Result<Install> {
     if !src.is_dir() {
         bail!("{} is not a folder", src.display());
@@ -486,22 +502,22 @@ pub fn install_pack(src: &Path, addons: &Path) -> Result<Install> {
         0
     };
 
-    let ini_path = addons.join("sider.ini");
-    let mut backup = None;
+    // Nothing is written to sider.ini here. The line the host should register
+    // is reported; the host inserts it through its own save path, which keeps
+    // the restore point and the game-closed check in one place.
     let mut ini_line = None;
+    let mut already_registered = false;
+    let ini_path = addons.join("sider.ini");
     if ini_path.exists() {
-        let stamp = mtime_of(&fs::metadata(&ini_path)?);
-        let bak = addons.join(format!("sider.ini.before-{name}-{stamp}"));
-        fs::copy(&ini_path, &bak).context("backing up sider.ini")?;
-        backup = Some(bak.to_string_lossy().replace('\\', "/"));
-        let mut ini = Ini::read(&ini_path)?;
-        let value = format!(".\\livecpk\\root\\{name}");
-        if let Some(line) = register(&mut ini, &value, "cpk.root") {
-            ini.write(&ini_path)
-                .with_context(|| format!("writing {}", ini_path.display()))?;
-            ini_line = Some(line);
-        } else {
+        let ini = Ini::read(&ini_path)?;
+        let want = format!(".\\livecpk\\root\\{name}").to_lowercase();
+        already_registered = ini.all("cpk.root").iter().any(|e|
+            e.value.replace('/', "\\").to_lowercase() == want);
+        if already_registered {
             warnings.push(format!("{name} is already registered in sider.ini"));
+        } else {
+            let mut ini = Ini::read(&ini_path)?;
+            ini_line = register(&mut ini, &format!(".\\livecpk\\root\\{name}"), "cpk.root");
         }
     } else {
         warnings.push(format!("no sider.ini at {} — files copied, nothing registered",
@@ -512,7 +528,8 @@ pub fn install_pack(src: &Path, addons: &Path) -> Result<Install> {
         files,
         bytes,
         ini_line,
-        backup,
+        already_registered,
+        backup: None,
         warnings,
     })
 }
@@ -611,9 +628,12 @@ pub fn entries(addons: &Path) -> Result<Vec<ModEntry>> {
     Ok(out)
 }
 
-/// Enable, disable, move, or unregister one entry. `apply` false means "just
-/// tell me what would change", and then nothing at all is written.
-pub fn edit(addons: &Path, key: &str, value: &str, mode: &str, apply: bool) -> Result<Edit> {
+/// Enable, disable, move, or unregister one entry. This only ever *reports*
+/// the change: the lines to remove, the lines to write. The host applies it
+/// through its own `save_ini`, which makes the restore point and refuses to
+/// write while the game is running, so `apply` here is kept for compatibility
+/// and no longer touches the file.
+pub fn edit(addons: &Path, key: &str, value: &str, mode: &str, _apply: bool) -> Result<Edit> {
     if !ORDERED_KEYS.contains(&key) {
         bail!("{key} is not an ordered list; edit it in the editor instead");
     }
@@ -679,24 +699,18 @@ pub fn edit(addons: &Path, key: &str, value: &str, mode: &str, apply: bool) -> R
         other => bail!("unknown action {other}"),
     }
 
-    let mut backup = None;
-    if apply {
-        let stamp = fs::metadata(&ini_path).ok()
-            .and_then(|m| m.modified().ok())
-            .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let bak = addons.join(format!("sider.ini.before-{mode}-{stamp}"));
-        fs::copy(&ini_path, &bak).context("backing up sider.ini")?;
-        backup = Some(bak.to_string_lossy().replace('\\', "/"));
-        if mode == "remove" {
-            ini.lines.remove(idx);
-        }
-        ini.write(&ini_path).context("writing sider.ini")?;
+    let backup = None;
+    if false {
+        // Legacy apply path, kept off: sider.ini is written by the host.
+        let _ = &ini_path;
+        let _ = &backup;
+    }
+    if mode == "remove" {
+        ini.lines.remove(idx);
     }
     Ok(Edit {
         action: format!("{mode} {key} = \"{value}\""),
-        applied: apply,
+        applied: false,
         before,
         after,
         backup,
@@ -732,18 +746,29 @@ pub fn rename(from: &Path, to: &Path) -> Result<String> {
     Ok(to.to_string_lossy().replace('\\', "/"))
 }
 
-/// Delete one file or folder tree. The UI confirms first; this still refuses
-/// anything outside the workspace it was handed, so a bad path cannot reach
-/// the game's own Data folder.
+/// Delete one file or folder tree, after copying it aside next to itself
+/// (`<name>.fl27mm-backup`, or a folder of that name), so an in-place delete
+/// is always recoverable. The UI confirms first; this still refuses anything
+/// outside the workspace it was handed, so a bad path cannot reach the game's
+/// own Data folder.
 pub fn remove(path: &Path, workspace: &Path) -> Result<String> {
     let real = |p: &Path| p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
     let (target, root) = (real(path), real(workspace));
     if !target.starts_with(&root) || target == root {
         bail!("{path:?} is not a folder inside the workspace, so this refuses to delete it");
     }
+    let backup = target.with_file_name(format!(
+        "{}.fl27mm-backup",
+        target.file_name().and_then(|n| n.to_str()).unwrap_or("item")
+    ));
+    let _ = fs::remove_dir_all(&backup);
+    let _ = fs::remove_file(&backup);
     if target.is_dir() {
-        fs::remove_dir_all(&target)?;
+        fs::rename(&target, &backup).with_context(||
+            format!("backing up {}", target.display()))?;
     } else {
+        fs::copy(&target, &backup).with_context(||
+            format!("backing up {}", target.display()))?;
         fs::remove_file(&target)?;
     }
     Ok(target.to_string_lossy().replace('\\', "/"))
@@ -974,16 +999,16 @@ mod tests {
         assert_eq!(got.files.len(), 1);
         assert!(got.files[0].verified, "the copy must match its source byte for byte");
         assert_eq!(got.bytes, 13);
-        assert!(got.backup.is_some(), "sider.ini must be copied aside first");
+        // sider.ini is no longer written here: the host registers the pack
+        // through its own save path, so the proposed line comes back instead.
+        assert!(got.backup.is_none(), "no sider.ini backup is written by Rust");
+        assert!(!got.already_registered);
         assert!(got.ini_line.as_ref().unwrap().contains("My Pack"), "{:?}", got.ini_line);
         let ini = fs::read_to_string(addons.join("sider.ini")).unwrap();
-        let new_at = ini.find("My Pack").unwrap();
-        let base_at = ini.find("cpk.root = \".\\livecpk\\root\"").unwrap();
-        assert!(new_at < base_at, "the new pack must win over the base root");
-        assert!(fs::read(addons.join("livecpk/root/My Pack/Asset/effect/x.ftex")).unwrap()
-               == b"texture-bytes");
+        assert!(!ini.contains("My Pack"), "the ini must be untouched by the install");
 
-        // Installing a second time must refuse to overwrite, not silently clobber.
+        // The host's registration does not change the copy: installing a second
+        // time still refuses to overwrite.
         let again = install_pack(&pack, &addons);
         assert!(again.is_err(), "an existing target must not be overwritten");
         let _ = fs::remove_dir_all(&addons);
@@ -1055,22 +1080,21 @@ mod tests {
         assert_eq!(fs::read_to_string(addons.join("sider.ini")).unwrap(), text,
                    "previewing must leave the file untouched");
 
+        // Apply is now a report too: sider.ini is written by the host's own
+        // save path, so the file stays untouched here and the change to make
+        // comes back in `after`.
         let a = edit(&addons, "cpk.root", ".\\livecpk\\root\\One", "disable", true).unwrap();
-        assert!(a.applied && a.backup.is_some());
-        let now = fs::read_to_string(addons.join("sider.ini")).unwrap();
-        // Everything that was not the target line is byte-identical, including
-        // the hand-written comment on the lua.module line.
-        let before: Vec<&str> = text.lines().collect();
-        let after: Vec<&str> = now.lines().collect();
-        assert_eq!(before.len(), after.len());
-        let changed: Vec<usize> = (0..before.len())
-            .filter(|&i| before[i] != after[i]).collect();
-        assert_eq!(changed, vec![1], "only the requested line changed: {before:?} -> {after:?}");
-        assert_eq!(after[2], before[2]);
-        assert_eq!(after[3], before[3]);
-        // And re-enabling restores the original bytes exactly.
-        edit(&addons, "cpk.root", ".\\livecpk\\root\\One", "enable", true).unwrap();
-        assert_eq!(fs::read_to_string(addons.join("sider.ini")).unwrap(), text);
+        assert!(!a.applied);
+        assert!(a.backup.is_none(), "Rust no longer backs up or writes sider.ini");
+        assert_eq!(fs::read_to_string(addons.join("sider.ini")).unwrap(), text,
+                   "the apply path must leave the file untouched");
+        assert_eq!(a.after[0], "\t;cpk.root = \".\\livecpk\\root\\One\"");
+
+        // remove reports the deletion of the whole line.
+        let r = edit(&addons, "cpk.root", ".\\livecpk\\root\\One", "remove", true).unwrap();
+        assert!(r.after.is_empty(), "remove reports an empty after: {:?}", r.after);
+        assert_eq!(fs::read_to_string(addons.join("sider.ini")).unwrap(), text,
+                   "remove must still leave the file untouched");
         let _ = fs::remove_dir_all(&addons);
     }
 

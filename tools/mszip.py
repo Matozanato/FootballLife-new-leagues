@@ -17,11 +17,10 @@ Frozen from a staged copy of tools/ without the lines that point at
 this machine's folders, and every staged source inside the .exe, the pack and the guides is
 checked for drive paths and user names. No game file, no table, no club data goes in.
 """
-import ast, os, re, shutil, subprocess, sys, zipfile
+import os, re, shutil, subprocess, sys, zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
-MANAGER = os.path.join(REPO, "mod-manager-rust")
 OUT = os.path.join(REPO, "out", "mszip")
 WORK = os.path.join(REPO, "out", "msexe")
 STAGE = os.path.join(WORK, "src")
@@ -33,7 +32,6 @@ HIDDEN = ["leaguebuilder", "bigjson", "lbplayers", "lbrating", "playeredit", "lb
           "mkcrests", "mkregioncats", "mkregnames", "mkcup", "mkccup", "mkcoaches", "mkcatflags", "mkmpcol", "mkteamcrest", "afp",
           "siderdir", "mktactics", "shieldcrest", "crestmatch", "kitpics", "kitnumbers", "kitnumbers_data", "lbservers", "kitmaker", "kitpatterns",
           "siderroot", "cpkread", "countries", "flpaths", "caltab", "boundscan", "capstone", "py7zr", "regions", "rowkeep",
-          "modstudio._fl27mm",
           "PIL.Image", "PIL.DdsImagePlugin"]
 
 CSS = """
@@ -183,17 +181,6 @@ def freeze():
     stage()
     if sys.platform != "win32":
         raise SystemExit("the FL Mod Studio release build requires Windows")
-    result = subprocess.run(
-        ["cargo", "build", "--release", "--locked", "--manifest-path",
-         os.path.join(MANAGER, "python", "Cargo.toml")],
-        capture_output=True, text=True,
-    )
-    if result.returncode:
-        raise SystemExit("Rust manager build failed:\n" + result.stderr[-3000:])
-    extension = os.path.join(MANAGER, "target", "release", "_fl27mm.dll")
-    if not os.path.isfile(extension):
-        raise SystemExit("Rust manager build did not produce " + extension)
-    shutil.copy2(extension, os.path.join(STAGE, "modstudio", "_fl27mm.pyd"))
     sep = ";"
     cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--onedir", "--windowed",
            "--contents-directory", "_internal",
@@ -209,16 +196,10 @@ def freeze():
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode:
         raise SystemExit("PyInstaller failed:\n" + r.stderr[-3000:])
-    toc = ast.literal_eval(open(os.path.join(WORK, "build", NAME, "PYZ-00.toc"),
-                                encoding="utf-8").read())
-    stage_root = os.path.normcase(os.path.abspath(STAGE))
-    used = sorted({
-        os.path.relpath(path, STAGE)
-        for _name, path, kind in toc[1]
-        if kind == "PYMODULE"
-        and os.path.normcase(os.path.commonpath([stage_root, os.path.normcase(os.path.abspath(path))]))
-        == stage_root
-    })
+    toc = open(os.path.join(WORK, "build", NAME, "PYZ-00.toc"), encoding="utf-8").read()
+    used = sorted(set(re.findall(
+        re.escape(STAGE).replace("\\\\", r"[\\/]+") + r"[\\/]+([\w\\/]+\.py)", toc
+    )))
     bad = []
     for f in used + ["modstudio_main.py"]:
         for i, l in enumerate(open(os.path.join(STAGE, f), encoding="utf-8"), 1):
@@ -245,7 +226,8 @@ def main():
         guide(os.path.join(REPO, "guides", code, "mod-studio-guide.md"),
               os.path.join(OUT, "README.%s.html" % code), code)
     # the licence goes with every copy (LICENSE, rule 3); the MIT one for 0.3.0 and older and the contributors' parts
-    for src, dst in (("LICENSE", "LICENSE.txt"), ("LICENSE-MIT", "LICENSE-MIT.txt")):
+    for src, dst in (("LICENSE", "LICENSE.txt"), ("LICENSE-MIT", "LICENSE-MIT.txt"),
+                     (os.path.join("mod-manager-rust", "LICENSE-BCDEC.txt"), "LICENSE-BCDEC.txt")):
         with open(os.path.join(REPO, src), encoding="utf-8") as f:
             text = f.read()
         with open(os.path.join(OUT, dst), "w", encoding="utf-8", newline="\r\n") as f:

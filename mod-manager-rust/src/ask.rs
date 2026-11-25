@@ -231,7 +231,10 @@ mod tests {
         // Nothing here asserts a specific bone count: the point is that the
         // layout holds across the install, or that a file where it does not is
         // refused with a reason rather than half-read.
-        let root = Path::new("C:/Games/SP Football Life 2027");
+        let root = Path::new(crate::install::GAME_ROOT);
+        if !root.join("SiderAddons").is_dir() {
+            return;
+        }
         let mut ok = 0;
         let mut bad: Vec<String> = Vec::new();
         for p in crate::fsutil::files(&root.join("SiderAddons")) {
@@ -273,8 +276,11 @@ mod tests {
     /// again, which would have accepted exactly one file in the install.
     #[test]
     fn the_record_marker_is_not_required_and_both_layouts_parse() {
-        let root = Path::new("C:/Games/SP Football Life 2027/SiderAddons");
-        let files: Vec<_> = crate::fsutil::files(root)
+        let root = Path::new(crate::install::GAME_ROOT).join("SiderAddons");
+        if !root.is_dir() {
+            return;
+        }
+        let files: Vec<_> = crate::fsutil::files(&root)
             .into_iter()
             .filter(|p| p.extension().map(|e| e == "ask").unwrap_or(false))
             .collect();

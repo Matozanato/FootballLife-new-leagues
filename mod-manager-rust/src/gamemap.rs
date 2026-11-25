@@ -1030,7 +1030,7 @@ mod tests {
 
     #[test]
     fn every_archive_in_the_install_is_explained() {
-        let data = Path::new(r"C:\Games\SP Football Life 2027\Data");
+        let data = Path::new(crate::install::GAME_ROOT).join("Data");
         if !data.is_dir() {
             return;
         }
@@ -1049,7 +1049,7 @@ mod tests {
 
     #[test]
     fn real_install_maps_and_flags_the_bad_tables() {
-        let game = Path::new(r"C:\Games\SP Football Life 2027");
+        let game = Path::new(crate::install::GAME_ROOT);
         if !game.join("Data").is_dir() {
             return;
         }

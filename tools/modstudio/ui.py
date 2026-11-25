@@ -562,7 +562,7 @@ class Job(QRunnable):
             self._emit("progress", x)
         try:
             r = self.fn(progress)
-        except (Exception, SystemExit):
+        except BaseException:
             # the builder's tools stop with SystemExit("message"); let through a worker thread it
             # ends the whole program with no window (0.2.2: "the app closes on Build")
             self._emit("failed", traceback.format_exc())

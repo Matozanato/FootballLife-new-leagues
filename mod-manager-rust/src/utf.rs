@@ -22,7 +22,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 pub const MAGIC: &[u8; 4] = b"@UTF";
 
@@ -82,19 +82,29 @@ impl Value {
 }
 
 impl From<u64> for Value {
-    fn from(v: u64) -> Self { Value::Int(v) }
+    fn from(v: u64) -> Self {
+        Value::Int(v)
+    }
 }
 impl From<u32> for Value {
-    fn from(v: u32) -> Self { Value::Int(v as u64) }
+    fn from(v: u32) -> Self {
+        Value::Int(v as u64)
+    }
 }
 impl From<usize> for Value {
-    fn from(v: usize) -> Self { Value::Int(v as u64) }
+    fn from(v: usize) -> Self {
+        Value::Int(v as u64)
+    }
 }
 impl From<&str> for Value {
-    fn from(v: &str) -> Self { Value::Str(v.to_string()) }
+    fn from(v: &str) -> Self {
+        Value::Str(v.to_string())
+    }
 }
 impl From<String> for Value {
-    fn from(v: String) -> Self { Value::Str(v) }
+    fn from(v: String) -> Self {
+        Value::Str(v)
+    }
 }
 
 pub type Row = HashMap<String, Value>;
@@ -112,24 +122,49 @@ pub struct Utf {
     pub rows: Vec<Row>,
 }
 
-fn read_string(buf: &[u8], strings: usize, off: u32) -> String {
-    let s = strings + off as usize;
-    if s >= buf.len() {
-        return String::new();
+fn read_string(buf: &[u8], strings: usize, end: usize, off: u32) -> Result<String> {
+    let start = strings
+        .checked_add(off as usize)
+        .context("UTF string offset overflow")?;
+    if start >= end {
+        bail!("UTF string offset is outside the string table");
     }
-    let e = buf[s..].iter().position(|&c| c == 0).map(|i| s + i).unwrap_or(buf.len());
-    String::from_utf8_lossy(&buf[s..e]).into_owned()
+    let tail = buf
+        .get(start..end)
+        .context("UTF string range is outside the file")?;
+    let len = tail
+        .iter()
+        .position(|&c| c == 0)
+        .context("unterminated UTF string")?;
+    Ok(String::from_utf8_lossy(&tail[..len]).into_owned())
 }
 
-fn read_value(buf: &[u8], p: usize, kind: u8, strings: usize) -> Value {
+fn read_value(
+    buf: &[u8],
+    p: usize,
+    end: usize,
+    kind: u8,
+    strings: usize,
+    strings_end: usize,
+) -> Result<Value> {
     let w = type_width(kind);
-    if p + w > buf.len() {
-        return Value::Zero;
+    if w == 0 {
+        bail!("unknown UTF value type {:#x}", kind & 0x0F);
     }
-    let raw = &buf[p..p + w];
-    match kind & 0x0F {
-        0x0A => Value::Str(read_string(buf, strings, u32::from_be_bytes(
-            [raw[0], raw[1], raw[2], raw[3]]))),
+    let value_end = p.checked_add(w).context("UTF value offset overflow")?;
+    if value_end > end {
+        bail!("UTF value runs past its table range");
+    }
+    let raw = buf
+        .get(p..value_end)
+        .context("UTF value runs past the file")?;
+    Ok(match kind & 0x0F {
+        0x0A => Value::Str(read_string(
+            buf,
+            strings,
+            strings_end,
+            u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
+        )?),
         0x08 => {
             let bits = u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]);
             Value::Int(f32::from_bits(bits) as u64)
@@ -141,66 +176,114 @@ fn read_value(buf: &[u8], p: usize, kind: u8, strings: usize) -> Value {
             }
             Value::Int(v)
         }
-    }
+    })
 }
 
 impl Utf {
     /// Parse the `@UTF` table whose magic sits at `at`.
     pub fn parse(buf: &[u8], at: usize) -> Result<Utf> {
-        if at + 32 > buf.len() || &buf[at..at + 4] != MAGIC {
+        let header_end = at.checked_add(32).context("UTF header offset overflow")?;
+        if header_end > buf.len() || &buf[at..at + 4] != MAGIC {
             bail!("no @UTF table at {at}");
         }
         let base = at + 8; // table-info offsets are relative to here
+        let table_size = be_u32(buf, at + 4) as usize;
+        if table_size < 24 {
+            bail!("UTF table is shorter than its fixed header");
+        }
+        let table_end = base
+            .checked_add(table_size)
+            .context("UTF table size overflow")?;
+        if table_end > buf.len() {
+            bail!("UTF table ends past the input file");
+        }
         let rows_offset = be_u32(buf, at + 8) as usize;
-        let strings = base + be_u32(buf, at + 12) as usize;
+        let strings = base
+            .checked_add(be_u32(buf, at + 12) as usize)
+            .context("UTF string table offset overflow")?;
         let name_ptr = be_u32(buf, at + 20);
         let num_columns = be_u16(buf, at + 24) as usize;
         let row_length = be_u16(buf, at + 26) as usize;
         let num_rows = be_u32(buf, at + 28) as usize;
-        if strings > buf.len() {
+        let rows_start = base
+            .checked_add(rows_offset)
+            .context("UTF row offset overflow")?;
+        if strings >= table_end {
             bail!("UTF string table out of range");
         }
-        let name = read_string(buf, strings, name_ptr);
+        if rows_start < header_end || rows_start > table_end {
+            bail!("UTF row table out of range");
+        }
+        let row_bytes = num_rows
+            .checked_mul(row_length)
+            .context("UTF row table size overflow")?;
+        let rows_end = rows_start
+            .checked_add(row_bytes)
+            .context("UTF row table end overflow")?;
+        if rows_end > strings || rows_end > table_end {
+            bail!("UTF rows run past the end of the row table");
+        }
+        if row_length == 0 && num_rows > table_end - rows_start {
+            bail!("UTF has too many zero-width rows for its table");
+        }
+        let schema_bytes = rows_start - header_end;
+        if num_columns > schema_bytes / 5 {
+            bail!("UTF column count exceeds the schema range");
+        }
+        let name = read_string(buf, strings, table_end, name_ptr)?;
 
         let mut p = at + 32;
         let mut columns = Vec::with_capacity(num_columns);
         for _ in 0..num_columns {
-            if p + 5 > buf.len() {
+            let schema_end = p.checked_add(5).context("UTF schema offset overflow")?;
+            if schema_end > rows_start {
                 bail!("column schema truncated");
             }
             let flags = buf[p];
             let name_off = be_u32(buf, p + 1);
-            p += 5;
-            let cname = read_string(buf, strings, name_off);
+            p = schema_end;
+            let cname = read_string(buf, strings, table_end, name_off)?;
             let constant = if storage(flags) == 0x30 {
-                let v = read_value(buf, p, flags, strings);
-                p += type_width(flags);
+                let v = read_value(buf, p, rows_start, flags, strings, table_end)?;
+                p = p
+                    .checked_add(type_width(flags))
+                    .context("UTF schema offset overflow")?;
                 Some(v)
             } else {
                 None
             };
-            columns.push(Column { name: cname, flags, constant });
+            columns.push(Column {
+                name: cname,
+                flags,
+                constant,
+            });
         }
 
-        let mut rows = Vec::with_capacity(num_rows);
+        let mut parsed_rows = Vec::with_capacity(num_rows);
         for i in 0..num_rows {
-            let mut rp = base + rows_offset + i * row_length;
+            let row_start = rows_start + i * row_length;
+            let row_end = row_start + row_length;
+            let mut rp = row_start;
             let mut row = Row::new();
             for col in &columns {
                 let value = match storage(col.flags) {
                     0x10 => Value::Zero,
                     0x30 => col.constant.clone().unwrap_or(Value::Zero),
                     _ => {
-                        let v = read_value(buf, rp, col.flags, strings);
+                        let v = read_value(buf, rp, row_end, col.flags, strings, table_end)?;
                         rp += type_width(col.flags);
                         v
                     }
                 };
                 row.insert(col.name.clone(), value);
             }
-            rows.push(row);
+            parsed_rows.push(row);
         }
-        Ok(Utf { name, columns, rows })
+        Ok(Utf {
+            name,
+            columns,
+            rows: parsed_rows,
+        })
     }
 }
 
@@ -253,12 +336,20 @@ pub struct Builder {
 
 impl Builder {
     pub fn new(name: &str) -> Builder {
-        Builder { name: name.to_string(), columns: Vec::new(), rows: Vec::new() }
+        Builder {
+            name: name.to_string(),
+            columns: Vec::new(),
+            rows: Vec::new(),
+        }
     }
 
     /// A column whose value is stored once per row.
     pub fn col(mut self, name: &str, flags: u8) -> Self {
-        self.columns.push(Column { name: name.to_string(), flags, constant: None });
+        self.columns.push(Column {
+            name: name.to_string(),
+            flags,
+            constant: None,
+        });
         self
     }
 
@@ -283,7 +374,8 @@ impl Builder {
     }
 
     fn row_length(&self) -> usize {
-        self.columns.iter()
+        self.columns
+            .iter()
             .filter(|c| storage(c.flags) == 0x50)
             .map(|c| type_width(c.flags))
             .sum()
@@ -310,8 +402,12 @@ impl Builder {
             schema.push(col.flags);
             schema.extend_from_slice(&ptr.to_be_bytes());
             if storage(col.flags) == 0x30 {
-                write_value(&mut schema, col.flags,
-                            col.constant.as_ref().unwrap_or(&Value::Zero), &mut strings);
+                write_value(
+                    &mut schema,
+                    col.flags,
+                    col.constant.as_ref().unwrap_or(&Value::Zero),
+                    &mut strings,
+                );
             }
         }
 
@@ -361,7 +457,10 @@ pub fn packet(magic: &[u8; 4], table: &[u8]) -> Vec<u8> {
 
 /// Convenience: build a one-row table from ordered (name, value) pairs.
 pub fn row(pairs: &[(&str, Value)]) -> Row {
-    pairs.iter().map(|(k, v)| (k.to_string(), v.clone())).collect()
+    pairs
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -436,5 +535,18 @@ mod tests {
         let back = Utf::parse(&bytes, 0).unwrap();
         assert!(back.rows.is_empty());
         assert_eq!(back.columns.len(), 1);
+    }
+
+    #[test]
+    fn declared_table_and_row_ranges_are_bounded_by_input() {
+        let mut bytes = vec![0u8; 64];
+        bytes[..4].copy_from_slice(MAGIC);
+        bytes[4..8].copy_from_slice(&40u32.to_be_bytes());
+        bytes[8..12].copy_from_slice(&24u32.to_be_bytes());
+        bytes[12..16].copy_from_slice(&32u32.to_be_bytes());
+        bytes[24..26].copy_from_slice(&0u16.to_be_bytes());
+        bytes[26..28].copy_from_slice(&16u16.to_be_bytes());
+        bytes[28..32].copy_from_slice(&u32::MAX.to_be_bytes());
+        assert!(Utf::parse(&bytes, 0).is_err());
     }
 }

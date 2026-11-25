@@ -999,9 +999,8 @@ mod tests {
     use std::path::PathBuf;
 
     fn constant_dir() -> Option<PathBuf> {
-        let p = PathBuf::from(
-            r"C:\Games\SP Football Life 2027\FL27 Megapatch\out\rt\a\common\match\constant",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("FL27 Megapatch/out/rt/a/common/match/constant");
         p.is_dir().then_some(p)
     }
 
@@ -1077,13 +1076,12 @@ mod tests {
 
     #[test]
     fn competition_records_decode_to_named_columns() {
-        let p = Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\Competition.bin",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/Competition.bin");
         if !p.exists() {
             return;
         }
-        let report = read(p).unwrap();
+        let report = read(&p).unwrap();
         let r = report.records.expect("Competition.bin should decode");
         assert_eq!(r.stride, 36);
         assert_eq!(r.records, 92);
@@ -1097,13 +1095,12 @@ mod tests {
 
     #[test]
     fn entry_records_split_the_packed_third_word() {
-        let p = Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\CompetitionEntry.bin",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/CompetitionEntry.bin");
         if !p.exists() {
             return;
         }
-        let r = read(p).unwrap().records.expect("entry table");
+        let r = read(&p).unwrap().records.expect("entry table");
         assert_eq!(r.records, 1359);
         // first row is (243, 3573, 269): slot 1, competition 13
         assert_eq!(r.columns[0].values[0], "243");
@@ -1113,13 +1110,12 @@ mod tests {
 
     #[test]
     fn regulation_records_map_only_what_is_verified() {
-        let p = Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\CompetitionRegulation.bin",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/CompetitionRegulation.bin");
         if !p.exists() {
             return;
         }
-        let r = read(p).unwrap().records.expect("regulation table");
+        let r = read(&p).unwrap().records.expect("regulation table");
         assert_eq!(r.records, 197);
         assert_eq!(
             r.columns.iter().find(|c| c.name == "name").unwrap().values[1],
@@ -1138,13 +1134,12 @@ mod tests {
 
     #[test]
     fn player_records_decode_id_and_names() {
-        let p = Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\Player.bin",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/Player.bin");
         if !p.exists() {
             return;
         }
-        let r = read(p).unwrap().records.expect("player table");
+        let r = read(&p).unwrap().records.expect("player table");
         assert_eq!(r.stride, 312);
         assert_eq!(r.records, 26710);
         assert_eq!(
@@ -1172,13 +1167,12 @@ mod tests {
 
     #[test]
     fn team_records_decode_id_and_the_always_filled_name() {
-        let p = Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\DR_LeagueCreator\common\etc\pesdb\Team.bin",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/Team.bin");
         if !p.exists() {
             return;
         }
-        let r = read(p).unwrap().records.expect("team table");
+        let r = read(&p).unwrap().records.expect("team table");
         assert_eq!(r.stride, 1532);
         assert_eq!(r.records, 763);
         let name = &r.columns.iter().find(|c| c.name == "name").unwrap().values;
@@ -1193,13 +1187,12 @@ mod tests {
 
     #[test]
     fn opaque_files_are_reported_without_a_stride_claim() {
-        let p = Path::new(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\common\etc\pesdb\Competition.bin",
-        );
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/common/etc/pesdb/Competition.bin");
         if !p.exists() {
             return;
         }
-        let report = read(p).unwrap();
+        let report = read(&p).unwrap();
         assert_eq!(report.framing, "unknown");
         assert!(
             report.records.is_none(),
@@ -1216,14 +1209,12 @@ mod tests {
         // self-agreement test prefers 28 and reports half the record as
         // unexplained. The names are the evidence: they sit at +8, +189 and
         // +370, and the same slot is exactly 392 bytes from the next one.
-        let p = Path::new(concat!(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\Stadiums Extra DB",
-            r"\common\etc\pesdb\Stadium.bin"
-        ));
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/Stadiums Extra DB/common/etc/pesdb/Stadium.bin");
         if !p.exists() {
             return;
         }
-        let got = read(p).unwrap();
+        let got = read(&p).unwrap();
         let s = got.structure.expect("Stadium.bin is a named table");
         assert_eq!(
             s.stride, 392,
@@ -1319,11 +1310,11 @@ mod patch_tests {
 
     /// The first loose table this install carries that the codec accepts.
     fn a_real_table() -> Option<PathBuf> {
-        let root = Path::new("C:/Games/SP Football Life 2027/SiderAddons");
+        let root = Path::new(crate::install::GAME_ROOT).join("SiderAddons");
         if !root.is_dir() {
             return None;
         }
-        for p in crate::fsutil::files(root)
+        for p in crate::fsutil::files(&root)
             .into_iter()
             .filter(|p| p.extension().is_some_and(|e| e == "bin"))
         {

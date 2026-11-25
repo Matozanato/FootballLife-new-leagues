@@ -37,8 +37,7 @@ const HEADER: usize = 56;
 
 /// A shipped face folder, used by the tests that need real meshes. Nothing
 /// synthesised here can stand in for the geometry the game actually loads.
-pub const REAL_FACE_DIR: &str =
-    "C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006";
+pub const REAL_FACE_DIR: &str = "C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006";
 
 /// The container holding that head.
 pub const REAL_FACE_FPK: &str = "C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006/#Win/face.fpk";

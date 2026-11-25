@@ -32,7 +32,7 @@
 //! that has not been reproduced here, so this module reports the clip and edits
 //! the fields whose meaning is measured, and says plainly what it cannot do.
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use std::path::Path;
 
 /// Measured on 1787/1787 shipped clips.
@@ -42,6 +42,7 @@ const UNIT_TABLE: usize = 164;
 /// The 32 bytes at the front plus the 112-byte table area before the unit
 /// offsets: the track data always runs to `len - 144`.
 const TRAILER: usize = 144;
+const MAX_FRAMES: u32 = 4096;
 
 fn le_u32(b: &[u8], at: usize) -> u32 {
     u32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]])
@@ -107,6 +108,13 @@ impl Clip {
         let track_len = le_u32(b, 112);
         let unit_count = le_u32(b, 144);
         let segment_count = le_u32(b, 148);
+        let frame_count = le_u32(b, 156);
+        if track_len as usize > b.len() {
+            bail!("gani track length exceeds the input file length");
+        }
+        if frame_count > MAX_FRAMES {
+            bail!("gani frame count {frame_count} exceeds the supported bound");
+        }
         if unit_count == 0 || unit_count > 4096 {
             bail!("implausible unit count {unit_count}");
         }
@@ -116,12 +124,19 @@ impl Clip {
         if segment_count < unit_count {
             bail!("{segment_count} segments cannot cover {unit_count} units");
         }
-        let table = UNIT_TABLE;        if table + 4 * unit_count as usize > b.len() {
+        let table = UNIT_TABLE;
+        if table + 4 * unit_count as usize > b.len() {
             bail!("unit table runs past the end of the file");
         }
         let mut unit_offsets = Vec::with_capacity(unit_count as usize);
         for k in 0..unit_count as usize {
             let v = le_u32(b, table + 4 * k);
+            if 144usize
+                .checked_add(v as usize)
+                .map_or(true, |at| at >= b.len())
+            {
+                bail!("unit {k} offset runs past the end of the file");
+            }
             if let Some(&prev) = unit_offsets.last() {
                 if v <= prev {
                     bail!("unit offsets are not increasing at unit {k}");
@@ -136,12 +151,14 @@ impl Clip {
             segment_count,
             // The template reads a single byte here and skips three, so the
             // three must be zero or the field is not what it looks like.
-            frame_rate: if le_u32(b, 160) == b[160] as u32 { b[160] as u32 } else {
+            frame_rate: if le_u32(b, 160) == b[160] as u32 {
+                b[160] as u32
+            } else {
                 bail!("frame rate field at 160 is not a byte with three zero pads");
             },
             track_len,
             unit_offsets,
-            frame_count: le_u32(b, 156),
+            frame_count,
             unknown_b: b[155],
         })
     }
@@ -283,11 +300,23 @@ impl Unit {
 /// be reading the wrong fields; a walk that lands every blob end on the next
 /// blob start, in all 1,787 shipped clips, is reading the real structure.
 pub fn walk(b: &[u8]) -> Result<Vec<Unit>> {
+    if b.len() < 176 {
+        bail!("too short for a gani header");
+    }
     let units = le_u32(b, 144) as usize;
     let frame_count = le_u32(b, 156) as usize;
+    if units == 0 || units > 4096 || units > (b.len().saturating_sub(164) / 4) {
+        bail!("gani unit count exceeds the input bounds");
+    }
+    if frame_count > MAX_FRAMES as usize {
+        bail!("gani frame count exceeds the supported bound");
+    }
     let mut out = Vec::with_capacity(units);
     for k in 0..units {
-        let at = 144usize + le_u32(b, 164 + 4 * k) as usize;
+        let offset_at = 164 + 4 * k;
+        let at = 144usize
+            .checked_add(le_u32(b, offset_at) as usize)
+            .context("gani unit offset overflow")?;
         if at + 8 > b.len() {
             bail!("unit {k} header runs past the end of the file");
         }
@@ -303,9 +332,8 @@ pub fn walk(b: &[u8]) -> Result<Vec<Unit>> {
             if seg_at + 8 > b.len() {
                 bail!("unit {k} segment {s} runs past the end of the file");
             }
-            let data_off = i32::from_le_bytes([
-                b[seg_at], b[seg_at + 1], b[seg_at + 2], b[seg_at + 3],
-            ]);
+            let data_off =
+                i32::from_le_bytes([b[seg_at], b[seg_at + 1], b[seg_at + 2], b[seg_at + 3]]);
             let segment_id = u16::from_le_bytes([b[seg_at + 4], b[seg_at + 5]]);
             let packed = b[seg_at + 6];
             let (code, next_off) = (packed & 0x0F, packed >> 4);
@@ -315,8 +343,9 @@ pub fn walk(b: &[u8]) -> Result<Vec<Unit>> {
             let cbs = b[seg_at + 7];
             let kind = SegmentType::from_code(code)
                 .ok_or_else(|| anyhow::anyhow!("unit {k} segment {s}: unknown type {code}"))?;
-            let (bits, bitpacked) = value_bits(kind, cbs)
-                .ok_or_else(|| anyhow::anyhow!("unit {k} segment {s}: {kind:?} with {cbs}-bit components"))?;
+            let (bits, bitpacked) = value_bits(kind, cbs).ok_or_else(|| {
+                anyhow::anyhow!("unit {k} segment {s}: {kind:?} with {cbs}-bit components")
+            })?;
             let mut blob = (0usize, 0usize);
             let mut keys = 0usize;
             if data_off != 0 && bits != 0 {
@@ -344,14 +373,28 @@ pub fn walk(b: &[u8]) -> Result<Vec<Unit>> {
                 }
                 let end = pos.div_ceil(8);
                 if end > b.len() {
-                    bail!("unit {k} segment {s} blob ends at {end}, past the file ({})", b.len());
+                    bail!(
+                        "unit {k} segment {s} blob ends at {end}, past the file ({})",
+                        b.len()
+                    );
                 }
                 blob = (start, end);
             }
-            segments.push(Segment { segment_id, kind, component_bits: cbs, has_next_entry: next_off != 0, blob, keys });
+            segments.push(Segment {
+                segment_id,
+                kind,
+                component_bits: cbs,
+                has_next_entry: next_off != 0,
+                blob,
+                keys,
+            });
             seg_at += if next_off == 0 { 8 } else { next_off as usize };
         }
-        out.push(Unit { name_code, flags, segments });
+        out.push(Unit {
+            name_code,
+            flags,
+            segments,
+        });
     }
     // No blob may overlap another: that would mean two readings of the same
     // bytes, and only one of them can be right.
@@ -406,7 +449,11 @@ pub enum Key {
     /// Rebuilding the fourth component needs the engine's own normalisation,
     /// which the template does not publish, so the parts are reported rather
     /// than a quaternion that would look authoritative and might not be.
-    Quat { parts: [u32; 3], signs: [bool; 3], bits: u8 },
+    Quat {
+        parts: [u32; 3],
+        signs: [bool; 3],
+        bits: u8,
+    },
     Halves([f32; 4]),
     Floats([f32; 4]),
     /// A vector whose components are all at the top of the range. The engine
@@ -433,8 +480,13 @@ impl Key {
 
 /// Decode the keyframes of one segment.
 pub fn keys_of(b: &[u8], seg: &Segment, frame_count: usize, static_unit: bool) -> Result<Vec<Key>> {
-    let (bits, _) = value_bits(seg.kind, seg.component_bits)
-        .ok_or_else(|| anyhow::anyhow!("cannot decode {} with {}-bit components", seg.kind.name(), seg.component_bits))?;
+    let (bits, _) = value_bits(seg.kind, seg.component_bits).ok_or_else(|| {
+        anyhow::anyhow!(
+            "cannot decode {} with {}-bit components",
+            seg.kind.name(),
+            seg.component_bits
+        )
+    })?;
     if bits == 0 {
         return Ok(Vec::new());
     }
@@ -482,7 +534,11 @@ fn read_key(b: &[u8], pos: usize, kind: SegmentType, cbs: u8) -> Result<Key> {
         for (i, s) in signs.iter_mut().enumerate() {
             *s = read_bits(b, pos + 3 * n + i, 1)? != 0;
         }
-        return Ok(Key::Quat { parts, signs, bits: cbs });
+        return Ok(Key::Quat {
+            parts,
+            signs,
+            bits: cbs,
+        });
     }
     let comps = kind.components();
     if cbs == 16 {
@@ -515,7 +571,11 @@ pub fn describe(clip: &Clip) -> String {
     out.push_str(&format!(
         "  track data {} bytes at 112, {} trailer\n",
         clip.track_len,
-        if clip.track_len_matches() { "correct" } else { "MISMATCHED" }
+        if clip.track_len_matches() {
+            "correct"
+        } else {
+            "MISMATCHED"
+        }
     ));
     if clip.size_disagrees() {
         out.push_str(&format!(
@@ -523,7 +583,10 @@ pub fn describe(clip: &Clip) -> String {
             clip.declared_size, clip.len
         ));
     }
-    out.push_str(&format!("  frames {} at {} fps\n", clip.frame_count, clip.frame_rate));
+    out.push_str(&format!(
+        "  frames {} at {} fps\n",
+        clip.frame_count, clip.frame_rate
+    ));
     out.push_str("  tracks decoded, keyframes read; see `tracks` for the per-segment walk\n");
     out
 }
@@ -547,8 +610,13 @@ pub fn tracks(b: &[u8], clip: &Clip) -> Result<String> {
             let first = keys.first().map(|x| x.render()).unwrap_or_default();
             out.push_str(&format!(
                 "  seg {:<2} {:<12} {:>2}-bit  keys {:<5} bytes {}..{}  first {}",
-                s.segment_id, s.kind.name(), s.component_bits, s.keys,
-                s.blob.0, s.blob.1, first
+                s.segment_id,
+                s.kind.name(),
+                s.component_bits,
+                s.keys,
+                s.blob.0,
+                s.blob.1,
+                first
             ));
             out.push('\n');
         }
@@ -581,7 +649,10 @@ fn key_bit_pos(seg: &Segment, static_unit: bool, key: usize) -> Result<(usize, u
         // Skip the frame-count byte that prefixes every key after the first.
         pos += 8;
     }
-    bail!("key {key} is past the end of this segment ({} stored)", seg.keys);
+    bail!(
+        "key {key} is past the end of this segment ({} stored)",
+        seg.keys
+    );
 }
 
 fn write_bits(b: &mut [u8], bit_pos: usize, n: usize, value: u32) -> Result<()> {
@@ -619,12 +690,23 @@ pub enum KeyValue {
 /// that changed must fall inside that one key's bit range. Only then is the
 /// file replaced. A keyframe edit that quietly shifted the rest of the clip
 /// would still play, which is exactly the failure a check like this catches.
-pub fn set_key(path: &Path, unit: usize, segment: usize, key: usize, value: KeyValue) -> Result<()> {
+pub fn set_key(
+    path: &Path,
+    unit: usize,
+    segment: usize,
+    key: usize,
+    value: KeyValue,
+) -> Result<()> {
     let bytes = std::fs::read(path)?;
     let clip = Clip::parse(&bytes)?;
     let units = walk(&bytes)?;
-    let u = units.get(unit).ok_or_else(|| anyhow::anyhow!("clip has {} units", units.len()))?;
-    let s = u.segments.get(segment).ok_or_else(|| anyhow::anyhow!("unit {unit} has {} segments", u.segments.len()))?;
+    let u = units
+        .get(unit)
+        .ok_or_else(|| anyhow::anyhow!("clip has {} units", units.len()))?;
+    let s = u
+        .segments
+        .get(segment)
+        .ok_or_else(|| anyhow::anyhow!("unit {unit} has {} segments", u.segments.len()))?;
     let (pos, bits) = key_bit_pos(s, u.is_static(), key)?;
 
     match (s.kind.is_quat(), &value) {
@@ -659,7 +741,8 @@ pub fn set_key(path: &Path, unit: usize, segment: usize, key: usize, value: KeyV
         }
         _ => bail!(
             "{} with {}-bit components needs a matching value",
-            s.kind.name(), s.component_bits
+            s.kind.name(),
+            s.component_bits
         ),
     }
     Ok(())
@@ -691,7 +774,13 @@ fn commit(
         }
         for (x, y) in a.segments.iter().zip(b.segments.iter()) {
             if x.blob != y.blob || x.keys != y.keys {
-                bail!("the edit moved a keyframe blob from {}..{} to {}..{}", x.blob.0, x.blob.1, y.blob.0, y.blob.1);
+                bail!(
+                    "the edit moved a keyframe blob from {}..{} to {}..{}",
+                    x.blob.0,
+                    x.blob.1,
+                    y.blob.0,
+                    y.blob.1
+                );
             }
         }
     }
@@ -700,7 +789,9 @@ fn commit(
     let hi = (pos + bits + 7) / 8;
     for i in 0..before.len() {
         if before[i] != after[i] && !(lo <= i && i < hi) {
-            bail!("byte {i} changed but is outside the edited key ({lo}..{hi}); the edit is refused");
+            bail!(
+                "byte {i} changed but is outside the edited key ({lo}..{hi}); the edit is refused"
+            );
         }
     }
     let tmp = path.with_extension("gani.tmp");
@@ -741,6 +832,7 @@ pub fn set_frame_rate(path: &Path, rate: u32) -> Result<(u32, u32)> {
     if !diff.is_empty() {
         bail!("the edit moved bytes outside the frame rate field");
     }
+    backup_once(path)?;
     let tmp = path.with_extension("gani.tmp");
     std::fs::write(&tmp, &next)?;
     std::fs::rename(&tmp, path)?;
@@ -748,19 +840,39 @@ pub fn set_frame_rate(path: &Path, rate: u32) -> Result<(u32, u32)> {
     if back.frame_rate != rate {
         bail!("re-read shows rate {}, not {rate}", back.frame_rate);
     }
+    backup_once(path)?;
     Ok((before.frame_rate, rate))
+}
+
+fn backup_once(path: &Path) -> Result<()> {
+    let backup = path.with_extension(format!(
+        "{}.fl27mm-backup",
+        path.extension().and_then(|e| e.to_str()).unwrap_or("dat")
+    ));
+    if !backup.exists() {
+        std::fs::copy(path, &backup)
+            .with_context(|| format!("backing up {} to {}", path.display(), backup.display()))?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn remove_backup(path: &Path) {
+        let backup = path.with_extension("gani.fl27mm-backup");
+        let _ = std::fs::remove_file(backup);
+    }
+
     fn samples() -> Vec<std::path::PathBuf> {
-        let root = Path::new("C:/Games/SP Football Life 2027/SiderAddons");
+        let root = Path::new(crate::install::GAME_ROOT);
         let mut out = Vec::new();
         let mut stack = vec![root.to_path_buf()];
         while let Some(dir) = stack.pop() {
-            let Ok(rd) = std::fs::read_dir(&dir) else { continue };
+            let Ok(rd) = std::fs::read_dir(&dir) else {
+                continue;
+            };
             for e in rd.flatten() {
                 let p = e.path();
                 if p.is_dir() {
@@ -780,9 +892,44 @@ mod tests {
     }
 
     #[test]
+    fn oversized_gani_frame_count_is_rejected_before_walking() {
+        let mut bytes = vec![0u8; 176];
+        bytes[..4].copy_from_slice(&MAGIC);
+        for (at, value) in [
+            (4, 32u32),
+            (20, 1),
+            (32, 143_688_520),
+            (36, 48),
+            (56, 64),
+            (96, 0xC6E9_37B9),
+            (104, 1),
+            (108, 48),
+            (112, 32),
+            (144, 1),
+            (148, 1),
+            (152, 0x0100_0001),
+            (156, u32::MAX),
+            (160, 10),
+        ] {
+            bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        bytes[80..86].copy_from_slice(b"MOTION");
+        bytes[116..120].copy_from_slice(&(-64i32).to_le_bytes());
+        assert!(Clip::parse(&bytes).is_err());
+        assert!(walk(&bytes).is_err());
+    }
+
+    #[test]
     fn every_shipped_sample_parses_and_agrees_on_the_track_length() {
         let s = samples();
-        assert!(s.len() >= 6, "expected shipped .gani samples, got {}", s.len());
+        if s.is_empty() {
+            return;
+        }
+        assert!(
+            s.len() >= 6,
+            "expected shipped .gani samples, got {}",
+            s.len()
+        );
         for p in &s {
             let c = Clip::read(p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
             assert!(c.track_len_matches(), "{}: track length lies", p.display());
@@ -794,10 +941,12 @@ mod tests {
     #[test]
     fn a_stale_size_field_is_reported_not_fatal() {
         // dml_coach_oop_dontmind01 declares 98,384 at 20,688 bytes long.
-        let p = Path::new("C:/Games/SP Football Life 2027/SiderAddons/content/cinematics/ARG/common/demo/anime/FoxAnim/FixDemo/Animations");
-        let found = crate::fsutil::files(p)
-            .into_iter()
-            .find(|x| x.file_name().map(|n| n == "dml_coach_oop_dontmind01.gani").unwrap_or(false));
+        let p = Path::new(crate::install::GAME_ROOT).join("SiderAddons/content/cinematics/ARG/common/demo/anime/FoxAnim/FixDemo/Animations");
+        let found = crate::fsutil::files(&p).into_iter().find(|x| {
+            x.file_name()
+                .map(|n| n == "dml_coach_oop_dontmind01.gani")
+                .unwrap_or(false)
+        });
         let Some(path) = found else { return };
         let c = Clip::read(&path).expect("a stale size must not stop the file parsing");
         assert!(c.size_disagrees());
@@ -807,6 +956,9 @@ mod tests {
     #[test]
     fn a_truncated_or_foreign_file_is_refused() {
         let s = samples();
+        if s.is_empty() {
+            return;
+        }
         let bytes = std::fs::read(&s[0]).unwrap();
         assert!(Clip::parse(&bytes[..100]).is_err());
         assert!(Clip::parse(&[0u8; 200]).is_err());
@@ -823,14 +975,19 @@ mod tests {
     /// bit-packing rule were guessed differently.
     #[test]
     fn every_shipped_clip_walks_and_its_blobs_tile_without_overlap() {
-        let root = Path::new("C:/Games/SP Football Life 2027/SiderAddons");
+        let root = Path::new(crate::install::GAME_ROOT).join("SiderAddons");
+        if !root.is_dir() {
+            return;
+        }
         let mut seen = 0usize;
         let mut errs: Vec<String> = Vec::new();
-        for p in crate::fsutil::files(root) {
+        for p in crate::fsutil::files(&root) {
             if p.extension().map(|e| e != "gani").unwrap_or(true) {
                 continue;
             }
-            let Ok(bytes) = std::fs::read(&p) else { continue };
+            let Ok(bytes) = std::fs::read(&p) else {
+                continue;
+            };
             if bytes.len() < 200 {
                 continue;
             }
@@ -840,22 +997,34 @@ mod tests {
                         let mut n = 0;
                         for u in &units {
                             for s in &u.segments {
-                                n += keys_of(&bytes, s, c.frame_count as usize, u.is_static())?.len();
+                                n += keys_of(&bytes, s, c.frame_count as usize, u.is_static())?
+                                    .len();
                             }
                         }
                         Ok(n)
                     })();
                     if let Err(e) = read {
-                        errs.push(format!("{}: {e}", p.file_name().unwrap_or_default().to_string_lossy()));
+                        errs.push(format!(
+                            "{}: {e}",
+                            p.file_name().unwrap_or_default().to_string_lossy()
+                        ));
                         continue;
                     }
                     seen += 1;
                 }
-                Err(e) => errs.push(format!("{}: {e}", p.file_name().unwrap_or_default().to_string_lossy())),
+                Err(e) => errs.push(format!(
+                    "{}: {e}",
+                    p.file_name().unwrap_or_default().to_string_lossy()
+                )),
             }
         }
         assert!(seen > 1500, "only {seen} clips walked");
-        assert!(errs.is_empty(), "{} clips failed to walk; first five: {:?}", errs.len(), &errs[..errs.len().min(5)]);
+        assert!(
+            errs.is_empty(),
+            "{} clips failed to walk; first five: {:?}",
+            errs.len(),
+            &errs[..errs.len().min(5)]
+        );
         println!("walked and tiled {seen} clips");
     }
 
@@ -868,7 +1037,10 @@ mod tests {
         // 1.0 in this encoding: exponent field 0x0400 -> (0x0400+0x1dc00)<<13
         let one = anim_half(0x3800);
         assert!(one.is_finite(), "a half must decode to a finite number");
-        assert_ne!(one, f32::from_bits(0x3800 << 13 | 0x8000_0000_0000u64 as usize as u32));
+        assert_ne!(
+            one,
+            f32::from_bits(0x3800 << 13 | 0x8000_0000_0000u64 as usize as u32)
+        );
         // Sign bit is the top bit, as in IEEE.
         assert!(anim_half(0x8000) <= 0.0);
         assert!(anim_half(0x7C00).is_finite() || anim_half(0x7C00).is_nan());
@@ -935,6 +1107,9 @@ mod tests {
     #[test]
     fn editing_a_keyframe_changes_that_key_and_nothing_else() {
         let s = samples();
+        if s.is_empty() {
+            return;
+        }
         let dir = std::env::temp_dir();
         let dst = dir.join("fl27mm_gani_edit.gani");
         std::fs::copy(&s[0], &dst).unwrap();
@@ -952,24 +1127,53 @@ mod tests {
         let seg = &units[ui].segments[si];
         let (pos, bits) = key_bit_pos(seg, units[ui].is_static(), 2).unwrap();
 
-        set_key(&dst, ui, si, 2, KeyValue::Quat { parts: [7, 9, 11], signs: [true, false, true] }).unwrap();
+        set_key(
+            &dst,
+            ui,
+            si,
+            2,
+            KeyValue::Quat {
+                parts: [7, 9, 11],
+                signs: [true, false, true],
+            },
+        )
+        .unwrap();
         let after = std::fs::read(&dst).unwrap();
 
         // Read the key back through the normal path.
-        let keys = keys_of(&after, &walk(&after).unwrap()[ui].segments[si], clip.frame_count as usize, units[ui].is_static()).unwrap();
+        let keys = keys_of(
+            &after,
+            &walk(&after).unwrap()[ui].segments[si],
+            clip.frame_count as usize,
+            units[ui].is_static(),
+        )
+        .unwrap();
         match keys[2] {
             Key::Quat { parts, signs, .. } => {
-                assert_eq!(parts, [7, 9, 11], "the written components did not read back");
-                assert_eq!(signs, [true, false, true], "the written signs did not read back");
+                assert_eq!(
+                    parts,
+                    [7, 9, 11],
+                    "the written components did not read back"
+                );
+                assert_eq!(
+                    signs,
+                    [true, false, true],
+                    "the written signs did not read back"
+                );
             }
             other => panic!("expected a quaternion, got {other:?}"),
         }
         // Nothing outside the key moved.
         let lo = pos / 8;
         let hi = (pos + bits + 7) / 8;
-        let moved: Vec<usize> = (0..before.len()).filter(|&i| before[i] != after[i]).collect();
+        let moved: Vec<usize> = (0..before.len())
+            .filter(|&i| before[i] != after[i])
+            .collect();
         assert!(!moved.is_empty(), "the edit changed nothing");
-        assert!(moved.iter().all(|&i| lo <= i && i < hi), "bytes outside the key changed: {moved:?} outside {lo}..{hi}");
+        assert!(
+            moved.iter().all(|&i| lo <= i && i < hi),
+            "bytes outside the key changed: {moved:?} outside {lo}..{hi}"
+        );
         // And the structure survived the round trip.
         let again = walk(&after).unwrap();
         assert_eq!(again.len(), units.len());
@@ -980,11 +1184,15 @@ mod tests {
             }
         }
         std::fs::remove_file(&dst).ok();
+        remove_backup(&dst);
     }
 
     #[test]
     fn an_out_of_range_component_is_refused_before_any_write() {
         let s = samples();
+        if s.is_empty() {
+            return;
+        }
         let dir = std::env::temp_dir();
         let dst = dir.join("fl27mm_gani_range.gani");
         std::fs::copy(&s[0], &dst).unwrap();
@@ -996,14 +1204,38 @@ mod tests {
             .find(|(_, _, s)| s.kind.is_quat() && s.component_bits == 12)
             .expect("a 12-bit quaternion segment");
         // 12 bits holds 4095; one more must be refused rather than truncated.
-        assert!(set_key(&dst, ui, si, 0, KeyValue::Quat { parts: [4096, 0, 0], signs: [false; 3] }).is_err());
-        assert!(set_key(&dst, ui, si, 0, KeyValue::Quat { parts: [4095, 0, 0], signs: [false; 3] }).is_ok());
+        assert!(set_key(
+            &dst,
+            ui,
+            si,
+            0,
+            KeyValue::Quat {
+                parts: [4096, 0, 0],
+                signs: [false; 3]
+            }
+        )
+        .is_err());
+        assert!(set_key(
+            &dst,
+            ui,
+            si,
+            0,
+            KeyValue::Quat {
+                parts: [4095, 0, 0],
+                signs: [false; 3]
+            }
+        )
+        .is_ok());
         std::fs::remove_file(&dst).ok();
+        remove_backup(&dst);
     }
 
     #[test]
     fn a_key_index_past_the_end_of_a_segment_is_refused() {
         let s = samples();
+        if s.is_empty() {
+            return;
+        }
         let dir = std::env::temp_dir();
         let dst = dir.join("fl27mm_gani_oob.gani");
         std::fs::copy(&s[0], &dst).unwrap();
@@ -1015,14 +1247,28 @@ mod tests {
             .find(|(_, _, s)| s.kind.is_quat() && s.keys > 1)
             .expect("a multi-key quaternion segment");
         let n = units[ui].segments[si].keys;
-        assert!(set_key(&dst, ui, si, n + 50, KeyValue::Quat { parts: [1, 1, 1], signs: [false; 3] }).is_err());
+        assert!(set_key(
+            &dst,
+            ui,
+            si,
+            n + 50,
+            KeyValue::Quat {
+                parts: [1, 1, 1],
+                signs: [false; 3]
+            }
+        )
+        .is_err());
         assert!(set_key(&dst, ui, si, 9999, KeyValue::Halves([0; 3])).is_err());
         std::fs::remove_file(&dst).ok();
+        remove_backup(&dst);
     }
 
     #[test]
     fn setting_the_rate_changes_only_four_bytes_and_survives_a_re_read() {
         let s = samples();
+        if s.is_empty() {
+            return;
+        }
         let dir = std::env::temp_dir();
         let dst = dir.join("fl27mm_gani_rate.gani");
         std::fs::copy(&s[0], &dst).unwrap();
@@ -1032,15 +1278,24 @@ mod tests {
         assert_eq!((was, now), (original, target));
         let after = std::fs::read(&dst).unwrap();
         let before = std::fs::read(&s[0]).unwrap();
-        let moved: Vec<usize> = (0..before.len()).filter(|&i| before[i] != after[i]).collect();
-        assert!(moved.iter().all(|&i| (160..164).contains(&i)), "moved: {moved:?}");
+        let moved: Vec<usize> = (0..before.len())
+            .filter(|&i| before[i] != after[i])
+            .collect();
+        assert!(
+            moved.iter().all(|&i| (160..164).contains(&i)),
+            "moved: {moved:?}"
+        );
         assert_eq!(Clip::read(&dst).unwrap().frame_rate, target);
         std::fs::remove_file(&dst).ok();
+        remove_backup(&dst);
     }
 
     #[test]
     fn an_implausible_rate_is_refused_before_any_write() {
         let s = samples();
+        if s.is_empty() {
+            return;
+        }
         assert!(set_frame_rate(&s[0], 0).is_err());
         assert!(set_frame_rate(&s[0], 5000).is_err());
         // The refusal happens before the file is opened for writing, so the

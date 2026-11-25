@@ -7,6 +7,7 @@ name = "fl27mm-python"
 version = "1.4.0"
 requires-python = ">=3.10"
 description = "PyO3 bindings for the FL27 Mod Manager"
+license = { file = "LICENSE" }
 
 [tool.maturin]
 python-source = "../tools"

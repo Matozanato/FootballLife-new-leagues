@@ -168,11 +168,11 @@ impl PixelFormat {
     /// them, and a wrong FourCC makes the file look corrupt in other tools.
     fn dxgi(self) -> Option<u32> {
         match self {
-            PixelFormat::Bc5 => Some(83),      // BC5_UNORM, endpoints centred on 128
-            PixelFormat::Bc6h => Some(95),     // BC6H_UF16
-            PixelFormat::Bc7 => Some(98),      // BC7_UNORM
-            PixelFormat::Rgba16f => Some(10),  // R16G16B16A16_FLOAT
-            PixelFormat::Rg16 => Some(34),     // R16G16_UNORM
+            PixelFormat::Bc5 => Some(83),     // BC5_UNORM, endpoints centred on 128
+            PixelFormat::Bc6h => Some(95),    // BC6H_UF16
+            PixelFormat::Bc7 => Some(98),     // BC7_UNORM
+            PixelFormat::Rgba16f => Some(10), // R16G16B16A16_FLOAT
+            PixelFormat::Rg16 => Some(34),    // R16G16_UNORM
             _ => None,
         }
     }
@@ -210,7 +210,9 @@ fn le_u16(b: &[u8], at: usize) -> u16 {
 
 fn inflate(raw: &[u8]) -> Result<Vec<u8>> {
     let mut out = Vec::new();
-    ZlibDecoder::new(raw).read_to_end(&mut out).context("inflating ftex chunk")?;
+    ZlibDecoder::new(raw)
+        .read_to_end(&mut out)
+        .context("inflating ftex chunk")?;
     Ok(out)
 }
 
@@ -254,8 +256,10 @@ impl Ftex {
             let chunks = le_i16(&buf, at + 14);
             let ftexs = buf[at + 13];
             if ftexs != 0 {
-                bail!("mip {i} lives in external ftexs #{ftexs}; \
-                       PES packs textures embedded, so this is unexpected");
+                bail!(
+                    "mip {i} lives in external ftexs #{ftexs}; \
+                       PES packs textures embedded, so this is unexpected"
+                );
             }
             let mut data = Vec::with_capacity(declared);
             if chunks == 0 {
@@ -283,7 +287,11 @@ impl Ftex {
                     let stored = if stored == 0 { 65536 } else { stored };
                     let raw_size = if raw_size == 0 { 65536 } else { raw_size };
                     let rel = le_u32(&buf, ia + 4);
-                    let rel = if rel > 0x8000_0000 { rel - 0x8000_0000 } else { rel };
+                    let rel = if rel > 0x8000_0000 {
+                        rel - 0x8000_0000
+                    } else {
+                        rel
+                    };
                     let pos = offset + rel as usize;
                     // Checked, because a bad size field must read as an error
                     // rather than as wrapping arithmetic that slips past.
@@ -300,7 +308,10 @@ impl Ftex {
                 }
             }
             if data.len() != declared {
-                bail!("mip {i}: decoded {} bytes, header says {declared}", data.len());
+                bail!(
+                    "mip {i}: decoded {} bytes, header says {declared}",
+                    data.len()
+                );
             }
             mips.push(Mip {
                 width: (width >> i).max(1),
@@ -308,7 +319,17 @@ impl Ftex {
                 data,
             });
         }
-        Ok(Ftex { format, version, width, height, depth, texture_type, nrt, flags, mips })
+        Ok(Ftex {
+            format,
+            version,
+            width,
+            height,
+            depth,
+            texture_type,
+            nrt,
+            flags,
+            mips,
+        })
     }
 
     pub fn to_dds(&self) -> Vec<u8> {
@@ -316,7 +337,11 @@ impl Ftex {
         out.extend_from_slice(b"DDS ");
         out.extend_from_slice(&124u32.to_le_bytes());
         let mut flags = 0x1u32 | 0x2 | 0x4 | 0x1000; // caps, height, width, pixel format
-        flags |= if self.format.block_bytes().is_some() { 0x80000 } else { 0x8 };
+        flags |= if self.format.block_bytes().is_some() {
+            0x80000
+        } else {
+            0x8
+        };
         if self.depth > 1 {
             flags |= 0x800000; // depth: LUT textures are 16x16x16 volumes
         }
@@ -336,27 +361,46 @@ impl Ftex {
         out.extend_from_slice(&[0u8; 44]); // reserved
 
         out.extend_from_slice(&32u32.to_le_bytes()); // pixel format size
-        // A DX10 header is the only way to name BC5/BC6H/BC7 and the 16-bit
-        // formats; the classic path keeps a FourCC or channel masks.
+                                                     // A DX10 header is the only way to name BC5/BC6H/BC7 and the 16-bit
+                                                     // formats; the classic path keeps a FourCC or channel masks.
         let (pf_flags, fourcc, bits, r, g, b, a) = match self.format {
             PixelFormat::Bc1 => (0x4u32, *b"DXT1", 0u32, 0u32, 0u32, 0u32, 0u32),
             PixelFormat::Bc2 => (0x4, *b"DXT3", 0, 0, 0, 0, 0),
             PixelFormat::Bc3 => (0x4, *b"DXT5", 0, 0, 0, 0, 0),
-            PixelFormat::Bgra8 => (0x1 | 0x40, [0; 4], 32,
-                                   0x00FF_0000, 0x0000_FF00, 0x0000_00FF, 0xFF00_0000),
+            PixelFormat::Bgra8 => (
+                0x1 | 0x40,
+                [0; 4],
+                32,
+                0x00FF_0000,
+                0x0000_FF00,
+                0x0000_00FF,
+                0xFF00_0000,
+            ),
             PixelFormat::L8 => (0x20000, [0; 4], 8, 0xFF, 0, 0, 0),
             _ => (0x4, *b"DX10", 0, 0, 0, 0, 0),
         };
-        let dxgi = if fourcc == *b"DX10" { self.format.dxgi() } else { None };
-        debug_assert_eq!(dxgi.is_some(), fourcc == *b"DX10",
-                         "a format without a classic FourCC needs a DXGI number");
+        let dxgi = if fourcc == *b"DX10" {
+            self.format.dxgi()
+        } else {
+            None
+        };
+        debug_assert_eq!(
+            dxgi.is_some(),
+            fourcc == *b"DX10",
+            "a format without a classic FourCC needs a DXGI number"
+        );
         out.extend_from_slice(&pf_flags.to_le_bytes());
         out.extend_from_slice(&fourcc);
         out.extend_from_slice(&bits.to_le_bytes());
         for m in [r, g, b, a] {
             out.extend_from_slice(&m.to_le_bytes());
         }
-        let caps = 0x1000u32 | if self.mips.len() > 1 { 0x8 | 0x400000 } else { 0 };
+        let caps = 0x1000u32
+            | if self.mips.len() > 1 {
+                0x8 | 0x400000
+            } else {
+                0
+            };
         out.extend_from_slice(&caps.to_le_bytes());
         out.extend_from_slice(&(if self.depth > 1 { 0x200000u32 } else { 0 }).to_le_bytes());
         out.extend_from_slice(&[0u8; 12]); // caps3, caps4, reserved2
@@ -413,8 +457,10 @@ impl Ftex {
                 // The names tools actually write for BC5.
                 b"ATI2" | b"BC5U" | b"BC5S" | b"A2XY" => PixelFormat::Bc5,
                 b"ATI1" | b"BC4U" | b"BC4S" => PixelFormat::L8,
-                _ => bail!("unsupported DDS fourCC {:?}",
-                           String::from_utf8_lossy(fourcc)),
+                _ => bail!(
+                    "unsupported DDS fourCC {:?}",
+                    String::from_utf8_lossy(fourcc)
+                ),
             }
         } else if pf_flags & 0x20000 != 0 {
             PixelFormat::L8
@@ -427,23 +473,67 @@ impl Ftex {
             bail!("DDS has zero width or height");
         }
 
-        let levels = if mip_count == 0 { 1 } else { mip_count as usize };
+        let max_levels = 32 - width.max(height).max(depth).leading_zeros() as usize;
+        let levels = if mip_count == 0 {
+            1
+        } else {
+            usize::try_from(mip_count).context("DDS mip count exceeds address space")?
+        };
+        if levels > max_levels {
+            bail!("DDS mip count {levels} exceeds the dimensions' maximum of {max_levels}");
+        }
         let mut mips = Vec::with_capacity(levels);
         for i in 0..levels {
             let w = (width >> i).max(1);
             let h = (height >> i).max(1);
             let d = (depth >> i).max(1);
-            let n = format.level_size(w, h) * d as usize;
-            if at + n > buf.len() {
-                bail!("DDS mip {i} needs {n} bytes at {at}, file has {}", buf.len());
+            let n = checked_level_size(format, w, h)?
+                .checked_mul(d as usize)
+                .context("DDS mip size overflow")?;
+            let end = at.checked_add(n).context("DDS payload offset overflow")?;
+            if end > buf.len() {
+                bail!(
+                    "DDS mip {i} needs {n} bytes at {at}, file has {}",
+                    buf.len()
+                );
             }
-            mips.push(Mip { width: w, height: h, data: buf[at..at + n].to_vec() });
-            at += n;
+            mips.push(Mip {
+                width: w,
+                height: h,
+                data: buf[at..end].to_vec(),
+            });
+            at = end;
+        }
+
+        fn checked_level_size(format: PixelFormat, width: u32, height: u32) -> Result<usize> {
+            let w = usize::try_from(width).context("DDS width exceeds address space")?;
+            let h = usize::try_from(height).context("DDS height exceeds address space")?;
+            let pixels = w.checked_mul(h).context("DDS dimensions overflow")?;
+            let bytes = match format {
+                PixelFormat::Bgra8 | PixelFormat::Rg16 => pixels.checked_mul(4),
+                PixelFormat::L8 => Some(pixels),
+                PixelFormat::Rgba16f => pixels.checked_mul(8),
+                PixelFormat::Bc1 => w
+                    .div_ceil(4)
+                    .checked_mul(h.div_ceil(4))
+                    .and_then(|n| n.checked_mul(8)),
+                PixelFormat::Bc2
+                | PixelFormat::Bc3
+                | PixelFormat::Bc5
+                | PixelFormat::Bc6h
+                | PixelFormat::Bc7 => w
+                    .div_ceil(4)
+                    .checked_mul(h.div_ceil(4))
+                    .and_then(|n| n.checked_mul(16)),
+            };
+            bytes.context("DDS mip size overflow")
         }
         Ok(Ftex {
             format,
             version: VERSION_DEFAULT,
-            width, height, depth,
+            width,
+            height,
+            depth,
             texture_type: 3, // diffuse; callers retag normal/material maps
             nrt: 2,
             flags: 17,
@@ -474,11 +564,16 @@ impl Ftex {
                     (piece.len(), piece)
                 };
                 if stored == 0 || stored > 0xFFFF {
-                    bail!("chunk of {stored} bytes does not fit the 16-bit size field, \
-                          where 0 already means a full 64 KiB");
+                    bail!(
+                        "chunk of {stored} bytes does not fit the 16-bit size field, \
+                          where 0 already means a full 64 KiB"
+                    );
                 }
-                index.push((stored as u16, piece.len() as u16,
-                            (index_bytes + payload.len()) as u32));
+                index.push((
+                    stored as u16,
+                    piece.len() as u16,
+                    (index_bytes + payload.len()) as u32,
+                ));
                 payload.extend_from_slice(bytes);
             }
             let mut block = Vec::with_capacity(index_bytes + payload.len());
@@ -513,8 +608,8 @@ impl Ftex {
             out[at + 8..at + 12].copy_from_slice(&(block.len() as u32).to_le_bytes());
             out[at + 12] = i as u8;
             out[at + 13] = 0; // embedded
-            out[at + 14..at + 16].copy_from_slice(
-                &(mip.data.len().div_ceil(CHUNK) as i16).to_le_bytes());
+            out[at + 14..at + 16]
+                .copy_from_slice(&(mip.data.len().div_ceil(CHUNK) as i16).to_le_bytes());
             out[*offset..*offset + block.len()].copy_from_slice(block);
         }
         Ok(out)
@@ -541,9 +636,11 @@ pub fn to_dds_file(src: &Path, dest: &Path) -> Result<Ftex> {
 }
 
 fn rgb565(c: u16) -> [u8; 3] {
-    [((c >> 11) as u32 * 255 / 31) as u8,
-     (((c >> 5) & 63) as u32 * 255 / 63) as u8,
-     ((c & 31) as u32 * 255 / 31) as u8]
+    [
+        ((c >> 11) as u32 * 255 / 31) as u8,
+        (((c >> 5) & 63) as u32 * 255 / 63) as u8,
+        ((c & 31) as u32 * 255 / 31) as u8,
+    ]
 }
 
 /// One 4x4 BC1 colour block into 16 RGBA pixels. `opaque` forces the
@@ -659,7 +756,11 @@ fn half_to_u8(h: u16) -> u8 {
     let f = if exp == 0 {
         mant as f32 * 2f32.powi(-24)
     } else if exp == 0x1F {
-        if mant == 0 { f32::INFINITY } else { f32::NAN }
+        if mant == 0 {
+            f32::INFINITY
+        } else {
+            f32::NAN
+        }
     } else {
         (1.0 + mant as f32 / 1024.0) * 2f32.powi(exp as i32 - 15)
     };
@@ -764,7 +865,11 @@ fn bc1_encode(px: &[[u8; 4]; 16], out: &mut [u8]) {
 pub fn encode_blocks(format: PixelFormat, rgba: &[u8], w: u32, h: u32) -> Result<Vec<u8>> {
     let (w, h) = (w as usize, h as usize);
     if rgba.len() < w * h * 4 {
-        bail!("encode needs {} bytes of RGBA8, got {}", w * h * 4, rgba.len());
+        bail!(
+            "encode needs {} bytes of RGBA8, got {}",
+            w * h * 4,
+            rgba.len()
+        );
     }
     let gather = |bx: usize, by: usize| -> [[u8; 4]; 16] {
         let mut tile = [[0u8; 4]; 16];
@@ -872,7 +977,11 @@ impl Ftex {
             | PixelFormat::Bc3
             | PixelFormat::Bc5
             | PixelFormat::Bc7 => {
-                let bs = if self.format == PixelFormat::Bc1 { 8 } else { 16 };
+                let bs = if self.format == PixelFormat::Bc1 {
+                    8
+                } else {
+                    16
+                };
                 let bw = w.div_ceil(4);
                 let bh = h.div_ceil(4);
                 for by in 0..bh {
@@ -896,8 +1005,11 @@ impl Ftex {
                             PixelFormat::Bc5 => bc5_block(block, &mut tile),
                             _ => {
                                 if !crate::bc7::decode_block(block, &mut tile) {
-                                    bail!("mip {level} block {} uses the reserved \
-                                           BC7 mode 8", by * bw + bx);
+                                    bail!(
+                                        "mip {level} block {} uses the reserved \
+                                           BC7 mode 8",
+                                        by * bw + bx
+                                    );
                                 }
                             }
                         }
@@ -942,7 +1054,9 @@ impl Ftex {
             PixelFormat::Bc6h => bail!(
                 "{}x{} is BC6H: the blocks are sized and will convert, but this \
                  build has no HDR block decoder for the preview",
-                w, h),
+                w,
+                h
+            ),
         }
         Ok((mip.width, mip.height, out))
     }
@@ -967,14 +1081,24 @@ mod tests {
         let ftex = Ftex {
             format: PixelFormat::Bc3,
             version: VERSION_DEFAULT,
-            width: 64, height: 32, depth: 1,
-            texture_type: 3, nrt: 2, flags: 17,
-            mips: (0..3).map(|i| {
-                let w = 64 >> i;
-                let h = 32 >> i;
-                let n = PixelFormat::Bc3.level_size(w, h);
-                Mip { width: w, height: h, data: (0..n).map(|k| (k % 251) as u8).collect() }
-            }).collect(),
+            width: 64,
+            height: 32,
+            depth: 1,
+            texture_type: 3,
+            nrt: 2,
+            flags: 17,
+            mips: (0..3)
+                .map(|i| {
+                    let w = 64 >> i;
+                    let h = 32 >> i;
+                    let n = PixelFormat::Bc3.level_size(w, h);
+                    Mip {
+                        width: w,
+                        height: h,
+                        data: (0..n).map(|k| (k % 251) as u8).collect(),
+                    }
+                })
+                .collect(),
         };
         let dds = ftex.to_dds();
         let back = Ftex::from_dds(&dds).unwrap();
@@ -992,10 +1116,15 @@ mod tests {
         let ftex = Ftex {
             format: PixelFormat::Bgra8,
             version: VERSION_DEFAULT,
-            width: 32, height: 32, depth: 1,
-            texture_type: 1, nrt: 2, flags: 17,
+            width: 32,
+            height: 32,
+            depth: 1,
+            texture_type: 1,
+            nrt: 2,
+            flags: 17,
             mips: vec![Mip {
-                width: 32, height: 32,
+                width: 32,
+                height: 32,
                 data: (0..32 * 32 * 4).map(|k| (k % 256) as u8).collect(),
             }],
         };
@@ -1020,10 +1149,17 @@ mod tests {
         let ftex = Ftex {
             format: PixelFormat::Bgra8,
             version: VERSION_DEFAULT,
-            width: 16, height: 16, depth: 16,
-            texture_type: 1, nrt: 2, flags: 17,
-            mips: vec![Mip { width: 16, height: 16,
-                             data: (0..n).map(|k| (k % 256) as u8).collect() }],
+            width: 16,
+            height: 16,
+            depth: 16,
+            texture_type: 1,
+            nrt: 2,
+            flags: 17,
+            mips: vec![Mip {
+                width: 16,
+                height: 16,
+                data: (0..n).map(|k| (k % 256) as u8).collect(),
+            }],
         };
         let dds = ftex.to_dds();
         assert_eq!(dds.len(), 128 + n);
@@ -1042,9 +1178,19 @@ mod tests {
         data[0..2].copy_from_slice(&0xF800u16.to_le_bytes());
         data[2..4].copy_from_slice(&0xF800u16.to_le_bytes());
         let ftex = Ftex {
-            format: PixelFormat::Bc1, version: VERSION_DEFAULT,
-            width: 4, height: 4, depth: 1, texture_type: 3, nrt: 2, flags: 17,
-            mips: vec![Mip { width: 4, height: 4, data }],
+            format: PixelFormat::Bc1,
+            version: VERSION_DEFAULT,
+            width: 4,
+            height: 4,
+            depth: 1,
+            texture_type: 3,
+            nrt: 2,
+            flags: 17,
+            mips: vec![Mip {
+                width: 4,
+                height: 4,
+                data,
+            }],
         };
         let (w, h, rgba) = ftex.to_rgba(0).unwrap();
         assert_eq!((w, h), (4, 4));
@@ -1057,10 +1203,19 @@ mod tests {
     #[test]
     fn dxt_size_not_multiple_of_four_is_clipped() {
         let ftex = Ftex {
-            format: PixelFormat::Bc3, version: VERSION_DEFAULT,
-            width: 6, height: 5, depth: 1, texture_type: 3, nrt: 2, flags: 17,
-            mips: vec![Mip { width: 6, height: 5,
-                             data: vec![0u8; 2 * 2 * 16] }],
+            format: PixelFormat::Bc3,
+            version: VERSION_DEFAULT,
+            width: 6,
+            height: 5,
+            depth: 1,
+            texture_type: 3,
+            nrt: 2,
+            flags: 17,
+            mips: vec![Mip {
+                width: 6,
+                height: 5,
+                data: vec![0u8; 2 * 2 * 16],
+            }],
         };
         let (w, h, rgba) = ftex.to_rgba(0).unwrap();
         assert_eq!((w, h), (6, 5));
@@ -1068,14 +1223,26 @@ mod tests {
     }
 
     #[test]
+    fn hostile_dds_dimensions_and_mip_count_are_rejected() {
+        let mut dds = vec![0u8; 128];
+        dds[..4].copy_from_slice(b"DDS ");
+        dds[12..16].copy_from_slice(&u32::MAX.to_le_bytes());
+        dds[16..20].copy_from_slice(&u32::MAX.to_le_bytes());
+        dds[24..28].copy_from_slice(&1u32.to_le_bytes());
+        dds[28..32].copy_from_slice(&u32::MAX.to_le_bytes());
+        dds[80..84].copy_from_slice(&4u32.to_le_bytes());
+        dds[84..88].copy_from_slice(b"DXT1");
+        assert!(Ftex::from_dds(&dds).is_err());
+    }
+
+    #[test]
     fn real_texture_decodes_and_re_encodes() {
-        let p = Path::new(concat!(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\3D Turf",
-            r"\Asset\model\bg\common\turf3d\sourceimages\#windx11\0grassfin_bsm_alp.ftex"));
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/3D Turf/Asset/model/bg/common/turf3d/sourceimages/#windx11/0grassfin_bsm_alp.ftex");
         if !p.exists() {
             return;
         }
-        let ftex = Ftex::read(p).unwrap();
+        let ftex = Ftex::read(&p).unwrap();
         assert_eq!(ftex.width, 128);
         assert_eq!(ftex.height, 128);
         assert_eq!(ftex.format, PixelFormat::Bc3);
@@ -1117,13 +1284,12 @@ mod tests {
         // Code 9 was the format every normal map failed on. The identification
         // rests on smoothness: as BC5 a real face normal map measures under 2
         // here, and 40+ decoded as any other 16-byte codec.
-        let p = Path::new(concat!(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\Asset\model",
-            r"\character\face\real\100006\sourceimages\#windx11\face_nrm.ftex"));
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/Asset/model/character/face/real/100006/sourceimages/#windx11/face_nrm.ftex");
         if !p.exists() {
             return;
         }
-        let ftex = Ftex::read(p).unwrap();
+        let ftex = Ftex::read(&p).unwrap();
         assert_eq!(ftex.format, PixelFormat::Bc5);
         let (w, h, rgba) = ftex.to_rgba(0).unwrap();
         let (mut sr, mut sg, mut zb) = (0u64, 0u64, 0u64);
@@ -1134,9 +1300,21 @@ mod tests {
         }
         let n = u64::from(w * h);
         // 128 is neutral, so a face is mostly flat surface.
-        assert!((110..=145).contains(&(sr / n)), "R mean {} is not centred", sr / n);
-        assert!((110..=145).contains(&(sg / n)), "G mean {} is not centred", sg / n);
-        assert!(zb / n > 190, "reconstructed Z mean {} means XY is noise", zb / n);
+        assert!(
+            (110..=145).contains(&(sr / n)),
+            "R mean {} is not centred",
+            sr / n
+        );
+        assert!(
+            (110..=145).contains(&(sg / n)),
+            "G mean {} is not centred",
+            sg / n
+        );
+        assert!(
+            zb / n > 190,
+            "reconstructed Z mean {} means XY is noise",
+            zb / n
+        );
         let r = roughness(w, h, &rgba);
         assert!(r < 6.0, "BC5 decode is not smooth: {r}");
     }
@@ -1147,13 +1325,12 @@ mod tests {
         // checks the decode without a reference image by comparing two mip
         // levels of the same surface: a correct decode makes mip 2 the blurred
         // mip 0, and noise does not correlate with itself downsampled.
-        let p = Path::new(concat!(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\Asset\model",
-            r"\character\face\real\117680\sourceimages\#windx11\hair_parts_bsm.ftex"));
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/Asset/model/character/face/real/117680/sourceimages/#windx11/hair_parts_bsm.ftex");
         if !p.exists() {
             return;
         }
-        let ftex = Ftex::read(p).unwrap();
+        let ftex = Ftex::read(&p).unwrap();
         assert_eq!(ftex.format, PixelFormat::Bc7);
         assert!(ftex.mips.len() > 3, "this file should carry a mip chain");
         let (w, h, big) = ftex.to_rgba(0).unwrap();
@@ -1180,8 +1357,10 @@ mod tests {
             }
         }
         let mad = acc as f64 / n as f64;
-        assert!(mad < 12.0,
-                "mip 0 downsampled differs from mip 2 by {mad:.1}, so the decode is noise");
+        assert!(
+            mad < 12.0,
+            "mip 0 downsampled differs from mip 2 by {mad:.1}, so the decode is noise"
+        );
     }
 
     #[test]
@@ -1194,14 +1373,27 @@ mod tests {
             (PixelFormat::Rg16, 34),
         ] {
             let ftex = Ftex {
-                format, version: VERSION_DEFAULT,
-                width: 8, height: 8, depth: 1,
-                texture_type: 9, nrt: 2, flags: 17,
-                mips: vec![Mip { width: 8, height: 8,
-                                 data: vec![0u8; format.level_size(8, 8)] }],
+                format,
+                version: VERSION_DEFAULT,
+                width: 8,
+                height: 8,
+                depth: 1,
+                texture_type: 9,
+                nrt: 2,
+                flags: 17,
+                mips: vec![Mip {
+                    width: 8,
+                    height: 8,
+                    data: vec![0u8; format.level_size(8, 8)],
+                }],
             };
             let dds = ftex.to_dds();
-            assert_eq!(&dds[84..88], b"DX10", "{} needs a DX10 header", format.name());
+            assert_eq!(
+                &dds[84..88],
+                b"DX10",
+                "{} needs a DX10 header",
+                format.name()
+            );
             assert_eq!(le_u32(&dds, 128), dxgi, "{} DXGI", format.name());
             assert_eq!(dds.len(), 148 + format.level_size(8, 8));
             let back = Ftex::from_dds(&dds).unwrap();
@@ -1214,18 +1406,18 @@ mod tests {
     fn every_format_in_a_real_pack_survives_ftex_dds_ftex() {
         // Reading and converting must work for every code even where this build
         // cannot draw a preview: the block bytes move untouched.
-        let dir = Path::new(concat!(
-            r"C:\Games\SP Football Life 2027\SiderAddons\livecpk\root\Asset\model\character\face"));
+        let dir = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/Asset/model/character/face");
         if !dir.exists() {
             return;
         }
         let mut seen: std::collections::BTreeMap<u16, usize> = Default::default();
         let mut checked = 0usize;
-        for p in crate::fsutil::files(dir).iter().take(600) {
+        for p in crate::fsutil::files(&dir).iter().take(600) {
             if p.extension().and_then(|e| e.to_str()) != Some("ftex") {
                 continue;
             }
-            let ftex = match Ftex::read(p) {
+            let ftex = match Ftex::read(&p) {
                 Ok(f) => f,
                 Err(_) => continue,
             };
@@ -1237,7 +1429,12 @@ mod tests {
                 .with_context(|| format!("reading back {}", p.display()))
                 .unwrap();
             assert_eq!(back.format, ftex.format, "format lost at {}", p.display());
-            assert_eq!(back.mips.len(), ftex.mips.len(), "mips lost at {}", p.display());
+            assert_eq!(
+                back.mips.len(),
+                ftex.mips.len(),
+                "mips lost at {}",
+                p.display()
+            );
             for (a, b) in back.mips.iter().zip(&ftex.mips) {
                 assert_eq!(a.data, b.data, "blocks changed at {}", p.display());
             }
@@ -1245,19 +1442,22 @@ mod tests {
             checked += 1;
         }
         assert!(checked > 40, "only {checked} files exercised");
-        assert!(seen.len() >= 3,
-                "a face pack should hold several formats, saw {seen:?}");
+        assert!(
+            seen.len() >= 3,
+            "a face pack should hold several formats, saw {seen:?}"
+        );
     }
 
     /// Mean absolute difference per channel between an image and its own
     /// encode/decode round trip.
     fn mean_error(w: u32, h: u32, before: &[u8], after: &[u8]) -> f64 {
-        let n = (w as usize * h as usize).min(before.len() / 4).min(after.len() / 4);
+        let n = (w as usize * h as usize)
+            .min(before.len() / 4)
+            .min(after.len() / 4);
         let (mut acc, mut count) = (0u64, 0u64);
         for i in 0..n {
             for c in 0..4 {
-                acc += (before[i * 4 + c] as i32 - after[i * 4 + c] as i32)
-                    .unsigned_abs() as u64;
+                acc += (before[i * 4 + c] as i32 - after[i * 4 + c] as i32).unsigned_abs() as u64;
                 count += 1;
             }
         }
@@ -1267,10 +1467,19 @@ mod tests {
     fn round_trip(format: PixelFormat, rgba: &[u8], w: u32, h: u32) -> Vec<u8> {
         let blocks = encode_blocks(format, rgba, w, h).unwrap();
         let tex = Ftex {
-            format, version: VERSION_DEFAULT,
-            width: w, height: h, depth: 1,
-            texture_type: 3, nrt: 2, flags: 17,
-            mips: vec![Mip { width: w, height: h, data: blocks }],
+            format,
+            version: VERSION_DEFAULT,
+            width: w,
+            height: h,
+            depth: 1,
+            texture_type: 3,
+            nrt: 2,
+            flags: 17,
+            mips: vec![Mip {
+                width: w,
+                height: h,
+                data: blocks,
+            }],
         };
         let (_, _, out) = tex.to_rgba(0).unwrap();
         out
@@ -1294,8 +1503,7 @@ mod tests {
         let mut acc = 0u64;
         for i in 0..(w * h) as usize {
             for c in 0..2 {
-                acc += (rgba[i * 4 + c] as i32 - back[i * 4 + c] as i32)
-                    .unsigned_abs() as u64;
+                acc += (rgba[i * 4 + c] as i32 - back[i * 4 + c] as i32).unsigned_abs() as u64;
             }
         }
         let err = acc as f64 / (w as f64 * h as f64 * 2.0);
@@ -1342,8 +1550,14 @@ mod tests {
         let back = round_trip(PixelFormat::Bc3, &rgba, w, h);
         let left = &back[..4];
         let right = &back[((w / 2) as usize * 4)..((w / 2) as usize * 4 + 4)];
-        assert!(left[0] as i32 - left[2] as i32 > 100, "red half lost: {left:?}");
-        assert!(right[2] as i32 - right[0] as i32 > 100, "blue half lost: {right:?}");
+        assert!(
+            left[0] as i32 - left[2] as i32 > 100,
+            "red half lost: {left:?}"
+        );
+        assert!(
+            right[2] as i32 - right[0] as i32 > 100,
+            "blue half lost: {right:?}"
+        );
         // Two flat halves are the easy case for a nearest-fit encoder, so the
         // average error should sit inside one 565 step, not tens of levels.
         let err = mean_error(w, h, &rgba, &back);

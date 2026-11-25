@@ -366,7 +366,8 @@ mod tests {
     use super::*;
 
     fn a_real_texture() -> Option<PathBuf> {
-        let p = Path::new("C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006/sourceimages/#windx11/face_bsm_alp.ftex");
+        let p = Path::new(crate::install::GAME_ROOT)
+            .join("SiderAddons/livecpk/root/Asset/model/character/face/real/100006/sourceimages/#windx11/face_bsm_alp.ftex");
         if p.is_file() { Some(p.to_path_buf()) } else { None }
     }
 

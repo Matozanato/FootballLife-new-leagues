@@ -1,5 +1,8 @@
 {
  "text": {
+  "Inspect CPK archives, textures, models and animations with the optional Rust tools.": "Inspectez les archives CPK, les textures, les modèles et les animations avec les outils Rust facultatifs.",
+  "Choose an archive to browse its contents.": "Choisissez une archive pour parcourir son contenu.",
+  "Run an operation to see its results.": "Lancez une opération pour en voir les résultats.",
   "The world's own copy: %s is not on this PC": "La copie du monde lui-même : %s n'est pas sur ce PC",
   "Getting the Build ready": "Préparation du Build",
   "Saving your world": "Enregistrement de votre monde",

@@ -3,6 +3,7 @@ name = "fl27mm-python"
 version = "1.4.0"
 edition = "2021"
 description = "PyO3 bindings for the FL27 Mod Manager"
+license-file = "../LICENSE"
 
 [lib]
 name = "_fl27mm"

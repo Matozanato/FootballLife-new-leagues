@@ -1,5 +1,8 @@
 {
  "text": {
+  "Inspect CPK archives, textures, models and animations with the optional Rust tools.": "Pregledajte CPK arhive, teksture, modele i animacije pomoću dodatnih Rust alata.",
+  "Choose an archive to browse its contents.": "Odaberite arhivu za pregled njezina sadržaja.",
+  "Run an operation to see its results.": "Pokrenite radnju da biste vidjeli rezultate.",
   "The world's own copy: %s is not on this PC": "Kopija iz samog svijeta: %s nije na ovom PC-u",
   "Getting the Build ready": "Pripremam Build",
   "Saving your world": "Spremam tvoj svijet",

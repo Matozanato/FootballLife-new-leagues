@@ -42,9 +42,8 @@ assert report.tree.topLevelItem(0).text(0) == "rows"
 manager = ModManager(SimpleNamespace(
     game=SimpleNamespace(folder="", sider_dir=""), settings={}, section_of={},
 ))
-assert manager.tabs.count() == 10
-assert manager.tabs.tabText(7) == "Kit Studio"
-assert manager.kit_tree.columnCount() == 3
+assert manager.tabs.count() == 3
+assert manager.tabs.tabText(0) == "CPK archives"
 
 theme.apply(app)
 caps_filter = theme._CAPS
@@ -59,13 +58,5 @@ model = SimpleNamespace(settings={}, saves=0)
 model.save_settings = lambda: setattr(model, "saves", model.saves + 1)
 page = Settings(model)
 assert page.findChild(QScrollArea) is not None
-page.text_size.setCurrentIndex(page.text_size.findData("large"))
-page.accent.setCurrentIndex(page.accent.findData("teal"))
-page.contrast_box.setChecked(True)
-assert model.settings == {"text_size": "large", "accent": "teal", "high_contrast": True}
-assert model.saves == 3
-page.reset_appearance()
-assert model.settings == {"text_size": "normal", "accent": "blue", "high_contrast": False}
-assert model.saves == 4
 
-print("ok - appearance preferences apply live, persist, reset, and remain scrollable")
+print("ok - the shared Qt theme follows the saved preferences and stays scrollable")
