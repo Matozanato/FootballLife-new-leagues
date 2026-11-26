@@ -2,8 +2,8 @@
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit,
-                               QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QWidget)
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit, QPlainTextEdit,
+                               QPushButton, QWidget)
 
 from .. import i18n
 import siderdir
@@ -26,7 +26,7 @@ class Settings(Page):
         form.setLabelAlignment(Qt.AlignRight)
         self.folder = QComboBox()
         self.folder.setEditable(True)
-        self.folder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.folder.setMinimumWidth(520)
         b = QPushButton(_("Browse..."))
         b.clicked.connect(self.pick_game)
         use = QPushButton(_("Use this folder"))
@@ -86,11 +86,8 @@ class Settings(Page):
         op = QPushButton(_("Open the program's settings folder"))
         op.clicked.connect(lambda: os.startfile(APPDIR) if os.path.isdir(APPDIR) else None)
         form.addRow("", row(op))
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QScrollArea.NoFrame)
-        scroll.setWidget(w)
-        self.outer.addWidget(scroll)
+        self.outer.addWidget(w)
+        self.outer.addStretch(1)
 
     def refresh(self):
         g = self.app.game

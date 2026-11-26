@@ -7,7 +7,6 @@ red    a problem, said by name
 blue   information, links, what is chosen
 (15.10.: the user picked the Windows font over JetBrains Mono / IBM Plex.)"""
 import os
-import re
 
 BG = "#0F1319"          # window
 PANEL = "#141921"       # cards, lists, tables
@@ -41,21 +40,6 @@ ROW, ROW_ALT = "#141921", "#1A212C"
 HEAD_BG, HEAD_FG, HEAD_LINE = "#1F2733", "#C9D2DE", "#2F3A4A"
 ROW_LINE = "#2A3341"
 ROW_SEL, ROW_HOVER = "rgba(74, 163, 255, 64)", "rgba(74, 163, 255, 28)"
-REPORT_ROW, REPORT_ALT = "#18212D", "#243143"
-REPORT_TEXT, REPORT_BORDER, REPORT_LINE = "#FFFFFF", "#3D4B5F", "#364355"
-ACCENTS = {
-    "blue": "#4AA3FF",
-    "teal": "#35C7B0",
-    "violet": "#B38CFF",
-    "amber": "#FFC15A",
-}
-_ACCENT_STATES = {
-    "blue": {"selection": "#23466c", "pressed": "#23406A", "hover": "#2A72CC", "primary_pressed": "#184C8C"},
-    "teal": {"selection": "#123D3D", "pressed": "#1C4F49", "hover": "#238C7E", "primary_pressed": "#17635A"},
-    "violet": {"selection": "#32264B", "pressed": "#443360", "hover": "#805DC0", "primary_pressed": "#60428E"},
-    "amber": {"selection": "#46351C", "pressed": "#5A431F", "hover": "#B38130", "primary_pressed": "#80591C"},
-}
-_FONT_SCALES = {"normal": 1.0, "large": 1.15, "extra-large": 1.3}
 
 # the families; fonts() picks the Windows 11 ones (Segoe UI Variable) when they are there
 SANS = "Segoe UI"
@@ -134,22 +118,22 @@ QLabel#problemtext { color: %(TEXT)s; }
 QPushButton, QToolButton { font-family: %(SANS_STACK)s; font-size: 9pt; }
 QPushButton { background: %(PANEL2)s; border: 1px solid %(LINE2)s; border-radius: 0; padding: 6px 14px; min-height: 18px; }
 QPushButton:hover { background: %(SELECTION)s; border-color: %(ACCENT)s; }
-QPushButton:pressed { background: %(PRESSED)s; }
+QPushButton:pressed { background: #23406A; }
 QPushButton:disabled { color: %(DIM)s; background: %(PANEL)s; border-color: %(BORDER)s; }
 QPushButton:checked { background: %(SELECTION)s; border-color: %(ACCENT)s; }
 QToolButton { background: %(PANEL2)s; border: 1px solid %(LINE2)s; border-radius: 0; padding: 6px 12px; }
 QToolButton:hover { background: %(SELECTION)s; border-color: %(ACCENT)s; }
 QToolButton::menu-indicator { image: none; width: 0; }
 QPushButton#primary { background: %(PRIMARY)s; color: white; border-color: %(PRIMARY)s; font-weight: 600; }
-QPushButton#primary:hover { background: %(PRIMARY_HOVER)s; border-color: %(ACCENT)s; }
-QPushButton#primary:pressed { background: %(PRIMARY_PRESSED)s; }
+QPushButton#primary:hover { background: #2A72CC; border-color: %(ACCENT)s; }
+QPushButton#primary:pressed { background: #184C8C; }
 QPushButton#action { color: %(ORANGE)s; border-color: %(ORANGE)s; background: transparent; font-weight: 600; padding: 3px 10px; min-height: 14px; }
 QPushButton#action:hover { background: %(WARN_BG)s; }
 QPushButton#rowbtn { padding: 3px 10px; min-height: 14px; }
 QPushButton#quick { text-align: left; padding: 11px 16px; font-weight: 600; background: %(PANEL2)s; }
 QPushButton#quickmain { text-align: left; padding: 11px 16px; font-weight: 600;
                         background: %(PRIMARY)s; color: white; border-color: %(PRIMARY)s; }
-QPushButton#quickmain:hover { background: %(PRIMARY_HOVER)s; }
+QPushButton#quickmain:hover { background: #2A72CC; }
 QPushButton#big { font-size: 10pt; font-weight: 600; padding: 10px 26px; }
 QPushButton#danger { color: %(DANGER)s; }
 QPushButton#danger:hover { border-color: %(DANGER)s; background: %(ERROR_BG)s; }
@@ -203,15 +187,6 @@ QHeaderView::section { font-family: %(SANS_STACK)s; font-size: 8pt; color: %(HEA
                        border-bottom: 1px solid %(HEAD_LINE)s; padding: 7px 8px; font-weight: 600; }
 QHeaderView::section:hover { color: white; }
 QTableCornerButton::section { background: %(HEAD_BG)s; border: none; border-bottom: 1px solid %(HEAD_LINE)s; }
-QTreeWidget#jsonReportTree, QTreeWidget#jsonReportDetails {
-    background: %(REPORT_ROW)s; alternate-background-color: %(REPORT_ALT)s;
-    color: %(REPORT_TEXT)s; border-color: %(REPORT_BORDER)s; font-size: 11pt; }
-QTreeWidget#jsonReportTree::item, QTreeWidget#jsonReportDetails::item {
-    color: %(REPORT_TEXT)s; padding: 6px 7px; border-bottom: 1px solid %(REPORT_LINE)s; }
-QTreeWidget#jsonReportTree::item:selected, QTreeWidget#jsonReportDetails::item:selected {
-    background: %(ROW_SEL)s; color: #FFFFFF; }
-QTreeWidget#jsonReportTree QHeaderView::section, QTreeWidget#jsonReportDetails QHeaderView::section {
-    font-size: 9pt; color: #FFFFFF; }
 
 /* splitters, scroll bars, tabs */
 QSplitter::handle { background: %(BORDER)s; }
@@ -330,56 +305,16 @@ def fonts():
                 MONO_STACK='"%s", "Cascadia Mono", monospace' % MONO)
 
 
-def _rgba(hex_color, alpha):
-    color = hex_color.lstrip("#")
-    red, green, blue = (int(color[index:index + 2], 16) for index in (0, 2, 4))
-    return "rgba(%d, %d, %d, %d)" % (red, green, blue, alpha)
-
-
-def _contrast_colors():
-    return {
-        "SUBTLE": "#D4DBE5",
-        "DIM": "#B5C0D0",
-        "BORDER": "#505D70",
-        "LINE2": "#718097",
-        "ROW_ALT": "#202A38",
-        "HEAD_BG": "#293548",
-        "HEAD_FG": "#FFFFFF",
-        "HEAD_LINE": "#697B94",
-        "ROW_LINE": "#46556A",
-        "REPORT_ALT": "#2A394D",
-        "REPORT_BORDER": "#718097",
-        "REPORT_LINE": "#53657D",
-    }
-
-
-def qss(settings=None):
-    settings = settings or {}
-    accent_key = settings.get("accent", "blue")
-    accent = ACCENTS.get(accent_key, ACCENT)
-    accent_states = _ACCENT_STATES.get(accent_key, _ACCENT_STATES["blue"])
-    colors = dict(
-        BG=BG, PANEL=PANEL, PANEL2=PANEL2, BORDER=BORDER, LINE2=LINE2, TEXT=TEXT, SUBTLE=SUBTLE,
-        DIM=DIM, ACCENT=accent, ORANGE=ORANGE, SELECTION=accent_states["selection"], DANGER=DANGER, GOOD=GOOD,
-        WARN_BG=WARN_BG, WARN_FG=WARN_FG, ERROR_BG=ERROR_BG, OK_BG=OK_BG, BAR=BAR, PLAY=PLAY,
-        PRIMARY=accent, PRESSED=accent_states["pressed"], PRIMARY_HOVER=accent_states["hover"],
-        PRIMARY_PRESSED=accent_states["primary_pressed"], BLUE_BG=BLUE_BG, BLUE_BORDER=BLUE_BORDER,
-        BLUE=accent, LIVE_BG=LIVE_BG, DASH=DASH, GO_FG=GO_FG,
-        ROW=ROW, ROW_ALT=ROW_ALT, HEAD_BG=HEAD_BG, HEAD_FG=HEAD_FG, HEAD_LINE=HEAD_LINE,
-        ROW_LINE=ROW_LINE, ROW_SEL=_rgba(accent, 72), ROW_HOVER=_rgba(accent, 32),
-        REPORT_ROW=REPORT_ROW, REPORT_ALT=REPORT_ALT, REPORT_TEXT=REPORT_TEXT,
-        REPORT_BORDER=REPORT_BORDER, REPORT_LINE=REPORT_LINE,
-        ASSETS=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets").replace("\\", "/"),
-    )
-    if settings.get("high_contrast"):
-        colors.update(_contrast_colors())
-    style = QSS_T % dict(colors, **fonts())
-    scale = _FONT_SCALES.get(settings.get("text_size", "normal"), 1.0)
-    return re.sub(
-        r"font-size:\s*(\d+(?:\.\d+)?)pt",
-        lambda match: "font-size: %.2fpt" % (float(match.group(1)) * scale),
-        style,
-    )
+def qss():
+    return QSS_T % dict(BG=BG, PANEL=PANEL, PANEL2=PANEL2, BORDER=BORDER, LINE2=LINE2, TEXT=TEXT, SUBTLE=SUBTLE,
+                        DIM=DIM, ACCENT=ACCENT, ORANGE=ORANGE, SELECTION=SELECTION, DANGER=DANGER, GOOD=GOOD,
+                        WARN_BG=WARN_BG, WARN_FG=WARN_FG, ERROR_BG=ERROR_BG, OK_BG=OK_BG, BAR=BAR, PLAY=PLAY,
+                        PRIMARY=PRIMARY, BLUE_BG=BLUE_BG, BLUE_BORDER=BLUE_BORDER,
+                        BLUE=BLUE, LIVE_BG=LIVE_BG, DASH=DASH, GO_FG=GO_FG,
+                        ROW=ROW, ROW_ALT=ROW_ALT, HEAD_BG=HEAD_BG, HEAD_FG=HEAD_FG, HEAD_LINE=HEAD_LINE,
+                        ROW_LINE=ROW_LINE, ROW_SEL=ROW_SEL, ROW_HOVER=ROW_HOVER,
+                        ASSETS=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets").replace("\\", "/"),
+                        **fonts())
 
 
 def caps(widget):
@@ -513,36 +448,29 @@ def _Caps(app):
     return _caps_filter()(app)
 
 
-def apply(app, settings=None):
+def apply(app):
     from PySide6.QtGui import QPalette, QColor, QFont
     app.setStyle("Fusion")
     fonts()
-    scale = _FONT_SCALES.get((settings or {}).get("text_size", "normal"), 1.0)
-    f = QFont(SANS, round(10 * scale))
+    f = QFont(SANS, 10)
     f.setStyleHint(QFont.SansSerif)
     app.setFont(f)
     # buttons, tabs and column heads in capitals, as the sections are (the text itself stays as
     # written). The style sheet's font replaces a font set per class, so each one gets it when
     # it is first polished
     global _CAPS
-    if _CAPS is None:
-        _CAPS = _Caps(app)
-        app.installEventFilter(_CAPS)
+    _CAPS = _Caps(app)
+    app.installEventFilter(_CAPS)
     p = QPalette()
-    accent_key = (settings or {}).get("accent", "blue")
-    accent = ACCENTS.get(accent_key, ACCENT)
-    accent_states = _ACCENT_STATES.get(accent_key, _ACCENT_STATES["blue"])
-    contrast = _contrast_colors() if (settings or {}).get("high_contrast") else {}
-    row_alt = contrast.get("ROW_ALT", ROW_ALT)
-    for role, c in ((QPalette.Window, BG), (QPalette.Base, PANEL), (QPalette.AlternateBase, row_alt),
+    for role, c in ((QPalette.Window, BG), (QPalette.Base, PANEL), (QPalette.AlternateBase, ROW_ALT),
                     (QPalette.Button, PANEL2), (QPalette.Text, TEXT), (QPalette.WindowText, TEXT),
-                    (QPalette.ButtonText, TEXT), (QPalette.Highlight, QColor(accent_states["selection"])),
+                    (QPalette.ButtonText, TEXT), (QPalette.Highlight, SELECTION),
                     (QPalette.HighlightedText, "#FFFFFF"), (QPalette.ToolTipBase, PANEL2),
-                    (QPalette.ToolTipText, TEXT), (QPalette.PlaceholderText, contrast.get("DIM", DIM)),
-                    (QPalette.Link, accent), (QPalette.LinkVisited, accent)):
+                    (QPalette.ToolTipText, TEXT), (QPalette.PlaceholderText, DIM),
+                    (QPalette.Link, ACCENT), (QPalette.LinkVisited, ACCENT)):
         p.setColor(role, QColor(c))
     app.setPalette(p)
-    app.setStyleSheet(qss(settings))
+    app.setStyleSheet(qss())
 
 
 def dark_title_bar(widget):
