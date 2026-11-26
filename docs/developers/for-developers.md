@@ -17,6 +17,12 @@ Making your own version of Mod Studio: see [forking.md](forking.md) and its chap
 - FL Mod Studio from source (`python tools/modstudio_main.py`) needs `PySide6`, `Pillow` and
   `py7zr`; making the release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and
   zig for the DLLs. The release `.exe` needs nothing.
+- Optional: the Game file tools page (CPK archives, textures, models, animations) uses a native
+  module from `mod-manager-rust/`. To build it, install Rust and `maturin` and run
+  `maturin develop --release` in `mod-manager-rust/` with your virtual environment active; it lands
+  in `tools/modstudio/` as `_fl27mm*.pyd`. Without it Mod Studio runs and `mszip.py` builds as
+  before, and the page says the module is missing. `cargo test` there needs no game; the tests that
+  read real game files skip unless the game is at `C:/Games/SP Football Life 2027` or `FL27_GAME`.
 - Windows. The tools were only ever run on Windows.
 
 ## Repository layout
@@ -38,6 +44,7 @@ tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
 tools/modstudio/    FL Mod Studio (tools/modstudio_main.py starts it from source,
                     tools/mszip.py makes the release zip) and the League Builder behind it
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
+mod-manager-rust/   optional native module (Rust, PyO3) for the Game file tools page
 tools/native/       the C source of the six DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
 guides/<lang>/      the user guides: install-a-pack, make-your-own-leagues, mod-studio-guide

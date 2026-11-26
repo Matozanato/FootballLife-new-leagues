@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn real_game_table_survives_a_re_encode() {
-        let p = std::path::Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("FL27 Megapatch/out/rt/a/common/match/constant/constant_match.bin");
         if !p.exists() {
             return;

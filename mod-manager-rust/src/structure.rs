@@ -638,7 +638,7 @@ mod tests {
         // The record turns out to be a run of ~79-byte blocks, each a data
         // area plus a 4-byte key plus padding, with an internal name token at
         // +1055 — all of it found from the bytes, not from documentation.
-        let p = std::path::Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/CompetitionRegulation.bin");
         if !p.exists() {
             return;
@@ -675,7 +675,7 @@ mod tests {
         // A named list rather than a walk of livecpk: several packs carry
         // their own 8 MB Player.bin, and inferring over all of them pushed the
         // suite from 27 s to 279 s for no extra coverage.
-        let dir = std::path::Path::new(crate::install::GAME_ROOT)
+        let dir = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb");
         if !dir.is_dir() {
             return;
@@ -715,7 +715,7 @@ mod tests {
     fn a_real_section_gets_a_row_width() {
         // cpuLevel.o is a 16-byte header then 34 rows of 32 bytes, so the
         // count does not divide the remainder and the tidy reading fails.
-        let p = std::path::Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("FL27 Megapatch/out/rt/common/match/constant/constant_match.bin");
         if !p.exists() {
             return;
@@ -732,7 +732,7 @@ mod tests {
         // Boots.bin is 304 records of 100 bytes and only 68 hold a name.
         // Merging neighbouring text fields claimed all 100 bytes were one
         // name, which is not a layout, it is an artefact of the merge rule.
-        let p = std::path::Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/boot-root/common/etc/pesdb/Boots.bin");
         if !p.exists() {
             return;

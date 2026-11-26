@@ -655,7 +655,7 @@ mod tests {
 
     #[test]
     fn real_cpk_header_parses() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("Data/dt18_all.cpk");
         if !p.exists() {
             return;

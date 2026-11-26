@@ -1,31 +1,19 @@
-//! fl27mm — mod manager for SP Football Life 2027 / Sider.
-//!
-//! Sider's two ordering rules are the whole problem this tool addresses:
-//! `cpk.root` is first-wins, so pack order decides which content the game
-//! actually sees, and `lua.module` loads in sequence, so dependencies must
-//! precede their users. Both are invisible in the file itself, which is why a
-//! hand-edited ini silently disables packs.
+//! fl27mm: format tools for SP Football Life 2027 game files.
 //!
 //! Commands:
-//!   scan       what the ini registers, and whether it resolves
-//!   conflicts  which packs share files, and whether they actually disagree
-//!   verify     what the current order shadows, and who shadows it
-//!   sort       propose (or write) an order where specific packs win
 //!   pesdb      validate database tables before they can override the game
 //!   cpk        list, extract or rebuild a CRIWARE archive
 //!   ftex       convert Fox Engine textures to and from DDS
 //!   container  unwrap, inspect or re-wrap a WESYS/asset container
 //!   bin        decode a .bin: sections, records, menu atlases, strings and hex
 
-use fl27mm::{binread, conflict, cpk, ftex, ini, order, packs, pesdb, wesys};
+use fl27mm::{binread, cpk, ftex, pesdb, wesys};
 
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 
-use ini::Ini;
 
 #[derive(Parser)]
 #[command(name = "fl27mm", version, about)]
@@ -36,36 +24,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// List registered packs and modules; flag missing files and duplicates.
-    Scan {
-        /// Game folder (the one containing SiderAddons).
-        #[arg(long)]
-        game: PathBuf,
-    },
-    /// Find packs that share file keys, and whether the bytes differ.
-    Conflicts {
-        /// The livecpk root holding the packs.
-        #[arg(long)]
-        packs: PathBuf,
-    },
-    /// Report what the current cpk.root order shadows.
-    Verify {
-        #[arg(long)]
-        ini: PathBuf,
-        /// SiderAddons folder the ini paths are relative to.
-        #[arg(long)]
-        addons: PathBuf,
-    },
-    /// Order packs so specific content wins and the base root is last.
-    Sort {
-        #[arg(long)]
-        ini: PathBuf,
-        #[arg(long)]
-        addons: PathBuf,
-        /// Write the result (backs up first). Without this, only prints.
-        #[arg(long)]
-        write: bool,
-    },
     /// Validate pesdb tables by framing and record stride.
     Pesdb {
         /// Folder to scan recursively for pesdb tables.
@@ -134,28 +92,6 @@ enum Cmd {
         #[arg(long)]
         out: Option<PathBuf>,
     },
-    /// Check, browse and edit a menu set's flow graphs.
-    Menu {
-        /// A menu-server competition folder, or any folder with
-        /// `common/script/flow`.
-        root: PathBuf,
-        /// Validate navigation links and stop.
-        #[arg(long)]
-        check: bool,
-        /// List screens with their events.
-        #[arg(long)]
-        list: bool,
-        /// Repoint one event: `SCREEN|EVENT|TARGET`.
-        #[arg(long)]
-        link: Option<String>,
-        /// Clone a screen: `FROM|TO`.
-        #[arg(long)]
-        clone: Option<String>,
-        /// Other layers that also define screens, so a link resolved by the
-        /// base game or another pack is not reported as dead. Repeatable.
-        #[arg(long = "base")]
-        bases: Vec<PathBuf>,
-    },
     /// Name the format of a file, or survey a tree and report what is not
     /// decodable yet. A directory answers "what is in my install"; a file
     /// answers "what is this thing".
@@ -199,144 +135,6 @@ enum Cmd {
         #[arg(long)]
         set_key: Option<String>,
     },
-}
-
-fn addons_of(game: &Path) -> PathBuf {
-    game.join("SiderAddons")
-}
-
-fn cmd_scan(game: &Path) -> Result<()> {
-    let addons = addons_of(game);
-    let path = addons.join("sider.ini");
-    let ini = Ini::read(&path).with_context(|| format!("reading {}", path.display()))?;
-
-    let packs = ini.active("cpk.root");
-    let mods = ini.active("lua.module");
-    println!("{}\n", path.display());
-    println!("{} packs, {} modules active", packs.len(), mods.len());
-
-    let mut seen = HashSet::new();
-    let mut missing = 0;
-    let mut dupes = 0;
-    for e in &packs {
-        if !seen.insert(e.value.to_lowercase()) {
-            println!("  DUPLICATE pack: {}", e.value);
-            dupes += 1;
-        }
-        if !order::resolve(&addons, &e.value).is_dir() {
-            println!("  MISSING pack:   {}", e.value);
-            missing += 1;
-        }
-    }
-    let mut mseen = HashSet::new();
-    for e in &mods {
-        if !mseen.insert(e.value.to_lowercase()) {
-            println!("  DUPLICATE module: {}", e.value);
-            dupes += 1;
-        }
-        if !addons.join("modules").join(e.value.replace('\\', "/")).is_file() {
-            println!("  MISSING module:   {}", e.value);
-            missing += 1;
-        }
-    }
-    let disabled_packs = ini.all("cpk.root").len() - packs.len();
-    let disabled_mods = ini.all("lua.module").len() - mods.len();
-    println!("\ndisabled: {disabled_packs} packs, {disabled_mods} modules");
-    println!("problems: {missing} missing, {dupes} duplicates");
-    if missing == 0 && dupes == 0 {
-        println!("clean");
-    }
-    Ok(())
-}
-
-fn cmd_conflicts(root: &Path) -> Result<()> {
-    let found = packs::discover(root);
-    if found.is_empty() {
-        bail!("no packs found under {}", root.display());
-    }
-    println!("{} packs under {}", found.len(), root.display());
-    let idx = conflict::index(&found);
-    let total: usize = idx.len();
-    let c = conflict::analyse(&found, &idx);
-    println!("{total} distinct file keys");
-    println!("{} shared, {} identical (harmless), {} genuinely differ",
-             c.shared, c.identical, c.differing);
-
-    let mut pairs: Vec<_> = c.pairs.iter().collect();
-    pairs.sort_by(|a, b| b.1.cmp(a.1));
-    println!("\n{} conflicting pairs, worst first:", pairs.len());
-    for ((a, b), n) in pairs.iter().take(15) {
-        println!("  {n:>5} keys   {}  <->  {}", found[*a].rel, found[*b].rel);
-    }
-    if !c.examples.is_empty() {
-        println!("\nexample differing keys:");
-        for k in &c.examples {
-            println!("  {k}");
-        }
-    }
-    Ok(())
-}
-
-fn cmd_verify(ini_path: &Path, addons: &Path) -> Result<()> {
-    let ini = Ini::read(ini_path)?;
-    let shadows = order::analyse(addons, &ini);
-    let dead: Vec<_> = shadows.iter().filter(|s| s.dead()).collect();
-    let partial: Vec<_> = shadows.iter()
-        .filter(|s| !s.dead() && s.surviving < s.total).collect();
-    let alive = shadows.len() - dead.len() - partial.len();
-    println!("{} packs, {} fully effective, {} partial, {} dead",
-             shadows.len(), alive, partial.len(), dead.len());
-
-    println!("\ndead packs (first 20):");
-    for s in dead.iter().take(20) {
-        let who = s.blockers.first()
-            .map(|(w, n)| format!("{n} keys by {w}"))
-            .unwrap_or_default();
-        println!("  {}  ({} keys)  {who}", s.rel, s.total);
-    }
-    println!("\npartially shadowed (worst first):");
-    let mut p: Vec<_> = partial.iter().collect();
-    p.sort_by(|a, b| {
-        let ra = a.surviving as f64 / a.total as f64;
-        let rb = b.surviving as f64 / b.total as f64;
-        ra.partial_cmp(&rb).unwrap()
-    });
-    for s in p.iter().take(15) {
-        println!("  {}/{} survive  {}", s.surviving, s.total, s.rel);
-    }
-    Ok(())
-}
-
-fn cmd_sort(ini_path: &Path, addons: &Path, write: bool) -> Result<()> {
-    let mut ini = Ini::read(ini_path)?;
-    let entries: Vec<_> = ini.all("cpk.root").into_iter().cloned().collect();
-    if entries.is_empty() {
-        bail!("no cpk.root entries in {}", ini_path.display());
-    }
-    let sorted = order::sorted(addons, &entries);
-    let before: Vec<&str> = entries.iter().map(|e| e.value.as_str()).collect();
-    let after: Vec<&str> = sorted.iter().map(|e| e.value.as_str()).collect();
-    let moved = before.iter().zip(after.iter()).filter(|(a, b)| a != b).count();
-    println!("{} entries, {moved} change position", entries.len());
-    println!("\nfirst 12 after sort:");
-    for v in after.iter().take(12) {
-        println!("  {v}");
-    }
-    println!("\nlast 3 after sort:");
-    for v in after.iter().rev().take(3).rev() {
-        println!("  {v}");
-    }
-    if !write {
-        println!("\ndry run — pass --write to apply (backs up first)");
-        return Ok(());
-    }
-    let backup = ini_path.with_extension("ini.bak");
-    std::fs::copy(ini_path, &backup)
-        .with_context(|| format!("backing up to {}", backup.display()))?;
-    ini.replace_ordered("cpk.root", sorted);
-    ini.write(ini_path)?;
-    println!("\nwritten; backup at {}", backup.display());
-    Ok(())
 }
 
 fn cmd_pesdb(dir: &Path) -> Result<()> {
@@ -716,82 +514,6 @@ fn cmd_container(input: &Path, unwrap: Option<&Path>, rewrap: Option<&Path>,
 }
 
 
-fn cmd_menu(root: &Path, check: bool, list: bool, link: Option<&str>, cl: Option<&str>, bases: &[PathBuf]) -> Result<()> {
-    use fl27mm::menus;
-    // A menu-server folder ships only a subset of the game's screens, so
-    // judging it alone calls almost every link dead: on a real set that is 344
-    // broken links that are not broken. The UI has required the base layer for
-    // this reason since 1.3.0 and the changelog says so; the CLI was still
-    // letting it be omitted, which made the two disagree.
-    if check && bases.is_empty() {
-        bail!(
-            "--check needs at least one --base layer: a menu set ships only part of the game's \
-             screens, so without the layer that supplies the rest almost every link looks dead. \
-             Pass --base <folder> for each layer the engine resolves against."
-        );
-    }
-    let screens = menus::load(root)?;
-    let mut report = menus::validate_with(&screens, bases);
-    report.root = root.to_string_lossy().into_owned();
-
-    if let Some(spec) = link {
-        let parts: Vec<&str> = spec.split('|').collect();
-        if parts.len() != 3 {
-            bail!("--link wants SCREEN|EVENT|TARGET");
-        }
-        let sc = menus::set_target(&screens, parts[0], parts[1], parts[2], false)?;
-        menus::write(&sc)?;
-        println!("{} event {} now goes to {}", parts[0], parts[1], parts[2]);
-        return Ok(());
-    }
-    if let Some(spec) = cl {
-        let parts: Vec<&str> = spec.split('|').collect();
-        if parts.len() != 2 {
-            bail!("--clone wants FROM|TO");
-        }
-        let (mut sc, dest) = menus::clone_screen(&screens, parts[0], parts[1])?;
-        if let Some(p) = dest.parent() {
-            std::fs::create_dir_all(p)?;
-        }
-        sc.path = dest.clone();
-        menus::write(&sc)?;
-        println!("created {} by copying {}", dest.display(), parts[0]);
-        return Ok(());
-    }
-    println!(
-        "{}: {} screens, {} navigation links",
-        report.root, report.screens, report.links
-    );
-    if list {
-        for (id, sc) in screens.iter().take(200) {
-            let ev: Vec<String> = sc
-                .events
-                .iter()
-                .map(|(n, e)| format!("{n}->{}/", e.to.clone().unwrap_or_else(|| "-".into())))
-                .collect();
-            println!("  {id:44} {}", ev.join(" "));
-        }
-    }
-    if !report.by_prefix.is_empty() {
-        println!("  groups: {}", report.by_prefix.iter().take(12).map(|(p, n)| format!("{p}:{n}")).collect::<Vec<_>>().join(" "));
-    }
-    if report.broken.is_empty() {
-        println!("  every link resolves within this set and the layers given");
-    } else {
-        println!("  {} BROKEN LINKS:", report.broken.len());
-        for b in report.broken.iter().take(60) {
-            println!("    {}.{} -> {}  ({})", b.screen, b.event, b.target, b.why);
-        }
-    }
-    if !report.unreachable.is_empty() {
-        println!("  {} screens nothing points at (informational, not an error)", report.unreachable.len());
-    }
-    if check && !report.broken.is_empty() {
-        bail!("{} broken navigation links", report.broken.len());
-    }
-    Ok(())
-}
-
 fn cmd_fmt(path: &Path, limit: Option<usize>) -> Result<()> {
     use fl27mm::foxfmt;
     if path.is_dir() {
@@ -1044,10 +766,6 @@ fn cmd_gani(path: &Path, rate: Option<u32>, all: bool, tracks: bool, set_key: Op
 
 fn main() -> Result<()> {    let cli = Cli::parse();
     match cli.cmd {
-        Cmd::Scan { game } => cmd_scan(&game),
-        Cmd::Conflicts { packs } => cmd_conflicts(&packs),
-        Cmd::Verify { ini, addons } => cmd_verify(&ini, &addons),
-        Cmd::Sort { ini, addons, write } => cmd_sort(&ini, &addons, write),
         Cmd::Pesdb { dir } => cmd_pesdb(&dir),
         Cmd::Cpk { archive, extract, filter, pack, out, summary, depth, compress } => {
             if let Some(src) = pack {
@@ -1071,7 +789,6 @@ fn main() -> Result<()> {    let cli = Cli::parse();
         }
         Cmd::Fmt { path, limit } => cmd_fmt(&path, limit),
         Cmd::Rig { path, with } => cmd_rig(&path, with.as_deref()),
-        Cmd::Gani { path, rate, all, tracks, set_key } => cmd_gani(&path, rate, all, tracks, set_key.as_deref()),
-        Cmd::Menu { root, check, list, link, r#clone, bases } => cmd_menu(&root, check, list, link.as_deref(), r#clone.as_deref(), &bases)
+        Cmd::Gani { path, rate, all, tracks, set_key } => cmd_gani(&path, rate, all, tracks, set_key.as_deref())
     }
 }

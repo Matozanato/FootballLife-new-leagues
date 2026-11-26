@@ -231,7 +231,7 @@ mod tests {
         // Nothing here asserts a specific bone count: the point is that the
         // layout holds across the install, or that a file where it does not is
         // refused with a reason rather than half-read.
-        let root = Path::new(crate::install::GAME_ROOT);
+        let root = crate::install::game_root();
         if !root.join("SiderAddons").is_dir() {
             return;
         }
@@ -276,7 +276,7 @@ mod tests {
     /// again, which would have accepted exactly one file in the install.
     #[test]
     fn the_record_marker_is_not_required_and_both_layouts_parse() {
-        let root = Path::new(crate::install::GAME_ROOT).join("SiderAddons");
+        let root = crate::install::game_root().join("SiderAddons");
         if !root.is_dir() {
             return;
         }

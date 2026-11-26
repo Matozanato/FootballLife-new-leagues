@@ -866,7 +866,7 @@ mod tests {
     }
 
     fn samples() -> Vec<std::path::PathBuf> {
-        let root = Path::new(crate::install::GAME_ROOT);
+        let root = crate::install::game_root();
         let mut out = Vec::new();
         let mut stack = vec![root.to_path_buf()];
         while let Some(dir) = stack.pop() {
@@ -941,7 +941,7 @@ mod tests {
     #[test]
     fn a_stale_size_field_is_reported_not_fatal() {
         // dml_coach_oop_dontmind01 declares 98,384 at 20,688 bytes long.
-        let p = Path::new(crate::install::GAME_ROOT).join("SiderAddons/content/cinematics/ARG/common/demo/anime/FoxAnim/FixDemo/Animations");
+        let p = crate::install::game_root().join("SiderAddons/content/cinematics/ARG/common/demo/anime/FoxAnim/FixDemo/Animations");
         let found = crate::fsutil::files(&p).into_iter().find(|x| {
             x.file_name()
                 .map(|n| n == "dml_coach_oop_dontmind01.gani")
@@ -975,7 +975,7 @@ mod tests {
     /// bit-packing rule were guessed differently.
     #[test]
     fn every_shipped_clip_walks_and_its_blobs_tile_without_overlap() {
-        let root = Path::new(crate::install::GAME_ROOT).join("SiderAddons");
+        let root = crate::install::game_root().join("SiderAddons");
         if !root.is_dir() {
             return;
         }

@@ -1237,7 +1237,7 @@ mod tests {
 
     #[test]
     fn real_texture_decodes_and_re_encodes() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/3D Turf/Asset/model/bg/common/turf3d/sourceimages/#windx11/0grassfin_bsm_alp.ftex");
         if !p.exists() {
             return;
@@ -1284,7 +1284,7 @@ mod tests {
         // Code 9 was the format every normal map failed on. The identification
         // rests on smoothness: as BC5 a real face normal map measures under 2
         // here, and 40+ decoded as any other 16-byte codec.
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/Asset/model/character/face/real/100006/sourceimages/#windx11/face_nrm.ftex");
         if !p.exists() {
             return;
@@ -1325,7 +1325,7 @@ mod tests {
         // checks the decode without a reference image by comparing two mip
         // levels of the same surface: a correct decode makes mip 2 the blurred
         // mip 0, and noise does not correlate with itself downsampled.
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/Asset/model/character/face/real/117680/sourceimages/#windx11/hair_parts_bsm.ftex");
         if !p.exists() {
             return;
@@ -1406,7 +1406,7 @@ mod tests {
     fn every_format_in_a_real_pack_survives_ftex_dds_ftex() {
         // Reading and converting must work for every code even where this build
         // cannot draw a preview: the block bytes move untouched.
-        let dir = Path::new(crate::install::GAME_ROOT)
+        let dir = crate::install::game_root()
             .join("SiderAddons/livecpk/root/Asset/model/character/face");
         if !dir.exists() {
             return;

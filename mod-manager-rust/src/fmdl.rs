@@ -37,10 +37,15 @@ const HEADER: usize = 56;
 
 /// A shipped face folder, used by the tests that need real meshes. Nothing
 /// synthesised here can stand in for the geometry the game actually loads.
-pub const REAL_FACE_DIR: &str = "C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006";
+pub fn real_face_dir() -> std::path::PathBuf {
+    crate::install::game_root()
+        .join("SiderAddons/livecpk/root/Asset/model/character/face/real/100006")
+}
 
 /// The container holding that head.
-pub const REAL_FACE_FPK: &str = "C:/Games/SP Football Life 2027/SiderAddons/livecpk/root/Asset/model/character/face/real/100006/#Win/face.fpk";
+pub fn real_face_fpk() -> std::path::PathBuf {
+    real_face_dir().join("#Win/face.fpk")
+}
 
 #[inline]
 fn le_u16(b: &[u8], at: usize) -> u16 {
@@ -772,7 +777,7 @@ impl Fmdl {
 /// mock: skips when the game is not installed here.
 #[cfg(test)]
 fn real_face() -> Option<crate::fpk::Entry> {
-    let path = std::path::Path::new(REAL_FACE_FPK);
+    let path = &crate::fmdl::real_face_fpk();
     if !path.exists() {
         return None;
     }

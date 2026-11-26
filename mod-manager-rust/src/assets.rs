@@ -366,7 +366,7 @@ mod tests {
     use super::*;
 
     fn a_real_texture() -> Option<PathBuf> {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/Asset/model/character/face/real/100006/sourceimages/#windx11/face_bsm_alp.ftex");
         if p.is_file() { Some(p.to_path_buf()) } else { None }
     }

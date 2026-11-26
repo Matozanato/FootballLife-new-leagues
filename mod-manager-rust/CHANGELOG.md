@@ -1,20 +1,31 @@
 # Changelog
 
-The FL27 Mod Manager inspects and edits a Football Life 27 install: pack order,
-conflicts, game tables, containers, textures, 3D models, animations and menu
-navigation. Everything it claims, it can show you.
+fl27mm reads and writes Football Life 27's own file formats: CPK archives,
+game tables, containers, textures, 3D models and animations. Everything it
+claims, it can show you.
 
 ## 1.4.0
 
-### Kit Studio and appearance controls
+### Optional tools inside FL Mod Studio
 
-- Added kit-atlas scanning, 3D preview, PNG template export, and PNG replacement
-  with format, dimensions and mip chain preserved and a source backup created.
-- Added a kit-pack scaffold for Sider uniform textures.
-- Added saved text-size, accent-theme and contrast preferences, plus searchable
-  tool navigation and a compiled-menu inspection shortcut from Menu Maker.
-- Bounded asset browsing by filtering families before texture decoding and
-  stopping scans at the result cap.
+This crate is now only the format half: CPK archives, FTEX/DDS textures, FMDL
+models, GANI animations, skeletons and rigs. It is an optional PyO3 module for
+FL Mod Studio, and Mod Studio builds and runs without it.
+
+- **Removed** the pack order, conflict scan, sider.ini editing, pack install,
+  menu editing and text-editing ("Mod Studio") code, along with the Tauri
+  desktop app and the probe binaries. FL Mod Studio's Roots, Install and
+  Modules pages already do these jobs and keep restore points, and nothing here
+  should write sider.ini behind them.
+- **Hostile files are rejected, not trusted.** Every size, count and offset read
+  from a file is checked against the file length before anything is allocated.
+  `tests/hostile.rs` runs every decoder over lying and random input under an
+  allocator that refuses anything over 256 MB. A Rust panic reaches Python as an
+  ordinary error, so Mod Studio's worker reports it instead of staying busy.
+- Tests that need the game skip when it is not installed. `FL27_GAME` points
+  them at another install.
+- Texture and animation edits in Mod Studio take a restore point (Restore
+  points page) first, and leave no backup files next to the game's files.
 
 ## 1.3.2
 

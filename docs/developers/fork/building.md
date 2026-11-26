@@ -11,6 +11,8 @@ the frozen program, the version number, and the updater.
   - `pyinstaller` freezes the program.
   - `py7zr` is optional (7z kit and face packs), but install it before a release: mszip
     names it as a hidden import, and a frozen program without it cannot open `.7z` files.
+- Not needed for a release: Rust and `maturin`, for the optional Game file tools module
+  (see [for-developers.md](../for-developers.md)). mszip ships it only when it was built.
 - **zig 0.16.0** for the DLLs. Download it for Windows x86_64 from ziglang.org and unpack it
   anywhere. It needs no Visual Studio and no SDK.
 

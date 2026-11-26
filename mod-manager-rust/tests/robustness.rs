@@ -7,11 +7,10 @@
 
 use fl27mm::{binread, cpk, fmdl, fpk, ftex, utf, wesys};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-fn first_existing(cands: &[&str]) -> Option<Vec<u8>> {
-    for c in cands {
-        let p = Path::new(c);
+fn first_existing(cands: &[PathBuf]) -> Option<Vec<u8>> {
+    for p in cands {
         if p.is_file() {
             if let Ok(b) = std::fs::read(p) {
                 if b.len() > 4096 {
@@ -24,7 +23,7 @@ fn first_existing(cands: &[&str]) -> Option<Vec<u8>> {
 }
 
 fn sample() -> Option<Vec<u8>> {
-    first_existing(&[fmdl::REAL_FACE_FPK])
+    first_existing(&[fmdl::real_face_fpk()])
 }
 
 /// Write bytes to a uniquely named temp file so the path-based readers can be
@@ -126,8 +125,9 @@ fn zeroed_and_max_fields_never_panic() {
 #[test]
 fn truncated_cpk_never_panics() {
     // A CPK is read through a file handle, so this needs real temp files.
-    let dt13 = "C:/Games/SP Football Life 2027/Data/dt13_all.cpk";
-    let dt16 = "C:/Games/SP Football Life 2027/Data/dt16_all.cpk";
+    let data = fl27mm::install::game_root().join("Data");
+    let dt13 = data.join("dt13_all.cpk");
+    let dt16 = data.join("dt16_all.cpk");
     let Some(bytes) = first_existing(&[dt13, dt16]) else {
         return;
     };

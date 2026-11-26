@@ -1285,7 +1285,7 @@ mod alpha_probe {
     /// whether an alpha test is safe at all.
     #[test]
     fn probe_alpha_distribution() {
-        let dir = std::path::Path::new(crate::fmdl::REAL_FACE_DIR);
+        let dir = &crate::fmdl::real_face_dir();
         if !dir.exists() { return; }
         for p in crate::fsutil::files(dir) {
             let name = p.file_name().unwrap().to_string_lossy().to_lowercase();
@@ -1480,7 +1480,7 @@ mod tests {
     }
 
     fn real_head() -> Option<Fmdl> {
-        let path = std::path::Path::new(crate::fmdl::REAL_FACE_FPK);
+        let path = &crate::fmdl::real_face_fpk();
         if !path.exists() {
             return None;
         }
@@ -1696,14 +1696,14 @@ mod binding_tests {
     use super::{
         coverage, keep_texturable, load_scene, render_scene_maps, texture_roots, Maps, Camera, Mode,
     };
-    use crate::fmdl::{Fmdl, REAL_FACE_FPK};
+    use crate::fmdl::Fmdl;
     use crate::fpk::Fpk;
 
     /// The eyelash-line and eye-occlusion parts are the ones that must go: they
     /// bind no colour map, so a skin sampler paints them with someone's cheek.
     #[test]
     fn untexturable_parts_are_dropped_and_the_head_survives() {
-        let path = std::path::Path::new(REAL_FACE_FPK);
+        let path = &crate::fmdl::real_face_fpk();
         if !path.exists() {
             return;
         }
@@ -1770,7 +1770,7 @@ mod binding_tests {
     /// "one --texture for every mesh" behaviour.
     #[test]
     fn the_skin_map_is_found_from_the_material_binding_alone() {
-        let path = std::path::Path::new(REAL_FACE_FPK);
+        let path = &crate::fmdl::real_face_fpk();
         if !path.exists() {
             return;
         }
@@ -1799,7 +1799,7 @@ mod binding_tests {
     /// render or silently drop the mesh; it falls back to the handed-in skin.
     #[test]
     fn a_named_map_that_is_absent_falls_back_instead_of_vanishing() {
-        let path = std::path::Path::new(REAL_FACE_FPK);
+        let path = &crate::fmdl::real_face_fpk();
         if !path.exists() {
             return;
         }

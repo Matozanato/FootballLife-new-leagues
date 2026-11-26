@@ -5,7 +5,9 @@
 //! texel of each subset flagged in the high bits (128/129/130), which is what
 //! tells the decoder to read one index bit fewer there.
 //!
-//! This follows iOrange/bcdec (MIT) for the endpoint expansion, and its arrays
+//! This follows iOrange/bcdec (Copyright (c) 2022 Sergii Kudlai, MIT License;
+//! the full notice is in LICENSE-BCDEC.txt next to Cargo.toml) for the endpoint
+//! expansion, and its arrays
 //! agree with that reference mode-for-mode. ftex code 11 is BC7: measured on
 //! real files, 99.8% of blocks carry a legal mode prefix and byte0 is dominated
 //! by 0x10/0x20/0x40, and `.dds` siblings shipped in the packs name it

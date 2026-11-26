@@ -105,8 +105,17 @@ mod path {
 }
 
 /// The installed game, when this build's tests can see it. CI and other
-/// machines skip the tests that need a real install.
+/// machines skip the tests that need a real install. `FL27_GAME` points the
+/// tests at another install, or at a missing folder to check that they skip.
 pub const GAME_ROOT: &str = "C:/Games/SP Football Life 2027";
+
+/// [`GAME_ROOT`], unless `FL27_GAME` names another folder.
+pub fn game_root() -> PathBuf {
+    std::env::var_os("FL27_GAME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(GAME_ROOT))
+}
 
 /// Scan the machine for installs. `extra` is searched first, so a folder the
 /// user picked by hand outranks anything found automatically.

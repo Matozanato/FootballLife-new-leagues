@@ -334,7 +334,7 @@ mod tests {
         // The six-entry sample above passed while 15 of 606 files were wrong,
         // so the real check is: take every compressed entry, not a handful.
         use std::io::{Read, Seek, Write};
-        let cpk_path = std::path::Path::new(crate::install::GAME_ROOT)
+        let cpk_path = crate::install::game_root()
             .join("Data/dt00_x64.cpk");
         if !cpk_path.exists() {
             return;
@@ -373,8 +373,7 @@ mod tests {
     #[test]
     fn real_dt00_entries_compress_and_decompress_back() {
         use std::io::Read;
-        use std::path::Path;
-        let cpk_path = Path::new(crate::install::GAME_ROOT)
+        let cpk_path = crate::install::game_root()
             .join("Data/dt00_x64.cpk");
         if !cpk_path.exists() {
             return;

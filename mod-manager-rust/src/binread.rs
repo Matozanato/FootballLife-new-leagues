@@ -999,7 +999,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn constant_dir() -> Option<PathBuf> {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("FL27 Megapatch/out/rt/a/common/match/constant");
         p.is_dir().then_some(p)
     }
@@ -1076,7 +1076,7 @@ mod tests {
 
     #[test]
     fn competition_records_decode_to_named_columns() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/Competition.bin");
         if !p.exists() {
             return;
@@ -1095,7 +1095,7 @@ mod tests {
 
     #[test]
     fn entry_records_split_the_packed_third_word() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/CompetitionEntry.bin");
         if !p.exists() {
             return;
@@ -1110,7 +1110,7 @@ mod tests {
 
     #[test]
     fn regulation_records_map_only_what_is_verified() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/CompetitionRegulation.bin");
         if !p.exists() {
             return;
@@ -1134,7 +1134,7 @@ mod tests {
 
     #[test]
     fn player_records_decode_id_and_names() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/Player.bin");
         if !p.exists() {
             return;
@@ -1167,7 +1167,7 @@ mod tests {
 
     #[test]
     fn team_records_decode_id_and_the_always_filled_name() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/DR_LeagueCreator/common/etc/pesdb/Team.bin");
         if !p.exists() {
             return;
@@ -1187,7 +1187,7 @@ mod tests {
 
     #[test]
     fn opaque_files_are_reported_without_a_stride_claim() {
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/common/etc/pesdb/Competition.bin");
         if !p.exists() {
             return;
@@ -1209,7 +1209,7 @@ mod tests {
         // self-agreement test prefers 28 and reports half the record as
         // unexplained. The names are the evidence: they sit at +8, +189 and
         // +370, and the same slot is exactly 392 bytes from the next one.
-        let p = Path::new(crate::install::GAME_ROOT)
+        let p = crate::install::game_root()
             .join("SiderAddons/livecpk/root/Stadiums Extra DB/common/etc/pesdb/Stadium.bin");
         if !p.exists() {
             return;
@@ -1310,7 +1310,7 @@ mod patch_tests {
 
     /// The first loose table this install carries that the codec accepts.
     fn a_real_table() -> Option<PathBuf> {
-        let root = Path::new(crate::install::GAME_ROOT).join("SiderAddons");
+        let root = crate::install::game_root().join("SiderAddons");
         if !root.is_dir() {
             return None;
         }

@@ -1,4 +1,5 @@
-"""Rust-backed Football Life tools, organized into the original manager sections."""
+"""Game file tools: CPK archives, textures, models and animations, through the optional native
+module (native.py). Pack order, installs and sider.ini stay with Roots, Install and Modules."""
 import json
 import os
 
@@ -9,7 +10,7 @@ from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QHBoxLayout, QLab
                                QSpinBox, QSplitter, QStackedWidget, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout, QWidget)
 
-from .. import native, theme
+from .. import backups, native, theme
 from ..i18n import _
 from ..ui import Page, ask, hint, pick_dir, run_job, row
 
@@ -275,8 +276,8 @@ class _ReportView(QWidget):
 
 
 class ModManager(Page):
-    title = "Mod Manager"
-    hint = "Inspect CPK archives, textures, models and animations with the optional Rust tools."
+    title = "Game file tools"
+    hint = "Inspect CPK archives, textures, models and animations with the optional native tools."
 
     def __init__(self, app):
         super().__init__(app)
@@ -309,6 +310,31 @@ class ModManager(Page):
             return False
         return True
 
+    @staticmethod
+    def _in_place(path, reason, call):
+        """the work of an edit that rewrites a game file where it is: a restore point first, in
+        SiderAddons\\ModStudio\\backups where Restore points lists it, then the native edit. The
+        Rust tools keep a copy of their own next to the file (<file>.fl27mm-backup) for their
+        command line; inside Mod Studio the restore point is the backup, so that copy is not left
+        in the game's folders"""
+        side = path + ".fl27mm-backup"
+
+        def work():
+            had = os.path.exists(side)
+            point = backups.before_change(path, reason)
+            try:
+                result = call()
+            finally:
+                if not had and os.path.exists(side):
+                    try:
+                        os.remove(side)
+                    except OSError:
+                        pass
+            if isinstance(result, dict) and point:
+                result["backup"] = point
+            return result
+        return work
+
     def _output(self, key, parent, readonly=True):
         report = _ReportView()
         parent.addWidget(report, 1)
@@ -322,7 +348,7 @@ class ModManager(Page):
 
     def _run(self, label, work, done, failed=None):
         if not native.available():
-            self.say(_("The Rust manager extension is not installed. Rebuild the app with its PyO3 module."), "err")
+            self.say(_("These tools need the optional native module, which this copy of Mod Studio does not have."), "err")
             return
         self.app.busy(True, _(label))
 
@@ -334,7 +360,7 @@ class ModManager(Page):
         def fail(traceback_text):
             self.app.busy(False)
             message = traceback_text.strip().splitlines()
-            self.say(_("Mod Manager operation failed:") + "\n" + (message[-1] if message else traceback_text), "err")
+            self.say(_("The tool stopped:") + "\n" + (message[-1] if message else traceback_text), "err")
             if failed is not None:
                 failed(traceback_text)
 
@@ -853,7 +879,7 @@ class ModManager(Page):
         signs = [value in {"true", "1"} for value in signs]
         unit, segment, key = data["unit"], data["segment"], self.key_index.value()
         if not ask(self, "Set animation key",
-                   _("Update unit %(unit)d, segment %(segment)d, key %(key)d? The Rust manager backs up the file.")
+                   _("Update unit %(unit)d, segment %(segment)d, key %(key)d? A restore point is made first.")
                    % {"unit": unit, "segment": segment, "key": key}):
             return
         path = self._animation_path
@@ -867,7 +893,9 @@ class ModManager(Page):
                       lambda report: self._show_animation_report(path, report))
 
         self._run(_("Updating animation key..."),
-                  lambda: native.animation_set_key(path, unit, segment, key, parts, signs), done)
+                  self._in_place(path, "animation key",
+                                 lambda: native.animation_set_key(path, unit, segment, key, parts, signs)),
+                  done)
 
     def set_animation_rate(self):
         path = self._animation_path
@@ -878,10 +906,11 @@ class ModManager(Page):
         if not self._can_edit_game_assets():
             return
         if not ask(self, "Set animation rate",
-                   _("Change the frame rate of %s to %d?") % (path, rate)):
+                   _("Change the frame rate of %s to %d? A restore point is made first.") % (path, rate)):
             return
         self._run(_("Updating animation rate..."),
-                  lambda: native.animation_set_rate(path, rate),
+                  self._in_place(path, "animation frame rate",
+                                 lambda: native.animation_set_rate(path, rate)),
                   lambda result: self._show("assets", {"previous_rate": result[0],
                                                         "new_rate": result[1]}))
 
@@ -907,11 +936,12 @@ class ModManager(Page):
         if not self._can_edit_game_assets():
             return
         if not ask(self, "Replace texture",
-                   _("Replace %s with this image? The Rust manager makes a backup and checks dimensions.")
+                   _("Replace %s with this image? A restore point is made first, and the size must match.")
                    % path):
             return
         self._run(_("Replacing texture..."),
-                  lambda: native.asset_replace(path, width, height, rgba),
+                  self._in_place(path, "texture replaced",
+                                 lambda: native.asset_replace(path, width, height, rgba)),
                   lambda result: self._show("assets", result))
 
     def _selected_asset_path(self):

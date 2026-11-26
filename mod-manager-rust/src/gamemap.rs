@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::{cpk, ini, order, pesdb};
+use crate::{cpk, pesdb};
 
 /// How risky it is to change something, and what that risk actually is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -384,7 +384,7 @@ pub fn describe(rel: &str) -> Info {
             "Kit definition",
             "realUni.bin files describing a kit's layers, colours and badges.",
             "uniform .bin", Edit::Careful,
-            "Slotkits_V3 and Kit Studio work on these.")),
+            "Slotkits_V3 and the Kits page work on these.")),
         ("asset/model/character/face", Info::new(
             "Face / hair",
             "Face montage parts and edit-mode hair.",
@@ -628,11 +628,10 @@ pub fn build(game: &Path) -> GameMap {
                  rule is visible in the file, which is why hand edits silently \
                  disable packs.",
                 "ini", Edit::Safe,
-                "Pack order tab shows what each entry actually contributes."),
+                "FL Mod Studio's Roots page sets the pack order."),
                 Some("packs"));
             n.bytes = std::fs::metadata(&ini_path).map(|m| m.len()).unwrap_or(0);
             side.children.push(n);
-            findings.extend(check_ini(&ini_path, &addons));
         }
 
         for exe in ["sider.exe", "sider.dll"] {
@@ -872,53 +871,6 @@ fn module_info(name: &str) -> Info {
               "Edit freely; sider.log reports failures with a line number.")
 }
 
-fn check_ini(ini_path: &Path, addons: &Path) -> Vec<Finding> {
-    let mut out = Vec::new();
-    let Ok(parsed) = ini::Ini::read(ini_path) else { return out };
-    let packs = parsed.active("cpk.root");
-    let flag = |k: &str| parsed.active(k).first()
-        .map(|v| v.value.trim() == "1").unwrap_or(false);
-    if !flag("lua.enabled") {
-        out.push(Finding {
-            severity: "error".into(),
-            title: "lua.enabled is off".into(),
-            detail: "No Lua module will load. Every .lua in the order is inert.".into(),
-            path: ini_path.to_string_lossy().into_owned(),
-        });
-    }
-    if !flag("luajit.ext.enabled") {
-        out.push(Finding {
-            severity: "error".into(),
-            title: "luajit.ext.enabled is off".into(),
-            detail: "Modules that use the LuaJIT extensions will fail.".into(),
-            path: ini_path.to_string_lossy().into_owned(),
-        });
-    }
-    if let Some(pos) = packs.iter().position(|e| order::is_base(&e.value)) {
-        if pos != packs.len() - 1 {
-            out.push(Finding {
-                severity: "error".into(),
-                title: "The base root is not last".into(),
-                detail: format!("`.\\livecpk\\root` sits at position {} of {}. Because \
-                                 cpk.root is first wins, every pack after it loses \
-                                 the keys it already carries.", pos + 1, packs.len()),
-                path: ini_path.to_string_lossy().into_owned(),
-            });
-        }
-    }
-    for e in &packs {
-        if !order::resolve(addons, &e.value).is_dir() {
-            out.push(Finding {
-                severity: "warn".into(),
-                title: "Registered pack is missing".into(),
-                detail: e.value.clone(),
-                path: ini_path.to_string_lossy().into_owned(),
-            });
-        }
-    }
-    out
-}
-
 fn check_tables(livecpk: &Path) -> Vec<Finding> {
     use rayon::prelude::*;
     let tables: Vec<PathBuf> = crate::fsutil::files(livecpk).into_iter()
@@ -1030,7 +982,7 @@ mod tests {
 
     #[test]
     fn every_archive_in_the_install_is_explained() {
-        let data = Path::new(crate::install::GAME_ROOT).join("Data");
+        let data = crate::install::game_root().join("Data");
         if !data.is_dir() {
             return;
         }
@@ -1049,11 +1001,11 @@ mod tests {
 
     #[test]
     fn real_install_maps_and_flags_the_bad_tables() {
-        let game = Path::new(crate::install::GAME_ROOT);
+        let game = crate::install::game_root();
         if !game.join("Data").is_dir() {
             return;
         }
-        let map = build(game);
+        let map = build(&game);
         assert!(map.archives >= 15, "should find the Data archives");
         assert!(map.nodes.iter().any(|n| n.rel == "SiderAddons"));
         assert!(map.nodes.iter().any(|n| n.rel == "Data"));

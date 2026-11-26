@@ -40,6 +40,9 @@ ROW, ROW_ALT = "#141921", "#1A212C"
 HEAD_BG, HEAD_FG, HEAD_LINE = "#1F2733", "#C9D2DE", "#2F3A4A"
 ROW_LINE = "#2A3341"
 ROW_SEL, ROW_HOVER = "rgba(74, 163, 255, 64)", "rgba(74, 163, 255, 28)"
+# the report trees of Game file tools: brighter rows, so long JSON reports read at a glance
+REPORT_ROW, REPORT_ALT = "#18212D", "#243143"
+REPORT_TEXT, REPORT_BORDER, REPORT_LINE = "#FFFFFF", "#3D4B5F", "#364355"
 
 # the families; fonts() picks the Windows 11 ones (Segoe UI Variable) when they are there
 SANS = "Segoe UI"
@@ -187,6 +190,15 @@ QHeaderView::section { font-family: %(SANS_STACK)s; font-size: 8pt; color: %(HEA
                        border-bottom: 1px solid %(HEAD_LINE)s; padding: 7px 8px; font-weight: 600; }
 QHeaderView::section:hover { color: white; }
 QTableCornerButton::section { background: %(HEAD_BG)s; border: none; border-bottom: 1px solid %(HEAD_LINE)s; }
+QTreeWidget#jsonReportTree, QTreeWidget#jsonReportDetails {
+    background: %(REPORT_ROW)s; alternate-background-color: %(REPORT_ALT)s;
+    color: %(REPORT_TEXT)s; border-color: %(REPORT_BORDER)s; font-size: 11pt; }
+QTreeWidget#jsonReportTree::item, QTreeWidget#jsonReportDetails::item {
+    color: %(REPORT_TEXT)s; padding: 6px 7px; border-bottom: 1px solid %(REPORT_LINE)s; }
+QTreeWidget#jsonReportTree::item:selected, QTreeWidget#jsonReportDetails::item:selected {
+    background: %(ROW_SEL)s; color: #FFFFFF; }
+QTreeWidget#jsonReportTree QHeaderView::section, QTreeWidget#jsonReportDetails QHeaderView::section {
+    font-size: 9pt; color: #FFFFFF; }
 
 /* splitters, scroll bars, tabs */
 QSplitter::handle { background: %(BORDER)s; }
@@ -313,6 +325,8 @@ def qss():
                         BLUE=BLUE, LIVE_BG=LIVE_BG, DASH=DASH, GO_FG=GO_FG,
                         ROW=ROW, ROW_ALT=ROW_ALT, HEAD_BG=HEAD_BG, HEAD_FG=HEAD_FG, HEAD_LINE=HEAD_LINE,
                         ROW_LINE=ROW_LINE, ROW_SEL=ROW_SEL, ROW_HOVER=ROW_HOVER,
+                        REPORT_ROW=REPORT_ROW, REPORT_ALT=REPORT_ALT, REPORT_TEXT=REPORT_TEXT,
+                        REPORT_BORDER=REPORT_BORDER, REPORT_LINE=REPORT_LINE,
                         ASSETS=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets").replace("\\", "/"),
                         **fonts())
 
