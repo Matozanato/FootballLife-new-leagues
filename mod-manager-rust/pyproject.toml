@@ -1,0 +1,15 @@
+[build-system]
+requires = ["maturin>=1.10,<2"]
+build-backend = "maturin"
+
+[project]
+name = "fl27mm-python"
+version = "1.4.0"
+requires-python = ">=3.10"
+description = "PyO3 bindings for the FL27 Mod Manager"
+license = { file = "LICENSE" }
+
+[tool.maturin]
+python-source = "../tools"
+module-name = "modstudio._fl27mm"
+manifest-path = "python/Cargo.toml"

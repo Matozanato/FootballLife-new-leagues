@@ -160,7 +160,9 @@ def stage():
             dst = os.path.join(STAGE, os.path.relpath(src, HERE))
             if f.endswith(".py"):
                 put(src, dst)
-            elif f.endswith((".json", ".ico", ".png")):
+            # _fl27mm*.pyd: the optional native tools (mod-manager-rust), only when someone built
+            # them; without it the release builds as before and Game file tools says it is missing
+            elif f.endswith((".json", ".ico", ".png", ".pyd")):
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
     shutil.copytree(os.path.join(HERE, "lang"), os.path.join(STAGE, "lang"))
@@ -222,7 +224,9 @@ def main():
         guide(os.path.join(REPO, "guides", code, "mod-studio-guide.md"),
               os.path.join(OUT, "README.%s.html" % code), code)
     # the licence goes with every copy (LICENSE, rule 3); the MIT one for 0.3.0 and older and the contributors' parts
-    for src, dst in (("LICENSE", "LICENSE.txt"), ("LICENSE-MIT", "LICENSE-MIT.txt")):
+    # the optional native module's bc7 decoder follows iOrange/bcdec (MIT): its notice goes too
+    for src, dst in (("LICENSE", "LICENSE.txt"), ("LICENSE-MIT", "LICENSE-MIT.txt"),
+                     (os.path.join("mod-manager-rust", "LICENSE-BCDEC.txt"), "LICENSE-BCDEC.txt")):
         with open(os.path.join(REPO, src), encoding="utf-8") as f:
             text = f.read()
         with open(os.path.join(OUT, dst), "w", encoding="utf-8", newline="\r\n") as f:
