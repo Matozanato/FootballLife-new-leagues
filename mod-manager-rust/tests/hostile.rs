@@ -236,3 +236,39 @@ fn a_packed_cpk_damaged_anywhere_never_panics_or_overallocates() {
     }
     let _ = std::fs::remove_dir_all(root);
 }
+
+/// The readers behind Game map, Tables and Menu maker, on hostile files.
+#[test]
+fn table_binary_and_menu_readers_reject_hostile_files() {
+    let mut rng = Rng(0xfeed);
+    for magic in [&b""[..], b"WESYS", b"\x78\x9c", b"AFP", b"TXP2"] {
+        for len in [0usize, 8, 64, 512, 4096] {
+            if len < magic.len() {
+                continue;
+            }
+            let b = with_magic(magic, len, &mut rng);
+            let t = Tmp::new("bin", &b);
+            let _ = fl27mm::binread::read(&t.0);
+            let _ = fl27mm::binread::section_bytes(&t.0, 0);
+            let _ = fl27mm::binread::section_bytes(&t.0, usize::MAX);
+            let _ = fl27mm::pesdb::validate(&t.0);
+            let _ = fl27mm::pesdb::inspect(&t.0);
+        }
+    }
+    // Menu flow folders full of broken JSON.
+    let root = std::env::temp_dir().join(format!("fl27mm-hostile-menu-{}", std::process::id()));
+    let flow = root.join("common/script/flow/BL");
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&flow).unwrap();
+    for (i, text) in ["", "{", "[]", "null", "{\"events\":5}", "{\"events\":{\"a\":{\"to\":7}}}",
+                      "{\"events\":{\"a\":{\"to\":\"../../x\"}}}"].iter().enumerate() {
+        std::fs::write(flow.join(format!("s{i}.json")), text).unwrap();
+        std::fs::write(flow.join(format!("r{i}.json")), rng.bytes(64 * (i + 1))).unwrap();
+    }
+    if let Ok(screens) = fl27mm::menus::load(&root) {
+        let _ = fl27mm::menus::validate(&screens);
+        let _ = fl27mm::menus::clone_screen(&screens, "BL/s0", "../outside");
+        let _ = fl27mm::menus::set_target(&screens, "BL/nope", "a", "BL/s0", false);
+    }
+    let _ = std::fs::remove_dir_all(root);
+}

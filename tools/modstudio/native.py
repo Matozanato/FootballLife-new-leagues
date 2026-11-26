@@ -1,7 +1,10 @@
-"""Optional PyO3 tools from mod-manager-rust: CPK archives, textures, models and animations.
+"""Optional PyO3 tools from mod-manager-rust: CPK archives, textures, models and animations,
+the game map, PES tables, WESYS containers, binaries and menu flows.
 
 Mod Studio runs without them: available() is False when the module was not built, and the
-pages that use them say so. Nothing here writes sider.ini."""
+pages that use them say so. Nothing here writes sider.ini. The calls that change a file in
+place (patch_binary, menu_link, asset_replace, animation_set_*) are made by Game file tools
+after a restore point of that file."""
 import json
 import os
 
@@ -155,3 +158,99 @@ def rig_inspect(path):
     if _fl27mm is None:
         raise RuntimeError("The Rust manager extension is not built")
     return _fl27mm.rig_inspect(os.fspath(path))
+
+
+def game_map(game):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.game_map(os.fspath(game)))
+
+
+def explain_path(path):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.explain_path(path))
+
+
+def pesdb_report(directory):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.pesdb_report(os.fspath(directory)))
+
+
+def container_report(path):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.container_report(os.fspath(path)))
+
+
+def container_unwrap(source, destination):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.container_unwrap(os.fspath(source), os.fspath(destination))
+
+
+def container_rewrap(body, original, destination):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.container_rewrap(
+        os.fspath(body), os.fspath(original), os.fspath(destination)
+    ))
+
+
+def inspect_binary(path):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.inspect_binary(os.fspath(path)))
+
+
+def binary_hex(path, offset=0, length=512):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.binary_hex(os.fspath(path), offset, length)
+
+
+def binary_section(path, index, length=512):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.binary_section(os.fspath(path), index, length)
+
+
+def binary_section_table(path, index):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.binary_section_table(os.fspath(path), index))
+
+
+def patch_binary(path, offset, hex_bytes):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.patch_binary(os.fspath(path), offset, hex_bytes))
+
+
+def menu_check(root, bases=()):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return json.loads(_fl27mm.menu_check(os.fspath(root), [os.fspath(path) for path in bases]))
+
+
+def menu_link(root, bases, screen, event, target):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.menu_link(
+        os.fspath(root), [os.fspath(path) for path in bases], screen, event, target
+    )
+
+
+def menu_clone(root, screen, target):
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.menu_clone(os.fspath(root), screen, target)
+
+
+def menu_screen_path(root, screen):
+    """the flow file menu_link rewrites for this screen (nothing is written), so a restore point
+    of it can be taken first"""
+    if _fl27mm is None:
+        raise RuntimeError("The Rust manager extension is not built")
+    return _fl27mm.menu_screen_path(os.fspath(root), screen)

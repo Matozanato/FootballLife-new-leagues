@@ -1,6 +1,7 @@
 //! fl27mm core: readers and writers for the game's own formats (CPK archives,
-//! FTEX textures, FMDL models, GANI animations, skeletons and rigs), shared by
-//! the command line and the optional PyO3 module FL Mod Studio loads.
+//! FTEX textures, FMDL models, GANI animations, skeletons and rigs, PES tables,
+//! WESYS containers, compiled menus and menu flow files), shared by the command
+//! line and the optional PyO3 module FL Mod Studio loads.
 //!
 //! Nothing here touches sider.ini. Pack order, modules and installs belong to
 //! FL Mod Studio itself, which keeps restore points for every change.
@@ -21,6 +22,7 @@ pub mod ftex;
 pub mod gani;
 pub mod gamemap;
 pub mod install;
+pub mod menus;
 pub mod pesdb;
 pub mod structure;
 pub mod utf;

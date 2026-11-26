@@ -1,5 +1,7 @@
-"""Game file tools: CPK archives, textures, models and animations, through the optional native
-module (native.py). Pack order, installs and sider.ini stay with Roots, Install and Modules."""
+"""Game file tools: the game map, CPK archives, textures, PES tables and containers, models and
+animations, and menu flows, through the optional native module (native.py). Every edit of a file
+in place takes a restore point first. Pack order, installs and sider.ini stay with Content
+folders (Roots), Install and Modules."""
 import json
 import os
 
@@ -22,9 +24,12 @@ def _report(value):
 class _ToolDeck(QWidget):
     currentChanged = Signal(int)
     _DESCRIPTIONS = {
+        "Game map": "Explore game folders, archives, and content paths.",
         "CPK archives": "Inspect archive contents and locate game resources.",
         "Textures": "Preview and inspect supported texture files.",
+        "Tables": "Read PES data tables, containers, and binary files.",
         "Assets": "Preview models and inspect or edit animation files.",
+        "Menu maker": "Check menu links, clone screens, and inspect compiled atlases.",
     }
 
     def __init__(self):
@@ -68,6 +73,11 @@ class _ToolDeck(QWidget):
         self.tool_count = QLabel(_("0 tools"))
         self.tool_count.setObjectName("subtle")
         rail_layout.addWidget(self.tool_count)
+        # pack order is not a tool here: it is the Content folders page's (Roots), which writes
+        # sider.ini with its restore point. A way there, so it is found from this page too
+        self.roots_link = QPushButton(_("Content folders (pack order)"))
+        self.roots_link.setToolTip(_("Open Tools > Content folders, where the pack order is set."))
+        rail_layout.addWidget(self.roots_link)
         root.addWidget(rail)
 
         content = QWidget()
@@ -285,11 +295,15 @@ class ModManager(Page):
         self._asset_entries = []
         self._animation_path = ""
         self.tabs = _ToolDeck()
+        self.tabs.roots_link.clicked.connect(self.open_roots)
         self.outer.addWidget(self.tabs, 1)
         self.outputs = {}
+        self._make_map_tab()
         self._make_cpk_tab()
         self._make_texture_tab()
+        self._make_tables_tab()
         self._make_assets_tab()
+        self._make_menu_tab()
         self.tabs.currentChanged.connect(lambda _index: self.refresh())
 
     def _tab(self, title):
@@ -299,6 +313,11 @@ class ModManager(Page):
         layout.setSpacing(10)
         self.tabs.addTab(page, title)
         return layout
+
+    def open_roots(self):
+        opener = getattr(self.app, "open_page", None)
+        if opener is not None:
+            opener("Roots")
 
     def _can_edit_game_assets(self):
         game = getattr(self.app, "game", None)
@@ -379,6 +398,124 @@ class ModManager(Page):
     def _addons(self):
         game = getattr(self.app, "game", None)
         return getattr(game, "sider_dir", "") or ""
+
+    def _make_map_tab(self):
+        layout = self._tab("Game map")
+        self.map_root = QLineEdit(self._game_folder())
+        self.map_root.setPlaceholderText(_("Game folder"))
+        browse = QPushButton(_("Choose folder..."))
+        browse.clicked.connect(lambda: self._choose_into(self.map_root, _("Choose the game folder")))
+        load = QPushButton(_("Build game map"))
+        load.clicked.connect(self.load_game_map)
+        self.map_path = QLineEdit()
+        self.map_path.setPlaceholderText(_("Explain a game or content path"))
+        explain = QPushButton(_("Explain path"))
+        explain.clicked.connect(self.explain_game_path)
+        layout.addWidget(row(self.map_root, browse, load, stretch=False))
+        layout.addWidget(row(self.map_path, explain, stretch=False))
+        split = QSplitter(Qt.Horizontal)
+        self.map_tree = QTreeWidget()
+        self.map_tree.setHeaderLabels([_("Component"), _("Kind"), _("Files"), _("Size")])
+        self.map_tree.itemSelectionChanged.connect(self.show_map_node)
+        self.map_tree.itemDoubleClicked.connect(self.open_map_node)
+        split.addWidget(self.map_tree)
+        detail = QWidget()
+        dv = QVBoxLayout(detail)
+        dv.setContentsMargins(0, 0, 0, 0)
+        dv.addWidget(hint(_("Select a component to inspect its mapped paths and files.")))
+        self._output("map", dv)
+        split.addWidget(detail)
+        split.setStretchFactor(0, 1)
+        split.setStretchFactor(1, 1)
+        layout.addWidget(split, 1)
+
+    @staticmethod
+    def _map_size(size):
+        size = int(size or 0)
+        for unit in (_("B"), _("KiB"), _("MiB"), _("GiB"), _("TiB")):
+            if size < 1024 or unit == _("TiB"):
+                return _("%(size).1f %(unit)s") % {"size": size, "unit": unit}
+            size /= 1024
+
+    def _add_map_nodes(self, parent, nodes):
+        for node in nodes:
+            info = node.get("info") or {}
+            item = QTreeWidgetItem([
+                str(node.get("name", node.get("rel", ""))),
+                str(info.get("format") or node.get("group", "")),
+                str(node.get("files", "")),
+                self._map_size(node.get("bytes", 0)),
+            ])
+            item.setData(0, Qt.UserRole, node)
+            parent.addChild(item) if isinstance(parent, QTreeWidgetItem) else parent.addTopLevelItem(item)
+            self._add_map_nodes(item, node.get("children") or [])
+
+    def load_game_map(self):
+        root = self.map_root.text().strip()
+        if not root:
+            self.say(_("Choose the game folder first."), "warn")
+            return
+        if not os.path.isdir(root):
+            self.say(_("The selected game folder does not exist or is not a directory."), "err")
+            return
+
+        def done(data):
+            self.map_tree.clear()
+            nodes = data.get("nodes", [])
+            if not nodes:
+                self.say(_("No game files were found here. Choose the folder containing Data or SiderAddons."),
+                         "err")
+                self._show("map", data)
+                return
+            self._add_map_nodes(self.map_tree, nodes)
+            self.map_tree.expandToDepth(1)
+            self.say("")
+            self._show("map", {
+                "game": data.get("game", root),
+                "archives": data.get("archives", 0),
+                "archive_bytes": self._map_size(data.get("archive_bytes", 0)),
+                "findings": data.get("findings", []),
+            })
+
+        self._run(_("Building the game map..."), lambda: native.game_map(root), done)
+
+    def show_map_node(self):
+        items = self.map_tree.selectedItems()
+        if items:
+            node = items[0].data(0, Qt.UserRole) or {}
+            self._show("map", {
+                "name": node.get("name"),
+                "path": node.get("path"),
+                "group": node.get("group"),
+                "info": node.get("info", {}),
+                "files": node.get("files", 0),
+                "bytes": self._map_size(node.get("bytes", 0)),
+                "children": len(node.get("children") or []),
+                "open_as": node.get("open_as"),
+            })
+
+    def open_map_node(self, item, _column=0):
+        node = item.data(0, Qt.UserRole) or {}
+        action = node.get("open_as")
+        if action == "cpk":
+            path = node.get("path", "")
+            if path:
+                self.cpk_path.setText(path)
+                self.tabs.setCurrentIndex(next(
+                    (i for i in range(self.tabs.count())
+                     if self.tabs.tabText(i) == _("CPK archives")), 0
+                ))
+                self.inspect_cpk()
+        elif action == "packs":
+            # pack order is the Content folders page's (Roots): sider.ini goes through it
+            self.open_roots()
+
+    def explain_game_path(self):
+        path = self.map_path.text().strip()
+        if not path:
+            return
+        self._run(_("Explaining path..."), lambda: native.explain_path(path),
+                  lambda data: self._show("map", data))
 
     def _make_cpk_tab(self):
         layout = self._tab("CPK archives")
@@ -653,6 +790,169 @@ class ModManager(Page):
                   lambda: native.convert_textures(source, destination, kind),
                   lambda result: self._show("texture", result))
 
+
+    def _make_tables_tab(self):
+        layout = self._tab("Tables")
+        self.pesdb_dir = QLineEdit()
+        self.pesdb_dir.setPlaceholderText(_("Folder containing PESDB tables"))
+        browse_dir = QPushButton(_("Choose folder..."))
+        browse_dir.clicked.connect(lambda: self._choose_into(self.pesdb_dir, _("Choose the tables folder")))
+        pesdb = QPushButton(_("Inspect PESDB"))
+        pesdb.clicked.connect(self.inspect_pesdb)
+        layout.addWidget(row(self.pesdb_dir, browse_dir, pesdb, stretch=False))
+
+        self.container_path = QLineEdit()
+        self.container_path.setPlaceholderText(_("WESYS container"))
+        browse_container = QPushButton(_("Choose container..."))
+        browse_container.clicked.connect(lambda: self._choose_file_into(self.container_path))
+        report_container = QPushButton(_("Inspect container"))
+        report_container.clicked.connect(self.inspect_container)
+        unwrap = QPushButton(_("Unwrap..."))
+        unwrap.clicked.connect(self.unwrap_container)
+        rewrap = QPushButton(_("Rewrap..."))
+        rewrap.clicked.connect(self.rewrap_container)
+        layout.addWidget(row(self.container_path, browse_container, report_container, unwrap, rewrap,
+                             stretch=False))
+
+        self.binary_path = QLineEdit()
+        self.binary_path.setPlaceholderText(_("Binary file"))
+        browse_binary = QPushButton(_("Choose binary..."))
+        browse_binary.clicked.connect(lambda: self._choose_file_into(self.binary_path))
+        inspect_binary = QPushButton(_("Inspect binary"))
+        inspect_binary.clicked.connect(self.inspect_binary)
+        self.patch_offset = QLineEdit()
+        self.patch_offset.setPlaceholderText(_("Offset (decimal)"))
+        self.patch_hex = QLineEdit()
+        self.patch_hex.setPlaceholderText(_("Bytes (hex)"))
+        patch = QPushButton(_("Patch bytes..."))
+        patch.clicked.connect(self.patch_binary)
+        layout.addWidget(row(self.binary_path, browse_binary, inspect_binary, stretch=False))
+        layout.addWidget(row(self.patch_offset, self.patch_hex, patch, stretch=False))
+        self.binary_sections = QTreeWidget()
+        self.binary_sections.setHeaderLabels([_("Section"), _("Offset"), _("Bytes")])
+        self.binary_sections.itemSelectionChanged.connect(self.inspect_binary_section)
+        layout.addWidget(self.binary_sections, 1)
+        self._output("tables", layout)
+
+    def inspect_pesdb(self):
+        directory = self.pesdb_dir.text().strip()
+        if not directory:
+            directory = pick_dir(self, "Choose the PESDB table folder")
+        if directory:
+            self.pesdb_dir.setText(directory)
+            self._run(_("Inspecting PESDB tables..."), lambda: native.pesdb_report(directory),
+                      lambda data: self._show("tables", data))
+
+    def inspect_container(self):
+        path = self.container_path.text().strip()
+        if not path:
+            path = self._file()
+        if path:
+            self.container_path.setText(path)
+            self._run(_("Inspecting container..."), lambda: native.container_report(path),
+                      lambda data: self._show("tables", data))
+
+    def unwrap_container(self):
+        source = self.container_path.text().strip()
+        if not source or not os.path.isfile(source):
+            self.say(_("Choose an existing container first."), "warn")
+            return
+        destination = self._save_file(source + ".body", "Unwrap container", "All files (*)")
+        if not destination:
+            return
+        if os.path.exists(destination):
+            self.say(_("The output file already exists; choose a different name."), "err")
+            return
+        if not ask(self, "Unwrap container", _("Write the container body to %s?") % destination):
+            return
+        self._run(_("Unwrapping container..."), lambda: native.container_unwrap(source, destination),
+                  lambda result: self._show("tables", result))
+
+    def rewrap_container(self):
+        body = self._file(title="Choose container body")
+        if not body:
+            return
+        original = self.container_path.text().strip() or self._file(title="Choose original container")
+        if not original:
+            return
+        destination = self._save_file(original + ".rewrapped", "Save rewrapped container")
+        if not destination:
+            return
+        if os.path.exists(destination):
+            self.say(_("The output file already exists; choose a different name."), "err")
+            return
+        if not ask(self, "Rewrap container", _("Create %s using the original container header?") % destination):
+            return
+        self._run(_("Rewrapping container..."),
+                  lambda: native.container_rewrap(body, original, destination),
+                  lambda result: self._show("tables", result))
+
+    def inspect_binary(self):
+        path = self.binary_path.text().strip()
+        if not path:
+            path = self._file()
+        if path:
+            self.binary_path.setText(path)
+
+            def work():
+                return native.inspect_binary(path), native.binary_hex(path)
+
+            def done(result):
+                report, hex_dump = result
+                self.binary_sections.clear()
+                table = (report.get("sections") or {}).get("sections", [])
+                for index, section in enumerate(table):
+                    item = QTreeWidgetItem([
+                        str(section.get("name", index)), str(section.get("offset", "")),
+                        str(section.get("length", section.get("size", ""))),
+                    ])
+                    item.setData(0, Qt.UserRole, index)
+                    self.binary_sections.addTopLevelItem(item)
+                self._show("tables", {"report": report, "body_hex": hex_dump})
+
+            self._run(_("Inspecting binary..."), work, done)
+
+    def inspect_binary_section(self):
+        items = self.binary_sections.selectedItems()
+        path = self.binary_path.text().strip()
+        if not items or not path:
+            return
+        index = items[0].data(0, Qt.UserRole)
+
+        def work():
+            return native.binary_section(path, index), native.binary_section_table(path, index)
+
+        def done(result):
+            hex_dump, table = result
+            self._show("tables", {"section": items[0].text(0), "table": table, "hex": hex_dump})
+
+        self._run(_("Inspecting binary section..."), work, done)
+
+    def patch_binary(self):
+        path = self.binary_path.text().strip()
+        try:
+            raw_offset = self.patch_offset.text().strip()
+            offset = int(raw_offset, 16 if raw_offset.lower().startswith("0x") else 10)
+        except ValueError:
+            self.say(_("Enter a valid decimal or 0x-prefixed byte offset."), "warn")
+            return
+        hex_bytes = "".join(self.patch_hex.text().split())
+        if not path or not hex_bytes:
+            self.say(_("Choose a binary and enter the bytes to write."), "warn")
+            return
+        if not self._can_edit_game_assets():
+            return
+        if not ask(self, "Patch binary", _("Patch %s at offset %s? A restore point is made first.")
+                   % (path, self.patch_offset.text().strip())):
+            return
+
+        def done(result):
+            self._show("tables", {"patch": result, "updated_file": path})
+            self.inspect_binary()
+
+        self._run(_("Patching binary..."),
+                  self._in_place(path, "binary patched",
+                                 lambda: native.patch_binary(path, offset, hex_bytes)), done)
 
     def _make_assets_tab(self):
         layout = self._tab("Assets")
@@ -965,14 +1265,216 @@ class ModManager(Page):
         if path:
             field.setText(path)
 
+    def _make_menu_tab(self):
+        layout = self._tab("Menu maker")
+        self.menu_root = QLineEdit()
+        self.menu_root.setPlaceholderText(_("Folder containing menu screen files"))
+        browse = QPushButton(_("Choose menu folder..."))
+        browse.clicked.connect(lambda: self._choose_into(self.menu_root, _("Choose menu folder")))
+        self.menu_bases = QLineEdit()
+        self.menu_bases.setPlaceholderText(_("Base menu folders, separated by semicolons"))
+        add_base = QPushButton(_("Add base folder..."))
+        add_base.clicked.connect(self.add_menu_base)
+        clear_bases = QPushButton(_("Clear"))
+        clear_bases.clicked.connect(self.menu_bases.clear)
+        check = QPushButton(_("Check menu links"))
+        check.clicked.connect(self.check_menu)
+        layout.addWidget(row(self.menu_root, browse, check, stretch=False))
+        layout.addWidget(row(self.menu_bases, add_base, clear_bases, stretch=False))
+        self.menu_screen = QLineEdit()
+        self.menu_screen.setPlaceholderText(_("Screen ID"))
+        self.menu_event = QLineEdit()
+        self.menu_event.setPlaceholderText(_("Event"))
+        self.menu_target = QLineEdit()
+        self.menu_target.setPlaceholderText(_("Target screen ID"))
+        link = QPushButton(_("Set link..."))
+        link.clicked.connect(self.set_menu_link)
+        layout.addWidget(row(self.menu_screen, self.menu_event, self.menu_target, link, stretch=False))
+        self.menu_clone_id = QLineEdit()
+        self.menu_clone_id.setPlaceholderText(_("New screen ID, e.g. BL/NewScreen"))
+        clone = QPushButton(_("Clone selected screen..."))
+        clone.clicked.connect(self.clone_menu_screen)
+        layout.addWidget(row(self.menu_clone_id, clone, stretch=False))
+        self.menu_binary_path = QLineEdit()
+        self.menu_binary_path.setPlaceholderText(_("Compiled menu .bin (AFP/TXP2 atlas)"))
+        browse_binary = QPushButton(_("Choose .bin..."))
+        browse_binary.clicked.connect(lambda: self._choose_file_into(
+            self.menu_binary_path, "Menu binaries (*.bin);;All files (*)"))
+        inspect_binary = QPushButton(_("Inspect compiled menu"))
+        inspect_binary.clicked.connect(self.inspect_menu_binary)
+        layout.addWidget(row(self.menu_binary_path, browse_binary, inspect_binary, stretch=False))
+        self.menu_tree = QTreeWidget()
+        self.menu_tree.setHeaderLabels([_("Screen / event"), _("Target")])
+        self.menu_tree.itemSelectionChanged.connect(self.select_menu_entry)
+        layout.addWidget(self.menu_tree, 1)
+        self._output("menu", layout)
+
+    def _menu_base_paths(self):
+        return [value.strip() for value in self.menu_bases.text().split(";") if value.strip()]
+
+    def add_menu_base(self):
+        directory = pick_dir(self, _("Choose a base menu folder"))
+        if not directory:
+            return
+        values = self._menu_base_paths()
+        if directory not in values:
+            values.append(directory)
+            self.menu_bases.setText("; ".join(values))
+
+    def check_menu(self):
+        root = self.menu_root.text().strip()
+        if not root:
+            self.say(_("Choose the menu folder first."), "warn")
+            return
+        bases = self._menu_base_paths()
+
+        def done(result):
+            self.menu_tree.clear()
+            self.menu_tree.setHeaderLabels([_("Screen / event"), _("Target")])
+            for entry in result.get("entries", []):
+                screen = str(entry.get("id", ""))
+                screen_item = QTreeWidgetItem([screen, ""])
+                screen_item.setData(0, Qt.UserRole, {"screen": screen})
+                self.menu_tree.addTopLevelItem(screen_item)
+                for event in entry.get("events", []):
+                    name = str(event.get("name", ""))
+                    target = str(event.get("to", ""))
+                    item = QTreeWidgetItem([name, target])
+                    item.setData(0, Qt.UserRole, {"screen": screen, "event": name, "target": target})
+                    screen_item.addChild(item)
+            self.menu_tree.expandToDepth(0)
+            self._show("menu", result.get("report", result))
+
+        self._run(_("Checking menu links..."), lambda: native.menu_check(root, bases), done)
+
+    def select_menu_entry(self):
+        items = self.menu_tree.selectedItems()
+        if not items:
+            return
+        data = items[0].data(0, Qt.UserRole) or {}
+        if data.get("kind") == "atlas":
+            return
+        self.menu_screen.setText(data.get("screen", ""))
+        self.menu_event.setText(data.get("event", ""))
+        self.menu_target.setText(data.get("target", ""))
+
+    def set_menu_link(self):
+        root = self.menu_root.text().strip()
+        screen, event, target = (self.menu_screen.text().strip(), self.menu_event.text().strip(),
+                                 self.menu_target.text().strip())
+        if not all((root, screen, event, target)):
+            self.say(_("Choose a menu folder and enter the screen, event, and target."), "warn")
+            return
+        bases = self._menu_base_paths()
+        if not self._can_edit_game_assets():
+            return
+        if not ask(self, "Set menu link",
+                   _("Change %(screen)s / %(event)s to point to %(target)s? A restore point is made first.")
+                   % {"screen": screen, "event": event, "target": target}):
+            return
+
+        def work():
+            path = native.menu_screen_path(root, screen)
+            return self._in_place(path, "menu link",
+                                  lambda: {"changed": native.menu_link(root, bases, screen, event, target),
+                                           "file": path})()
+
+        self._run(_("Updating menu link..."), work,
+                  lambda result: (self._show("menu", result), self.check_menu()))
+
+    def clone_menu_screen(self):
+        root = self.menu_root.text().strip()
+        screen = self.menu_screen.text().strip()
+        target = self.menu_clone_id.text().strip()
+        if not root or not screen or not target:
+            self.say(_("Choose a menu folder and source screen, then enter the new screen ID."), "warn")
+            return
+        if not self._can_edit_game_assets():
+            return
+        if not ask(self, "Clone menu screen",
+                   _("Copy %(source)s to %(target)s? The existing screen will not be overwritten.")
+                   % {"source": screen, "target": target}):
+            return
+
+        def done(created):
+            self.menu_clone_id.clear()
+            self.menu_screen.setText(created)
+            self._show("menu", {"created_screen": created})
+            self.check_menu()
+
+        self._run(_("Cloning menu screen..."),
+                  lambda: native.menu_clone(root, screen, target), done)
+
+    def inspect_menu_binary(self):
+        path = self.menu_binary_path.text().strip()
+        if not path or not os.path.isfile(path):
+            path = self._file(filters="Menu binaries (*.bin);;All files (*)")
+        if not path:
+            return
+        self.menu_binary_path.setText(path)
+
+        def done(report):
+            self.menu_tree.clear()
+            layout = report.get("menu_layout")
+            if not layout:
+                self.menu_tree.setHeaderLabels([_("Compiled menu"), _("Result")])
+                self._show("menu", report)
+                self.say(_("No AFP/TXP2 picture atlas was recognized in this file."), "warn")
+                return
+
+            self.menu_tree.setHeaderLabels([_("Picture / texture"), _("Atlas rectangle (pixels)")])
+            for index, texture in enumerate(layout.get("textures", [])):
+                texture_item = QTreeWidgetItem([
+                    _("Texture %(index)s · %(width)s × %(height)s · format 0x%(format)02x")
+                    % {"index": index, "width": texture["width"], "height": texture["height"],
+                       "format": texture["format"]},
+                    "",
+                ])
+                texture_item.setData(0, Qt.UserRole, {"kind": "atlas"})
+                self.menu_tree.addTopLevelItem(texture_item)
+                for picture in layout.get("pictures", []):
+                    if picture.get("texture") != index:
+                        continue
+                    rect = (picture["x0_half"] / 2, picture["y0_half"] / 2,
+                            picture["x1_half"] / 2, picture["y1_half"] / 2)
+                    item = QTreeWidgetItem([
+                        picture["name"],
+                        _("[%(x0).1f, %(y0).1f]–[%(x1).1f, %(y1).1f]")
+                        % dict(zip(("x0", "y0", "x1", "y1"), rect)),
+                    ])
+                    item.setData(0, Qt.UserRole, {"kind": "atlas"})
+                    texture_item.addChild(item)
+            self.menu_tree.expandAll()
+            self._show("menu", {
+                "file": path,
+                "package": layout.get("package_name"),
+                "textures": layout.get("textures", []),
+                "pictures": len(layout.get("pictures", [])),
+                "coordinate_note": _("Rectangles locate pictures in texture atlases, not on screen."),
+            })
+
+        self._run(_("Decoding compiled menu..."), lambda: native.inspect_binary(path), done)
+
     def refresh(self):
         if not hasattr(self, "tabs") or self.tabs.count() == 0:
             return
-        return
+        current = self.tabs.tabText(self.tabs.currentIndex())
+        if current == _("Game map") and self.map_tree.topLevelItemCount() == 0:
+            if self.map_root.text().strip() and native.available():
+                self.load_game_map()
 
     def refresh_current(self):
         index = self.tabs.currentIndex()
-        handlers = (self.inspect_cpk, self.inspect_texture, self.list_assets)
+        handlers = (self.load_game_map, self.inspect_cpk, self.inspect_texture, self._refresh_tables,
+                    self.list_assets, self.check_menu)
         if 0 <= index < len(handlers):
             handlers[index]()
+
+    def _refresh_tables(self):
+        if self.pesdb_dir.text().strip():
+            self.inspect_pesdb()
+        elif self.container_path.text().strip():
+            self.inspect_container()
+        elif self.binary_path.text().strip():
+            self.inspect_binary()
 

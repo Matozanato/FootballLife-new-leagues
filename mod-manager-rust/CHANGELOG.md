@@ -9,11 +9,12 @@ claims, it can show you.
 ### Optional tools inside FL Mod Studio
 
 This crate is now only the format half: CPK archives, FTEX/DDS textures, FMDL
-models, GANI animations, skeletons and rigs. It is an optional PyO3 module for
-FL Mod Studio, and Mod Studio builds and runs without it.
+models, GANI animations, skeletons and rigs, PES tables, WESYS containers,
+binaries, the game map and menu flows. It is an optional PyO3 module for
+FL Mod Studio's Game file tools page, and Mod Studio builds and runs without it.
 
-- **Removed** the pack order, conflict scan, sider.ini editing, pack install,
-  menu editing and text-editing ("Mod Studio") code, along with the Tauri
+- **Removed** the pack order, conflict scan, sider.ini editing, pack install
+  and text-editing ("Mod Studio") code, along with the Tauri
   desktop app and the probe binaries. FL Mod Studio's Roots, Install and
   Modules pages already do these jobs and keep restore points, and nothing here
   should write sider.ini behind them.
@@ -24,8 +25,11 @@ FL Mod Studio, and Mod Studio builds and runs without it.
   ordinary error, so Mod Studio's worker reports it instead of staying busy.
 - Tests that need the game skip when it is not installed. `FL27_GAME` points
   them at another install.
-- Texture and animation edits in Mod Studio take a restore point (Restore
-  points page) first, and leave no backup files next to the game's files.
+- Every edit of a file in place from Mod Studio (texture replace, animation
+  rate and keys, binary patch, menu link) takes a restore point (Restore points
+  page) first, and leaves no backup files next to the game's files. The
+  bindings no longer write `.fl27mm-backup` copies of their own; Menu maker's
+  clone and the container and CPK writers only ever create new files.
 
 ## 1.3.2
 

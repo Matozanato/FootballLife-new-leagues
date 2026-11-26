@@ -17,7 +17,8 @@ Making your own version of Mod Studio: see [forking.md](forking.md) and its chap
 - FL Mod Studio from source (`python tools/modstudio_main.py`) needs `PySide6`, `Pillow` and
   `py7zr`; making the release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and
   zig for the DLLs. The release `.exe` needs nothing.
-- Optional: the Game file tools page (CPK archives, textures, models, animations) uses a native
+- Optional: the Game file tools page (game map, CPK archives, textures, tables, models,
+  animations, menu flows) uses a native
   module from `mod-manager-rust/`. To build it, install Rust and `maturin` and run
   `maturin develop --release` in `mod-manager-rust/` with your virtual environment active; it lands
   in `tools/modstudio/` as `_fl27mm*.pyd`. Without it Mod Studio runs and `mszip.py` builds as

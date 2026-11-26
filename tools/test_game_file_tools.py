@@ -5,10 +5,11 @@ The Game file tools page and its optional native module (native.py, mod-manager-
   - a Rust panic reaches Python as pyo3's PanicException, a BaseException: the worker's
     `except Exception` would not see it and the window stayed busy. native.py turns it into a
     RuntimeError; KeyboardInterrupt and SystemExit go through as they are;
-  - without the module the page builds, has its three tools, and says the module is missing;
+  - without the module the page builds, has its six tools, and says the module is missing;
   - an edit that rewrites a game file takes a restore point in SiderAddons\ModStudio\backups
     first (Restore points lists it) and leaves no <file>.fl27mm-backup next to the game's file;
-  - native.py offers nothing that writes sider.ini (pack install, pack order, menus, text files).
+  - Patch bytes and Set link take the same restore point before they write;
+  - native.py offers nothing that writes sider.ini (pack install, pack order).
 
 No game, no native module needed: a fake one stands in for it.
 """
@@ -64,10 +65,10 @@ ok("a call that works returns its value unchanged")
 
 # 2. nothing in the bridge writes sider.ini or edits packs
 public = {n for n in dir(native) if not n.startswith("_") and callable(getattr(native, n))}
-for gone in ("studio_install", "studio_edit", "studio_write", "studio_remove", "menu_link",
-             "menu_clone", "sorted_roots", "scan", "verify", "conflicts", "patch_binary"):
+for gone in ("studio_install", "studio_edit", "studio_write", "studio_remove",
+             "sorted_roots", "scan", "verify", "conflicts"):
     assert gone not in public, gone
-ok("native.py has no pack install, pack order, menu or text-file writers (%d functions)" % len(public))
+ok("native.py has no pack install, pack order or sider.ini writers (%d functions)" % len(public))
 
 # 3. the page without the module
 from PySide6.QtWidgets import QApplication
@@ -81,9 +82,14 @@ try:
     page = ModManager(SimpleNamespace(game=SimpleNamespace(folder="", sider_dir="", running=lambda: []),
                                       settings={}, section_of={}, busy=lambda *a: None))
     page.say = lambda text, kind="": said.append((text, kind))
-    assert page.tabs.count() == 3, page.tabs.count()
-    assert [page.tabs.tabText(i) for i in range(3)] == ["CPK archives", "Textures", "Assets"]
-    ok("the page builds without the module, with its three tools")
+    tools = ["Game map", "CPK archives", "Textures", "Tables", "Assets", "Menu maker"]
+    assert [page.tabs.tabText(i) for i in range(page.tabs.count())] == tools
+    ok("the page builds without the module, with its %d tools" % len(tools))
+    opened = []
+    page.app.open_page = opened.append
+    page.tabs.roots_link.click()
+    assert opened == ["Roots"], opened
+    ok("Content folders (pack order) on the tool list opens the Roots page")
     page._run("x", lambda: 1, lambda r: None)
     assert said and said[-1][1] == "err" and "optional native module" in said[-1][0], said
     ok("and says the module is missing when a tool is used")
@@ -141,6 +147,59 @@ try:
     assert not os.path.exists(target + ".fl27mm-backup")
     assert len(backups.history(sd)) == 3
     ok("a failed edit raises, keeps its restore point and leaves no sidecar")
+
+    # Patch bytes and Set link through the page, with a stand-in module that writes like the real one
+    import modstudio.pages.manager as MP
+    menu_file = os.path.join(sd, "livecpk", "menu", "common", "script", "flow", "BL", "first.json")
+    os.makedirs(os.path.dirname(menu_file))
+    open(menu_file, "w").write('{"events": {"back": {"to": "BL/first"}}}')
+
+    class Writer:
+        def patch_binary(self, path, offset, hex_bytes):
+            open(path, "wb").write(b"patched")
+            return json.dumps({"changed": 1, "size": 7})
+
+        def menu_screen_path(self, root, screen):
+            return menu_file
+
+        def menu_link(self, root, bases, screen, event, target):
+            open(menu_file, "w").write('{"events": {"back": {"to": "%s"}}}' % target)
+            return "%s · %s -> %s" % (screen, event, target)
+
+        def menu_check(self, root, bases):
+            return json.dumps({"entries": [], "report": {}})
+
+        def inspect_binary(self, path):
+            return json.dumps({})
+
+        def binary_hex(self, path, offset, length):
+            return ""
+
+    saved = native._fl27mm, MP.ask, MP.run_job
+    native._fl27mm = native._Guarded(Writer())
+    MP.ask = lambda *a, **k: True
+    MP.run_job = lambda fn, done, fail: done(fn(None))
+    try:
+        page = ModManager(SimpleNamespace(game=SimpleNamespace(folder=T, sider_dir=sd, running=lambda: []),
+                                          settings={}, section_of={}, busy=lambda *a: None))
+        page.say = lambda *a, **k: None
+        page.binary_path.setText(target)
+        page.patch_offset.setText("0")
+        page.patch_hex.setText("00")
+        page.patch_binary()
+        page.menu_root.setText(os.path.join(sd, "livecpk", "menu"))
+        page.menu_screen.setText("BL/first")
+        page.menu_event.setText("back")
+        page.menu_target.setText("BL/second")
+        page.set_menu_link()
+    finally:
+        native._fl27mm, MP.ask, MP.run_job = saved
+    reasons = [r["reason"] for r in backups.history(sd)]
+    assert "binary patched" in reasons and "menu link" in reasons, reasons
+    assert "BL/second" in open(menu_file).read()
+    menu_copy = [r for r in backups.history(sd) if r["reason"] == "menu link"][0]
+    assert "BL/first" in open(os.path.join(sd, menu_copy["copy"])).read()
+    ok("Patch bytes and Set link each take a restore point of the file before writing it")
 finally:
     shutil.rmtree(T, ignore_errors=True)
 

@@ -7,7 +7,7 @@ use pyo3::exceptions::PyOSError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
-use fl27mm::{ask, assets, cpk, frig, ftex, gamemap, gani, render};
+use fl27mm::{ask, assets, binread, cpk, frig, ftex, gamemap, gani, menus, pesdb, render, wesys};
 
 fn json_text<T: serde::Serialize>(value: &T) -> Result<String> {
     serde_json::to_string_pretty(value).context("serializing Rust manager report")
@@ -593,6 +593,374 @@ fn rig_inspect(py: Python<'_>, path: PathBuf) -> PyResult<String> {
     .map_err(|error| PyOSError::new_err(error.to_string()))
 }
 
+#[pyfunction]
+fn game_map(py: Python<'_>, game: PathBuf) -> PyResult<String> {
+    let report = py
+        .detach(move || Ok::<_, anyhow::Error>(gamemap::build(&game)))
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    json_text(&report).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn explain_path(path: String) -> PyResult<String> {
+    let info = gamemap::describe(&path);
+    json_text(&info).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn pesdb_report(py: Python<'_>, directory: PathBuf) -> PyResult<String> {
+    let rows = py
+        .detach(move || {
+            if !directory.is_dir() {
+                anyhow::bail!("table folder is not a directory: {}", directory.display());
+            }
+            let files = fl27mm::fsutil::files(&directory);
+            let mut rows = Vec::new();
+            for path in files {
+                let name = path.file_name().unwrap_or_default().to_string_lossy();
+                if !name.to_ascii_lowercase().ends_with(".bin")
+                    || !path
+                        .to_string_lossy()
+                        .to_ascii_lowercase()
+                        .contains("pesdb")
+                {
+                    continue;
+                }
+                let verdict = pesdb::validate(&path);
+                let status = match verdict.status {
+                    pesdb::Status::Ok => "ok",
+                    pesdb::Status::BadStride => "badstride",
+                    pesdb::Status::Unrecognised => "unrecognised",
+                    pesdb::Status::Unreadable => "unreadable",
+                };
+                rows.push(serde_json::json!({
+                    "file": path.strip_prefix(&directory).unwrap_or(&path).to_string_lossy(),
+                    "ok": verdict.ok,
+                    "status": status,
+                    "reason": verdict.reason,
+                }));
+                if rows.len() >= 5000 {
+                    break;
+                }
+            }
+            Ok::<_, anyhow::Error>(rows)
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    serde_json::to_string_pretty(&rows).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn container_report(py: Python<'_>, input: PathBuf) -> PyResult<String> {
+    let rows = py
+        .detach(move || {
+            let files = if input.is_dir() {
+                fl27mm::fsutil::files(&input)
+                    .into_iter()
+                    .take(5000)
+                    .collect::<Vec<_>>()
+            } else {
+                vec![input.clone()]
+            };
+            let base = if input.is_dir() {
+                input.clone()
+            } else {
+                input
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .to_path_buf()
+            };
+            let mut rows = Vec::new();
+            for path in files {
+                let relative = path.strip_prefix(&base).unwrap_or(&path);
+                let file = relative.to_string_lossy().into_owned();
+                match fs::read(&path) {
+                    Err(error) => rows.push(serde_json::json!({
+                        "file": file, "framing": "-", "file_size": 0,
+                        "body_size": 0, "exact": false, "error": error.to_string()
+                    })),
+                    Ok(raw) => match wesys::decode(&raw) {
+                        Err(error) => rows.push(serde_json::json!({
+                            "file": file, "framing": "-", "file_size": raw.len(),
+                            "body_size": 0, "exact": false, "error": error.to_string()
+                        })),
+                        Ok(mut decoded) => {
+                            let framing = decoded.kind.name().to_string();
+                            let body_size = decoded.body.len();
+                            match wesys::encode(&mut decoded) {
+                                Ok(_) => rows.push(serde_json::json!({
+                                    "file": file, "framing": framing, "file_size": raw.len(),
+                                    "body_size": body_size, "exact": decoded.exact,
+                                    "level": decoded.level, "error": null
+                                })),
+                                Err(error) => rows.push(serde_json::json!({
+                                    "file": file, "framing": framing, "file_size": raw.len(),
+                                    "body_size": body_size, "exact": false,
+                                    "level": null, "error": error.to_string()
+                                })),
+                            }
+                        }
+                    },
+                }
+            }
+            Ok::<_, anyhow::Error>(rows)
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    serde_json::to_string_pretty(&rows).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn container_unwrap(py: Python<'_>, input: PathBuf, destination: PathBuf) -> PyResult<usize> {
+    py.detach(move || {
+        if destination.exists() {
+            anyhow::bail!("destination already exists: {}", destination.display());
+        }
+        let raw = fs::read(&input).with_context(|| format!("reading {}", input.display()))?;
+        let decoded = wesys::decode(&raw)?;
+        if decoded.kind.name() == "unknown" {
+            anyhow::bail!("unidentified framing; refusing to write an unknown body");
+        }
+        fs::write(&destination, &decoded.body)
+            .with_context(|| format!("writing {}", destination.display()))?;
+        Ok::<_, anyhow::Error>(decoded.body.len())
+    })
+    .map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn container_rewrap(
+    py: Python<'_>,
+    body: PathBuf,
+    original: PathBuf,
+    destination: PathBuf,
+) -> PyResult<String> {
+    let report = py
+        .detach(move || {
+            if destination.exists() {
+                anyhow::bail!("destination already exists: {}", destination.display());
+            }
+            let raw =
+                fs::read(&original).with_context(|| format!("reading {}", original.display()))?;
+            let mut decoded = wesys::decode(&raw)?;
+            decoded.body =
+                fs::read(&body).with_context(|| format!("reading {}", body.display()))?;
+            let wrapped = wesys::encode(&mut decoded)?;
+            fs::write(&destination, &wrapped)
+                .with_context(|| format!("writing {}", destination.display()))?;
+            Ok::<_, anyhow::Error>(serde_json::json!({
+                "file": destination.to_string_lossy(),
+                "framing": decoded.kind.name(),
+                "file_size": wrapped.len(),
+                "body_size": decoded.body.len(),
+                "exact": decoded.exact,
+                "level": decoded.level,
+            }))
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    serde_json::to_string_pretty(&report).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn inspect_binary(py: Python<'_>, path: PathBuf) -> PyResult<String> {
+    let report = py
+        .detach(move || binread::read(&path))
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    json_text(&report).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn binary_hex(
+    py: Python<'_>,
+    path: PathBuf,
+    offset: Option<usize>,
+    length: Option<usize>,
+) -> PyResult<String> {
+    py.detach(move || {
+        let raw = fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
+        let body = wesys::decode(&raw)?.body;
+        Ok::<_, anyhow::Error>(binread::hexdump(
+            &body,
+            offset.unwrap_or(0),
+            length.unwrap_or(512),
+        ))
+    })
+    .map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn binary_section(
+    py: Python<'_>,
+    path: PathBuf,
+    index: usize,
+    length: Option<usize>,
+) -> PyResult<String> {
+    let text = py
+        .detach(move || {
+            let data = binread::section_bytes(&path, index)?;
+            Ok::<_, anyhow::Error>(binread::hexdump(&data, 0, length.unwrap_or(512)))
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    Ok(text)
+}
+
+#[pyfunction]
+fn binary_section_table(py: Python<'_>, path: PathBuf, index: usize) -> PyResult<String> {
+    let report = py
+        .detach(move || {
+            let data = binread::section_bytes(&path, index)?;
+            let binary = binread::read(&path)?;
+            let name = binary
+                .sections
+                .as_ref()
+                .and_then(|table| table.sections.get(index))
+                .map(|section| section.name.clone())
+                .unwrap_or_default();
+            let plausible_floats = data
+                .chunks_exact(4)
+                .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                .filter(|value| {
+                    value.is_finite() && (*value == 0.0 || (1e-4..=1e9).contains(&value.abs()))
+                })
+                .count();
+            let found = match fl27mm::structure::infer_block(&data) {
+                Some((count, row, values)) => Some((row, count, values)),
+                None => fl27mm::structure::best_row_width(&data).map(|(row, rows)| {
+                    let values = data
+                        .chunks_exact(4)
+                        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                        .collect::<Vec<_>>();
+                    (row, rows, values)
+                }),
+            };
+            let (table, values) = match found {
+                Some((row, rows, values)) => {
+                    (Some((rows, row)), values.into_iter().take(1024).collect())
+                }
+                None => (None, Vec::new()),
+            };
+            Ok::<_, anyhow::Error>(serde_json::json!({
+                "name": name,
+                "bytes": data.len(),
+                "table": table,
+                "values": values,
+                "plausible_floats": plausible_floats,
+            }))
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    serde_json::to_string_pretty(&report).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn patch_binary(py: Python<'_>, path: PathBuf, offset: usize, hex: String) -> PyResult<String> {
+    let report = py
+        .detach(move || {
+            let bytes: Option<Vec<u8>> = hex
+                .as_bytes()
+                .chunks(2)
+                .map(|chunk| {
+                    std::str::from_utf8(chunk)
+                        .ok()
+                        .and_then(|part| u8::from_str_radix(part, 16).ok())
+                })
+                .collect();
+            let Some(bytes) = bytes else {
+                anyhow::bail!("{hex:?} is not an even number of hex digits");
+            };
+            if bytes.is_empty() {
+                anyhow::bail!("nothing to write");
+            }
+            let (changed, size) = binread::patch(&path, offset, &bytes)?;
+            Ok::<_, anyhow::Error>(serde_json::json!({
+                "changed": changed,
+                "size": size,
+            }))
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    serde_json::to_string_pretty(&report).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn menu_check(py: Python<'_>, root: PathBuf, bases: Vec<PathBuf>) -> PyResult<String> {
+    let result = py
+        .detach(move || {
+            let screens = menus::load(&root)?;
+            let mut report = menus::validate_with(&screens, &bases);
+            report.root = root.to_string_lossy().into_owned();
+            let entries = screens
+                .iter()
+                .take(400)
+                .map(|(id, screen)| {
+                    serde_json::json!({
+                        "id": id,
+                        "events": screen.events.iter().map(|(name, event)| {
+                            serde_json::json!({
+                                "name": name,
+                                "to": event.to.clone().unwrap_or_default(),
+                            })
+                        }).collect::<Vec<_>>(),
+                    })
+                })
+                .collect::<Vec<_>>();
+            Ok::<_, anyhow::Error>(serde_json::json!({
+                "report": report,
+                "entries": entries,
+            }))
+        })
+        .map_err(|error| PyOSError::new_err(error.to_string()))?;
+    serde_json::to_string_pretty(&result).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn menu_link(
+    py: Python<'_>,
+    root: PathBuf,
+    bases: Vec<PathBuf>,
+    screen: String,
+    event: String,
+    target: String,
+) -> PyResult<String> {
+    py.detach(move || {
+        let screens = menus::load(&root)?;
+        if !menus::target_known(&screens, &bases, &target) {
+            anyhow::bail!(
+                "{target} is not a screen in this set or the base folders; no change was made"
+            );
+        }
+        let edited = menus::set_target(&screens, &screen, &event, &target, true)?;
+        menus::write(&edited)?;
+        Ok(format!("{screen} · {event} -> {target}"))
+    })
+    .map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+fn menu_clone(py: Python<'_>, root: PathBuf, screen: String, target: String) -> PyResult<String> {
+    py.detach(move || -> anyhow::Result<String> {
+        let screens = menus::load(&root)?;
+        let (copy, destination) = menus::clone_screen(&screens, &screen, &target)?;
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("creating {}", parent.display()))?;
+        }
+        menus::write(&copy)?;
+        Ok(copy.id)
+    })
+    .map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+/// The file `menu_link` will rewrite for this screen, so the host can take a
+/// restore point of it first. Nothing is written.
+#[pyfunction]
+fn menu_screen_path(py: Python<'_>, root: PathBuf, screen: String) -> PyResult<String> {
+    py.detach(move || {
+        let screens = menus::load(&root)?;
+        let found = screens
+            .get(&screen)
+            .with_context(|| format!("no screen {screen}"))?;
+        Ok::<_, anyhow::Error>(found.path.to_string_lossy().into_owned())
+    })
+    .map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
 #[pymodule]
 fn _fl27mm(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(cpk_inspect, module)?)?;
@@ -610,6 +978,21 @@ fn _fl27mm(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(animation_set_key, module)?)?;
     module.add_function(wrap_pyfunction!(animation_set_rate, module)?)?;
     module.add_function(wrap_pyfunction!(rig_inspect, module)?)?;
+    module.add_function(wrap_pyfunction!(game_map, module)?)?;
+    module.add_function(wrap_pyfunction!(explain_path, module)?)?;
+    module.add_function(wrap_pyfunction!(pesdb_report, module)?)?;
+    module.add_function(wrap_pyfunction!(container_report, module)?)?;
+    module.add_function(wrap_pyfunction!(container_unwrap, module)?)?;
+    module.add_function(wrap_pyfunction!(container_rewrap, module)?)?;
+    module.add_function(wrap_pyfunction!(inspect_binary, module)?)?;
+    module.add_function(wrap_pyfunction!(binary_hex, module)?)?;
+    module.add_function(wrap_pyfunction!(binary_section, module)?)?;
+    module.add_function(wrap_pyfunction!(binary_section_table, module)?)?;
+    module.add_function(wrap_pyfunction!(patch_binary, module)?)?;
+    module.add_function(wrap_pyfunction!(menu_check, module)?)?;
+    module.add_function(wrap_pyfunction!(menu_link, module)?)?;
+    module.add_function(wrap_pyfunction!(menu_clone, module)?)?;
+    module.add_function(wrap_pyfunction!(menu_screen_path, module)?)?;
     Ok(())
 }
 
